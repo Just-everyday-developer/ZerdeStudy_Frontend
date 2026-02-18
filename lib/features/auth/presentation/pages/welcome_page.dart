@@ -1,57 +1,49 @@
 import 'package:flutter/material.dart';
-import 'package:frontend_flutter/core/extensions/context_size.dart';
-import 'package:frontend_flutter/features/auth/presentation/widgets/AnimatedWelcomeText.dart';
-import '../widgets/WelcomeBackdropPainter.dart';
-import '../widgets/WelcomePageBottom.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../widgets/AnimatedWelcomeText.dart';
+import '../widgets/AuthBackgroundWrapper.dart';
+import '../widgets/TechActionButton.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("Screen size: ${context.w} x ${context.h}");
-    debugPrint("Scale factor: ${context.u}");
+    return AuthBackgroundWrapper(
+      child: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 24),
+                  const AnimatedWelcomeText(text: 'Welcome to ZerdeStudy'),
+                  const SizedBox(height: 36),
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            // Фон с волнами/кружками
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFF1E5AA8), // верх
-                      Color(0xFF2C76C5), // низ
-                    ],
+                  TechActionButton(
+                    title: 'Log In',
+                    isPrimary: true,
+                    onTap: () => context.go('/login'),
                   ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: CustomPaint(
-                painter: WelcomeBackdropPainter(),
+                  const SizedBox(height: 16),
+                  TechActionButton(
+                    title: 'Sign Up',
+                    isPrimary: false,
+                    onTap: () => context.go('/signup'),
+                  ),
 
-                /// Рисует декоративные круги
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
-            Positioned(
-              left: context.u * 0.05,
-              right: context.u * 0.05,
-              top: context.h * 0.18,
-              child: Center(
-                child: AnimatedWelcomeText(text: "Welcome to \nZerdeStudy"),
-              ),
-            ),
-            WelcomePageBottom(),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+

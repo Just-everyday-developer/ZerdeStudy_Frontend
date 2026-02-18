@@ -1,20 +1,51 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:frontend_flutter/features/home/presentation/pages/home_page.dart';
+import 'package:frontend_flutter/features/knowledge%20tree/presentation/pages/knowledge_tree.dart';
 import 'package:frontend_flutter/features/auth/presentation/pages/login_page.dart';
 import 'package:frontend_flutter/features/auth/presentation/pages/welcome_page.dart';
-import 'package:go_router/go_router.dart';
-
-import '../../features/auth/presentation/pages/sign_up.dart';
+import 'package:frontend_flutter/features/auth/presentation/pages/sign_up_page.dart';
+import '../../core/utils/СyberTransition.dart';
 
 List<RouteBase> routes = [
   GoRoute(
     path: '/welcome',
-    builder: (context, state) => WelcomePage(),
+    pageBuilder: (context, state) => cyberTransition(
+      context: context,
+      state: state,
+      child: const WelcomePage(),
+    ),
   ),
   GoRoute(
     path: '/login',
-    builder: (context, state) => LoginPage(),
+    pageBuilder: (context, state) => cyberTransition(
+      context: context,
+      state: state,
+      child: const LoginPage(),
+    ),
   ),
   GoRoute(
     path: '/signup',
-    builder: (context, state) => SignUpPage(),
-  )
+    pageBuilder: (context, state) => cyberTransition(
+      context: context,
+      state: state,
+      child: const SignUpPage(),
+    ),
+  ),
+  GoRoute(
+    path: '/home',
+    pageBuilder: (context, state) => cyberTransition(
+      context: context,
+      state: state,
+      child: const HomePage(),
+    ),
+  ),
+  GoRoute(
+    path: '/tree',
+    pageBuilder: (context, state) => cyberTransition(
+      context: context,
+      state: state,
+      child: const KnowledgeTreePage(),
+    ),
+  ),
 ];

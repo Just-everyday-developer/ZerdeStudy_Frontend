@@ -1,127 +1,151 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/constants/app_colors.dart';
 
-class SignUpPage extends StatelessWidget {
-  const SignUpPage({Key? key}) : super(key: key);
+import '../../../../core/common_widgets/TechTextField.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../providers/auth_providers.dart';
+import '../widgets/AuthBackgroundWrapper.dart';
+
+class SignUpPage extends ConsumerStatefulWidget {
+  const SignUpPage({super.key});
+
+  @override
+  ConsumerState<SignUpPage> createState() => _SignUpPageState();
+}
+
+class _SignUpPageState extends ConsumerState<SignUpPage> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _passCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController();
+    _emailCtrl = TextEditingController();
+    _passCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSignUpPressed() {
+    final name = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final password = _passCtrl.text;
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Name is required')),
+      );
+      return;
+    }
+
+    final validateEmail = ref.read(validateEmailProvider);
+    if (!validateEmail(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid email')),
+      );
+      return;
+    }
+
+    if (password.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 8 characters')),
+      );
+      return;
+    }
+
+    // Дальше твоя логика регистрации
+    context.go('/home');
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
+    return AuthBackgroundWrapper(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.primary),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'init User();',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-                fontFamily: 'monospace',
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Create your profile to start learning.',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 40),
-            _buildTechTextField(hint: 'Name', icon: Icons.person_outline),
-            const SizedBox(height: 16),
-            _buildTechTextField(hint: 'Email', icon: Icons.email_outlined),
-            const SizedBox(height: 16),
-            _buildTechTextField(hint: 'Password', icon: Icons.lock_outline, isObscure: true),
-            const SizedBox(height: 32),
-            _buildRoleSelector(),
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.background,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: AppColors.primary),
+        ),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'System.register();',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    TechTextField(
+                      hint: 'Full Name',
+                      icon: Icons.person_outline,
+                      controller: _nameCtrl,
+                    ),
+                    const SizedBox(height: 16),
+                    TechTextField(
+                      hint: 'Email',
+                      icon: Icons.alternate_email,
+                      controller: _emailCtrl,
+                    ),
+                    const SizedBox(height: 16),
+                    TechTextField(
+                      hint: 'Password',
+                      icon: Icons.password,
+                      isObscure: true,
+                      controller: _passCtrl,
+                    ),
+                    const SizedBox(height: 32),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.background,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 10,
+                          shadowColor: AppColors.primary.withOpacity(0.5),
+                        ),
+                        onPressed: _onSignUpPressed,
+                        child: const Text(
+                          'Initialize Account',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                onPressed: () {
-                  context.go("/welcome");
-                },
-                child: const Text('Compile & Sign Up', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTechTextField({required String hint, required IconData icon, bool isObscure = false}) {
-    return TextField(
-      obscureText: isObscure,
-      style: const TextStyle(color: AppColors.textPrimary),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textSecondary),
-        prefixIcon: Icon(icon, color: AppColors.primary),
-        filled: true,
-        fillColor: AppColors.surface,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoleSelector() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildRoleButton(title: 'Student', isActive: true, icon: Icons.school_outlined),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildRoleButton(title: 'Instructor', isActive: false, icon: Icons.computer),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRoleButton({required String title, required bool isActive, required IconData icon}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: isActive ? AppColors.primary.withOpacity(0.1) : AppColors.surface,
-        border: Border.all(color: isActive ? AppColors.primary : Colors.transparent),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? AppColors.primary : AppColors.textSecondary, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: TextStyle(
-              color: isActive ? AppColors.primary : AppColors.textSecondary,
-              fontWeight: FontWeight.bold,
             ),
           ),
-        ],
+        ),
       ),
     );
   }

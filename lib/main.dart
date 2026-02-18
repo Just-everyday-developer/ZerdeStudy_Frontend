@@ -1,14 +1,27 @@
 import "package:flutter/material.dart";
-import "package:frontend_flutter/features/auth/presentation/pages/welcome_page.dart";
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import "app/routing/router.dart";
+import "core/providers/background_controller.dart";
+
+final backgroundController = BackgroundController();
 
 void main() {
-  runApp(MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with SingleTickerProviderStateMixin {
+  @override
+  void initState() {
+    super.initState();
+    backgroundController.initialize(this); // Запускаем один раз на всё приложение
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,5 +31,4 @@ class MyApp extends StatelessWidget {
       title: 'ZerdeStudy',
     );
   }
-
 }

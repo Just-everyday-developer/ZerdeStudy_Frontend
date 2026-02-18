@@ -5,17 +5,20 @@ class TechTextField extends StatelessWidget {
   final String hint;
   final IconData icon;
   final bool isObscure;
+  final TextEditingController controller;
 
   const TechTextField({
-    Key? key,
+    super.key,
     required this.hint,
     required this.icon,
     this.isObscure = false,
-  }) : super(key: key);
+    required this.controller,
+  });
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: controller,
       obscureText: isObscure,
       style: const TextStyle(color: AppColors.textPrimary),
       decoration: InputDecoration(
