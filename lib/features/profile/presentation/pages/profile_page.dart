@@ -1,70 +1,224 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/demo_app_controller.dart';
+import '../../../../core/common_widgets/app_button.dart';
+import '../../../../core/common_widgets/app_page_scaffold.dart';
+import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/common_widgets/locale_selector.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
+
+class ProfilePage extends ConsumerWidget {
+  const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            // Аватар с неоновой рамкой
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primary, width: 2),
-                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 15)],
-              ),
-              child: const CircleAvatar(
-                radius: 40,
-                backgroundColor: AppColors.surface,
-                child: Icon(Icons.person, size: 40, color: AppColors.textSecondary),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Julia M.', style: TextStyle(color: AppColors.textPrimary, fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(color: AppColors.accent.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-              child: const Text('450 XP', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(height: 32),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(demoAppControllerProvider);
+    final controller = ref.read(demoAppControllerProvider.notifier);
+    final catalog = ref.watch(demoCatalogProvider);
+    final achievements = catalog.achievementsFor(state);
+    final l10n = context.l10n;
+    final user = state.user;
+
+    return AppPageScaffold(
+      title: l10n.text('profile'),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+        children: [
+          GlowCard(
+            accent: AppColors.primary,
+            child: Column(
+              children: [
+                Container(
+                  width: 82,
+                  height: 82,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary.withValues(alpha: 0.16),
+                  ),
+                  child: const Icon(
+                    Icons.person_rounded,
+                    color: AppColors.primary,
+                    size: 40,
+                  ),
                 ),
-                child: ListView(
+                const SizedBox(height: 14),
+                Text(
+                  user?.name ?? 'Dana S.',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  user?.email ?? 'demo@zerdestudy.app',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
                   children: [
-                    _buildSettingsTile(Icons.book_outlined, 'Manage Courses'),
-                    _buildSettingsTile(Icons.assignment_turned_in_outlined, 'Student Submissions'),
-                    _buildSettingsTile(Icons.question_answer_outlined, 'Q&A'),
-                    const Divider(color: AppColors.background, height: 32),
-                    _buildSettingsTile(Icons.add_circle_outline, 'Create New Course', color: AppColors.primary),
+                    _Pill(label: 'XP', value: '${state.xp}'),
+                    _Pill(label: 'Level', value: '${state.level}'),
+                    _Pill(label: 'Streak', value: '${state.streak}d'),
                   ],
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          GlowCard(
+            accent: AppColors.accent,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.text('profile_goal'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  user?.goal ?? 'Reach confident demo flow in 14 days',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.text('locale'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                LocaleSelector(
+                  currentLocale: state.locale,
+                  onChanged: controller.changeLocale,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          GlowCard(
+            accent: AppColors.success,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.text('achievements'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                ...achievements.map((achievement) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: (achievement.unlocked ? AppColors.success : AppColors.surfaceSoft)
+                                .withValues(alpha: 0.16),
+                            child: Icon(
+                              achievement.icon,
+                              color: achievement.unlocked
+                                  ? AppColors.success
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              achievement.title.resolve(state.locale),
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${achievement.progress}/${achievement.goal}',
+                            style: const TextStyle(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          AppButton.secondary(
+            label: l10n.text('view_stats'),
+            icon: Icons.insights_rounded,
+            onPressed: () => context.push(AppRoutes.stats),
+          ),
+          const SizedBox(height: 12),
+          AppButton.secondary(
+            label: l10n.text('view_leaderboard'),
+            icon: Icons.leaderboard_rounded,
+            onPressed: () => context.push(AppRoutes.leaderboard),
+          ),
+          const SizedBox(height: 12),
+          AppButton.secondary(
+            label: l10n.text('reset_demo'),
+            icon: Icons.restart_alt_rounded,
+            onPressed: () {
+              controller.resetDemo();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.text('reset_demo'))),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          AppButton.secondary(
+            label: l10n.text('logout'),
+            icon: Icons.logout_rounded,
+            onPressed: () {
+              controller.logout();
+              context.go(AppRoutes.welcome);
+            },
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildSettingsTile(IconData icon, String title, {Color color = AppColors.textPrimary}) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
-      trailing: const Icon(Icons.arrow_forward_ios, color: AppColors.textSecondary, size: 16),
-      onTap: () {},
+class _Pill extends StatelessWidget {
+  const _Pill({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: AppColors.surfaceSoft,
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

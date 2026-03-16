@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
 
 class BackgroundController extends ChangeNotifier {
-  late AnimationController _controller;
+  AnimationController? _controller;
 
   void initialize(TickerProvider vsync) {
+    if (_controller != null) {
+      return;
+    }
+
     _controller = AnimationController(
       vsync: vsync,
       duration: const Duration(seconds: 30),
     )..repeat();
 
-    // Подписываемся на обновление, чтобы уведомлять слушателей
-    _controller.addListener(() {
-      notifyListeners();
-    });
+    _controller!.addListener(notifyListeners);
   }
 
-  double get value => _controller.value;
+  double get value => _controller?.value ?? 0;
+
+  void shutdown() {
+    _controller?.dispose();
+    _controller = null;
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    shutdown();
     super.dispose();
   }
 }

@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/common_widgets/TechTextField.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../providers/auth_providers.dart';
-import '../widgets/AuthBackgroundWrapper.dart';
+import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/demo_app_controller.dart';
+import '../../../../core/common_widgets/locale_selector.dart';
+import '../../../../core/common_widgets/tech_text_field.dart';
+import '../../../../core/localization/app_localizations.dart';
+import '../providers/email_providers.dart';
+import '../providers/name_providers.dart';
+import '../providers/password_providers.dart';
+import '../widgets/auth_background_wrapper.dart';
+import '../widgets/tech_action_button.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
@@ -35,113 +41,107 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     super.dispose();
   }
 
-  void _onSignUpPressed() {
+  void _submit() {
+    final l10n = context.l10n;
     final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
-    final password = _passCtrl.text;
+    final password = _passCtrl.text.trim();
 
-    if (name.isEmpty) {
+    if (!ref.read(validateNameProvider)(name)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name is required')),
+        SnackBar(content: Text(l10n.text('empty_name'))),
+      );
+      return;
+    }
+    if (!ref.read(validateEmailProvider)(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.text('invalid_email'))),
+      );
+      return;
+    }
+    if (!ref.read(validatePasswordProvider)(password)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.text('invalid_password'))),
       );
       return;
     }
 
-    final validateEmail = ref.read(validateEmailProvider);
-    if (!validateEmail(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid email')),
-      );
-      return;
-    }
-
-    if (password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 8 characters')),
-      );
-      return;
-    }
-
-    // Дальше твоя логика регистрации
-    context.go('/home');
+    ref.read(demoAppControllerProvider.notifier).loginWithEmail(
+          email: email,
+          name: name,
+        );
+    context.go(AppRoutes.home);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final state = ref.watch(demoAppControllerProvider);
+
     return AuthBackgroundWrapper(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: AppColors.primary),
-        ),
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'System.register();',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                        fontFamily: 'monospace',
-                      ),
+      child: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: LocaleSelector(
+                      currentLocale: state.locale,
+                      onChanged: ref.read(demoAppControllerProvider.notifier).changeLocale,
                     ),
-                    const SizedBox(height: 40),
-
-                    TechTextField(
-                      hint: 'Full Name',
-                      icon: Icons.person_outline,
-                      controller: _nameCtrl,
-                    ),
-                    const SizedBox(height: 16),
-                    TechTextField(
-                      hint: 'Email',
-                      icon: Icons.alternate_email,
-                      controller: _emailCtrl,
-                    ),
-                    const SizedBox(height: 16),
-                    TechTextField(
-                      hint: 'Password',
-                      icon: Icons.password,
-                      isObscure: true,
-                      controller: _passCtrl,
-                    ),
-                    const SizedBox(height: 32),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.background,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 10,
-                          shadowColor: AppColors.primary.withOpacity(0.5),
-                        ),
-                        onPressed: _onSignUpPressed,
-                        child: const Text(
-                          'Initialize Account',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    l10n.text('signup_title'),
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    l10n.text('tagline'),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45),
+                  ),
+                  const SizedBox(height: 28),
+                  TechTextField(
+                    hint: l10n.text('full_name'),
+                    icon: Icons.person_outline_rounded,
+                    controller: _nameCtrl,
+                  ),
+                  const SizedBox(height: 14),
+                  TechTextField(
+                    hint: l10n.text('email'),
+                    icon: Icons.alternate_email_rounded,
+                    controller: _emailCtrl,
+                  ),
+                  const SizedBox(height: 14),
+                  TechTextField(
+                    hint: l10n.text('password'),
+                    icon: Icons.lock_outline_rounded,
+                    controller: _passCtrl,
+                    isObscure: true,
+                  ),
+                  const SizedBox(height: 20),
+                  TechActionButton(
+                    title: l10n.text('signup'),
+                    isPrimary: true,
+                    icon: Icons.rocket_launch_rounded,
+                    onTap: _submit,
+                  ),
+                  const SizedBox(height: 12),
+                  TechActionButton(
+                    title: l10n.text('apple'),
+                    isPrimary: false,
+                    icon: Icons.apple_rounded,
+                    onTap: () {
+                      ref.read(demoAppControllerProvider.notifier).loginWithProvider('apple');
+                      context.go(AppRoutes.home);
+                    },
+                  ),
+                ],
               ),
             ),
           ),

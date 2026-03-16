@@ -1,6 +1,6 @@
-# frontend_flutter
+# ZerdeStudy
 
-A new Flutter project.
+Presentation MVP built with Flutter for diploma demo scenarios.
 
 ## Getting Started
 
