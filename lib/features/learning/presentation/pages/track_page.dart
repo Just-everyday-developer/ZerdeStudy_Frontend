@@ -39,34 +39,13 @@ class TrackPage extends ConsumerWidget {
               children: [
                 Icon(track.icon, color: track.color, size: 42),
                 const SizedBox(height: 14),
-                Text(
-                  track.title.resolve(state.locale),
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
+                Text(track.title.resolve(state.locale), style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 8),
-                Text(
-                  track.subtitle.resolve(state.locale),
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(track.subtitle.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
-                Text(
-                  track.description.resolve(state.locale),
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
+                Text(track.description.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.45)),
                 const SizedBox(height: 16),
-                Text(
-                  track.heroMetric.resolve(state.locale),
-                  style: TextStyle(
-                    color: track.color,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                Text(track.heroMetric.resolve(state.locale), style: TextStyle(color: track.color, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 16),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
@@ -79,41 +58,31 @@ class TrackPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  track.outcome.resolve(state.locale),
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
+                  '${progress.completedUnits}/${progress.totalUnits} units • ${progress.completedQuizzes}/${progress.totalQuizzes} quizzes • ${progress.completedTrainers}/${progress.totalTrainers} labs',
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 18),
                 AppButton.primary(
-                  label: track.isPlayable
-                      ? l10n.text('start_track')
-                      : l10n.text('unlock_later'),
-                  icon: track.isPlayable ? Icons.rocket_launch_rounded : Icons.lock_rounded,
-                  onPressed: track.isPlayable
-                      ? () {
-                          controller.setCurrentTrack(track.id);
-                          final nextTarget = progress.nextTarget;
-                          if (nextTarget == null) {
-                            return;
-                          }
-                          context.push(
-                            nextTarget.isPractice
-                                ? AppRoutes.practiceById(nextTarget.id)
-                                : AppRoutes.lessonById(nextTarget.id),
-                          );
-                        }
-                      : null,
+                  label: l10n.text('start_track'),
+                  icon: Icons.rocket_launch_rounded,
+                  onPressed: () {
+                    controller.setCurrentTrack(track.id);
+                    final target = progress.nextTarget;
+                    if (target == null) {
+                      return;
+                    }
+                    context.push(
+                      target.isPractice
+                          ? AppRoutes.practiceById(target.id)
+                          : AppRoutes.lessonById(target.id),
+                    );
+                  },
                 ),
               ],
             ),
           ),
           const SizedBox(height: 18),
-          Text(
-            l10n.text('modules'),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text(l10n.text('modules'), style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           ...track.modules.map((module) => Padding(
                 padding: const EdgeInsets.only(bottom: 14),
@@ -122,46 +91,31 @@ class TrackPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        module.title.resolve(state.locale),
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                      Text(module.title.resolve(state.locale), style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 6),
-                      Text(
-                        module.summary.resolve(state.locale),
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          height: 1.4,
+                      Text(module.summary.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.4)),
+                      const SizedBox(height: 14),
+                      ...module.lessons.map((lesson) => ListTile(
+                            onTap: () {
+                              controller.focusLesson(lesson.id);
+                              context.push(AppRoutes.lessonById(lesson.id));
+                            },
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(lesson.title.resolve(state.locale), style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+                            subtitle: Text(lesson.summary.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.35)),
+                            trailing: const Icon(Icons.chevron_right_rounded),
+                          )),
+                      if (module.practice != null)
+                        ListTile(
+                          onTap: () {
+                            controller.focusPractice(module.practice!.id);
+                            context.push(AppRoutes.practiceById(module.practice!.id));
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(module.practice!.title.resolve(state.locale), style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+                          subtitle: Text(module.practice!.summary.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.35)),
+                          trailing: const Icon(Icons.chevron_right_rounded),
                         ),
-                      ),
-                      if (track.isPlayable) ...[
-                        const SizedBox(height: 14),
-                        ...module.lessons.map((lesson) => ListTile(
-                              onTap: () {
-                                controller.focusLesson(lesson.id);
-                                context.push(AppRoutes.lessonById(lesson.id));
-                              },
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                lesson.title.resolve(state.locale),
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              subtitle: Text(
-                                lesson.summary.resolve(state.locale),
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  height: 1.35,
-                                ),
-                              ),
-                              trailing: const Icon(Icons.chevron_right_rounded),
-                            )),
-                      ],
                     ],
                   ),
                 ),

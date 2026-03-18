@@ -44,23 +44,23 @@ class WelcomePage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(999),
-                            color: AppColors.primary.withValues(alpha: 0.14),
-                          ),
-                          child: Text(
-                            l10n.text('presentation_ready'),
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
+                        // Container(
+                        //   padding: const EdgeInsets.symmetric(
+                        //     horizontal: 14,
+                        //     vertical: 8,
+                        //   ),
+                        //   decoration: BoxDecoration(
+                        //     borderRadius: BorderRadius.circular(999),
+                        //     color: AppColors.primary.withValues(alpha: 0.14),
+                        //   ),
+                        //   child: Text(
+                        //     l10n.text('presentation_ready'),
+                        //     style: const TextStyle(
+                        //       color: AppColors.primary,
+                        //       fontWeight: FontWeight.w700,
+                        //     ),
+                        //   ),
+                        // ),
                         const SizedBox(height: 18),
                         AnimatedWelcomeText(
                           text: l10n.text('app_name'),
@@ -73,52 +73,42 @@ class WelcomePage extends ConsumerWidget {
                                 height: 1.45,
                               ),
                         ),
-                        const SizedBox(height: 22),
-                        const Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            _SignalPill(label: '7 tracks'),
-                            _SignalPill(label: 'AI mentor'),
-                            _SignalPill(label: 'RU / EN / KZ'),
-                          ],
-                        ),
+                        // const SizedBox(height: 22),
+                        // const Wrap(
+                        //   spacing: 12,
+                        //   runSpacing: 12,
+                        //   children: [
+                        //     _SignalPill(label: '14 branches'),
+                        //     _SignalPill(label: 'AI mentor'),
+                        //     _SignalPill(label: 'RU / EN / KZ'),
+                        //   ],
+                        // ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const GlowCard(
-                    accent: AppColors.accent,
-                    child: Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _FeatureCard(
-                          title: 'Knowledge tree',
-                          subtitle: 'All IT directions visible at once',
-                        ),
-                        _FeatureCard(
-                          title: 'Stateful demo',
-                          subtitle: 'XP, streak, progress, achievements',
-                        ),
-                        _FeatureCard(
-                          title: 'Lesson flow',
-                          subtitle: 'Theory, code, practice, AI help',
-                        ),
-                      ],
-                    ),
-                  ),
+                  // const GlowCard(
+                  //   accent: AppColors.accent,
+                  //   child: Wrap(
+                  //     spacing: 12,
+                  //     runSpacing: 12,
+                  //     children: [
+                  //       _FeatureCard(
+                  //         title: 'Knowledge tree',
+                  //         subtitle: 'CS Core plus IT spheres on one map',
+                  //       ),
+                  //       _FeatureCard(
+                  //         title: 'Stateful demo',
+                  //         subtitle: 'XP, streak, progress, quizzes, achievements',
+                  //       ),
+                  //       _FeatureCard(
+                  //         title: 'Lesson flow',
+                  //         subtitle: 'Theory, output quiz, memory lab, practice, AI help',
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                   const SizedBox(height: 20),
-                  TechActionButton(
-                    title: l10n.text('start_demo'),
-                    isPrimary: true,
-                    icon: Icons.play_circle_fill_rounded,
-                    onTap: () {
-                      controller.loginWithProvider('google');
-                      context.go(AppRoutes.home);
-                    },
-                  ),
-                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -178,6 +168,7 @@ class WelcomePage extends ConsumerWidget {
   }
 }
 
+// ignore: unused_element
 class _SignalPill extends StatelessWidget {
   const _SignalPill({
     required this.label,
@@ -205,6 +196,7 @@ class _SignalPill extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _FeatureCard extends StatelessWidget {
   const _FeatureCard({
     required this.title,

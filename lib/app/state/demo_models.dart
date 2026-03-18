@@ -103,8 +103,8 @@ class AiMessage {
         orElse: () => AiAuthor.user,
       ),
       text: json['text'] as String? ?? '',
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
-          DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
     );
   }
 }
@@ -157,6 +157,8 @@ class LeaderboardEntry {
     required this.name,
     required this.xp,
     required this.level,
+    required this.role,
+    required this.focus,
     required this.isCurrentUser,
   });
 
@@ -164,7 +166,67 @@ class LeaderboardEntry {
   final String name;
   final int xp;
   final int level;
+  final String role;
+  final String focus;
   final bool isCurrentUser;
+}
+
+enum QuizKind { outputPrediction, conceptCheck }
+
+class QuizOption {
+  const QuizOption({
+    required this.id,
+    required this.label,
+  });
+
+  final String id;
+  final LocalizedText label;
+}
+
+class LessonQuiz {
+  const LessonQuiz({
+    required this.id,
+    required this.title,
+    required this.prompt,
+    required this.kind,
+    required this.options,
+    required this.correctOptionId,
+    required this.explanation,
+  });
+
+  final String id;
+  final LocalizedText title;
+  final LocalizedText prompt;
+  final QuizKind kind;
+  final List<QuizOption> options;
+  final String correctOptionId;
+  final LocalizedText explanation;
+}
+
+enum CodeTrainerKind { fillBlank, reorderLines, matchOutput }
+
+class CodeTrainer {
+  const CodeTrainer({
+    required this.id,
+    required this.title,
+    required this.instruction,
+    required this.kind,
+    required this.prompt,
+    required this.options,
+    this.template,
+    this.correctOptionId,
+    this.correctSequence = const <String>[],
+  });
+
+  final String id;
+  final LocalizedText title;
+  final LocalizedText instruction;
+  final CodeTrainerKind kind;
+  final String prompt;
+  final List<QuizOption> options;
+  final String? template;
+  final String? correctOptionId;
+  final List<String> correctSequence;
 }
 
 class LessonItem {
@@ -177,7 +239,11 @@ class LessonItem {
     required this.durationMinutes,
     required this.outcome,
     required this.codeSnippet,
+    required this.exampleOutput,
     required this.keyPoints,
+    required this.quizzes,
+    required this.codeTrainers,
+    required this.completionRequirements,
     required this.promptSuggestion,
     required this.xpReward,
   });
@@ -190,7 +256,11 @@ class LessonItem {
   final int durationMinutes;
   final LocalizedText outcome;
   final String codeSnippet;
+  final String exampleOutput;
   final List<LocalizedText> keyPoints;
+  final List<LessonQuiz> quizzes;
+  final List<CodeTrainer> codeTrainers;
+  final List<String> completionRequirements;
   final LocalizedText promptSuggestion;
   final int xpReward;
 }
@@ -205,6 +275,7 @@ class PracticeTask {
     required this.brief,
     required this.starterCode,
     required this.successCriteria,
+    required this.knowledgeChecks,
     required this.promptSuggestion,
     required this.xpReward,
   });
@@ -217,6 +288,7 @@ class PracticeTask {
   final LocalizedText brief;
   final String starterCode;
   final List<LocalizedText> successCriteria;
+  final List<LocalizedText> knowledgeChecks;
   final LocalizedText promptSuggestion;
   final int xpReward;
 }
@@ -241,6 +313,10 @@ class LearningModule {
   int get totalUnits => lessons.length + (practice == null ? 0 : 1);
 }
 
+enum TrackZone { computerScienceCore, itSpheres }
+
+enum TrackAvailability { available, inProgress, completed, mastered }
+
 class LearningTrack {
   const LearningTrack({
     required this.id,
@@ -252,7 +328,11 @@ class LearningTrack {
     required this.heroMetric,
     required this.icon,
     required this.color,
-    required this.isPlayable,
+    required this.zone,
+    required this.availability,
+    required this.order,
+    required this.nodeId,
+    required this.connections,
     required this.modules,
   });
 
@@ -265,27 +345,51 @@ class LearningTrack {
   final LocalizedText heroMetric;
   final IconData icon;
   final Color color;
-  final bool isPlayable;
+  final TrackZone zone;
+  final TrackAvailability availability;
+  final int order;
+  final String nodeId;
+  final List<String> connections;
   final List<LearningModule> modules;
 
   int get totalUnits {
     return modules.fold<int>(0, (sum, module) => sum + module.totalUnits);
   }
-}
 
-enum TrackVisualState { locked, inProgress, completed }
+  int get totalQuizzes {
+    return modules.fold<int>(
+      0,
+      (sum, module) => sum + module.lessons.fold<int>(0, (inner, lesson) => inner + lesson.quizzes.length),
+    );
+  }
+
+  int get totalTrainers {
+    return modules.fold<int>(
+      0,
+      (sum, module) => sum + module.lessons.fold<int>(0, (inner, lesson) => inner + lesson.codeTrainers.length),
+    );
+  }
+}
 
 class TrackProgress {
   const TrackProgress({
     required this.state,
     required this.completedUnits,
     required this.totalUnits,
+    required this.completedQuizzes,
+    required this.totalQuizzes,
+    required this.completedTrainers,
+    required this.totalTrainers,
     required this.nextTarget,
   });
 
-  final TrackVisualState state;
+  final TrackAvailability state;
   final int completedUnits;
   final int totalUnits;
+  final int completedQuizzes;
+  final int totalQuizzes;
+  final int completedTrainers;
+  final int totalTrainers;
   final LearningTarget? nextTarget;
 
   double get fraction {
@@ -314,4 +418,92 @@ class LearningTarget {
   LocalizedText get title => isPractice ? practice!.title : lesson!.title;
 
   String get trackId => isPractice ? practice!.trackId : lesson!.trackId;
+}
+
+class CommunityCourseAuthor {
+  const CommunityCourseAuthor({
+    required this.name,
+    required this.role,
+    required this.accentLabel,
+  });
+
+  final String name;
+  final String role;
+  final String accentLabel;
+}
+
+class CommunityCourseLessonPreview {
+  const CommunityCourseLessonPreview({
+    required this.title,
+    required this.summary,
+    required this.durationMinutes,
+  });
+
+  final LocalizedText title;
+  final LocalizedText summary;
+  final int durationMinutes;
+}
+
+class CommunityCourse {
+  const CommunityCourse({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.description,
+    required this.level,
+    required this.rating,
+    required this.enrollmentCount,
+    required this.estimatedHours,
+    required this.color,
+    required this.author,
+    required this.tags,
+    required this.lessons,
+  });
+
+  final String id;
+  final LocalizedText title;
+  final LocalizedText subtitle;
+  final LocalizedText description;
+  final String level;
+  final double rating;
+  final int enrollmentCount;
+  final int estimatedHours;
+  final Color color;
+  final CommunityCourseAuthor author;
+  final List<String> tags;
+  final List<CommunityCourseLessonPreview> lessons;
+}
+
+class QuizAnswerStat {
+  const QuizAnswerStat({
+    required this.attempts,
+    required this.correctAnswers,
+  });
+
+  final int attempts;
+  final int correctAnswers;
+
+  QuizAnswerStat copyWith({
+    int? attempts,
+    int? correctAnswers,
+  }) {
+    return QuizAnswerStat(
+      attempts: attempts ?? this.attempts,
+      correctAnswers: correctAnswers ?? this.correctAnswers,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'attempts': attempts,
+      'correctAnswers': correctAnswers,
+    };
+  }
+
+  factory QuizAnswerStat.fromJson(Map<String, dynamic> json) {
+    return QuizAnswerStat(
+      attempts: json['attempts'] as int? ?? 0,
+      correctAnswers: json['correctAnswers'] as int? ?? 0,
+    );
+  }
 }

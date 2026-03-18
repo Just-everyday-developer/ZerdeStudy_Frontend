@@ -18,7 +18,7 @@ final demoAppControllerProvider =
     NotifierProvider<DemoAppController, DemoAppState>(DemoAppController.new);
 
 class DemoAppController extends Notifier<DemoAppState> {
-  static const String _storageKey = 'zerdestudy_demo_state_v1';
+  static const String _storageKey = 'zerdestudy_demo_state_v2';
 
   late final SharedPreferences _preferences;
   late final DemoCatalog _catalog;
@@ -54,7 +54,7 @@ class DemoAppController extends Notifier<DemoAppState> {
         user: _createUser(
           name: name,
           email: email,
-          goal: state.user?.goal ?? 'Ship a presentation-ready MVP',
+          goal: state.user?.goal ?? 'Build confidence across CS Core and IT Spheres',
         ),
       ),
     );
@@ -62,7 +62,7 @@ class DemoAppController extends Notifier<DemoAppState> {
   }
 
   void loginWithProvider(String providerLabel) {
-    final normalized = providerLabel.toLowerCase();
+    final normalized = providerLabel.toLowerCase().trim();
     final providerName = providerLabel.isEmpty
         ? 'Demo'
         : providerLabel[0].toUpperCase() + providerLabel.substring(1);
@@ -71,9 +71,10 @@ class DemoAppController extends Notifier<DemoAppState> {
       state.copyWith(
         isAuthenticated: true,
         user: _createUser(
-          name: providerName == 'Apple' ? 'Aliya ❤️' : 'Aliya ❤️',
+          name: 'Talgat',
           email: '${normalized.isEmpty ? 'demo' : normalized}@zerdestudy.app',
-          goal: 'Reach confident demo flow in 14 days',
+          goal: 'Reach a polished presentation flow across all branches',
+          role: '$providerName learner',
         ),
       ),
     );
@@ -99,6 +100,7 @@ class DemoAppController extends Notifier<DemoAppState> {
     state = _withDerived(
       state.copyWith(
         currentTrackId: trackId,
+        focusedLessonId: null,
         focusedPracticeId: null,
       ),
     );
@@ -129,12 +131,62 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
+  void completeQuiz(String quizId, {required bool isCorrect}) {
+    final quizStats = Map<String, QuizAnswerStat>.from(state.quizAnswerStats);
+    final previous = quizStats[quizId] ??
+        const QuizAnswerStat(
+          attempts: 0,
+          correctAnswers: 0,
+        );
+    quizStats[quizId] = previous.copyWith(
+      attempts: previous.attempts + 1,
+      correctAnswers: previous.correctAnswers + (isCorrect ? 1 : 0),
+    );
+
+    var completedQuizIds = Set<String>.from(state.completedQuizIds);
+    var xp = state.xp;
+    if (isCorrect && !completedQuizIds.contains(quizId)) {
+      completedQuizIds = completedQuizIds..add(quizId);
+      xp += 6;
+    }
+
+    state = _withDerived(
+      state.copyWith(
+        completedQuizIds: completedQuizIds,
+        quizAnswerStats: quizStats,
+        xp: xp,
+      ),
+    );
+    _persist();
+  }
+
+  void completeTrainer(String trainerId) {
+    if (state.completedTrainerIds.contains(trainerId)) {
+      return;
+    }
+
+    final completedTrainerIds = Set<String>.from(state.completedTrainerIds)
+      ..add(trainerId);
+
+    state = _withDerived(
+      state.copyWith(
+        completedTrainerIds: completedTrainerIds,
+        xp: state.xp + 8,
+      ),
+    );
+    _persist();
+  }
+
   void completeLesson(String lessonId) {
     if (state.completedLessonIds.contains(lessonId)) {
       return;
     }
 
     final lesson = _catalog.lessonById(lessonId);
+    if (!_catalog.lessonRequirementsMet(state, lessonId)) {
+      return;
+    }
+
     final completedLessonIds = Set<String>.from(state.completedLessonIds)
       ..add(lessonId);
 
@@ -177,6 +229,40 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
+  void viewCommunityCourse(String courseId) {
+    if (state.viewedCommunityCourseIds.contains(courseId)) {
+      return;
+    }
+
+    final viewedCommunityCourseIds =
+        Set<String>.from(state.viewedCommunityCourseIds)..add(courseId);
+
+    state = _withDerived(
+      state.copyWith(
+        viewedCommunityCourseIds: viewedCommunityCourseIds,
+        xp: state.xp + 4,
+      ),
+    );
+    _persist();
+  }
+
+  void saveCommunityCourse(String courseId) {
+    if (state.savedCommunityCourseIds.contains(courseId)) {
+      return;
+    }
+
+    final savedCommunityCourseIds =
+        Set<String>.from(state.savedCommunityCourseIds)..add(courseId);
+
+    state = _withDerived(
+      state.copyWith(
+        savedCommunityCourseIds: savedCommunityCourseIds,
+        xp: state.xp + 10,
+      ),
+    );
+    _persist();
+  }
+
   void sendAiMessage(String message) {
     final trimmed = message.trim();
     if (trimmed.isEmpty) {
@@ -202,13 +288,21 @@ class DemoAppController extends Notifier<DemoAppState> {
         ),
       );
 
-    state = _withDerived(state.copyWith(aiMessages: messages));
+    state = _withDerived(
+      state.copyWith(
+        aiMessages: messages,
+        xp: state.xp + 2,
+      ),
+    );
     _persist();
   }
 
   void resetDemo() {
     final locale = state.locale;
-    final currentUser = state.user ?? _createUser(email: 'demo@zerdestudy.app');
+    final currentUser = state.user ??
+        _createUser(
+          email: 'demo@zerdestudy.app',
+        );
     final seeded = _seedState().copyWith(
       locale: locale,
       isAuthenticated: true,
@@ -225,22 +319,57 @@ class DemoAppController extends Notifier<DemoAppState> {
       isAuthenticated: false,
       user: null,
       currentTrackId: 'fundamentals',
-      focusedLessonId: 'fundamentals_flow',
+      focusedLessonId: 'fundamentals_lesson_1_2',
       focusedPracticeId: null,
       completedLessonIds: <String>{
-        'fundamentals_mindset',
-        'frontend_html',
+        'fundamentals_lesson_1_1',
+        'frontend_lesson_1_1',
+        'operating_systems_lesson_1_1',
       },
-      completedPracticeIds: <String>{},
-      xp: 240,
-      streak: 4,
+      completedPracticeIds: <String>{
+        'frontend_practice_1',
+      },
+      completedQuizIds: <String>{
+        'fundamentals_lesson_1_1_quiz_1',
+        'frontend_lesson_1_1_quiz_1',
+        'operating_systems_lesson_1_1_quiz_1',
+      },
+      completedTrainerIds: <String>{
+        'fundamentals_lesson_1_1_trainer_1',
+        'frontend_lesson_1_1_trainer_1',
+        'operating_systems_lesson_1_1_trainer_1',
+      },
+      quizAnswerStats: <String, QuizAnswerStat>{
+        'fundamentals_lesson_1_1_quiz_1': const QuizAnswerStat(
+          attempts: 1,
+          correctAnswers: 1,
+        ),
+        'frontend_lesson_1_1_quiz_1': const QuizAnswerStat(
+          attempts: 2,
+          correctAnswers: 1,
+        ),
+        'operating_systems_lesson_1_1_quiz_1': const QuizAnswerStat(
+          attempts: 1,
+          correctAnswers: 1,
+        ),
+      },
+      viewedCommunityCourseIds: <String>{
+        'course_portfolio_engineering',
+        'course_sql_for_analysts',
+      },
+      savedCommunityCourseIds: <String>{
+        'course_ml_journal_club',
+      },
+      xp: 468,
+      streak: 7,
       dailyMissionDone: false,
-      weeklyActivity: <int>[2, 3, 1, 4, 2, 5, 1],
+      weeklyActivity: <int>[2, 4, 3, 5, 4, 6, 2],
       aiMessages: <AiMessage>[
         AiMessage(
           id: 'mentor-seed',
           author: AiAuthor.mentor,
-          text: 'I can explain lessons, suggest the next step, and help you narrate the demo.',
+          text:
+              'I can walk through CS Core topics, explain code output, and help you narrate the demo with clear next steps.',
           createdAt: DateTime(2026, 3, 16, 9, 0),
         ),
       ],
@@ -258,12 +387,13 @@ class DemoAppController extends Notifier<DemoAppState> {
     String? name,
     required String email,
     String? goal,
+    String? role,
   }) {
     return DemoUser(
-      name: (name == null || name.trim().isEmpty) ? 'Aliya ❤️' : name.trim(),
+      name: (name == null || name.trim().isEmpty) ? 'Talgat' : name.trim(),
       email: email.trim(),
-      role: 'Student Explorer',
-      goal: goal ?? 'Reach the Frontend track with visible progress',
+      role: role ?? 'Student Explorer',
+      goal: goal ?? 'Cover the full demo without dead ends',
     );
   }
 

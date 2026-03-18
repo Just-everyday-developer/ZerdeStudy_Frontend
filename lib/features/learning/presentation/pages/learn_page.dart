@@ -19,8 +19,6 @@ class LearnPage extends ConsumerWidget {
     final state = ref.watch(demoAppControllerProvider);
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
-    final playableTracks =
-        catalog.tracks.where((track) => track.isPlayable).toList(growable: false);
     final currentTrack = catalog.trackById(state.currentTrackId);
     final progress = catalog.progressForTrack(state, currentTrack.id);
     final l10n = context.l10n;
@@ -33,7 +31,7 @@ class LearnPage extends ConsumerWidget {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: playableTracks.map((track) {
+            children: catalog.tracks.map((track) {
               final selected = track.id == currentTrack.id;
               return ChoiceChip(
                 label: Text(track.title.resolve(state.locale)),
@@ -55,23 +53,11 @@ class LearnPage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.text('current_focus'),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text(l10n.text('current_focus'), style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
-                Text(
-                  currentTrack.title.resolve(state.locale),
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
+                Text(currentTrack.title.resolve(state.locale), style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 8),
-                Text(
-                  currentTrack.outcome.resolve(state.locale),
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
+                Text(currentTrack.outcome.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.45)),
                 const SizedBox(height: 16),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
@@ -84,7 +70,7 @@ class LearnPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '${progress.completedUnits}/${progress.totalUnits} ${l10n.text('lessons_done').toLowerCase()}',
+                  '${progress.completedUnits}/${progress.totalUnits} units • ${progress.completedQuizzes}/${progress.totalQuizzes} quizzes • ${progress.completedTrainers}/${progress.totalTrainers} labs',
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ],
@@ -138,18 +124,9 @@ class _ModuleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            module.title.resolve(locale),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text(module.title.resolve(locale), style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 6),
-          Text(
-            module.summary.resolve(locale),
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              height: 1.45,
-            ),
-          ),
+          Text(module.summary.resolve(locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.45)),
           const SizedBox(height: 16),
           ...module.lessons.map((lesson) => _UnitTile(
                 title: lesson.title.resolve(locale),
@@ -193,31 +170,12 @@ class _UnitTile extends StatelessWidget {
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        backgroundColor: (completed ? AppColors.success : AppColors.primary)
-            .withValues(alpha: 0.18),
-        child: Icon(
-          completed ? Icons.check_rounded : icon,
-          color: completed ? AppColors.success : AppColors.primary,
-        ),
+        backgroundColor: (completed ? AppColors.success : AppColors.primary).withValues(alpha: 0.18),
+        child: Icon(completed ? Icons.check_rounded : icon, color: completed ? AppColors.success : AppColors.primary),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
-          height: 1.3,
-        ),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: AppColors.textSecondary,
-      ),
+      title: Text(title, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+      subtitle: Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, height: 1.3)),
+      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
     );
   }
 }

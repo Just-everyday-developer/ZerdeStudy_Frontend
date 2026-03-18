@@ -10,6 +10,8 @@ import '../../features/analytics/presentation/pages/stats_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
+import '../../features/home/presentation/pages/community_course_detail_page.dart';
+import '../../features/home/presentation/pages/community_courses_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/knowledge_tree/presentation/pages/knowledge_tree.dart';
 import '../../features/learning/presentation/pages/learn_page.dart';
@@ -175,6 +177,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const LeaderboardPage(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.courses,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const CommunityCoursesPage(),
+        ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.courses}/:courseId',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: CommunityCourseDetailPage(
+            courseId: state.pathParameters['courseId'] ?? '',
+          ),
         ),
       ),
     ],

@@ -11,6 +11,8 @@ class SkillNode extends StatelessWidget {
     required this.statusLabel,
     required this.onTap,
     required this.offset,
+    this.diameter = 88,
+    this.labelWidth = 120,
   });
 
   final String label;
@@ -19,6 +21,8 @@ class SkillNode extends StatelessWidget {
   final String statusLabel;
   final VoidCallback onTap;
   final Offset offset;
+  final double diameter;
+  final double labelWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +34,8 @@ class SkillNode extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              width: 88,
-              height: 88,
+              width: diameter,
+              height: diameter,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.surface,
@@ -44,11 +48,11 @@ class SkillNode extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(icon, color: color, size: 32),
+              child: Icon(icon, color: color, size: diameter * 0.36),
             ),
             const SizedBox(height: 10),
             SizedBox(
-              width: 120,
+              width: labelWidth,
               child: Column(
                 children: [
                   Text(

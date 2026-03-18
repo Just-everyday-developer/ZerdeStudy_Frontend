@@ -57,123 +57,215 @@ void main() {
     );
   }
 
-  testWidgets('demo entry from welcome opens dashboard', (tester) async {
+  Future<void> pumpScene(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  testWidgets('social login from welcome opens dashboard', (tester) async {
     await configureSurface(tester);
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final preferences = await SharedPreferences.getInstance();
+    final container = await createContainer();
+    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
 
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(preferences),
-        ],
+      UncontrolledProviderScope(
+        container: container,
         child: const MyApp(),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 200));
+    await pumpScene(tester);
 
-    expect(find.text('Войти в демо'), findsOneWidget);
+    expect(find.text('Log in'), findsOneWidget);
+    await tester.tap(find.text('GitHub'));
+    await pumpScene(tester);
 
-    await tester.ensureVisible(find.text('Войти в демо'));
-    await tester.tap(find.text('Войти в демо'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 450));
-
-    expect(find.text('Дашборд'), findsOneWidget);
+    expect(find.text('Dashboard'), findsOneWidget);
   });
 
-  testWidgets('locale switch updates welcome CTA', (tester) async {
+  testWidgets('locale switch updates welcome CTA text', (tester) async {
     await configureSurface(tester);
     final container = await createContainer();
+
+    await tester.pumpWidget(buildTestApp(container, const WelcomePage()));
+    await pumpScene(tester);
+
+    expect(find.text('Войти'), findsOneWidget);
+    await tester.tap(find.text('EN'));
+    await pumpScene(tester);
+
+    expect(find.text('Log in'), findsOneWidget);
+  });
+
+  testWidgets('tree renders the new organic layout and opens track overview',
+      (tester) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+    final controller = container.read(demoAppControllerProvider.notifier);
+    controller.changeLocale(AppLocale.en);
+    controller.loginWithProvider('google');
 
     await tester.pumpWidget(
-      buildTestApp(container, const WelcomePage()),
+      UncontrolledProviderScope(
+        container: container,
+        child: const MyApp(),
+      ),
     );
-    await tester.pump(const Duration(milliseconds: 200));
+    await pumpScene(tester);
 
-    expect(find.text('Войти в демо'), findsOneWidget);
+    await tester.tap(find.text('Tree'));
+    await pumpScene(tester);
 
-    await tester.ensureVisible(find.text('EN'));
-    await tester.tap(find.text('EN'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('grows like a real tree'), findsOneWidget);
+    expect(find.text('Mathematical Analysis'), findsOneWidget);
+    expect(find.text('Discrete Math'), findsOneWidget);
+    expect(find.text('Linear Algebra'), findsOneWidget);
 
-    expect(find.text('Enter demo'), findsOneWidget);
+    await tester.tap(find.text('Discrete Math').first);
+    await pumpScene(tester);
+
+    expect(find.text('Track overview'), findsOneWidget);
+    expect(find.text('Modules'), findsOneWidget);
   });
 
-  testWidgets('completing a lesson updates demo state', (tester) async {
+  testWidgets('lesson requires quiz and memory lab before completion', (tester) async {
     await configureSurface(tester);
     final container = await createContainer();
+    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
 
     await tester.pumpWidget(
       buildTestApp(
         container,
-        const LessonPage(lessonId: 'fundamentals_flow'),
+        const LessonPage(lessonId: 'fundamentals_lesson_2_2'),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 100));
+    await pumpScene(tester);
+
+    expect(find.text('Output Quiz'), findsOneWidget);
+    expect(find.text('Code Memory Lab'), findsOneWidget);
+
+    await tester.tap(find.text('3'));
+    await pumpScene(tester);
+    await tester.tap(find.text('Check answer'));
+    await pumpScene(tester);
+
+    container.read(demoAppControllerProvider.notifier).completeTrainer(
+          'fundamentals_lesson_2_2_trainer_1',
+        );
+    await pumpScene(tester);
+
+    await tester.scrollUntilVisible(
+      find.text('Complete lesson'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Complete lesson'));
+    await pumpScene(tester);
 
     expect(
       container.read(demoAppControllerProvider).completedLessonIds,
-      isNot(contains('fundamentals_flow')),
+      contains('fundamentals_lesson_2_2'),
     );
-
-    await tester.ensureVisible(find.text('Завершить урок'));
-    await tester.tap(find.text('Завершить урок'));
-    await tester.pump();
-
-    expect(
-      container.read(demoAppControllerProvider).completedLessonIds,
-      contains('fundamentals_flow'),
-    );
-    expect(find.text('+55 XP'), findsOneWidget);
   });
 
-  testWidgets('ai mentor sends message and appends deterministic reply',
+  testWidgets('ai mentor returns different deterministic replies for different intents',
       (tester) async {
     await configureSurface(tester);
     final container = await createContainer();
+    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
 
-    await tester.pumpWidget(
-      buildTestApp(container, const AiMentorPage()),
+    await tester.pumpWidget(buildTestApp(container, const AiMentorPage()));
+    await pumpScene(tester);
+
+    expect(find.text('Common questions'), findsOneWidget);
+    expect(
+      find.text('Why does the tree begin with Computer Science Core?'),
+      findsOneWidget,
     );
-    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.enterText(find.byType(TextField).last, 'Explain the tree');
+    await tester.tap(find.text('Send'));
+    await pumpScene(tester);
+    final firstReply = container.read(demoAppControllerProvider).aiMessages.last.text;
 
     await tester.enterText(
       find.byType(TextField).last,
-      'How do I debug this?',
+      'Give me a hint for the next output quiz.',
     );
-    await tester.tap(find.text('Отправить'));
-    await tester.pump();
+    await tester.tap(find.text('Send'));
+    await pumpScene(tester);
+    final secondReply = container.read(demoAppControllerProvider).aiMessages.last.text;
 
-    final messages = container.read(demoAppControllerProvider).aiMessages;
-    expect(messages.length, 3);
-    expect(messages.last.author.name, 'mentor');
+    expect(firstReply, isNot(secondReply));
+  });
+
+  testWidgets('home community block opens catalog and detail page', (tester) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+    final controller = container.read(demoAppControllerProvider.notifier);
+    controller.changeLocale(AppLocale.en);
+    controller.loginWithProvider('google');
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MyApp(),
+      ),
+    );
+    await pumpScene(tester);
+
+    await tester.scrollUntilVisible(find.text('Open catalog'), 300);
+    await tester.tap(find.text('Open catalog'));
+    await pumpScene(tester);
+
+    expect(find.text('Community courses'), findsOneWidget);
+    await tester.tap(find.text('Portfolio Engineering for Students'));
+    await pumpScene(tester);
+
+    expect(find.text('Save course'), findsOneWidget);
   });
 
   testWidgets('profile reset restores seeded progress', (tester) async {
     await configureSurface(tester);
     final container = await createContainer();
     final controller = container.read(demoAppControllerProvider.notifier);
-    controller.loginWithEmail(email: 'demo@zerdestudy.app');
-    controller.completeLesson('fundamentals_flow');
+    controller.changeLocale(AppLocale.en);
+    controller.loginWithProvider('google');
+    controller.completeQuiz('fundamentals_lesson_2_2_quiz_1', isCorrect: true);
+    controller.completeTrainer('fundamentals_lesson_2_2_trainer_1');
+    controller.completeLesson('fundamentals_lesson_2_2');
 
     expect(
       container.read(demoAppControllerProvider).completedLessonIds,
-      contains('fundamentals_flow'),
+      contains('fundamentals_lesson_2_2'),
     );
 
-    await tester.pumpWidget(
-      buildTestApp(container, const ProfilePage()),
-    );
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpWidget(buildTestApp(container, const ProfilePage()));
+    await pumpScene(tester);
 
-    await tester.ensureVisible(find.text('Сбросить демо'));
-    await tester.tap(find.text('Сбросить демо'));
-    await tester.pump();
+    await tester.scrollUntilVisible(find.byIcon(Icons.restart_alt_rounded), 300);
+    await tester.tap(find.byIcon(Icons.restart_alt_rounded));
+    await pumpScene(tester);
 
     final state = container.read(demoAppControllerProvider);
-    expect(state.completedLessonIds, isNot(contains('fundamentals_flow')));
+    expect(state.completedLessonIds, isNot(contains('fundamentals_lesson_2_2')));
     expect(state.isAuthenticated, isTrue);
+  });
+
+  testWidgets('profile achievements menu opens unlocked and locked sections',
+      (tester) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+    final controller = container.read(demoAppControllerProvider.notifier);
+    controller.changeLocale(AppLocale.en);
+    controller.loginWithProvider('google');
+
+    await tester.pumpWidget(buildTestApp(container, const ProfilePage()));
+    await pumpScene(tester);
+
+    await tester.tap(find.text('Open menu'));
+    await pumpScene(tester);
+
+    expect(find.text('Unlocked'), findsOneWidget);
+    expect(find.text('Locked'), findsOneWidget);
   });
 }

@@ -10,7 +10,7 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 
-class PracticePage extends ConsumerWidget {
+class PracticePage extends ConsumerStatefulWidget {
   const PracticePage({
     super.key,
     required this.practiceId,
@@ -19,12 +19,20 @@ class PracticePage extends ConsumerWidget {
   final String practiceId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PracticePage> createState() => _PracticePageState();
+}
+
+class _PracticePageState extends ConsumerState<PracticePage> {
+  final Set<int> _checkedKnowledgeItems = <int>{};
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
-    final practice = catalog.practiceById(practiceId);
-    final completed = state.completedPracticeIds.contains(practiceId);
+    final practice = catalog.practiceById(widget.practiceId);
+    final completed = state.completedPracticeIds.contains(widget.practiceId);
+    final checksComplete = _checkedKnowledgeItems.length == practice.knowledgeChecks.length;
     final l10n = context.l10n;
 
     return AppPageScaffold(
@@ -37,18 +45,9 @@ class PracticePage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  practice.summary.resolve(state.locale),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text(practice.summary.resolve(state.locale), style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
-                Text(
-                  practice.brief.resolve(state.locale),
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
+                Text(practice.brief.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.45)),
               ],
             ),
           ),
@@ -58,10 +57,7 @@ class PracticePage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Starter Code',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('Starter Code', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
@@ -70,14 +66,7 @@ class PracticePage extends ConsumerWidget {
                     color: AppColors.backgroundElevated,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(
-                    practice.starterCode,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontFamily: 'monospace',
-                      height: 1.45,
-                    ),
-                  ),
+                  child: Text(practice.starterCode, style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'monospace', height: 1.45)),
                 ),
               ],
             ),
@@ -88,10 +77,7 @@ class PracticePage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Success Criteria',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('Success Criteria', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 ...practice.successCriteria.map((criterion) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -100,41 +86,58 @@ class PracticePage extends ConsumerWidget {
                         children: [
                           const Padding(
                             padding: EdgeInsets.only(top: 4),
-                            child: Icon(
-                              Icons.check_circle_outline_rounded,
-                              size: 18,
-                              color: AppColors.success,
-                            ),
+                            child: Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.success),
                           ),
                           const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              criterion.resolve(state.locale),
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
+                          Expanded(child: Text(criterion.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.4))),
                         ],
                       ),
                     )),
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          GlowCard(
+            accent: AppColors.primary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Quick check', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 10),
+                ...practice.knowledgeChecks.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final check = entry.value;
+                  final selected = _checkedKnowledgeItems.contains(index);
+                  return CheckboxListTile(
+                    value: selected,
+                    onChanged: completed
+                        ? null
+                        : (value) {
+                            setState(() {
+                              if (value == true) {
+                                _checkedKnowledgeItems.add(index);
+                              } else {
+                                _checkedKnowledgeItems.remove(index);
+                              }
+                            });
+                          },
+                    title: Text(check.resolve(state.locale), style: const TextStyle(color: AppColors.textPrimary)),
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                  );
+                }),
+              ],
+            ),
+          ),
           const SizedBox(height: 18),
           AppButton.primary(
-            label: completed
-                ? l10n.text('status_completed')
-                : l10n.text('complete_practice'),
+            label: completed ? l10n.text('status_completed') : l10n.text('complete_practice'),
             icon: completed ? Icons.check_circle_rounded : Icons.code_rounded,
-            onPressed: completed
+            onPressed: completed || !checksComplete
                 ? null
                 : () {
-                    controller.completePractice(practiceId);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('+${practice.xpReward} XP')),
-                    );
+                    controller.completePractice(widget.practiceId);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('+${practice.xpReward} XP')));
                   },
           ),
           const SizedBox(height: 12),
@@ -142,7 +145,7 @@ class PracticePage extends ConsumerWidget {
             label: l10n.text('ask_ai'),
             icon: Icons.smart_toy_rounded,
             onPressed: () {
-              controller.focusPractice(practiceId);
+              controller.focusPractice(widget.practiceId);
               controller.sendAiMessage(practice.promptSuggestion.resolve(state.locale));
               context.go(AppRoutes.ai);
             },

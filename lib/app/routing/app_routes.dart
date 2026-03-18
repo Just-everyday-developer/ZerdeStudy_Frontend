@@ -12,10 +12,13 @@ class AppRoutes {
   static const String practice = '/practice';
   static const String stats = '/stats';
   static const String leaderboard = '/leaderboard';
+  static const String courses = '/courses';
 
   static String trackById(String trackId) => '$track/$trackId';
 
   static String lessonById(String lessonId) => '$lesson/$lessonId';
 
   static String practiceById(String practiceId) => '$practice/$practiceId';
+
+  static String courseById(String courseId) => '$courses/$courseId';
 }

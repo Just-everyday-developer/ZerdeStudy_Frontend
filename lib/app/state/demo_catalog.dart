@@ -1,187 +1,279 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import 'demo_app_state.dart';
+import 'demo_catalog_cs_data.dart';
+import 'demo_catalog_it_data.dart';
+import 'demo_catalog_support.dart';
 import 'demo_models.dart';
 
 class DemoCatalog {
-  DemoCatalog() : tracks = _buildTracks();
+  DemoCatalog()
+      : tracks = <LearningTrack>[
+          ...buildComputerScienceTracks(),
+          ...buildItSphereTracks(),
+        ],
+        communityCourses = _buildCommunityCourses(),
+        _leaderboardSeed = _buildLeaderboardSeed();
 
   final List<LearningTrack> tracks;
+  final List<CommunityCourse> communityCourses;
+  final List<LeaderboardEntry> _leaderboardSeed;
 
-  static const List<Achievement> _achievementBlueprints = <Achievement>[
-    Achievement(
-      id: 'first_step',
-      title: LocalizedText(
-        ru: 'Первый шаг',
-        en: 'First Step',
-        kk: 'Алғашқы қадам',
-      ),
-      description: LocalizedText(
-        ru: 'Завершите первый урок.',
-        en: 'Complete your first lesson.',
-        kk: 'Алғашқы сабақты аяқтаңыз.',
-      ),
-      icon: Icons.bolt_rounded,
-      goal: 1,
-      progress: 0,
-      unlocked: false,
-    ),
-    Achievement(
-      id: 'focus_mode',
-      title: LocalizedText(
-        ru: 'Фокус-режим',
-        en: 'Focus Mode',
-        kk: 'Фокус режимі',
-      ),
-      description: LocalizedText(
-        ru: 'Доведите streak до 5 дней.',
-        en: 'Reach a 5-day streak.',
-        kk: '5 күндік streak жинаңыз.',
-      ),
-      icon: Icons.local_fire_department_rounded,
-      goal: 5,
-      progress: 0,
-      unlocked: false,
-    ),
-    Achievement(
-      id: 'frontend_ready',
-      title: LocalizedText(
-        ru: 'Frontend Ready',
-        en: 'Frontend Ready',
-        kk: 'Frontend Ready',
-      ),
-      description: LocalizedText(
-        ru: 'Закройте ветку Frontend.',
-        en: 'Finish the Frontend track.',
-        kk: 'Frontend тармағын жабыңыз.',
-      ),
-      icon: Icons.web_asset_rounded,
-      goal: 1,
-      progress: 0,
-      unlocked: false,
-    ),
-    Achievement(
-      id: 'xp_360',
-      title: LocalizedText(
-        ru: 'Ритм роста',
-        en: 'Growth Rhythm',
-        kk: 'Өсу ырғағы',
-      ),
-      description: LocalizedText(
-        ru: 'Наберите 360 XP.',
-        en: 'Reach 360 XP.',
-        kk: '360 XP жинаңыз.',
-      ),
-      icon: Icons.stars_rounded,
-      goal: 360,
-      progress: 0,
-      unlocked: false,
-    ),
-  ];
+  late final Map<String, LearningTrack> _tracksById = <String, LearningTrack>{
+    for (final track in tracks) track.id: track,
+  };
+  late final Map<String, LessonItem> _lessonsById = <String, LessonItem>{
+    for (final track in tracks)
+      for (final module in track.modules)
+        for (final lesson in module.lessons) lesson.id: lesson,
+  };
+  late final Map<String, PracticeTask> _practicesById = <String, PracticeTask>{
+    for (final track in tracks)
+      for (final module in track.modules)
+        if (module.practice != null) module.practice!.id: module.practice!,
+  };
+  late final Map<String, CommunityCourse> _coursesById =
+      <String, CommunityCourse>{
+    for (final course in communityCourses) course.id: course,
+  };
 
-  LearningTrack trackById(String trackId) {
-    return tracks.firstWhere((track) => track.id == trackId);
+  LearningTrack trackById(String trackId) => _tracksById[trackId] ?? tracks.first;
+
+  LessonItem lessonById(String lessonId) =>
+      _lessonsById[lessonId] ?? _lessonsById.values.first;
+
+  PracticeTask practiceById(String practiceId) =>
+      _practicesById[practiceId] ?? _practicesById.values.first;
+
+  CommunityCourse courseById(String courseId) =>
+      _coursesById[courseId] ?? communityCourses.first;
+
+  List<LearningTrack> tracksForZone(TrackZone zone) {
+    return tracks.where((track) => track.zone == zone).toList(growable: false);
   }
 
-  LessonItem lessonById(String lessonId) {
-    for (final track in tracks) {
-      for (final module in track.modules) {
-        for (final lesson in module.lessons) {
-          if (lesson.id == lessonId) {
-            return lesson;
-          }
-        }
-      }
+  LocalizedText zoneTitle(TrackZone zone) {
+    switch (zone) {
+      case TrackZone.computerScienceCore:
+        return sameText('Computer Science Core');
+      case TrackZone.itSpheres:
+        return sameText('Applied IT Spheres');
     }
-    throw StateError('Unknown lesson id: $lessonId');
   }
 
-  PracticeTask practiceById(String practiceId) {
-    for (final track in tracks) {
-      for (final module in track.modules) {
-        if (module.practice?.id == practiceId) {
-          return module.practice!;
-        }
-      }
+  LocalizedText zoneSummary(TrackZone zone) {
+    switch (zone) {
+      case TrackZone.computerScienceCore:
+        return sameText(
+          'Foundational topics that explain how systems, data, math, and machines behave.',
+        );
+      case TrackZone.itSpheres:
+        return sameText(
+          'Interactive applied branches built on top of the core, from frontend to machine learning.',
+        );
     }
-    throw StateError('Unknown practice id: $practiceId');
+  }
+
+  int completedUnitsForZone(DemoAppState state, TrackZone zone) {
+    return tracksForZone(zone)
+        .fold<int>(0, (sum, track) => sum + _completedUnitsForTrack(state, track));
+  }
+
+  int totalUnitsForZone(TrackZone zone) {
+    return tracksForZone(zone).fold<int>(0, (sum, track) => sum + track.totalUnits);
+  }
+
+  bool lessonRequirementsMet(DemoAppState state, String lessonId) {
+    final lesson = lessonById(lessonId);
+    return lesson.completionRequirements.every(
+      (id) =>
+          state.completedQuizIds.contains(id) ||
+          state.completedTrainerIds.contains(id),
+    );
   }
 
   TrackProgress progressForTrack(DemoAppState state, String trackId) {
     final track = trackById(trackId);
-    final completedUnits = _completedUnitsForTrack(state, track);
-
-    return TrackProgress(
-      state: visualStateFor(state, track),
-      completedUnits: completedUnits,
-      totalUnits: track.totalUnits,
-      nextTarget: nextTargetForTrack(state, trackId),
-    );
-  }
-
-  TrackVisualState visualStateFor(DemoAppState state, LearningTrack track) {
-    if (!track.isPlayable) {
-      return TrackVisualState.locked;
-    }
-    if (_completedUnitsForTrack(state, track) >= track.totalUnits) {
-      return TrackVisualState.completed;
-    }
-    return TrackVisualState.inProgress;
-  }
-
-  LearningTarget? nextTargetForTrack(DemoAppState state, String trackId) {
-    final track = trackById(trackId);
-    if (!track.isPlayable) {
-      return null;
-    }
+    var completedUnits = 0;
+    LearningTarget? nextTarget;
 
     for (final module in track.modules) {
       for (final lesson in module.lessons) {
-        if (!state.completedLessonIds.contains(lesson.id)) {
-          return LearningTarget.lesson(lesson);
+        if (state.completedLessonIds.contains(lesson.id)) {
+          completedUnits += 1;
+        } else {
+          nextTarget ??= LearningTarget.lesson(lesson);
         }
       }
-
       final practice = module.practice;
-      if (practice != null &&
-          !state.completedPracticeIds.contains(practice.id)) {
-        return LearningTarget.practice(practice);
+      if (practice != null) {
+        if (state.completedPracticeIds.contains(practice.id)) {
+          completedUnits += 1;
+        } else {
+          nextTarget ??= LearningTarget.practice(practice);
+        }
       }
     }
-    return null;
+
+    final quizIds = <String>[
+      for (final module in track.modules)
+        for (final lesson in module.lessons)
+          for (final quiz in lesson.quizzes) quiz.id,
+    ];
+    final trainerIds = <String>[
+      for (final module in track.modules)
+        for (final lesson in module.lessons)
+          for (final trainer in lesson.codeTrainers) trainer.id,
+    ];
+
+    return TrackProgress(
+      state: trackAvailabilityFor(state, track.id),
+      completedUnits: completedUnits,
+      totalUnits: track.totalUnits,
+      completedQuizzes: quizIds.where(state.completedQuizIds.contains).length,
+      totalQuizzes: quizIds.length,
+      completedTrainers: trainerIds.where(state.completedTrainerIds.contains).length,
+      totalTrainers: trainerIds.length,
+      nextTarget: nextTarget,
+    );
+  }
+
+  TrackAvailability trackAvailabilityFor(DemoAppState state, String trackId) {
+    final track = trackById(trackId);
+    final progress = _completedUnitsForTrack(state, track);
+    if (progress == 0) {
+      return TrackAvailability.available;
+    }
+    if (progress < track.totalUnits) {
+      return TrackAvailability.inProgress;
+    }
+    return _isMastered(state, track)
+        ? TrackAvailability.mastered
+        : TrackAvailability.completed;
+  }
+
+  int totalUnits() => tracks.fold<int>(0, (sum, track) => sum + track.totalUnits);
+
+  int totalCompletedUnits(DemoAppState state) =>
+      state.completedLessonIds.length + state.completedPracticeIds.length;
+
+  int totalQuizzes() =>
+      tracks.fold<int>(0, (sum, track) => sum + track.totalQuizzes);
+
+  int totalTrainers() =>
+      tracks.fold<int>(0, (sum, track) => sum + track.totalTrainers);
+
+  int completedTracks(DemoAppState state) {
+    return tracks
+        .where((track) {
+          final availability = trackAvailabilityFor(state, track.id);
+          return availability == TrackAvailability.completed ||
+              availability == TrackAvailability.mastered;
+        })
+        .length;
+  }
+
+  int masteredTracks(DemoAppState state) {
+    return tracks
+        .where((track) => trackAvailabilityFor(state, track.id) == TrackAvailability.mastered)
+        .length;
   }
 
   List<Achievement> achievementsFor(DemoAppState state) {
     final completedLessons = state.completedLessonIds.length;
-    final frontendComplete =
-        progressForTrack(state, 'frontend').state == TrackVisualState.completed;
+    final completedPractices = state.completedPracticeIds.length;
+    final completedQuizzes = state.completedQuizIds.length;
+    final completedTrainers = state.completedTrainerIds.length;
+    final userMessages =
+        state.aiMessages.where((message) => message.author == AiAuthor.user).length;
+    final csDone = [
+      'mathematics',
+      'mathematical_analysis',
+      'discrete_math',
+      'linear_algebra_calculus',
+      'probability_statistics_analytics',
+      'algorithms_data_structures',
+      'databases',
+      'networking_protocols',
+      'ai_theory',
+      'computer_architecture',
+      'information_security_foundations',
+      'operating_systems',
+    ]
+        .where((id) => _isTrackFinished(state, id)).length;
+    final itDone = [
+      'fundamentals',
+      'frontend',
+      'backend',
+      'mobile',
+      'android_development',
+      'ios_development',
+      'crossplatform_development',
+      'cybersecurity',
+      'sre_devops',
+      'system_administration',
+      'machine_learning',
+      'qa_engineering',
+    ]
+        .where((id) => _isTrackFinished(state, id)).length;
+    final courseSignals =
+        state.viewedCommunityCourseIds.length + state.savedCommunityCourseIds.length;
+    final frontendDone = _isTrackFinished(state, 'frontend') ? 1 : 0;
+    final systemsDone = _isTrackFinished(state, 'operating_systems') ? 1 : 0;
+    final dataDone =
+        (_isTrackFinished(state, 'databases') ? 1 : 0) +
+            (_isTrackFinished(state, 'probability_statistics_analytics') ? 1 : 0);
+    final mathRootsDone =
+        (_isTrackFinished(state, 'mathematics') ? 1 : 0) +
+            (_isTrackFinished(state, 'mathematical_analysis') ? 1 : 0) +
+            (_isTrackFinished(state, 'discrete_math') ? 1 : 0) +
+            (_isTrackFinished(state, 'linear_algebra_calculus') ? 1 : 0) +
+            (_isTrackFinished(state, 'probability_statistics_analytics') ? 1 : 0);
+    final algorithmDone =
+        _isTrackFinished(state, 'algorithms_data_structures') ? 1 : 0;
+    final networkDone =
+        _isTrackFinished(state, 'networking_protocols') ? 1 : 0;
+    final mlEngineerDone =
+        _isTrackFinished(state, 'machine_learning') ? 1 : 0;
+    final qaDone = _isTrackFinished(state, 'qa_engineering') ? 1 : 0;
+    final systemAdminDone =
+        _isTrackFinished(state, 'system_administration') ? 1 : 0;
+    final mobileBranchesDone = [
+      'mobile',
+      'android_development',
+      'ios_development',
+      'crossplatform_development',
+    ].where((id) => _isTrackFinished(state, id)).length;
+    final securityStackDone =
+        (_isTrackFinished(state, 'information_security_foundations') ? 1 : 0) +
+            (_isTrackFinished(state, 'cybersecurity') ? 1 : 0);
 
-    return _achievementBlueprints.map((blueprint) {
-      switch (blueprint.id) {
-        case 'first_step':
-          return blueprint.copyWith(
-            progress: completedLessons,
-            unlocked: completedLessons >= blueprint.goal,
-          );
-        case 'focus_mode':
-          return blueprint.copyWith(
-            progress: state.streak,
-            unlocked: state.streak >= blueprint.goal,
-          );
-        case 'frontend_ready':
-          return blueprint.copyWith(
-            progress: frontendComplete ? 1 : 0,
-            unlocked: frontendComplete,
-          );
-        case 'xp_360':
-          return blueprint.copyWith(
-            progress: state.xp,
-            unlocked: state.xp >= blueprint.goal,
-          );
-        default:
-          return blueprint;
-      }
-    }).toList(growable: false);
+    return <Achievement>[
+      _achievement('first_step', 'First step', 'Complete the first lesson in any branch.', Icons.flag_rounded, 1, completedLessons),
+      _achievement('lesson_runner', 'Lesson runner', 'Finish 6 lessons across the tree.', Icons.play_lesson_rounded, 6, completedLessons),
+      _achievement('practice_engineer', 'Practice engineer', 'Close 4 hands-on tasks.', Icons.code_rounded, 4, completedPractices),
+      _achievement('quiz_scout', 'Quiz scout', 'Solve 10 output quizzes.', Icons.quiz_rounded, 10, completedQuizzes),
+      _achievement('memory_builder', 'Memory builder', 'Finish 10 code memory labs.', Icons.memory_rounded, 10, completedTrainers),
+      _achievement('streak_7', 'Seven day pulse', 'Reach a 7-day streak.', Icons.local_fire_department_rounded, 7, state.streak),
+      _achievement('xp_900', 'XP 900', 'Cross 900 XP in the demo.', Icons.bolt_rounded, 900, state.xp),
+      _achievement('ai_partner', 'AI partner', 'Send 6 questions to the mentor.', Icons.smart_toy_rounded, 6, userMessages),
+      _achievement('cs_core_explorer', 'CS core explorer', 'Finish 2 Computer Science Core tracks.', Icons.hub_rounded, 2, csDone),
+      _achievement('sphere_builder', 'Sphere builder', 'Finish 2 IT sphere tracks.', Icons.auto_awesome_mosaic_rounded, 2, itDone),
+      _achievement('frontend_ready', 'Frontend ready', 'Close the Frontend track.', Icons.web_rounded, 1, frontendDone),
+      _achievement('systems_foundation', 'Systems foundation', 'Close the Operating Systems track.', Icons.developer_board_rounded, 1, systemsDone),
+      _achievement('data_confidence', 'Data confidence', 'Finish Databases and Probability/Statistics.', Icons.insights_rounded, 2, dataDone),
+      _achievement('math_canopy', 'Math canopy', 'Finish 3 mathematical foundation branches.', Icons.calculate_rounded, 3, mathRootsDone),
+      _achievement('algorithmic_mindset', 'Algorithmic mindset', 'Close Algorithms & Data Structures.', Icons.account_tree_rounded, 1, algorithmDone),
+      _achievement('network_mapper', 'Network mapper', 'Close Information Networks.', Icons.hub_rounded, 1, networkDone),
+      _achievement('mobile_forest', 'Mobile forest', 'Finish 3 mobile-related branches.', Icons.devices_rounded, 3, mobileBranchesDone),
+      _achievement('qa_guardian', 'QA guardian', 'Close the QA Engineer branch.', Icons.fact_check_rounded, 1, qaDone),
+      _achievement('ops_keeper', 'Ops keeper', 'Close the System Administration branch.', Icons.admin_panel_settings_rounded, 1, systemAdminDone),
+      _achievement('ml_pathfinder', 'ML pathfinder', 'Close the ML Engineer branch.', Icons.psychology_alt_rounded, 1, mlEngineerDone),
+      _achievement('security_stack', 'Security stack', 'Finish Information Security and Cybersecurity.', Icons.shield_rounded, 2, securityStackDone),
+      _achievement('community_curator', 'Community curator', 'View or save 4 community courses.', Icons.groups_rounded, 4, courseSignals),
+      _achievement('mastery_badges', 'Mastery badges', 'Master 2 tracks with perfect quiz accuracy.', Icons.workspace_premium_rounded, 2, masteredTracks(state)),
+    ];
   }
 
   Set<String> unlockedAchievementIdsFor(DemoAppState state) {
@@ -192,728 +284,329 @@ class DemoCatalog {
   }
 
   List<LeaderboardEntry> leaderboardFor(DemoAppState state) {
+    final currentUser = LeaderboardEntry(
+      id: 'current-user',
+      name: state.user?.name ?? 'Talgat',
+      xp: state.xp,
+      level: state.level,
+      role: state.user?.role ?? 'Student Explorer',
+      focus: trackById(state.currentTrackId).title.resolve(state.locale),
+      isCurrentUser: true,
+    );
     final entries = <LeaderboardEntry>[
-      const LeaderboardEntry(
-        id: 'alex',
-        name: 'Alex R.',
-        xp: 540,
-        level: 4,
-        isCurrentUser: false,
-      ),
-      const LeaderboardEntry(
-        id: 'nurai',
-        name: 'Nurai T.',
-        xp: 480,
-        level: 3,
-        isCurrentUser: false,
-      ),
-      const LeaderboardEntry(
-        id: 'amira',
-        name: 'Amira K.',
-        xp: 430,
-        level: 3,
-        isCurrentUser: false,
-      ),
-      LeaderboardEntry(
-        id: 'current-user',
-        name: state.user?.name ?? 'Demo User',
-        xp: state.xp,
-        level: state.level,
-        isCurrentUser: true,
-      ),
-      const LeaderboardEntry(
-        id: 'timur',
-        name: 'Timur S.',
-        xp: 320,
-        level: 2,
-        isCurrentUser: false,
-      ),
+      ..._leaderboardSeed.where((entry) => entry.id != currentUser.id),
+      currentUser,
     ];
-
     entries.sort((left, right) => right.xp.compareTo(left.xp));
     return entries;
   }
 
-  String mentorReply(DemoAppState state, String prompt) {
-    final normalized = prompt.toLowerCase();
-    final locale = state.locale;
-    final lessonTitle = state.focusedLessonId == null
-        ? null
-        : lessonById(state.focusedLessonId!).title.resolve(locale);
-
-    if (normalized.contains('error') || normalized.contains('ошиб')) {
-      return LocalizedText(
-        ru: 'Сначала проверь входные данные и ожидаемый результат. Затем сузим проблему: что именно не совпало в ${lessonTitle ?? 'текущем задании'}?',
-        en: 'Start by comparing input and expected output. Then narrow the issue down: what exactly mismatched in ${lessonTitle ?? 'the current task'}?',
-        kk: 'Алдымен кіріс пен күтілетін нәтижені салыстырыңыз. Содан кейін мәселені тарылтайық: ${lessonTitle ?? 'ағымдағы тапсырмада'} нақты не сәйкес келмеді?',
-      ).resolve(locale);
-    }
-
-    if (normalized.contains('plan') ||
-        normalized.contains('траект') ||
-        normalized.contains('roadmap')) {
-      return LocalizedText(
-        ru: 'Для презентационного темпа держим маршрут таким: Fundamentals -> Frontend -> teaser по остальным веткам. Это показывает и глубину, и ширину MVP.',
-        en: 'For a presentation-friendly pace, keep the route as Fundamentals -> Frontend -> teaser overviews for the rest. That shows both depth and breadth.',
-        kk: 'Презентацияға ыңғайлы маршрут: Fundamentals -> Frontend -> қалған тармақтарға teaser overview. Осылай MVP-дің тереңдігі де, кеңдігі де көрінеді.',
-      ).resolve(locale);
-    }
-
-    if (state.currentTrackId == 'frontend') {
-      return LocalizedText(
-        ru: 'Во Frontend сейчас важно не только собрать UI, но и связать состояние с действиями пользователя. Покажи progress, CTA и итоговую пользу экрана.',
-        en: 'In Frontend, focus not only on the UI but on wiring state to user actions. Show progress, CTAs, and the screen outcome.',
-        kk: 'Frontend-та тек UI емес, қолданушы әрекеттеріне байланған күй де маңызды. Progress, CTA және экран нәтижесін көрсетіңіз.',
-      ).resolve(locale);
-    }
-
-    return LocalizedText(
-      ru: 'Разбей тему на маленькие шаги: цель, теория, пример, практика, рефлексия. Именно такой ритм лучше всего смотрится в демо-обучении.',
-      en: 'Break the topic into small steps: goal, theory, example, practice, reflection. That rhythm works best in a demo learning flow.',
-      kk: 'Тақырыпты шағын қадамдарға бөліңіз: мақсат, теория, мысал, практика, рефлексия. Демо-оқытуда осы ырғақ ең жақсы көрінеді.',
-    ).resolve(locale);
+  List<LocalizedText> recentMilestonesFor(DemoAppState state) {
+    return <LocalizedText>[
+      sameText('Completed ${totalCompletedUnits(state)} units across ${_activeTracks(state)} active branches.'),
+      sameText('Quiz accuracy: ${(state.quizAccuracy * 100).round()}%.'),
+      sameText('Community courses: ${state.viewedCommunityCourseIds.length} viewed, ${state.savedCommunityCourseIds.length} saved.'),
+      sameText('Mastered tracks: ${masteredTracks(state)}.'),
+    ];
   }
 
   List<String> suggestedPrompts(DemoAppState state) {
-    return <LocalizedText>[
-      const LocalizedText(
-        ru: 'Объясни тему простыми словами',
-        en: 'Explain this topic in simple words',
-        kk: 'Тақырыпты қарапайым тілмен түсіндір',
-      ),
-      const LocalizedText(
-        ru: 'С чего начать практику?',
-        en: 'How should I start the practice?',
-        kk: 'Практиканы неден бастаймын?',
-      ),
-      const LocalizedText(
-        ru: 'Построй мне план на 20 минут',
-        en: 'Build me a 20-minute study plan',
-        kk: 'Маған 20 минуттық жоспар құрып бер',
-      ),
-    ].map((prompt) => prompt.resolve(state.locale)).toList(growable: false);
+    final focus = state.focusedLessonId != null
+        ? lessonById(state.focusedLessonId!).title.resolve(state.locale)
+        : state.focusedPracticeId != null
+            ? practiceById(state.focusedPracticeId!).title.resolve(state.locale)
+            : trackById(state.currentTrackId).title.resolve(state.locale);
+    final track = trackById(state.currentTrackId);
+    final prompts = <String>[
+      'Explain $focus in one minute.',
+      'How does $focus connect to the unified tree?',
+      'Give me a hint for the next output quiz.',
+      'Summarize this topic in simple terms.',
+      'Suggest a memory trick for the code example.',
+      'Which branch connects most naturally to this one?',
+      'How do operating systems, databases, and networks support product work?',
+    ];
+
+    if (track.zone == TrackZone.computerScienceCore) {
+      prompts.addAll(<String>[
+        'Which IT sphere grows naturally from this core topic?',
+        'Why does this foundation matter for backend, security, or ML?',
+      ]);
+    } else {
+      prompts.addAll(<String>[
+        'Which Computer Science Core topic should I study to get better here?',
+        'Compare this sphere with the nearest neighboring branch in the tree.',
+      ]);
+    }
+
+    return prompts;
   }
 
-  int totalCompletedUnits(DemoAppState state) {
-    return state.completedLessonIds.length + state.completedPracticeIds.length;
+  String mentorReply(DemoAppState state, String message) {
+    final normalized = message.toLowerCase();
+    final focus = state.focusedLessonId != null
+        ? lessonById(state.focusedLessonId!).title.resolve(state.locale)
+        : state.focusedPracticeId != null
+            ? practiceById(state.focusedPracticeId!).title.resolve(state.locale)
+            : trackById(state.currentTrackId).title.resolve(state.locale);
+
+    final pool = _replyPool(normalized, focus, state);
+    return pool[_stableHash('${state.currentTrackId}|$focus|$normalized') % pool.length];
   }
 
-  int totalPlayableUnits() {
-    return tracks
-        .where((track) => track.isPlayable)
-        .fold<int>(0, (sum, track) => sum + track.totalUnits);
+  List<String> _replyPool(String normalized, String focus, DemoAppState state) {
+    if (_containsAny(normalized, <String>['quiz', 'output', 'вывод'])) {
+      return <String>[
+        'For output questions, narrate variables aloud: initial value, transformation, final print. That makes $focus much easier to present confidently.',
+        'A good demo hint is to point to the last visible change. In $focus, the final output matters more than every intermediate detail.',
+        'Walk the example line by line and notice where state changes. That is usually the key to the output in $focus.',
+      ];
+    }
+    if (_containsAny(normalized, <String>['memory', 'trainer', 'запомин'])) {
+      return <String>[
+        'Use chunking: intent, setup, transformation, result. That pattern works well for the code memory lab in $focus.',
+        'If you forget a line, rebuild from inputs and output. The trainer for $focus rewards structure, not perfect wording.',
+        'Try verbal anchors: name the role of each line before trying to remember exact syntax.',
+      ];
+    }
+    if (_containsAny(normalized, <String>['tree', 'branch', 'ветк', 'дерево'])) {
+      return <String>[
+        'The tree is one shared route: Computer Science Core sets the foundation, Fundamentals bridges theory into practice, and the lower layer opens the specialized IT spheres.',
+        'A strong demo order is Operating Systems -> Databases -> Fundamentals -> Backend. It shows how the product flows from foundation into applied work.',
+        'Each branch stays independently available to open, so the tree feels connected without forcing one sphere to unlock another.',
+      ];
+    }
+    if (_containsAny(normalized, <String>['stats', 'statistics', 'стат'])) {
+      return <String>[
+        'Use statistics to tell a story: breadth across branches, depth inside a track, then habits through streak, quizzes, and AI sessions.',
+        'The improved stats page works well as proof of engagement: it combines unit completion, quiz accuracy, core-vs-sphere progress, and community exploration.',
+        'When you narrate the stats screen, highlight progression from available to mastered. That ladder makes the journey easy to grasp.',
+      ];
+    }
+    if (_containsAny(normalized, <String>['course', 'community', 'курс', 'user'])) {
+      return <String>[
+        'Community courses are read-only mock data in this MVP, but they demonstrate how expert content can complement the main tree.',
+        'A strong presentation line is that user-created courses add discovery without changing the core progression logic.',
+        'Treat community courses as an expansion surface: curated authors, preview lessons, and save actions already feel product-ready in the mock.',
+      ];
+    }
+    if (_containsAny(normalized, <String>['next', 'дальше', 'след'])) {
+      final next = progressForTrack(state, state.currentTrackId).nextTarget;
+      final nextTrack = _suggestNextTrack(state, state.currentTrackId);
+      return <String>[
+        next == null
+            ? 'This track is fully covered. I would jump to ${nextTrack.title.resolve(state.locale)} to keep the demo moving.'
+            : 'The next clean step is ${next.title.resolve(state.locale)}. It keeps the story focused and actionable.',
+        'After $focus, I would open ${nextTrack.title.resolve(state.locale)} to show how independent branches still feel connected.',
+        'For a smooth narrative, finish the current unit and then pivot into ${nextTrack.title.resolve(state.locale)}.',
+      ];
+    }
+    return <String>[
+      'For $focus, I would explain the idea, show the code example, let the learner predict the output, and only then move into practice.',
+      'This MVP is strongest when you show live state changes. Complete one lesson in $focus and then jump straight to the tree and statistics screens.',
+      'If you are presenting the demo, anchor on the journey: open branch, study lesson, solve quiz, finish trainer, and watch stats update.',
+    ];
   }
 
   int _completedUnitsForTrack(DemoAppState state, LearningTrack track) {
-    var total = 0;
-    for (final module in track.modules) {
-      for (final lesson in module.lessons) {
-        if (state.completedLessonIds.contains(lesson.id)) {
-          total += 1;
-        }
-      }
+    return track.modules.fold<int>(0, (sum, module) {
+      final lessonsDone =
+          module.lessons.where((lesson) => state.completedLessonIds.contains(lesson.id)).length;
+      final practiceDone =
+          module.practice != null && state.completedPracticeIds.contains(module.practice!.id)
+              ? 1
+              : 0;
+      return sum + lessonsDone + practiceDone;
+    });
+  }
 
-      final practice = module.practice;
-      if (practice != null && state.completedPracticeIds.contains(practice.id)) {
-        total += 1;
-      }
+  bool _isMastered(DemoAppState state, LearningTrack track) {
+    if (_completedUnitsForTrack(state, track) != track.totalUnits) {
+      return false;
     }
-    return total;
+    final quizIds = <String>[
+      for (final module in track.modules)
+        for (final lesson in module.lessons)
+          for (final quiz in lesson.quizzes) quiz.id,
+    ];
+    final trainerIds = <String>[
+      for (final module in track.modules)
+        for (final lesson in module.lessons)
+          for (final trainer in lesson.codeTrainers) trainer.id,
+    ];
+    return quizIds.every((quizId) {
+          final stat = state.quizAnswerStats[quizId];
+          return state.completedQuizIds.contains(quizId) &&
+              stat != null &&
+              stat.attempts == 1 &&
+              stat.correctAnswers >= 1;
+        }) &&
+        trainerIds.every(state.completedTrainerIds.contains);
+  }
+
+  bool _isTrackFinished(DemoAppState state, String trackId) {
+    final availability = trackAvailabilityFor(state, trackId);
+    return availability == TrackAvailability.completed ||
+        availability == TrackAvailability.mastered;
+  }
+
+  int _activeTracks(DemoAppState state) =>
+      tracks.where((track) => _completedUnitsForTrack(state, track) > 0).length;
+
+  LearningTrack _suggestNextTrack(DemoAppState state, String currentTrackId) {
+    return tracks.firstWhere(
+      (track) =>
+          track.id != currentTrackId &&
+          trackAvailabilityFor(state, track.id) != TrackAvailability.mastered,
+      orElse: () => tracks.first,
+    );
+  }
+
+  Achievement _achievement(
+    String id,
+    String title,
+    String description,
+    IconData icon,
+    int goal,
+    int progress,
+  ) {
+    return Achievement(
+      id: id,
+      title: sameText(title),
+      description: sameText(description),
+      icon: icon,
+      goal: goal,
+      progress: progress.clamp(0, goal),
+      unlocked: progress >= goal,
+    );
+  }
+
+  static bool _containsAny(String value, List<String> patterns) =>
+      patterns.any(value.contains);
+
+  static int _stableHash(String value) {
+    var hash = 0;
+    for (final codeUnit in value.codeUnits) {
+      hash = ((hash * 31) + codeUnit) & 0x7fffffff;
+    }
+    return hash;
   }
 }
 
-LocalizedText t(String ru, String en, String kk) {
-  return LocalizedText(ru: ru, en: en, kk: kk);
-}
-
-List<LearningTrack> _buildTracks() {
-  return <LearningTrack>[
-    _fundamentalsTrack(),
-    _frontendTrack(),
-    _lockedTrack(
-      id: 'backend',
-      icon: Icons.storage_rounded,
-      color: const Color(0xFF70D49A),
-      title: t('Backend', 'Backend', 'Backend'),
-      subtitle: t('API, базы данных и архитектура', 'APIs, databases, and architecture', 'API, дерекқор және архитектура'),
-      description: t(
-        'Следующая большая ветка после интерфейсов: как данные живут на сервере.',
-        'The next big branch after interfaces: how data lives on the server.',
-        'Интерфейстен кейінгі келесі үлкен тармақ: деректердің серверде өмір сүруі.',
-      ),
-      teaser: t('Preview: REST, CRUD, auth flow и сервисы.', 'Preview: REST, CRUD, auth flow, and services.', 'Preview: REST, CRUD, auth flow және сервистер.'),
-      outcome: t('Откроется после завершения основного frontend-ритма.', 'Unlocks after the core frontend rhythm is complete.', 'Негізгі frontend ырғағы аяқталғаннан кейін ашылады.'),
+List<CommunityCourse> _buildCommunityCourses() {
+  return <CommunityCourse>[
+    buildCommunityCourse(
+      id: 'course_portfolio_engineering',
+      title: 'Portfolio Engineering for Students',
+      subtitle: 'Turn side projects into convincing product stories',
+      description: 'A mock course on structuring projects, demos, and README narratives for internships.',
+      level: 'Beginner',
+      rating: 4.8,
+      enrollmentCount: 1240,
+      estimatedHours: 5,
+      color: AppColors.primary,
+      author: const CommunityCourseAuthor(name: 'Aruzhan Bek', role: 'Product Engineer', accentLabel: 'Demo design'),
+      tags: <String>['portfolio', 'frontend', 'career'],
+      lessons: <CommunityCourseLessonPreview>[
+        buildCourseLesson('Tell the project story', 'Frame the problem, the user, and the outcome.'),
+        buildCourseLesson('Show technical depth', 'Pick 2-3 implementation decisions worth discussing.'),
+        buildCourseLesson('Present without dead ends', 'Design a demo flow that feels alive and intentional.'),
+      ],
     ),
-    _lockedTrack(
-      id: 'mobile',
-      icon: Icons.phone_android_rounded,
-      color: const Color(0xFF8F93FF),
-      title: t('Mobile Development', 'Mobile Development', 'Mobile Development'),
-      subtitle: t('Нативные паттерны и UX на ходу', 'Native patterns and mobile UX', 'Натив паттерндер мен mobile UX'),
-      description: t('Touch-first сценарии и мобильная навигация.', 'Touch-first flows and mobile navigation.', 'Touch-first сценарий және mobile навигация.'),
-      teaser: t('Preview: gestures, adaptive layouts, offline thinking.', 'Preview: gestures, adaptive layouts, offline thinking.', 'Preview: gestures, adaptive layouts, offline thinking.'),
-      outcome: t('Ветка для расширения продукта за пределы web-демо.', 'A branch for expanding the product beyond the web demo.', 'Өнімді web-демодан ары кеңейтуге арналған тармақ.'),
-    ),
-    _lockedTrack(
-      id: 'devops',
-      icon: Icons.settings_suggest_rounded,
-      color: const Color(0xFF4BE0C6),
-      title: t('DevOps / SRE', 'DevOps / SRE', 'DevOps / SRE'),
-      subtitle: t('Доставка, наблюдаемость и надёжность', 'Delivery, observability, reliability', 'Жеткізу, бақылау және сенімділік'),
-      description: t('Релизы, пайплайны и стабильность продукта.', 'Releases, pipelines, and product stability.', 'Релиздер, pipeline және өнім тұрақтылығы.'),
-      teaser: t('Preview: CI/CD, metrics, logs, rollback mindset.', 'Preview: CI/CD, metrics, logs, rollback mindset.', 'Preview: CI/CD, metrics, logs, rollback mindset.'),
-      outcome: t('Покажет, как проект выходит в production.', 'Shows how a project reaches production.', 'Жобаның production-ға қалай шығатынын көрсетеді.'),
-    ),
-    _lockedTrack(
-      id: 'cyber_security',
-      icon: Icons.shield_rounded,
-      color: const Color(0xFFFF6A7A),
-      title: t('Cyber Security', 'Cyber Security', 'Cyber Security'),
-      subtitle: t('Безопасность как часть инженерного мышления', 'Security as part of engineering', 'Қауіпсіздік инженерлік ойлаудың бөлігі ретінде'),
-      description: t('Secure-by-default подход и работа с рисками.', 'Secure-by-default thinking and risk handling.', 'Secure-by-default тәсілі және тәуекелмен жұмыс.'),
-      teaser: t('Preview: auth, secrets, threat mindset, secure reviews.', 'Preview: auth, secrets, threat mindset, secure reviews.', 'Preview: auth, secrets, threat mindset, secure reviews.'),
-      outcome: t('Подскажет, как расти не только быстро, но и безопасно.', 'Shows how to grow not only fast but safely.', 'Тек тез емес, қауіпсіз өсуді де көрсетеді.'),
-    ),
-    _lockedTrack(
-      id: 'machine_learning',
-      icon: Icons.psychology_alt_rounded,
+    buildCommunityCourse(
+      id: 'course_sql_for_analysts',
+      title: 'SQL for Product Analysts',
+      subtitle: 'Queries, cohorts, funnels, and experiment reads',
+      description: 'A mock community course that packages practical SQL patterns around product questions.',
+      level: 'Intermediate',
+      rating: 4.7,
+      enrollmentCount: 980,
+      estimatedHours: 7,
       color: const Color(0xFFFFD166),
-      title: t('Machine Learning', 'Machine Learning', 'Machine Learning'),
-      subtitle: t('Данные, модели и практический AI', 'Data, models, and practical AI', 'Дерек, модель және практикалық AI'),
-      description: t('Путь от использования ИИ к пониманию его устройства.', 'A path from using AI to understanding it.', 'AI-ды қолданудан оны түсінуге апаратын жол.'),
-      teaser: t('Preview: features, evaluation, prompt systems.', 'Preview: features, evaluation, prompt systems.', 'Preview: features, evaluation, prompt systems.'),
-      outcome: t('Покажет путь к более продвинутой AI-специализации.', 'Shows the path toward deeper AI specialization.', 'Тереңірек AI мамандануына жол көрсетеді.'),
+      author: const CommunityCourseAuthor(name: 'Maksat Y.', role: 'Analytics Lead', accentLabel: 'SQL coaching'),
+      tags: <String>['sql', 'analytics', 'experiments'],
+      lessons: <CommunityCourseLessonPreview>[
+        buildCourseLesson('Count, filter, compare', 'Write readable queries for product metrics.'),
+        buildCourseLesson('Funnel reasoning', 'Translate behavior into stage-based analysis.'),
+        buildCourseLesson('Experiment snapshots', 'Read lift without overstating certainty.'),
+      ],
+    ),
+    buildCommunityCourse(
+      id: 'course_ml_journal_club',
+      title: 'ML Journal Club Lite',
+      subtitle: 'Read one paper idea and map it into product language',
+      description: 'A mock club-style course that connects research ideas to product intuition.',
+      level: 'Intermediate',
+      rating: 4.9,
+      enrollmentCount: 560,
+      estimatedHours: 4,
+      color: const Color(0xFFA78BFA),
+      author: const CommunityCourseAuthor(name: 'Dana S.', role: 'ML Engineer', accentLabel: 'Research to product'),
+      tags: <String>['ml', 'reading', 'research'],
+      lessons: <CommunityCourseLessonPreview>[
+        buildCourseLesson('Read the abstract for product meaning', 'Extract the real-world problem quickly.'),
+        buildCourseLesson('Map methods to intuition', 'Explain the method without dense notation.'),
+        buildCourseLesson('Find deployment relevance', 'Identify where the idea fits in a product.'),
+      ],
+    ),
+    buildCommunityCourse(
+      id: 'course_secure_api_clinic',
+      title: 'Secure API Clinic',
+      subtitle: 'A guided walkthrough of auth, validation, and incident hints',
+      description: 'A mock course from a staff backend engineer focused on defensive API design.',
+      level: 'Advanced',
+      rating: 4.6,
+      enrollmentCount: 430,
+      estimatedHours: 6,
+      color: AppColors.danger,
+      author: const CommunityCourseAuthor(name: 'Rustem K.', role: 'Staff Backend Engineer', accentLabel: 'Security review'),
+      tags: <String>['security', 'backend', 'api'],
+      lessons: <CommunityCourseLessonPreview>[
+        buildCourseLesson('Threat model the endpoint', 'Identify assets, actors, and misuse paths early.'),
+        buildCourseLesson('Validate at the edge', 'Reduce trust assumptions before deeper logic.'),
+        buildCourseLesson('Observe and respond', 'Connect signals to an action plan.'),
+      ],
+    ),
+    buildCommunityCourse(
+      id: 'course_design_systems_from_scratch',
+      title: 'Design Systems from Scratch',
+      subtitle: 'Tokens, hierarchy, reusable components, and product coherence',
+      description: 'A mock course that frames design systems as a language for teams.',
+      level: 'Intermediate',
+      rating: 4.8,
+      enrollmentCount: 760,
+      estimatedHours: 5,
+      color: const Color(0xFFFF9F68),
+      author: const CommunityCourseAuthor(name: 'Aigerim N.', role: 'Design Systems Lead', accentLabel: 'UI systems'),
+      tags: <String>['design-system', 'frontend', 'mobile'],
+      lessons: <CommunityCourseLessonPreview>[
+        buildCourseLesson('Name your primitives', 'Create a vocabulary for surfaces and emphasis.'),
+        buildCourseLesson('Design for states', 'Component systems are strongest when states are first-class.'),
+        buildCourseLesson('Teach the system', 'Adoption depends on examples and narrative, not only tokens.'),
+      ],
     ),
   ];
 }
 
-LearningTrack _lockedTrack({
-  required String id,
-  required IconData icon,
-  required Color color,
-  required LocalizedText title,
-  required LocalizedText subtitle,
-  required LocalizedText description,
-  required LocalizedText teaser,
-  required LocalizedText outcome,
-}) {
-  return LearningTrack(
-    id: id,
-    title: title,
-    subtitle: subtitle,
-    description: description,
-    teaser: teaser,
-    outcome: outcome,
-    heroMetric: t('Preview branch', 'Preview branch', 'Preview branch'),
-    icon: icon,
-    color: color,
-    isPlayable: false,
-    modules: <LearningModule>[
-      LearningModule(
-        id: '${id}_preview',
-        trackId: id,
-        title: t('Preview module', 'Preview module', 'Preview module'),
-        summary: teaser,
-        lessons: const <LessonItem>[],
-        practice: null,
-      ),
-    ],
-  );
-}
-
-LearningTrack _fundamentalsTrack() {
-  return LearningTrack(
-    id: 'fundamentals',
-    title: t('Fundamentals', 'Fundamentals', 'Fundamentals'),
-    subtitle: t(
-      'База мышления разработчика',
-      'Developer thinking foundation',
-      'Әзірлеуші ойлауының негізі',
-    ),
-    description: t(
-      'Стартовая ветка для логики, структуры кода, отладки и ритма обучения.',
-      'Starter branch for logic, code structure, debugging, and learning rhythm.',
-      'Логика, код құрылымы, debug және оқу ырғағына арналған бастапқы тармақ.',
-    ),
-    teaser: t(
-      'Закрываем основу, чтобы дальше двигаться по любому IT-направлению без хаоса.',
-      'Close the basics first so every next IT path feels structured, not chaotic.',
-      'Алдымен негізді жабамыз, сонда келесі IT бағыты реттелген көрінеді.',
-    ),
-    outcome: t(
-      'После ветки студент уверенно читает простые программы и умеет разложить задачу на шаги.',
-      'After this branch, the learner can read simple programs and break tasks into steps.',
-      'Осы тармақтан кейін студент қарапайым бағдарламаларды оқып, тапсырманы қадамдарға бөле алады.',
-    ),
-    heroMetric: t('2 модуля · 6 шагов', '2 modules · 6 steps', '2 модуль · 6 қадам'),
-    icon: Icons.account_tree_rounded,
-    color: const Color(0xFF59E3FF),
-    isPlayable: true,
-    modules: <LearningModule>[
-      LearningModule(
-        id: 'fundamentals_core',
-        trackId: 'fundamentals',
-        title: t('Core Logic', 'Core Logic', 'Core Logic'),
-        summary: t(
-          'Как мыслить как разработчик и видеть алгоритм до кода.',
-          'How to think like a developer and see the algorithm before the code.',
-          'Кодқа дейін алгоритмді көріп, әзірлеушіше ойлау.',
-        ),
-        lessons: <LessonItem>[
-          LessonItem(
-            id: 'fundamentals_mindset',
-            trackId: 'fundamentals',
-            moduleId: 'fundamentals_core',
-            title: t('Programming Mindset', 'Programming Mindset', 'Programming Mindset'),
-            summary: t(
-              'Учимся превращать большую цель в короткую последовательность действий.',
-              'Turn a big goal into a short sequence of actions.',
-              'Үлкен мақсатты қысқа әрекеттер тізбегіне айналдыру.',
-            ),
-            durationMinutes: 12,
-            outcome: t(
-              'Определите вход, действие и ожидаемый результат задачи.',
-              'Identify the input, action, and expected outcome of a task.',
-              'Тапсырманың кірісі, әрекеті және күтілетін нәтижесін анықтаңыз.',
-            ),
-            codeSnippet: '''// Pseudocode mindset
-goal = "show study progress"
-input = completedLessons
-action = calculatePercentage(input)
-output = "62% completed"''',
-            keyPoints: <LocalizedText>[
-              t('Сначала цель, потом инструменты.', 'Goal first, tools second.', 'Алдымен мақсат, содан кейін құрал.'),
-              t('Разбивайте задачу на маленькие блоки.', 'Break problems into small blocks.', 'Тапсырманы шағын блоктарға бөліңіз.'),
-              t('Проверяйте результат после каждого шага.', 'Validate after every step.', 'Әр қадамнан кейін нәтижені тексеріңіз.'),
-            ],
-            promptSuggestion: t(
-              'Объясни, как декомпозировать задачу',
-              'Explain how to decompose a task',
-              'Тапсырманы қалай бөлуге болатынын түсіндір',
-            ),
-            xpReward: 50,
-          ),
-          LessonItem(
-            id: 'fundamentals_flow',
-            trackId: 'fundamentals',
-            moduleId: 'fundamentals_core',
-            title: t('Conditions and Flow', 'Conditions and Flow', 'Conditions and Flow'),
-            summary: t(
-              'Используем if/else и порядок действий для управляемого поведения программы.',
-              'Use if/else and execution order to control program behavior.',
-              'Бағдарлама жүрісін басқару үшін if/else және орындалу ретін қолдану.',
-            ),
-            durationMinutes: 14,
-            outcome: t(
-              'Научитесь описывать простую логику выбора.',
-              'Describe simple branching logic.',
-              'Қарапайым тармақталу логикасын сипаттау.',
-            ),
-            codeSnippet: '''if (progress >= 0.7) {
-  showBadge("Almost there");
-} else {
-  showHint("Finish the current lesson");
-}''',
-            keyPoints: <LocalizedText>[
-              t('Условия помогают управлять сценарием.', 'Conditions shape the scenario.', 'Шарттар сценарийді басқарады.'),
-              t('Порядок веток влияет на результат.', 'Branch order affects the outcome.', 'Тармақ реті нәтижеге әсер етеді.'),
-              t('Показывайте пользователю понятный next step.', 'Always reveal the next step.', 'Қолданушыға келесі қадамды анық көрсетіңіз.'),
-            ],
-            promptSuggestion: t(
-              'Разбери пример с условиями',
-              'Break down an if/else example',
-              'if/else мысалын талдап бер',
-            ),
-            xpReward: 55,
-          ),
-        ],
-        practice: PracticeTask(
-          id: 'fundamentals_logic_lab',
-          trackId: 'fundamentals',
-          moduleId: 'fundamentals_core',
-          title: t('Logic Lab', 'Logic Lab', 'Logic Lab'),
-          summary: t(
-            'Соберите мини-сценарий выбора следующего шага для студента.',
-            'Build a mini flow that chooses the next step for the learner.',
-            'Студент үшін келесі қадамды таңдайтын шағын flow құрыңыз.',
-          ),
-          brief: t(
-            'Нужно показать подсказку для студента в зависимости от прогресса и streak.',
-            'Show a hint based on progress and streak.',
-            'Прогресс пен streak-ке қарап hint көрсету керек.',
-          ),
-          starterCode: '''String nextHint(double progress, int streak) {
-  if (progress >= 0.8) {
-    return "Finish practice";
-  }
-  return "Review lesson";
-}''',
-          successCriteria: <LocalizedText>[
-            t('Есть минимум две ветки поведения.', 'At least two behavior branches exist.', 'Кемінде екі тармақ болуы керек.'),
-            t('Подсказка понятна пользователю.', 'The hint is clear to the learner.', 'Hint қолданушыға түсінікті болуы тиіс.'),
-            t('Логика зависит от данных, а не от хардкода.', 'Logic depends on data, not static text.', 'Логика дерекке сүйенуі керек.'),
-          ],
-          promptSuggestion: t(
-            'Подскажи, как улучшить мою функцию',
-            'Help me improve this function',
-            'Функциямды қалай жақсартуға болады?',
-          ),
-          xpReward: 70,
-        ),
-      ),
-      LearningModule(
-        id: 'fundamentals_debug',
-        trackId: 'fundamentals',
-        title: t('Debug and Structure', 'Debug and Structure', 'Debug and Structure'),
-        summary: t(
-          'Закрепляем функции, списки и отладочный ритм.',
-          'Reinforce functions, lists, and a debugging rhythm.',
-          'Функциялар, тізімдер және debug ырғағын бекіту.',
-        ),
-        lessons: <LessonItem>[
-          LessonItem(
-            id: 'fundamentals_functions',
-            trackId: 'fundamentals',
-            moduleId: 'fundamentals_debug',
-            title: t('Functions and Reuse', 'Functions and Reuse', 'Functions and Reuse'),
-            summary: t(
-              'Убираем дублирование и выносим шаги в повторно используемые блоки.',
-              'Reduce duplication and move repeated steps into reusable blocks.',
-              'Қайталанатын бөліктерді қайта қолданылатын блоктарға шығару.',
-            ),
-            durationMinutes: 11,
-            outcome: t(
-              'Научитесь выделять повторяющееся поведение.',
-              'Spot and extract repeated behavior.',
-              'Қайталанатын әрекеттерді бөліп көрсету.',
-            ),
-            codeSnippet: '''Widget buildMetric(String title, String value) {
-  return MetricCard(title: title, value: value);
-}''',
-            keyPoints: <LocalizedText>[
-              t('Функция отвечает за один смысл.', 'One function, one intent.', 'Бір функция, бір мағына.'),
-              t('Повторяющийся UI тоже стоит выносить.', 'Repeated UI should be extracted too.', 'Қайталанатын UI-ды да бөлу керек.'),
-              t('Названия должны объяснять действие.', 'Names should explain the action.', 'Атаулар әрекетті түсіндіруі керек.'),
-            ],
-            promptSuggestion: t(
-              'Помоги выделить функцию из кода',
-              'Help me extract a function',
-              'Кодтан функция бөліп бер',
-            ),
-            xpReward: 50,
-          ),
-          LessonItem(
-            id: 'fundamentals_debugging',
-            trackId: 'fundamentals',
-            moduleId: 'fundamentals_debug',
-            title: t('Debugging Basics', 'Debugging Basics', 'Debugging Basics'),
-            summary: t(
-              'Понимаем, как быстро локализовать ошибку и проверить гипотезу.',
-              'Learn to localize an error quickly and test a hypothesis.',
-              'Қатені тез локалдап, гипотезаны тексеру тәсілі.',
-            ),
-            durationMinutes: 13,
-            outcome: t(
-              'Опишите простой цикл: наблюдение -> гипотеза -> проверка.',
-              'Describe the cycle: observe -> hypothesize -> verify.',
-              'Бақылау -> гипотеза -> тексеру циклін сипаттау.',
-            ),
-            codeSnippet: '''print("progress: \$progress");
-assert(progress >= 0 && progress <= 1);''',
-            keyPoints: <LocalizedText>[
-              t('Сначала воспроизведите проблему.', 'Reproduce the issue first.', 'Алдымен қателікті қайталаңыз.'),
-              t('Проверяйте одно предположение за раз.', 'Test one assumption at a time.', 'Бір уақытта бір болжамды тексеріңіз.'),
-              t('Фиксируйте, что именно изменилось.', 'Note what exactly changed.', 'Нақты не өзгергенін белгілеңіз.'),
-            ],
-            promptSuggestion: t(
-              'Помоги составить план отладки',
-              'Help me build a debug plan',
-              'Debug жоспарын құрып бер',
-            ),
-            xpReward: 55,
-          ),
-        ],
-        practice: PracticeTask(
-          id: 'fundamentals_debug_lab',
-          trackId: 'fundamentals',
-          moduleId: 'fundamentals_debug',
-          title: t('Debug Flow Lab', 'Debug Flow Lab', 'Debug Flow Lab'),
-          summary: t(
-            'Находите ошибку в мини-виджете аналитики и чините сценарий.',
-            'Find the issue in a mini analytics widget and fix the flow.',
-            'Аналитика виджетіндегі қатені тауып, flow-ды түзету.',
-          ),
-          brief: t(
-            'В прогресс-бар попадает число больше 1. Нужно объяснить причину и предложить фиксацию.',
-            'A progress bar receives a value greater than 1. Explain the cause and propose a fix.',
-            'Progress bar-ға 1-ден үлкен мән беріліп жатыр. Себебін түсіндіріп, fix ұсыныңыз.',
-          ),
-          starterCode: '''final progress = completedLessons / 2;
-LinearProgressIndicator(value: progress);''',
-          successCriteria: <LocalizedText>[
-            t('Найдена причина проблемы.', 'The root cause is identified.', 'Мәселенің себебі табылды.'),
-            t('Предложено безопасное ограничение значения.', 'A safe value clamp is proposed.', 'Қауіпсіз шектеу ұсынылды.'),
-            t('Пояснение можно озвучить на презентации.', 'The explanation is presentation-ready.', 'Түсіндіруді презентацияда айтуға болады.'),
-          ],
-          promptSuggestion: t(
-            'Помоги проверить гипотезу по багу',
-            'Help me verify the bug hypothesis',
-            'Баг гипотезасын тексеруге көмектес',
-          ),
-          xpReward: 75,
-        ),
-      ),
-    ],
-  );
-}
-
-LearningTrack _frontendTrack() {
-  return LearningTrack(
-    id: 'frontend',
-    title: t('Frontend', 'Frontend', 'Frontend'),
-    subtitle: t(
-      'Интерфейсы, адаптивность и состояние',
-      'Interfaces, responsiveness, and state',
-      'Интерфейс, адаптивтілік және күй',
-    ),
-    description: t(
-      'Ветка про визуальный слой продукта: структура экрана, композиция, интерактивность.',
-      'The visual layer of a product: screen structure, composition, and interactivity.',
-      'Өнімнің визуал қабаты: экран құрылымы, композиция және интерактивтілік.',
-    ),
-    teaser: t(
-      'Собираем интерфейс, который не просто красивый, а объясняет следующий шаг пользователю.',
-      'Build interfaces that not only look good but also clarify the next user action.',
-      'Тек әдемі емес, келесі қадамды түсіндіретін интерфейс жасаймыз.',
-    ),
-    outcome: t(
-      'После ветки студент умеет проектировать карточки, CTA и адаптивные блоки под реальный user flow.',
-      'After this branch, the learner can design cards, CTAs, and adaptive blocks for a real user flow.',
-      'Осы тармақтан кейін студент нақты user flow үшін карточка, CTA және адаптив блоктарды жасай алады.',
-    ),
-    heroMetric: t('2 модуля · 6 шагов', '2 modules · 6 steps', '2 модуль · 6 қадам'),
-    icon: Icons.web_rounded,
-    color: const Color(0xFFFFB158),
-    isPlayable: true,
-    modules: <LearningModule>[
-      LearningModule(
-        id: 'frontend_layout',
-        trackId: 'frontend',
-        title: t('UI Structure', 'UI Structure', 'UI Structure'),
-        summary: t(
-          'Каркас интерфейса, hierarchy и понятные точки фокуса.',
-          'Interface skeleton, hierarchy, and clear focal points.',
-          'Интерфейс қаңқасы, hierarchy және анық фокус нүктелері.',
-        ),
-        lessons: <LessonItem>[
-          LessonItem(
-            id: 'frontend_html',
-            trackId: 'frontend',
-            moduleId: 'frontend_layout',
-            title: t('Screen Hierarchy', 'Screen Hierarchy', 'Screen Hierarchy'),
-            summary: t(
-              'Понимаем, как расставить акценты, чтобы экран быстро считывался на защите.',
-              'Learn how to place emphasis so the screen reads fast during a presentation.',
-              'Экран презентацияда тез оқылуы үшін акценттерді дұрыс қою.',
-            ),
-            durationMinutes: 10,
-            outcome: t(
-              'Выберите один главный CTA и одну supporting-механику.',
-              'Choose one primary CTA and one supporting mechanic.',
-              'Бір негізгі CTA және бір supporting механиканы таңдаңыз.',
-            ),
-            codeSnippet: '''Column(
-  children: [
-    HeroCard(),
-    ProgressStrip(),
-    ActionButton(label: "Continue learning"),
-  ],
-)''',
-            keyPoints: <LocalizedText>[
-              t('Иерархия экономит время пользователя.', 'Hierarchy saves user time.', 'Hierarchy қолданушы уақытын үнемдейді.'),
-              t('Первый экран должен продавать следующий шаг.', 'The first screen should sell the next action.', 'Бірінші экран келесі қадамды сатуы керек.'),
-              t('Повторяйте мотивы и отступы.', 'Repeat patterns and spacing.', 'Мотивтер мен аралықтарды қайталаңыз.'),
-            ],
-            promptSuggestion: t(
-              'Оцени структуру моего экрана',
-              'Review my screen structure',
-              'Экранымның құрылымын бағала',
-            ),
-            xpReward: 50,
-          ),
-          LessonItem(
-            id: 'frontend_responsive',
-            trackId: 'frontend',
-            moduleId: 'frontend_layout',
-            title: t('Responsive Decisions', 'Responsive Decisions', 'Responsive Decisions'),
-            summary: t(
-              'Готовим layout, который выглядит уверенно и на телефоне, и в браузере.',
-              'Prepare a layout that feels strong on both phone and browser.',
-              'Телефонда да, браузерде де сенімді көрінетін layout дайындау.',
-            ),
-            durationMinutes: 13,
-            outcome: t(
-              'Научитесь ограничивать ширину и перестраивать сетку под размер экрана.',
-              'Learn to constrain width and adapt the grid to screen size.',
-              'Контейнер енін шектеп, торды экран өлшеміне бейімдеңіз.',
-            ),
-            codeSnippet: '''Center(
-  child: ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 520),
-    child: child,
-  ),
-)''',
-            keyPoints: <LocalizedText>[
-              t('Phone-first не означает browser-last.', 'Phone-first is not browser-last.', 'Phone-first browser-last деген емес.'),
-              t('Ширина контейнера формирует ритм чтения.', 'Container width shapes reading rhythm.', 'Контейнер ені оқу ырғағын қалыптастырады.'),
-              t('Сетки должны быть предсказуемыми.', 'Grids should stay predictable.', 'Торлар болжамды болуы керек.'),
-            ],
-            promptSuggestion: t(
-              'Сделай мне план адаптации экрана',
-              'Give me a responsive plan for this screen',
-              'Экранды бейімдеу жоспарын бер',
-            ),
-            xpReward: 55,
-          ),
-        ],
-        practice: PracticeTask(
-          id: 'frontend_ui_lab',
-          trackId: 'frontend',
-          moduleId: 'frontend_layout',
-          title: t('Landing UI Lab', 'Landing UI Lab', 'Landing UI Lab'),
-          summary: t(
-            'Соберите hero-блок для образовательного продукта.',
-            'Build a hero block for an educational product.',
-            'Білім беру өніміне hero-блок жинаңыз.',
-          ),
-          brief: t(
-            'Нужны заголовок, короткий value proposition, CTA и 2 supporting-метрики.',
-            'Include a headline, short value proposition, CTA, and 2 support metrics.',
-            'Тақырып, қысқа value proposition, CTA және 2 supporting метрика керек.',
-          ),
-          starterCode: '''HeroCard(
-  title: "ZerdeStudy",
-  subtitle: "Personal path into IT",
-)''',
-          successCriteria: <LocalizedText>[
-            t('Есть один сильный CTA.', 'There is one strong CTA.', 'Бір күшті CTA бар.'),
-            t('Метрики усиливают доверие.', 'Metrics strengthen trust.', 'Метрикалар сенімді күшейтеді.'),
-            t('Блок читается за 3-5 секунд.', 'The block is readable in 3-5 seconds.', 'Блок 3-5 секундта оқылады.'),
-          ],
-          promptSuggestion: t(
-            'Дай фидбек по hero-блоку',
-            'Give feedback on my hero block',
-            'Hero-блокқа фидбек бер',
-          ),
-          xpReward: 70,
-        ),
-      ),
-      LearningModule(
-        id: 'frontend_state',
-        trackId: 'frontend',
-        title: t('Stateful UI', 'Stateful UI', 'Stateful UI'),
-        summary: t(
-          'Связываем действия пользователя с прогрессом, табами и micro-feedback.',
-          'Connect user actions to progress, tabs, and micro-feedback.',
-          'Қолданушы әрекеттерін progress, tab және micro-feedback-пен байланыстыру.',
-        ),
-        lessons: <LessonItem>[
-          LessonItem(
-            id: 'frontend_components',
-            trackId: 'frontend',
-            moduleId: 'frontend_state',
-            title: t('Reusable Components', 'Reusable Components', 'Reusable Components'),
-            summary: t(
-              'Собираем повторяемые карточки и action-блоки из одной дизайн-системы.',
-              'Build repeatable cards and action blocks from one design system.',
-              'Бір дизайн жүйесінен қайталанатын карточка мен action-блок құру.',
-            ),
-            durationMinutes: 12,
-            outcome: t(
-              'Научитесь выносить повторяющийся UI в переиспользуемые виджеты.',
-              'Extract repeating UI into reusable widgets.',
-              'Қайталанатын UI-ды қайта қолданылатын виджеттерге шығару.',
-            ),
-            codeSnippet: '''class GlowCard extends StatelessWidget {
-  const GlowCard({required this.child});
-}''',
-            keyPoints: <LocalizedText>[
-              t('Одна стилистика на всём пути делает MVP цельным.', 'One styling language keeps the MVP coherent.', 'Бір стилистика MVP-ді тұтас етеді.'),
-              t('Компонент должен прятать визуальную сложность.', 'A component should hide visual complexity.', 'Компонент визуал күрделілікті жасыруы керек.'),
-              t('Простой API ускоряет сборку экранов.', 'A simple API speeds up screens.', 'Қарапайым API экран жинауды тездетеді.'),
-            ],
-            promptSuggestion: t(
-              'Помоги выделить общий компонент',
-              'Help me extract a shared component',
-              'Ортақ компонентті бөліп бер',
-            ),
-            xpReward: 50,
-          ),
-          LessonItem(
-            id: 'frontend_state_link',
-            trackId: 'frontend',
-            moduleId: 'frontend_state',
-            title: t('State and Feedback', 'State and Feedback', 'State and Feedback'),
-            summary: t(
-              'Показываем, как действия влияют на XP, streak и доступность следующего шага.',
-              'Show how actions affect XP, streak, and the next available step.',
-              'Әрекеттердің XP, streak және келесі қадамға әсерін көрсету.',
-            ),
-            durationMinutes: 15,
-            outcome: t(
-              'Свяжите одно действие с несколькими UI-изменениями.',
-              'Connect one action to multiple UI updates.',
-              'Бір әрекетті бірнеше UI жаңаруымен байланыстырыңыз.',
-            ),
-            codeSnippet: '''ref.read(demoAppControllerProvider.notifier)
-  .completeLesson(lessonId);''',
-            keyPoints: <LocalizedText>[
-              t('Действие должно иметь видимый эффект.', 'Actions should have visible effects.', 'Әрекет көрінетін әсер беруі керек.'),
-              t('Стейт нужен ради пользовательской пользы.', 'State exists to help the learner.', 'State қолданушыға пайда беру үшін керек.'),
-              t('Feedback укрепляет мотивацию.', 'Feedback reinforces motivation.', 'Feedback мотивацияны күшейтеді.'),
-            ],
-            promptSuggestion: t(
-              'Как связать действие и прогресс?',
-              'How do I connect an action to progress?',
-              'Әрекетті progress-пен қалай байланыстырамын?',
-            ),
-            xpReward: 55,
-          ),
-        ],
-        practice: PracticeTask(
-          id: 'frontend_state_lab',
-          trackId: 'frontend',
-          moduleId: 'frontend_state',
-          title: t('Responsive Dashboard Lab', 'Responsive Dashboard Lab', 'Responsive Dashboard Lab'),
-          summary: t(
-            'Подключите кнопку завершения к локальному прогрессу и метрикам.',
-            'Connect a completion button to local progress and metrics.',
-            'Аяқтау батырмасын локал прогресс пен метрикаларға қосыңыз.',
-          ),
-          brief: t(
-            'После нажатия должны измениться XP, streak, блок continue learning и карточка достижений.',
-            'After tapping, XP, streak, the continue card, and achievements should all update.',
-            'Басқаннан кейін XP, streak, continue learning және achievement карточкасы жаңаруы керек.',
-          ),
-          starterCode: '''FilledButton(
-  onPressed: () {
-    // TODO: update state
-  },
-  child: Text("Complete practice"),
-)''',
-          successCriteria: <LocalizedText>[
-            t('Меняется минимум три UI-состояния.', 'At least three UI states change.', 'Кемінде үш UI күйі өзгереді.'),
-            t('Изменения понятны без объяснения кода.', 'Changes are obvious without code explanation.', 'Өзгерістер кодсыз да түсінікті.'),
-            t('Экран остаётся чистым и презентабельным.', 'The screen stays clean and presentation-ready.', 'Экран таза әрі презентацияға дайын қалады.'),
-          ],
-          promptSuggestion: t(
-            'Предложи лучший feedback после действия',
-            'Suggest better feedback after this action',
-            'Әрекеттен кейінгі жақсы feedback ұсын',
-          ),
-          xpReward: 75,
-        ),
-      ),
-    ],
-  );
+List<LeaderboardEntry> _buildLeaderboardSeed() {
+  return const <LeaderboardEntry>[
+    LeaderboardEntry(id: 'l1', name: 'Nursultan', xp: 1320, level: 8, role: 'Backend Explorer', focus: 'Databases', isCurrentUser: false),
+    LeaderboardEntry(id: 'l2', name: 'Mira', xp: 1280, level: 8, role: 'Frontend Builder', focus: 'Frontend', isCurrentUser: false),
+    LeaderboardEntry(id: 'l3', name: 'Dias', xp: 1210, level: 7, role: 'Systems Learner', focus: 'Operating Systems', isCurrentUser: false),
+    LeaderboardEntry(id: 'l4', name: 'Aruzhan', xp: 1170, level: 7, role: 'ML Apprentice', focus: 'Machine Learning', isCurrentUser: false),
+    LeaderboardEntry(id: 'l5', name: 'Talgat', xp: 1115, level: 7, role: 'Reliability Learner', focus: 'SRE / DevOps', isCurrentUser: false),
+    LeaderboardEntry(id: 'l6', name: 'Sofia', xp: 1090, level: 7, role: 'Security Watcher', focus: 'Cybersecurity', isCurrentUser: false),
+    LeaderboardEntry(id: 'l7', name: 'Adilet', xp: 1035, level: 6, role: 'Math Track Learner', focus: 'Discrete Math', isCurrentUser: false),
+    LeaderboardEntry(id: 'l8', name: 'Zarina', xp: 980, level: 6, role: 'Data Storyteller', focus: 'Probability & Analytics', isCurrentUser: false),
+    LeaderboardEntry(id: 'l9', name: 'Bekzat', xp: 950, level: 6, role: 'Protocol Mapper', focus: 'Networks', isCurrentUser: false),
+    LeaderboardEntry(id: 'l10', name: 'Madina', xp: 910, level: 6, role: 'Mobile Builder', focus: 'Mobile', isCurrentUser: false),
+    LeaderboardEntry(id: 'l11', name: 'Ayan', xp: 860, level: 5, role: 'Product Analyst', focus: 'Databases', isCurrentUser: false),
+    LeaderboardEntry(id: 'l12', name: 'Alina', xp: 830, level: 5, role: 'App Generalist', focus: 'Fundamentals', isCurrentUser: false),
+    LeaderboardEntry(id: 'l13', name: 'Yernar', xp: 790, level: 5, role: 'UI Explorer', focus: 'Frontend', isCurrentUser: false),
+    LeaderboardEntry(id: 'l14', name: 'Tomiris', xp: 760, level: 5, role: 'Research Reader', focus: 'Machine Learning', isCurrentUser: false),
+    LeaderboardEntry(id: 'l15', name: 'Ainur', xp: 730, level: 5, role: 'Systems Generalist', focus: 'Computer Architecture', isCurrentUser: false),
+    LeaderboardEntry(id: 'l16', name: 'Nikita', xp: 690, level: 4, role: 'API Learner', focus: 'Backend', isCurrentUser: false),
+    LeaderboardEntry(id: 'l17', name: 'Asel', xp: 650, level: 4, role: 'Security Apprentice', focus: 'Cybersecurity', isCurrentUser: false),
+    LeaderboardEntry(id: 'l18', name: 'Ilia', xp: 620, level: 4, role: 'Cloud Curious', focus: 'SRE / DevOps', isCurrentUser: false),
+  ];
 }

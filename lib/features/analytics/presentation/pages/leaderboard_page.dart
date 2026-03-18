@@ -24,34 +24,35 @@ class LeaderboardPage extends ConsumerWidget {
           GlowCard(
             accent: AppColors.primary,
             child: Text(
-              l10n.text('leaderboard_hint'),
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                height: 1.45,
-              ),
+              'A richer local leaderboard makes demo engagement visible: level, role, focus branch, and current-user highlighting all update from mock state.',
+              style: const TextStyle(color: AppColors.textSecondary, height: 1.45),
             ),
           ),
           const SizedBox(height: 16),
           ...entries.asMap().entries.map((entry) {
             final index = entry.key + 1;
             final item = entry.value;
+            final accent = item.isCurrentUser ? AppColors.primary : AppColors.divider;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: GlowCard(
-                accent: item.isCurrentUser ? AppColors.primary : AppColors.divider,
+                accent: accent,
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: (item.isCurrentUser ? AppColors.primary : AppColors.surfaceSoft)
-                          .withValues(alpha: 0.18),
-                      child: Text(
-                        '$index',
-                        style: TextStyle(
-                          color: item.isCurrentUser
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
-                          fontWeight: FontWeight.w700,
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: (item.isCurrentUser ? AppColors.primary : AppColors.surfaceSoft).withValues(alpha: 0.18),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$index',
+                          style: TextStyle(
+                            color: item.isCurrentUser ? AppColors.primary : AppColors.textSecondary,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),
@@ -60,28 +61,22 @@ class LeaderboardPage extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            item.name,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                          Text(item.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
                           const SizedBox(height: 4),
-                          Text(
-                            'Level ${item.level}',
-                            style: const TextStyle(color: AppColors.textSecondary),
+                          Text('Level ${item.level} • ${item.role}', style: const TextStyle(color: AppColors.textSecondary)),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _Tag(label: item.focus),
+                              if (item.isCurrentUser) const _Tag(label: 'You'),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    Text(
-                      '${item.xp} XP',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    Text('${item.xp} XP', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -89,6 +84,24 @@ class LeaderboardPage extends ConsumerWidget {
           }),
         ],
       ),
+    );
+  }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: AppColors.surfaceSoft,
+      ),
+      child: Text(label, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
     );
   }
 }
