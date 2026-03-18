@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/demo_app_controller.dart';
+import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/common_widgets/tech_text_field.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -48,20 +49,26 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     final password = _passCtrl.text.trim();
 
     if (!ref.read(validateNameProvider)(name)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.text('empty_name'))),
+      AppNotice.show(
+        context,
+        message: l10n.text('empty_name'),
+        type: AppNoticeType.error,
       );
       return;
     }
     if (!ref.read(validateEmailProvider)(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.text('invalid_email'))),
+      AppNotice.show(
+        context,
+        message: l10n.text('invalid_email'),
+        type: AppNoticeType.error,
       );
       return;
     }
     if (!ref.read(validatePasswordProvider)(password)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.text('invalid_password'))),
+      AppNotice.show(
+        context,
+        message: l10n.text('invalid_password'),
+        type: AppNoticeType.error,
       );
       return;
     }

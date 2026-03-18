@@ -5,7 +5,7 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 
 class CommunityCourseDetailPage extends ConsumerStatefulWidget {
   const CommunityCourseDetailPage({
@@ -26,7 +26,9 @@ class _CommunityCourseDetailPageState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(demoAppControllerProvider.notifier).viewCommunityCourse(widget.courseId);
+      ref
+          .read(demoAppControllerProvider.notifier)
+          .viewCommunityCourse(widget.courseId);
     });
   }
 
@@ -37,6 +39,7 @@ class _CommunityCourseDetailPageState
     final catalog = ref.watch(demoCatalogProvider);
     final course = catalog.courseById(widget.courseId);
     final saved = state.savedCommunityCourseIds.contains(widget.courseId);
+    final colors = context.appColors;
 
     return AppPageScaffold(
       title: course.title.resolve(state.locale),
@@ -48,9 +51,18 @@ class _CommunityCourseDetailPageState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(course.subtitle.resolve(state.locale), style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  course.subtitle.resolve(state.locale),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 8),
-                Text(course.description.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.45)),
+                Text(
+                  course.description.resolve(state.locale),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 10,
@@ -67,43 +79,68 @@ class _CommunityCourseDetailPageState
           ),
           const SizedBox(height: 16),
           GlowCard(
-            accent: AppColors.accent,
+            accent: colors.accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${course.author.name} • ${course.author.role}', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  '${course.author.name} | ${course.author.role}',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 6),
-                Text(course.author.accentLabel, style: const TextStyle(color: AppColors.textSecondary)),
+                Text(
+                  course.author.accentLabel,
+                  style: TextStyle(color: colors.textSecondary),
+                ),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: course.tags.map((tag) => _Meta(label: tag)).toList(growable: false),
+                  children: course.tags
+                      .map((tag) => _Meta(label: tag))
+                      .toList(growable: false),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          ...course.lessons.map((lesson) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: GlowCard(
-                  accent: course.color,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(lesson.title.resolve(state.locale), style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 6),
-                      Text(lesson.summary.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.35)),
-                      const SizedBox(height: 10),
-                      Text('${lesson.durationMinutes} min preview', style: const TextStyle(color: AppColors.textSecondary)),
-                    ],
-                  ),
+          ...course.lessons.map(
+            (lesson) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GlowCard(
+                accent: course.color,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lesson.title.resolve(state.locale),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      lesson.summary.resolve(state.locale),
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '${lesson.durationMinutes} min preview',
+                      style: TextStyle(color: colors.textSecondary),
+                    ),
+                  ],
                 ),
-              )),
+              ),
+            ),
+          ),
           AppButton.primary(
             label: saved ? 'Saved to profile' : 'Save course',
-            icon: saved ? Icons.check_circle_rounded : Icons.bookmark_add_rounded,
-            onPressed: saved ? null : () => controller.saveCommunityCourse(widget.courseId),
+            icon:
+                saved ? Icons.check_circle_rounded : Icons.bookmark_add_rounded,
+            onPressed: saved
+                ? null
+                : () => controller.saveCommunityCourse(widget.courseId),
           ),
         ],
       ),
@@ -118,13 +155,21 @@ class _Meta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: AppColors.surfaceSoft,
+        color: colors.surfaceSoft,
       ),
-      child: Text(label, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

@@ -52,12 +52,17 @@ class _MyAppState extends ConsumerState<MyApp>
     final locale = ref.watch(
       demoAppControllerProvider.select((state) => state.locale),
     );
+    final themeMode = ref.watch(
+      demoAppControllerProvider.select((state) => state.themeMode),
+    );
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       title: 'ZerdeStudy',
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode.materialMode,
       locale: locale.locale,
       supportedLocales: AppLocale.values
           .map((appLocale) => appLocale.locale)

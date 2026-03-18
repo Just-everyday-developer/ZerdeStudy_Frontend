@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 import '../../../../main.dart';
 import 'infinite_tech_painter.dart';
 
@@ -14,8 +14,9 @@ class AuthBackgroundWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.background,
       body: Stack(
         children: [
           Positioned.fill(
@@ -24,11 +25,7 @@ class AuthBackgroundWrapper extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.background,
-                    AppColors.backgroundElevated,
-                    AppColors.background.withValues(alpha: 0.96),
-                  ],
+                  colors: colors.authGradient,
                 ),
               ),
             ),
@@ -40,6 +37,8 @@ class AuthBackgroundWrapper extends StatelessWidget {
                 return CustomPaint(
                   painter: InfiniteTechPainter(
                     animationValue: backgroundController.value,
+                    primary: colors.primary,
+                    accent: colors.accent,
                   ),
                 );
               },
@@ -48,12 +47,12 @@ class AuthBackgroundWrapper extends StatelessWidget {
           Positioned(
             left: -40,
             top: 80,
-            child: _GlowOrb(color: AppColors.primary.withValues(alpha: 0.22)),
+            child: _GlowOrb(color: colors.primary.withValues(alpha: 0.22)),
           ),
           Positioned(
             right: -50,
             bottom: 140,
-            child: _GlowOrb(color: AppColors.accent.withValues(alpha: 0.18)),
+            child: _GlowOrb(color: colors.accent.withValues(alpha: 0.18)),
           ),
           child,
         ],

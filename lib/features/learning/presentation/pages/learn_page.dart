@@ -8,8 +8,8 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 
 class LearnPage extends ConsumerWidget {
   const LearnPage({super.key});
@@ -21,10 +21,9 @@ class LearnPage extends ConsumerWidget {
     final catalog = ref.watch(demoCatalogProvider);
     final currentTrack = catalog.trackById(state.currentTrackId);
     final progress = catalog.progressForTrack(state, currentTrack.id);
-    final l10n = context.l10n;
+    final colors = context.appColors;
 
     return AppPageScaffold(
-      title: l10n.text('tab_learn'),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
         children: [
@@ -38,10 +37,12 @@ class LearnPage extends ConsumerWidget {
                 selected: selected,
                 onSelected: (_) => controller.setCurrentTrack(track.id),
                 selectedColor: track.color.withValues(alpha: 0.18),
-                backgroundColor: AppColors.surfaceSoft,
-                side: BorderSide(color: selected ? track.color : AppColors.divider),
+                backgroundColor: colors.surfaceSoft,
+                side: BorderSide(
+                  color: selected ? track.color : colors.divider,
+                ),
                 labelStyle: TextStyle(
-                  color: selected ? track.color : AppColors.textSecondary,
+                  color: selected ? track.color : colors.textSecondary,
                   fontWeight: FontWeight.w700,
                 ),
               );
@@ -53,47 +54,61 @@ class LearnPage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(l10n.text('current_focus'), style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  context.l10n.text('current_focus'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 8),
-                Text(currentTrack.title.resolve(state.locale), style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  currentTrack.title.resolve(state.locale),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 8),
-                Text(currentTrack.outcome.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.45)),
+                Text(
+                  currentTrack.outcome.resolve(state.locale),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
                   child: LinearProgressIndicator(
                     value: progress.fraction,
                     minHeight: 10,
-                    backgroundColor: AppColors.backgroundElevated,
+                    backgroundColor: colors.backgroundElevated,
                     color: currentTrack.color,
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '${progress.completedUnits}/${progress.totalUnits} units • ${progress.completedQuizzes}/${progress.totalQuizzes} quizzes • ${progress.completedTrainers}/${progress.totalTrainers} labs',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  '${progress.completedUnits}/${progress.totalUnits} units | ${progress.completedQuizzes}/${progress.totalQuizzes} quizzes | ${progress.completedTrainers}/${progress.totalTrainers} labs',
+                  style: TextStyle(color: colors.textSecondary),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 20),
-          ...currentTrack.modules.map((module) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _ModuleCard(
-                  module: module,
-                  locale: state.locale,
-                  completedLessonIds: state.completedLessonIds,
-                  completedPracticeIds: state.completedPracticeIds,
-                  onLessonTap: (lesson) {
-                    controller.focusLesson(lesson.id);
-                    context.push(AppRoutes.lessonById(lesson.id));
-                  },
-                  onPracticeTap: (practice) {
-                    controller.focusPractice(practice.id);
-                    context.push(AppRoutes.practiceById(practice.id));
-                  },
-                ),
-              )),
+          ...currentTrack.modules.map(
+            (module) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _ModuleCard(
+                module: module,
+                locale: state.locale,
+                completedLessonIds: state.completedLessonIds,
+                completedPracticeIds: state.completedPracticeIds,
+                onLessonTap: (lesson) {
+                  controller.focusLesson(lesson.id);
+                  context.push(AppRoutes.lessonById(lesson.id));
+                },
+                onPracticeTap: (practice) {
+                  controller.focusPractice(practice.id);
+                  context.push(AppRoutes.practiceById(practice.id));
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -119,22 +134,32 @@ class _ModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return GlowCard(
       accent: const Color(0xFF5CE6FF),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(module.title.resolve(locale), style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            module.title.resolve(locale),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 6),
-          Text(module.summary.resolve(locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.45)),
+          Text(
+            module.summary.resolve(locale),
+            style: TextStyle(color: colors.textSecondary, height: 1.45),
+          ),
           const SizedBox(height: 16),
-          ...module.lessons.map((lesson) => _UnitTile(
-                title: lesson.title.resolve(locale),
-                subtitle: lesson.summary.resolve(locale),
-                icon: Icons.play_lesson_rounded,
-                completed: completedLessonIds.contains(lesson.id),
-                onTap: () => onLessonTap(lesson),
-              )),
+          ...module.lessons.map(
+            (lesson) => _UnitTile(
+              title: lesson.title.resolve(locale),
+              subtitle: lesson.summary.resolve(locale),
+              icon: Icons.play_lesson_rounded,
+              completed: completedLessonIds.contains(lesson.id),
+              onTap: () => onLessonTap(lesson),
+            ),
+          ),
           if (module.practice != null)
             _UnitTile(
               title: module.practice!.title.resolve(locale),
@@ -166,16 +191,31 @@ class _UnitTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return ListTile(
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        backgroundColor: (completed ? AppColors.success : AppColors.primary).withValues(alpha: 0.18),
-        child: Icon(completed ? Icons.check_rounded : icon, color: completed ? AppColors.success : AppColors.primary),
+        backgroundColor: (completed ? colors.success : colors.primary)
+            .withValues(alpha: 0.18),
+        child: Icon(
+          completed ? Icons.check_rounded : icon,
+          color: completed ? colors.success : colors.primary,
+        ),
       ),
-      title: Text(title, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
-      subtitle: Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, height: 1.3)),
-      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(color: colors.textSecondary, height: 1.3),
+      ),
+      trailing: Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
     );
   }
 }

@@ -2,16 +2,19 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
 import 'background_assets.dart';
 import 'tech_particle.dart';
 
 class InfiniteTechPainter extends CustomPainter {
   InfiniteTechPainter({
     required this.animationValue,
+    required this.primary,
+    required this.accent,
   });
 
   final double animationValue;
+  final Color primary;
+  final Color accent;
 
   static final List<TechParticle> _particles = List<TechParticle>.generate(
     54,
@@ -28,7 +31,7 @@ class InfiniteTechPainter extends CustomPainter {
       final progress = (animationValue * particle.speed + particle.yOffset) % 1;
       final random = math.Random(particle.id);
       final isIcon = random.nextBool();
-      final accent = random.nextBool() ? AppColors.primary : AppColors.accent;
+      final particleAccent = random.nextBool() ? primary : accent;
       final depth = 0.35 + random.nextDouble() * 0.75;
       final x = (random.nextDouble() * size.width).clamp(24, size.width - 24);
       final y = progress * (size.height + 120) - 60;
@@ -49,7 +52,7 @@ class InfiniteTechPainter extends CustomPainter {
         text: TextSpan(
           text: symbol,
           style: TextStyle(
-            color: accent.withValues(alpha: opacity.toDouble()),
+            color: particleAccent.withValues(alpha: opacity.toDouble()),
             fontSize: 12 + depth * 12,
             fontFamily: fontFamily,
             fontWeight: FontWeight.w700,

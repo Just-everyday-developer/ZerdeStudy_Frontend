@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_locale.dart';
+import 'app_theme_mode.dart';
 import 'demo_app_state.dart';
 import 'demo_catalog.dart';
 import 'demo_models.dart';
@@ -18,7 +19,7 @@ final demoAppControllerProvider =
     NotifierProvider<DemoAppController, DemoAppState>(DemoAppController.new);
 
 class DemoAppController extends Notifier<DemoAppState> {
-  static const String _storageKey = 'zerdestudy_demo_state_v2';
+  static const String _storageKey = 'zerdestudy_demo_state_v3';
 
   late final SharedPreferences _preferences;
   late final DemoCatalog _catalog;
@@ -93,6 +94,11 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void changeLocale(AppLocale locale) {
     state = _withDerived(state.copyWith(locale: locale));
+    _persist();
+  }
+
+  void changeThemeMode(AppThemeMode themeMode) {
+    state = _withDerived(state.copyWith(themeMode: themeMode));
     _persist();
   }
 
@@ -316,6 +322,7 @@ class DemoAppController extends Notifier<DemoAppState> {
   DemoAppState _seedState() {
     return DemoAppState(
       locale: AppLocale.ru,
+      themeMode: AppThemeMode.dark,
       isAuthenticated: false,
       user: null,
       currentTrackId: 'fundamentals',

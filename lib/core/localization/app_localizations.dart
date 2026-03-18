@@ -40,11 +40,11 @@ class AppLocalizations {
     },
     'tagline': {
       AppLocale.ru:
-          'Персональная траектория в IT с деревом знаний, AI-ментором и презентационным MVP.',
+          'Начните изучать IT шаг за шагом - понятно и уверенно',
       AppLocale.en:
-          'A personal path into IT with a knowledge tree, AI mentor, and presentation-ready MVP.',
+          'Start learning IT step by step with clarity and confidence',
       AppLocale.kk:
-          'IT саласына білім ағашы, AI-ментор және презентацияға дайын MVP бар жеке траектория.',
+          'IT-ті қадам-қадаммен анық әрі сенімді үйренуді бастаңыз',
     },
     'presentation_ready': {
       AppLocale.ru: 'Кликабельный MVP для презентации',
@@ -63,7 +63,7 @@ class AppLocalizations {
     },
     'signup': {
       AppLocale.ru: 'Создать аккаунт',
-      AppLocale.en: 'Create account',
+      AppLocale.en: 'Sign up',
       AppLocale.kk: 'Аккаунт ашу',
     },
     'login_title': {

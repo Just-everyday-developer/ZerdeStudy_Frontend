@@ -83,7 +83,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return AppShellScaffold(navigationShell: navigationShell);
+          return AppShellScaffold(
+            navigationShell: navigationShell,
+            navigatorKeys: <GlobalKey<NavigatorState>>[
+              _homeNavigatorKey,
+              _treeNavigatorKey,
+              _learnNavigatorKey,
+              _aiNavigatorKey,
+              _profileNavigatorKey,
+            ],
+          );
         },
         branches: [
           StatefulShellBranch(

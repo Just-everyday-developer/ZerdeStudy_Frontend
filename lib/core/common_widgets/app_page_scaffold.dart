@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/app_theme_colors.dart';
 
 class AppPageScaffold extends StatelessWidget {
   const AppPageScaffold({
@@ -20,6 +20,7 @@ class AppPageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final content = SafeArea(
       top: safeAreaTop,
       child: Align(
@@ -32,12 +33,12 @@ class AppPageScaffold extends StatelessWidget {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.background,
       bottomNavigationBar: bottomNavigationBar,
-      appBar: title == null
+      appBar: title == null && (actions == null || actions!.isEmpty)
           ? null
           : AppBar(
-              title: Text(title!),
+              title: title == null ? null : Text(title!),
               centerTitle: false,
               backgroundColor: Colors.transparent,
               actions: actions,
@@ -57,16 +58,13 @@ class _Backdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF0A0F1D),
-            Color(0xFF08111F),
-            Color(0xFF050A14),
-          ],
+          colors: colors.pageGradient,
         ),
       ),
       child: Stack(
@@ -75,7 +73,7 @@ class _Backdrop extends StatelessWidget {
             top: -80,
             left: -50,
             child: _GlowOrb(
-              color: AppColors.primary.withValues(alpha: 0.18),
+              color: colors.primary.withValues(alpha: 0.18),
               size: 220,
             ),
           ),
@@ -83,7 +81,7 @@ class _Backdrop extends StatelessWidget {
             top: 180,
             right: -60,
             child: _GlowOrb(
-              color: AppColors.accent.withValues(alpha: 0.16),
+              color: colors.accent.withValues(alpha: 0.16),
               size: 180,
             ),
           ),
@@ -91,7 +89,7 @@ class _Backdrop extends StatelessWidget {
             bottom: -30,
             left: 50,
             child: _GlowOrb(
-              color: AppColors.success.withValues(alpha: 0.12),
+              color: colors.success.withValues(alpha: 0.12),
               size: 160,
             ),
           ),

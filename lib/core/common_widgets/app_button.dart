@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/app_theme_colors.dart';
 
 class AppButton extends StatelessWidget {
   const AppButton.primary({
@@ -25,11 +25,14 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final background = isSecondary
-        ? AppColors.surfaceSoft.withValues(alpha: 0.82)
-        : AppColors.primary;
-    final foreground = isSecondary ? AppColors.textPrimary : AppColors.background;
-    final border = isSecondary ? AppColors.divider : AppColors.primary;
+        ? colors.surfaceSoft.withValues(alpha: 0.88)
+        : colors.primary;
+    final foreground = isSecondary
+        ? colors.textPrimary
+        : Theme.of(context).colorScheme.onPrimary;
+    final border = isSecondary ? colors.divider : colors.primary;
 
     return SizedBox(
       width: double.infinity,

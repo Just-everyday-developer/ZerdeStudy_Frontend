@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/state/app_locale.dart';
-import '../constants/app_colors.dart';
+import '../theme/app_theme_colors.dart';
 
 class LocaleSelector extends StatelessWidget {
   const LocaleSelector({
@@ -15,6 +15,7 @@ class LocaleSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -24,13 +25,13 @@ class LocaleSelector extends StatelessWidget {
           label: Text(locale.label),
           selected: selected,
           onSelected: (_) => onChanged(locale),
-          selectedColor: AppColors.primary.withValues(alpha: 0.16),
-          backgroundColor: AppColors.surfaceSoft,
+          selectedColor: colors.primary.withValues(alpha: 0.16),
+          backgroundColor: colors.surfaceSoft,
           side: BorderSide(
-            color: selected ? AppColors.primary : AppColors.divider,
+            color: selected ? colors.primary : colors.divider,
           ),
           labelStyle: TextStyle(
-            color: selected ? AppColors.primary : AppColors.textSecondary,
+            color: selected ? colors.primary : colors.textSecondary,
             fontWeight: FontWeight.w700,
           ),
         );

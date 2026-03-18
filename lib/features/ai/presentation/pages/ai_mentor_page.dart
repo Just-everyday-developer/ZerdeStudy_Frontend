@@ -7,8 +7,8 @@ import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 
 class AiMentorPage extends ConsumerStatefulWidget {
   const AiMentorPage({super.key});
@@ -43,14 +43,17 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
     final catalog = ref.watch(demoCatalogProvider);
     final l10n = context.l10n;
     final prompts = catalog.suggestedPrompts(state);
+    final colors = context.appColors;
     final focusedTitle = state.focusedLessonId == null
         ? state.focusedPracticeId == null
             ? catalog.trackById(state.currentTrackId).title.resolve(state.locale)
-            : catalog.practiceById(state.focusedPracticeId!).title.resolve(state.locale)
+            : catalog
+                .practiceById(state.focusedPracticeId!)
+                .title
+                .resolve(state.locale)
         : catalog.lessonById(state.focusedLessonId!).title.resolve(state.locale);
 
     return AppPageScaffold(
-      title: l10n.text('ai_mentor'),
       child: Column(
         children: [
           Expanded(
@@ -58,7 +61,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
               children: [
                 GlowCard(
-                  accent: AppColors.primary,
+                  accent: colors.primary,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -69,8 +72,8 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                       const SizedBox(height: 6),
                       Text(
                         focusedTitle,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: TextStyle(
+                          color: colors.textSecondary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -79,7 +82,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                 ),
                 const SizedBox(height: 16),
                 GlowCard(
-                  accent: AppColors.accent,
+                  accent: colors.accent,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -95,10 +98,12 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                           return ActionChip(
                             label: Text(prompt),
                             onPressed: () {
-                              ref.read(demoAppControllerProvider.notifier).sendAiMessage(prompt);
+                              ref
+                                  .read(demoAppControllerProvider.notifier)
+                                  .sendAiMessage(prompt);
                             },
-                            side: const BorderSide(color: AppColors.divider),
-                            backgroundColor: AppColors.surfaceSoft,
+                            side: BorderSide(color: colors.divider),
+                            backgroundColor: colors.surfaceSoft,
                           );
                         }).toList(growable: false),
                       ),
@@ -109,19 +114,19 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                 _FaqSection(
                   locale: state.locale,
                   onAsk: (question) {
-                    ref.read(demoAppControllerProvider.notifier).sendAiMessage(
-                          question,
-                        );
+                    ref
+                        .read(demoAppControllerProvider.notifier)
+                        .sendAiMessage(question);
                   },
                 ),
                 const SizedBox(height: 16),
                 if (state.aiMessages.isEmpty)
                   GlowCard(
-                    accent: AppColors.success,
+                    accent: colors.success,
                     child: Text(
                       l10n.text('empty_chat'),
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        color: colors.textSecondary,
                         height: 1.45,
                       ),
                     ),
@@ -142,7 +147,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: GlowCard(
-              accent: AppColors.primary,
+              accent: colors.primary,
               child: Column(
                 children: [
                   TextField(
@@ -180,8 +185,9 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final isMentor = message.author == AiAuthor.mentor;
-    final accent = isMentor ? AppColors.primary : AppColors.accent;
+    final accent = isMentor ? colors.primary : colors.accent;
 
     return Align(
       alignment: isMentor ? Alignment.centerLeft : Alignment.centerRight,
@@ -194,7 +200,7 @@ class _MessageBubble extends StatelessWidget {
                 isMentor ? CrossAxisAlignment.start : CrossAxisAlignment.end,
             children: [
               Text(
-                isMentor ? 'AI Mentor' : 'You',
+                isMentor ? 'Mentor' : 'You',
                 style: TextStyle(
                   color: accent,
                   fontWeight: FontWeight.w700,
@@ -203,8 +209,8 @@ class _MessageBubble extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 message.text,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: colors.textPrimary,
                   height: 1.45,
                 ),
               ),
@@ -228,23 +234,24 @@ class _FaqSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = _faqItemsFor(locale);
+    final colors = context.appColors;
 
     return GlowCard(
-      accent: AppColors.success,
+      accent: colors.success,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            locale == AppLocale.ru ? 'Частые вопросы' : 'Common questions',
+            locale == AppLocale.ru ? 'Готовые вопросы' : 'Prepared questions',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           Text(
             locale == AppLocale.ru
-                ? 'Откройте популярные вопросы по дереву знаний и обучающим трекам.'
-                : 'Browse common questions about the knowledge tree and learning tracks.',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+                ? 'Выберите один из готовых вопросов и сразу отправьте его в чат.'
+                : 'Pick a prepared question and send it to the chat instantly.',
+            style: TextStyle(
+              color: colors.textSecondary,
               height: 1.4,
             ),
           ),
@@ -254,7 +261,7 @@ class _FaqSection extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 12),
               child: _FaqCard(
                 item: item,
-                askLabel: locale == AppLocale.ru ? 'Использовать вопрос' : 'Use question',
+                askLabel: locale == AppLocale.ru ? 'Задать вопрос' : 'Ask now',
                 onAsk: () => onAsk(item.question),
               ),
             ),
@@ -268,68 +275,68 @@ class _FaqSection extends StatelessWidget {
     if (locale == AppLocale.ru) {
       return const <_FaqItem>[
         _FaqItem(
-          question: 'Почему дерево начинается с Computer Science Core?',
+          question: 'С чего лучше начать в этом дереве знаний?',
           answer:
-              'Потому что это общий фундамент: математика, архитектура компьютера, ОС, сети и базы данных объясняют, как реально ведут себя данные, код и системы.',
+              'Начните с core-тем: математика, алгоритмы, базы данных, сети и операционные системы дают основу почти для всех инженерных направлений.',
         ),
         _FaqItem(
-          question: 'Как из core-тем дерево переходит в backend, frontend и другие сферы?',
+          question: 'Как Operating Systems помогает понять backend и mobile?',
           answer:
-              'Через Fundamentals и прикладные связи: сети и базы данных естественно ведут в backend, ОС и lifecycle помогают mobile и SRE, а математика и статистика ведут в machine learning.',
+              'ОС объясняют процессы, память, файлы, потоки и работу с ресурсами, а это напрямую влияет на серверные приложения и мобильный runtime.',
         ),
         _FaqItem(
-          question: 'Что важно сказать про Operating Systems на презентации?',
+          question: 'Какие core-темы особенно важны для ML Engineer?',
           answer:
-              'ОС управляет процессами, памятью, файлами и доступом к ресурсам. Это слой, который связывает код приложения с реальным железом и поведением системы.',
+              'Линейная алгебра, теория вероятностей и статистика особенно важны: они помогают понимать представление данных, обучение моделей и оценку качества.',
         ),
         _FaqItem(
-          question: 'Зачем в уроках нужны Output Quiz и Code Memory Lab?',
+          question: 'Зачем в уроках есть Output Quiz и Code Memory Lab?',
           answer:
-              'Output Quiz проверяет понимание выполнения кода, а Code Memory Lab закрепляет синтаксис и структуру через короткие тренажеры. Вместе они делают урок более живым и убедительным на демо.',
+              'Output Quiz тренирует понимание выполнения кода, а Code Memory Lab закрепляет синтаксис и типичные шаблоны через короткие упражнения.',
         ),
         _FaqItem(
-          question: 'Какие темы из core важнее всего для machine learning?',
+          question: 'Как выбрать следующую ветку после текущей?',
           answer:
-              'Линейная алгебра помогает понимать векторы и преобразования, а вероятность и статистика нужны для оценки моделей, метрик и уверенности в результате.',
+              'Идите по соседним ветвям: после core-тем логично переходить в специализацию, которая использует этот фундамент на практике.',
         ),
         _FaqItem(
-          question: 'Как выбрать следующую ветку после изучения текущей?',
+          question: 'Что можно коротко сказать про базы данных на защите?',
           answer:
-              'Ориентируйтесь на связи в дереве: после core-тем обычно удобно идти в Fundamentals, а затем переходить в прикладную сферу, которая опирается на этот фундамент.',
+              'Базы данных отвечают за хранение, поиск, целостность и структуру информации, поэтому они лежат в основе backend, аналитики и многих продуктовых систем.',
         ),
       ];
     }
 
     return const <_FaqItem>[
       _FaqItem(
-        question: 'Why does the tree begin with Computer Science Core?',
+        question: 'Where should I start in this tree?',
         answer:
-            'Because the core topics explain how software, data, hardware, and systems really behave before the learner picks a specialization.',
+            'Start with the CS core branches because they explain the foundation behind most engineering roles.',
       ),
       _FaqItem(
-        question: 'How does the tree move from core topics into backend, frontend, and the other spheres?',
+        question: 'How do Operating Systems support backend and mobile?',
         answer:
-            'The bridge is Fundamentals plus applied connections: networks and databases feed backend, operating systems support mobile and SRE, and math/statistics support machine learning.',
+            'Operating Systems explain processes, memory, files, threads, and resource access, which shape both server and mobile runtime behavior.',
       ),
       _FaqItem(
-        question: 'What is the strongest one-line explanation of Operating Systems?',
+        question: 'Which core topics matter most for ML Engineer?',
         answer:
-            'Operating Systems manage processes, memory, files, and device access, connecting application logic to the actual runtime environment.',
+            'Linear algebra, probability, and statistics are especially important because they support model training, data representation, and evaluation.',
       ),
       _FaqItem(
         question: 'Why do lessons include Output Quiz and Code Memory Lab?',
         answer:
-            'The quiz checks whether the learner can reason about execution, while the memory lab reinforces syntax and code structure through small active exercises.',
+            'The quiz checks code execution reasoning, while the memory lab reinforces syntax and structure through short active practice.',
       ),
       _FaqItem(
-        question: 'Which core topics matter most for machine learning?',
+        question: 'How should I choose the next branch?',
         answer:
-            'Linear algebra helps with vectors and transformations, while probability and statistics are essential for metrics, uncertainty, and model evaluation.',
+            'Move into the specialization that naturally builds on the core topic you just studied.',
       ),
       _FaqItem(
-        question: 'How should I choose the next branch after this one?',
+        question: 'What is the short defense-ready explanation of databases?',
         answer:
-            'Follow the nearby tree connections: after a core topic, move into Fundamentals or the closest applied sphere that builds on the same foundation.',
+            'Databases are responsible for structured storage, fast access, and data integrity, which makes them a foundation for backend and analytics systems.',
       ),
     ];
   }
@@ -348,20 +355,22 @@ class _FaqCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: AppColors.surfaceSoft,
-        border: Border.all(color: AppColors.divider),
+        color: colors.surfaceSoft,
+        border: Border.all(color: colors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             item.question,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: colors.textPrimary,
               fontWeight: FontWeight.w700,
               height: 1.35,
             ),
@@ -369,8 +378,8 @@ class _FaqCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             item.answer,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: colors.textSecondary,
               height: 1.45,
             ),
           ),
@@ -379,15 +388,15 @@ class _FaqCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: onAsk,
-              icon: const Icon(
+              icon: Icon(
                 Icons.send_rounded,
                 size: 16,
-                color: AppColors.primary,
+                color: colors.primary,
               ),
               label: Text(
                 askLabel,
-                style: const TextStyle(
-                  color: AppColors.primary,
+                style: TextStyle(
+                  color: colors.primary,
                   fontWeight: FontWeight.w700,
                 ),
               ),

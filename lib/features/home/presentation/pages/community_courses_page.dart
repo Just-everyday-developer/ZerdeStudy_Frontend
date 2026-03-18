@@ -6,7 +6,7 @@ import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 
 class CommunityCoursesPage extends ConsumerWidget {
   const CommunityCoursesPage({super.key});
@@ -15,6 +15,7 @@ class CommunityCoursesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
     final catalog = ref.watch(demoCatalogProvider);
+    final colors = context.appColors;
 
     return AppPageScaffold(
       title: 'Community courses',
@@ -38,24 +39,48 @@ class CommunityCoursesPage extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(course.title.resolve(state.locale), style: Theme.of(context).textTheme.titleLarge),
+                              Text(
+                                course.title.resolve(state.locale),
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
                               const SizedBox(height: 6),
-                              Text(course.subtitle.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.35)),
+                              Text(
+                                course.subtitle.resolve(state.locale),
+                                style: TextStyle(
+                                  color: colors.textSecondary,
+                                  height: 1.35,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(999),
                             color: course.color.withValues(alpha: 0.14),
                           ),
-                          child: Text(saved ? 'Saved' : course.level, style: TextStyle(color: course.color, fontWeight: FontWeight.w700)),
+                          child: Text(
+                            saved ? 'Saved' : course.level,
+                            style: TextStyle(
+                              color: course.color,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
-                    Text(course.description.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.4)),
+                    Text(
+                      course.description.resolve(state.locale),
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
                     const SizedBox(height: 14),
                     Wrap(
                       spacing: 8,
@@ -84,13 +109,21 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: AppColors.surfaceSoft,
+        color: colors.surfaceSoft,
       ),
-      child: Text(label, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

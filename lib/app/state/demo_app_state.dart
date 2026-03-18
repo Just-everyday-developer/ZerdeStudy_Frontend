@@ -1,9 +1,11 @@
 import 'app_locale.dart';
+import 'app_theme_mode.dart';
 import 'demo_models.dart';
 
 class DemoAppState {
   const DemoAppState({
     required this.locale,
+    required this.themeMode,
     required this.isAuthenticated,
     required this.user,
     required this.currentTrackId,
@@ -28,6 +30,7 @@ class DemoAppState {
   static const int xpPerLevel = 180;
 
   final AppLocale locale;
+  final AppThemeMode themeMode;
   final bool isAuthenticated;
   final DemoUser? user;
   final String currentTrackId;
@@ -74,6 +77,7 @@ class DemoAppState {
 
   DemoAppState copyWith({
     AppLocale? locale,
+    AppThemeMode? themeMode,
     bool? isAuthenticated,
     Object? user = _sentinel,
     String? currentTrackId,
@@ -95,6 +99,7 @@ class DemoAppState {
   }) {
     return DemoAppState(
       locale: locale ?? this.locale,
+      themeMode: themeMode ?? this.themeMode,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       user: identical(user, _sentinel) ? this.user : user as DemoUser?,
       currentTrackId: currentTrackId ?? this.currentTrackId,
@@ -130,6 +135,7 @@ class DemoAppState {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'locale': locale.code,
+      'themeMode': themeMode.code,
       'isAuthenticated': isAuthenticated,
       'user': user?.toJson(),
       'currentTrackId': currentTrackId,
@@ -156,6 +162,7 @@ class DemoAppState {
   factory DemoAppState.fromJson(Map<String, dynamic> json) {
     return DemoAppState(
       locale: AppLocale.fromCode(json['locale'] as String?),
+      themeMode: AppThemeMode.fromCode(json['themeMode'] as String?),
       isAuthenticated: json['isAuthenticated'] as bool? ?? false,
       user: json['user'] is Map<String, dynamic>
           ? DemoUser.fromJson(json['user'] as Map<String, dynamic>)

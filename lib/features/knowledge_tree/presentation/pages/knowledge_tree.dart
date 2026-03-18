@@ -7,10 +7,7 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/localization/app_localizations.dart';
-import '../widgets/skill_node.dart';
-import '../widgets/tree_painter.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 
 class KnowledgeTreePage extends ConsumerWidget {
   const KnowledgeTreePage({super.key});
@@ -18,29 +15,25 @@ class KnowledgeTreePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final catalog = ref.watch(demoCatalogProvider);
-    final coreCount = _treeNodeSpecs.keys
-        .where(
-          (id) => catalog.trackById(id).zone == TrackZone.computerScienceCore,
-        )
-        .length;
-    final appliedCount = _treeNodeSpecs.keys
-        .where((id) => catalog.trackById(id).zone == TrackZone.itSpheres)
-        .length;
+    final state = ref.watch(demoAppControllerProvider);
+    final colors = context.appColors;
+    final coreCount = _coreBranchIds.length + _mathChildIds.length;
+    final appliedCount = _appliedBranchIds.length + _mobileChildIds.length;
+    final completed = catalog.totalCompletedUnits(state);
 
     return AppPageScaffold(
-      title: context.l10n.text('knowledge_tree'),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
         children: [
           GlowCard(
-            accent: AppColors.primary,
+            accent: colors.primary,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'The knowledge map now grows like a real tree: the trunk holds core computer science, the first large branches carry the foundational disciplines, and higher branches specialize into engineering roles.',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  'One unified tree starts from the computer science foundation and grows into applied engineering paths.',
+                  style: TextStyle(
+                    color: colors.textSecondary,
                     height: 1.45,
                   ),
                 ),
@@ -50,19 +43,19 @@ class KnowledgeTreePage extends ConsumerWidget {
                   runSpacing: 10,
                   children: [
                     _FlowPill(
-                      label: 'CS Core',
-                      value: '$coreCount branches',
-                      color: AppColors.primary,
+                      label: 'Core',
+                      value: '$coreCount nodes',
+                      color: colors.primary,
                     ),
                     _FlowPill(
-                      label: 'Applied Roles',
-                      value: '$appliedCount branches',
-                      color: AppColors.accent,
+                      label: 'Applied',
+                      value: '$appliedCount nodes',
+                      color: colors.accent,
                     ),
                     _FlowPill(
-                      label: 'Map Size',
-                      value: '${_treeNodeSpecs.length} interactive nodes',
-                      color: AppColors.success,
+                      label: 'Progress',
+                      value: '$completed units done',
+                      color: colors.success,
                     ),
                   ],
                 ),
@@ -72,9 +65,109 @@ class KnowledgeTreePage extends ConsumerWidget {
           const SizedBox(height: 16),
           const _Legend(),
           const SizedBox(height: 16),
-          const SizedBox(
-            height: 760,
-            child: _OrganicKnowledgeTree(),
+          const _TreeCanvas(),
+        ],
+      ),
+    );
+  }
+}
+
+class _TreeCanvas extends ConsumerWidget {
+  const _TreeCanvas();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+
+    return GlowCard(
+      accent: colors.primary,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Column(
+                children: [
+                  const SizedBox(height: 86),
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        width: 8,
+                        decoration: BoxDecoration(
+                          color: colors.treeTrunk,
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colors.treeTrunkGlow.withValues(alpha: 0.24),
+                              blurRadius: 18,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Column(
+            children: [
+              _RootHeader(
+                title: 'Computer Science',
+                subtitle:
+                    'Base branches first, then applied specializations that grow from them.',
+              ),
+              const SizedBox(height: 18),
+              _TreeStageLabel(label: 'Core branches'),
+              const SizedBox(height: 10),
+              _BranchGroup(
+                trackId: 'mathematics',
+                side: _BranchSide.left,
+                childTrackIds: _mathChildIds,
+              ),
+              const SizedBox(height: 10),
+              ..._coreBranchIds
+                  .where((trackId) => trackId != 'mathematics')
+                  .toList(growable: false)
+                  .asMap()
+                  .entries
+                  .map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _BranchGroup(
+                        trackId: entry.value,
+                        side: entry.key.isEven
+                            ? _BranchSide.right
+                            : _BranchSide.left,
+                      ),
+                    ),
+                  ),
+              const SizedBox(height: 10),
+              _TreeStageLabel(label: 'Applied branches'),
+              const SizedBox(height: 10),
+              ..._appliedBranchIds.asMap().entries.map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _BranchGroup(
+                        trackId: entry.value,
+                        side: entry.key.isEven
+                            ? _BranchSide.right
+                            : _BranchSide.left,
+                        childTrackIds: entry.value == 'mobile'
+                            ? _mobileChildIds
+                            : const <String>[],
+                      ),
+                    ),
+                  ),
+              const SizedBox(height: 8),
+              Text(
+                'Tap any node to open its track overview.',
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -82,115 +175,237 @@ class KnowledgeTreePage extends ConsumerWidget {
   }
 }
 
-class _OrganicKnowledgeTree extends ConsumerWidget {
-  const _OrganicKnowledgeTree();
+class _BranchGroup extends ConsumerWidget {
+  const _BranchGroup({
+    required this.trackId,
+    required this.side,
+    this.childTrackIds = const <String>[],
+  });
+
+  final String trackId;
+  final _BranchSide side;
+  final List<String> childTrackIds;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
     final catalog = ref.watch(demoCatalogProvider);
-    final size = const Size(1860, 1400);
+    final track = catalog.trackById(trackId);
+    final availability = catalog.trackAvailabilityFor(state, track.id);
+    final colors = context.appColors;
+    final statusColor = _statusColor(colors, availability, track.color);
 
-    final connections = <List<Offset>>[
-      for (final link in _treeLinks)
-        if (_treeNodeSpecs.containsKey(link.$1) &&
-            _treeNodeSpecs.containsKey(link.$2))
-          <Offset>[
-            _treeNodeSpecs[link.$1]!.center,
-            _treeNodeSpecs[link.$2]!.center,
-          ],
-    ];
-
-    return GlowCard(
-      accent: AppColors.primary,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: InteractiveViewer(
-          constrained: false,
-          boundaryMargin: const EdgeInsets.all(24),
-          minScale: 0.24,
-          maxScale: 2.2,
-          child: SizedBox(
-            width: size.width,
-            height: size.height,
-            child: Stack(
-              children: [
-                CustomPaint(
-                  size: size,
-                  painter: TreePainter(
-                    connections: connections,
-                    trunkPaths: _trunkPaths,
-                  ),
-                ),
-                const Positioned(
-                  left: 720,
-                  top: 1040,
-                  child: _TreeLabel(
-                    title: 'Computer Science Roots',
-                    subtitle:
-                        'Math, databases, algorithms, networks, AI theory, architecture, security, and OS',
-                  ),
-                ),
-                const Positioned(
-                  left: 700,
-                  top: 360,
-                  child: _TreeLabel(
-                    title: 'Applied Engineering Branches',
-                    subtitle:
-                        'Frontend, backend, mobile, DevOps / SRE, system administration, ML, QA, and cybersecurity',
-                  ),
-                ),
-                ..._treeNodeSpecs.entries.map((entry) {
-                  final track = catalog.trackById(entry.key);
-                  final availability = catalog.trackAvailabilityFor(
-                    state,
-                    track.id,
-                  );
-                  final spec = entry.value;
-
-                  return SkillNode(
-                    label: track.title.resolve(state.locale),
-                    icon: track.icon,
-                    color: _statusColor(availability, track.color),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: side == _BranchSide.left
+              ? Align(
+                  alignment: Alignment.centerRight,
+                  child: _NodeCluster(
+                    track: track,
                     statusLabel: _statusLabel(availability),
-                    offset: spec.offset,
-                    diameter: spec.diameter,
-                    labelWidth: spec.labelWidth,
-                    onTap: () => context.push(AppRoutes.trackById(track.id)),
-                  );
-                }),
+                    statusColor: statusColor,
+                    childTrackIds: childTrackIds,
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+        SizedBox(
+          width: 68,
+          child: Row(
+            children: [
+              if (side == _BranchSide.right) ...[
+                Container(width: 34, height: 4, color: colors.treeTrunk),
+                Expanded(child: Container()),
+              ] else ...[
+                Expanded(child: Container()),
+                Container(width: 34, height: 4, color: colors.treeTrunk),
               ],
-            ),
+            ],
           ),
         ),
-      ),
+        Expanded(
+          child: side == _BranchSide.right
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: _NodeCluster(
+                    track: track,
+                    statusLabel: _statusLabel(availability),
+                    statusColor: statusColor,
+                    childTrackIds: childTrackIds,
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
     );
   }
+}
 
-  String _statusLabel(TrackAvailability availability) {
-    switch (availability) {
-      case TrackAvailability.available:
-        return 'Available';
-      case TrackAvailability.inProgress:
-        return 'In progress';
-      case TrackAvailability.completed:
-        return 'Completed';
-      case TrackAvailability.mastered:
-        return 'Mastered';
-    }
-  }
+class _NodeCluster extends ConsumerWidget {
+  const _NodeCluster({
+    required this.track,
+    required this.statusLabel,
+    required this.statusColor,
+    required this.childTrackIds,
+  });
 
-  Color _statusColor(TrackAvailability availability, Color trackColor) {
-    switch (availability) {
-      case TrackAvailability.available:
-        return AppColors.textSecondary;
-      case TrackAvailability.inProgress:
-        return trackColor;
-      case TrackAvailability.completed:
-        return AppColors.success;
-      case TrackAvailability.mastered:
-        return AppColors.accent;
-    }
+  final LearningTrack track;
+  final String statusLabel;
+  final Color statusColor;
+  final List<String> childTrackIds;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(demoAppControllerProvider);
+    final catalog = ref.watch(demoCatalogProvider);
+    final colors = context.appColors;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 160),
+      child: Column(
+        crossAxisAlignment: track.id == 'backend' ||
+                track.id == 'databases' ||
+                track.id == 'networking_protocols' ||
+                track.id == 'ai_theory' ||
+                track.id == 'computer_architecture' ||
+                track.id == 'operating_systems' ||
+                track.id == 'sre_devops' ||
+                track.id == 'system_administration' ||
+                track.id == 'qa_engineering' ||
+                track.id == 'cybersecurity'
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.end,
+        children: [
+          InkWell(
+            onTap: () => context.push(AppRoutes.trackById(track.id)),
+            borderRadius: BorderRadius.circular(22),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                color: colors.surface,
+                border: Border.all(color: statusColor.withValues(alpha: 0.34)),
+                boxShadow: [
+                  BoxShadow(
+                    color: statusColor.withValues(alpha: 0.12),
+                    blurRadius: 18,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: statusColor.withValues(alpha: 0.14),
+                    ),
+                    child: Icon(track.icon, color: statusColor, size: 20),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    track.title.resolve(state.locale),
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: statusColor.withValues(alpha: 0.14),
+                    ),
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (childTrackIds.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 10),
+              width: 4,
+              height: 18,
+              decoration: BoxDecoration(
+                color: colors.treeTrunk,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            Wrap(
+              alignment: WrapAlignment.start,
+              spacing: 8,
+              runSpacing: 8,
+              children: childTrackIds.map((childTrackId) {
+                final childTrack = catalog.trackById(childTrackId);
+                final availability = catalog.trackAvailabilityFor(
+                  state,
+                  childTrack.id,
+                );
+                final childColor = _statusColor(
+                  colors,
+                  availability,
+                  childTrack.color,
+                );
+
+                return InkWell(
+                  onTap: () => context.push(AppRoutes.trackById(childTrack.id)),
+                  borderRadius: BorderRadius.circular(18),
+                  child: Container(
+                    width: 72,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: colors.surfaceSoft,
+                      border: Border.all(
+                        color: childColor.withValues(alpha: 0.28),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(childTrack.icon, color: childColor, size: 18),
+                        const SizedBox(height: 6),
+                        Text(
+                          childTrack.title.resolve(state.locale),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: colors.textPrimary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(growable: false),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -199,16 +414,18 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return GlowCard(
-      accent: AppColors.success,
+      accent: colors.success,
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: const [
-          _LegendPill(label: 'Available', color: AppColors.textSecondary),
-          _LegendPill(label: 'In progress', color: AppColors.primary),
-          _LegendPill(label: 'Completed', color: AppColors.success),
-          _LegendPill(label: 'Mastered', color: AppColors.accent),
+        children: [
+          _LegendPill(label: 'Available', color: colors.textSecondary),
+          _LegendPill(label: 'In progress', color: colors.primary),
+          _LegendPill(label: 'Completed', color: colors.success),
+          _LegendPill(label: 'Mastered', color: colors.accent),
         ],
       ),
     );
@@ -256,6 +473,8 @@ class _FlowPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -277,7 +496,7 @@ class _FlowPill extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: colors.textSecondary),
           ),
         ],
       ),
@@ -285,8 +504,8 @@ class _FlowPill extends StatelessWidget {
   }
 }
 
-class _TreeLabel extends StatelessWidget {
-  const _TreeLabel({
+class _RootHeader extends StatelessWidget {
+  const _RootHeader({
     required this.title,
     required this.subtitle,
   });
@@ -296,191 +515,136 @@ class _TreeLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: 430,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: AppColors.surface.withValues(alpha: 0.88),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w800,
-              ),
+    final colors = context.appColors;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: colors.surface.withValues(alpha: 0.92),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                height: 1.35,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: colors.textSecondary,
+              height: 1.35,
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TreeStageLabel extends StatelessWidget {
+  const _TreeStageLabel({
+    required this.label,
+  });
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: colors.surfaceSoft,
+        border: Border.all(color: colors.divider),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 }
 
-class _TreeNodeSpec {
-  const _TreeNodeSpec({
-    required this.offset,
-    this.diameter = 88,
-    this.labelWidth = 124,
-  });
-
-  final Offset offset;
-  final double diameter;
-  final double labelWidth;
-
-  Offset get center => offset + Offset(diameter / 2, diameter / 2);
+enum _BranchSide {
+  left,
+  right,
 }
 
-const Map<String, _TreeNodeSpec> _treeNodeSpecs = <String, _TreeNodeSpec>{
-  'mathematics': _TreeNodeSpec(
-    offset: Offset(150, 720),
-    diameter: 106,
-    labelWidth: 150,
-  ),
-  'mathematical_analysis': _TreeNodeSpec(offset: Offset(20, 510), diameter: 82),
-  'discrete_math': _TreeNodeSpec(offset: Offset(170, 340), diameter: 82),
-  'linear_algebra_calculus': _TreeNodeSpec(
-    offset: Offset(320, 510),
-    diameter: 82,
-  ),
-  'probability_statistics_analytics': _TreeNodeSpec(
-    offset: Offset(470, 340),
-    diameter: 82,
-    labelWidth: 132,
-  ),
-  'algorithms_data_structures': _TreeNodeSpec(
-    offset: Offset(560, 810),
-    diameter: 94,
-    labelWidth: 144,
-  ),
-  'databases': _TreeNodeSpec(offset: Offset(780, 680), diameter: 92),
-  'networking_protocols': _TreeNodeSpec(
-    offset: Offset(1030, 630),
-    diameter: 92,
-    labelWidth: 136,
-  ),
-  'ai_theory': _TreeNodeSpec(offset: Offset(1240, 820), diameter: 94),
-  'computer_architecture': _TreeNodeSpec(
-    offset: Offset(1460, 950),
-    diameter: 92,
-    labelWidth: 136,
-  ),
-  'information_security_foundations': _TreeNodeSpec(
-    offset: Offset(1560, 630),
-    diameter: 92,
-    labelWidth: 136,
-  ),
-  'operating_systems': _TreeNodeSpec(offset: Offset(1720, 790), diameter: 96),
-  'qa_engineering': _TreeNodeSpec(
-    offset: Offset(220, 140),
-    diameter: 90,
-    labelWidth: 132,
-  ),
-  'frontend': _TreeNodeSpec(offset: Offset(470, 160), diameter: 92),
-  'backend': _TreeNodeSpec(offset: Offset(790, 170), diameter: 94),
-  'machine_learning': _TreeNodeSpec(
-    offset: Offset(990, 80),
-    diameter: 96,
-    labelWidth: 136,
-  ),
-  'mobile': _TreeNodeSpec(
-    offset: Offset(1130, 260),
-    diameter: 102,
-    labelWidth: 132,
-  ),
-  'android_development': _TreeNodeSpec(
-    offset: Offset(980, 0),
-    diameter: 78,
-    labelWidth: 118,
-  ),
-  'ios_development': _TreeNodeSpec(
-    offset: Offset(1140, 0),
-    diameter: 78,
-    labelWidth: 112,
-  ),
-  'crossplatform_development': _TreeNodeSpec(
-    offset: Offset(1300, 0),
-    diameter: 78,
-    labelWidth: 122,
-  ),
-  'sre_devops': _TreeNodeSpec(
-    offset: Offset(1450, 200),
-    diameter: 92,
-    labelWidth: 132,
-  ),
-  'system_administration': _TreeNodeSpec(
-    offset: Offset(1650, 330),
-    diameter: 94,
-    labelWidth: 140,
-  ),
-  'cybersecurity': _TreeNodeSpec(
-    offset: Offset(1600, 90),
-    diameter: 92,
-    labelWidth: 132,
-  ),
-};
+String _statusLabel(TrackAvailability availability) {
+  switch (availability) {
+    case TrackAvailability.available:
+      return 'Available';
+    case TrackAvailability.inProgress:
+      return 'In progress';
+    case TrackAvailability.completed:
+      return 'Completed';
+    case TrackAvailability.mastered:
+      return 'Mastered';
+  }
+}
 
-const List<(String, String)> _treeLinks = <(String, String)>[
-  ('mathematics', 'mathematical_analysis'),
-  ('mathematics', 'discrete_math'),
-  ('mathematics', 'linear_algebra_calculus'),
-  ('mathematics', 'probability_statistics_analytics'),
-  ('discrete_math', 'algorithms_data_structures'),
-  ('linear_algebra_calculus', 'ai_theory'),
-  ('probability_statistics_analytics', 'machine_learning'),
-  ('algorithms_data_structures', 'frontend'),
-  ('algorithms_data_structures', 'backend'),
-  ('algorithms_data_structures', 'qa_engineering'),
-  ('algorithms_data_structures', 'machine_learning'),
-  ('databases', 'backend'),
-  ('databases', 'machine_learning'),
-  ('networking_protocols', 'backend'),
-  ('networking_protocols', 'sre_devops'),
-  ('networking_protocols', 'system_administration'),
-  ('networking_protocols', 'cybersecurity'),
-  ('ai_theory', 'machine_learning'),
-  ('computer_architecture', 'operating_systems'),
-  ('computer_architecture', 'sre_devops'),
-  ('computer_architecture', 'system_administration'),
-  ('information_security_foundations', 'cybersecurity'),
-  ('information_security_foundations', 'system_administration'),
-  ('operating_systems', 'backend'),
-  ('operating_systems', 'mobile'),
-  ('operating_systems', 'sre_devops'),
-  ('operating_systems', 'system_administration'),
-  ('operating_systems', 'cybersecurity'),
-  ('frontend', 'mobile'),
-  ('mobile', 'android_development'),
-  ('mobile', 'ios_development'),
-  ('mobile', 'crossplatform_development'),
+Color _statusColor(
+  AppThemeColors colors,
+  TrackAvailability availability,
+  Color trackColor,
+) {
+  switch (availability) {
+    case TrackAvailability.available:
+      return colors.textSecondary;
+    case TrackAvailability.inProgress:
+      return trackColor;
+    case TrackAvailability.completed:
+      return colors.success;
+    case TrackAvailability.mastered:
+      return colors.accent;
+  }
+}
+
+const List<String> _mathChildIds = <String>[
+  'mathematical_analysis',
+  'discrete_math',
+  'linear_algebra_calculus',
+  'probability_statistics_analytics',
 ];
 
-const List<List<Offset>> _trunkPaths = <List<Offset>>[
-  <Offset>[
-    Offset(930, 1390),
-    Offset(930, 1220),
-    Offset(925, 1060),
-    Offset(920, 930),
-  ],
-  <Offset>[
-    Offset(925, 1140),
-    Offset(790, 1260),
-  ],
-  <Offset>[
-    Offset(935, 1140),
-    Offset(1080, 1260),
-  ],
+const List<String> _coreBranchIds = <String>[
+  'mathematics',
+  'databases',
+  'algorithms_data_structures',
+  'networking_protocols',
+  'ai_theory',
+  'computer_architecture',
+  'information_security_foundations',
+  'operating_systems',
+];
+
+const List<String> _mobileChildIds = <String>[
+  'android_development',
+  'ios_development',
+  'crossplatform_development',
+];
+
+const List<String> _appliedBranchIds = <String>[
+  'frontend',
+  'backend',
+  'mobile',
+  'sre_devops',
+  'system_administration',
+  'machine_learning',
+  'qa_engineering',
+  'cybersecurity',
 ];

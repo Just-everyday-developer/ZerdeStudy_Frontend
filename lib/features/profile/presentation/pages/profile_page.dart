@@ -4,14 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
+import '../../../../app/state/app_theme_mode.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_button.dart';
+import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -22,21 +24,28 @@ class ProfilePage extends ConsumerWidget {
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
     final achievements = catalog.achievementsFor(state);
-    final unlocked = achievements.where((item) => item.unlocked).toList(growable: false);
+    final unlocked =
+        achievements.where((item) => item.unlocked).toList(growable: false);
     final preview = <Achievement>[
       ...unlocked.take(3),
       ...achievements.where((item) => !item.unlocked).take(1),
     ].take(4).toList(growable: false);
-    final l10n = context.l10n;
     final user = state.user;
+    final colors = context.appColors;
 
     return AppPageScaffold(
-      title: l10n.text('profile'),
+      actions: [
+        IconButton(
+          onPressed: () => _showSettingsSheet(context, ref),
+          icon: Icon(Icons.settings_rounded, color: colors.textPrimary),
+          tooltip: 'Settings',
+        ),
+      ],
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
         children: [
           GlowCard(
-            accent: AppColors.primary,
+            accent: colors.primary,
             child: Column(
               children: [
                 Container(
@@ -44,11 +53,11 @@ class ProfilePage extends ConsumerWidget {
                   height: 82,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.primary.withValues(alpha: 0.16),
+                    color: colors.primary.withValues(alpha: 0.14),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.person_rounded,
-                    color: AppColors.primary,
+                    color: colors.primary,
                     size: 40,
                   ),
                 ),
@@ -60,9 +69,9 @@ class ProfilePage extends ConsumerWidget {
                 const SizedBox(height: 6),
                 Text(
                   user?.email ?? 'demo@zerdestudy.app',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: colors.textSecondary),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
@@ -71,6 +80,10 @@ class ProfilePage extends ConsumerWidget {
                     _Pill(label: 'XP', value: '${state.xp}'),
                     _Pill(label: 'Level', value: '${state.level}'),
                     _Pill(label: 'Streak', value: '${state.streak}d'),
+                    _Pill(
+                      label: 'Theme',
+                      value: state.themeMode.label,
+                    ),
                   ],
                 ),
               ],
@@ -78,38 +91,43 @@ class ProfilePage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           GlowCard(
-            accent: AppColors.accent,
+            accent: colors.accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.text('profile_goal'),
+                  context.l10n.text('profile_goal'),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   user?.goal ?? 'Reach confident demo flow in 14 days',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    color: colors.textSecondary,
                     height: 1.45,
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  l10n.text('locale'),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 10),
-                LocaleSelector(
-                  currentLocale: state.locale,
-                  onChanged: controller.changeLocale,
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _InfoTag(
+                      icon: Icons.language_rounded,
+                      label: 'Language: ${state.locale.label}',
+                    ),
+                    _InfoTag(
+                      icon: Icons.palette_outlined,
+                      label: 'Theme: ${state.themeMode.label}',
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
           GlowCard(
-            accent: AppColors.success,
+            accent: colors.success,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -120,28 +138,31 @@ class ProfilePage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            l10n.text('achievements'),
+                            context.l10n.text('achievements'),
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: 6),
                           Text(
                             '${unlocked.length}/${achievements.length} unlocked',
-                            style: const TextStyle(color: AppColors.textSecondary),
+                            style: TextStyle(color: colors.textSecondary),
                           ),
                         ],
                       ),
                     ),
                     TextButton.icon(
-                      onPressed: () =>
-                          _showAchievementsSheet(context, achievements, state.locale),
-                      icon: const Icon(
-                        Icons.workspace_premium_rounded,
-                        color: AppColors.success,
+                      onPressed: () => _showAchievementsSheet(
+                        context,
+                        achievements,
+                        state.locale,
                       ),
-                      label: const Text(
-                        'Open menu',
+                      icon: Icon(
+                        Icons.workspace_premium_rounded,
+                        color: colors.success,
+                      ),
+                      label: Text(
+                        'Open',
                         style: TextStyle(
-                          color: AppColors.success,
+                          color: colors.success,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -163,30 +184,32 @@ class ProfilePage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           AppButton.secondary(
-            label: l10n.text('view_stats'),
+            label: context.l10n.text('view_stats'),
             icon: Icons.insights_rounded,
             onPressed: () => context.push(AppRoutes.stats),
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
-            label: l10n.text('view_leaderboard'),
+            label: context.l10n.text('view_leaderboard'),
             icon: Icons.leaderboard_rounded,
             onPressed: () => context.push(AppRoutes.leaderboard),
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
-            label: l10n.text('delete_history'),
+            label: context.l10n.text('delete_history'),
             icon: Icons.restart_alt_rounded,
             onPressed: () {
               controller.resetDemo();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.text('reset_demo'))),
+              AppNotice.show(
+                context,
+                message: context.l10n.text('reset_demo'),
+                type: AppNoticeType.success,
               );
             },
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
-            label: l10n.text('logout'),
+            label: context.l10n.text('logout'),
             icon: Icons.logout_rounded,
             onPressed: () {
               controller.logout();
@@ -198,13 +221,10 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  void _showAchievementsSheet(
-    BuildContext context,
-    List<Achievement> achievements,
-    AppLocale locale,
-  ) {
-    final unlocked = achievements.where((item) => item.unlocked).toList(growable: false);
-    final locked = achievements.where((item) => !item.unlocked).toList(growable: false);
+  void _showSettingsSheet(BuildContext context, WidgetRef ref) {
+    final state = ref.read(demoAppControllerProvider);
+    final controller = ref.read(demoAppControllerProvider.notifier);
+    final colors = context.appColors;
 
     showModalBottomSheet<void>(
       context: context,
@@ -212,9 +232,101 @@ class ProfilePage extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          decoration: BoxDecoration(
+            color: colors.background,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.divider,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Settings',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Language',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  LocaleSelector(
+                    currentLocale: state.locale,
+                    onChanged: controller.changeLocale,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Theme',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: AppThemeMode.values.map((mode) {
+                      final selected = mode == state.themeMode;
+                      return ChoiceChip(
+                        label: Text(mode.label),
+                        selected: selected,
+                        onSelected: (_) => controller.changeThemeMode(mode),
+                        selectedColor: colors.primary.withValues(alpha: 0.16),
+                        backgroundColor: colors.surfaceSoft,
+                        side: BorderSide(
+                          color: selected ? colors.primary : colors.divider,
+                        ),
+                        labelStyle: TextStyle(
+                          color: selected
+                              ? colors.primary
+                              : colors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      );
+                    }).toList(growable: false),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAchievementsSheet(
+    BuildContext context,
+    List<Achievement> achievements,
+    AppLocale locale,
+  ) {
+    final unlocked =
+        achievements.where((item) => item.unlocked).toList(growable: false);
+    final locked =
+        achievements.where((item) => !item.unlocked).toList(growable: false);
+    final colors = context.appColors;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: colors.background,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: SafeArea(
             top: false,
@@ -228,7 +340,7 @@ class ProfilePage extends ConsumerWidget {
                       width: 44,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.divider,
+                        color: colors.divider,
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -243,19 +355,19 @@ class ProfilePage extends ConsumerWidget {
                           const SizedBox(height: 6),
                           Text(
                             '${unlocked.length} unlocked | ${locked.length} locked',
-                            style: const TextStyle(color: AppColors.textSecondary),
+                            style: TextStyle(color: colors.textSecondary),
                           ),
                           const SizedBox(height: 18),
                           _AchievementSection(
                             title: 'Unlocked',
-                            accent: AppColors.success,
+                            accent: colors.success,
                             achievements: unlocked,
                             locale: locale,
                           ),
                           const SizedBox(height: 18),
                           _AchievementSection(
                             title: 'Locked',
-                            accent: AppColors.textSecondary,
+                            accent: colors.textSecondary,
                             achievements: locked,
                             locale: locale,
                           ),
@@ -288,6 +400,8 @@ class _AchievementSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return GlowCard(
       accent: accent,
       child: Column(
@@ -302,9 +416,9 @@ class _AchievementSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (achievements.isEmpty)
-            const Text(
+            Text(
               'No items here yet.',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: colors.textSecondary),
             )
           else
             ...achievements.map(
@@ -333,15 +447,15 @@ class _AchievementRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        achievement.unlocked ? AppColors.success : AppColors.textSecondary;
+    final colors = context.appColors;
+    final accent = achievement.unlocked ? colors.success : colors.textSecondary;
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: AppColors.surfaceSoft,
-        border: Border.all(color: AppColors.divider),
+        color: colors.surfaceSoft,
+        border: Border.all(color: colors.divider),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,16 +471,16 @@ class _AchievementRow extends StatelessWidget {
               children: [
                 Text(
                   achievement.title.resolve(locale),
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   achievement.description.resolve(locale),
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    color: colors.textSecondary,
                     height: 1.35,
                   ),
                 ),
@@ -376,7 +490,7 @@ class _AchievementRow extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: achievement.fraction,
                     minHeight: 6,
-                    backgroundColor: AppColors.backgroundElevated,
+                    backgroundColor: colors.backgroundElevated,
                     color: accent,
                   ),
                 ),
@@ -386,8 +500,8 @@ class _AchievementRow extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             '${achievement.progress}/${achievement.goal}',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: colors.textSecondary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -405,26 +519,66 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: AppColors.surfaceSoft,
+        color: colors.surfaceSoft,
       ),
       child: Column(
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: colors.textSecondary,
               fontSize: 12,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoTag extends StatelessWidget {
+  const _InfoTag({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: colors.surfaceSoft,
+        border: Border.all(color: colors.divider),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: colors.primary),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: colors.textSecondary,
               fontWeight: FontWeight.w700,
             ),
           ),

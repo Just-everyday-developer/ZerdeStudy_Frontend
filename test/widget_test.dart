@@ -9,6 +9,9 @@ import 'package:frontend_flutter/core/localization/app_localizations.dart';
 import 'package:frontend_flutter/core/theme/app_theme.dart';
 import 'package:frontend_flutter/features/ai/presentation/pages/ai_mentor_page.dart';
 import 'package:frontend_flutter/features/auth/presentation/pages/welcome_page.dart';
+import 'package:frontend_flutter/features/home/presentation/pages/community_course_detail_page.dart';
+import 'package:frontend_flutter/features/home/presentation/pages/community_courses_page.dart';
+import 'package:frontend_flutter/features/home/presentation/pages/home_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/lesson_page.dart';
 import 'package:frontend_flutter/features/profile/presentation/pages/profile_page.dart';
 import 'package:frontend_flutter/main.dart';
@@ -79,7 +82,7 @@ void main() {
     await tester.tap(find.text('GitHub'));
     await pumpScene(tester);
 
-    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.text('Daily mission'), findsOneWidget);
   });
 
   testWidgets('locale switch updates welcome CTA text', (tester) async {
@@ -96,7 +99,7 @@ void main() {
     expect(find.text('Log in'), findsOneWidget);
   });
 
-  testWidgets('tree renders the new organic layout and opens track overview',
+  testWidgets('tree renders the new unified tree and opens track overview',
       (tester) async {
     await configureSurface(tester);
     final container = await createContainer();
@@ -112,10 +115,14 @@ void main() {
     );
     await pumpScene(tester);
 
-    await tester.tap(find.text('Tree'));
+    await tester.tap(find.byIcon(Icons.account_tree_outlined));
     await pumpScene(tester);
 
-    expect(find.textContaining('grows like a real tree'), findsOneWidget);
+    expect(
+      find.textContaining('One unified tree starts from the computer science'),
+      findsOneWidget,
+    );
+    expect(find.text('Core branches'), findsOneWidget);
     expect(find.text('Mathematical Analysis'), findsOneWidget);
     expect(find.text('Discrete Math'), findsOneWidget);
     expect(find.text('Linear Algebra'), findsOneWidget);
@@ -176,11 +183,8 @@ void main() {
     await tester.pumpWidget(buildTestApp(container, const AiMentorPage()));
     await pumpScene(tester);
 
-    expect(find.text('Common questions'), findsOneWidget);
-    expect(
-      find.text('Why does the tree begin with Computer Science Core?'),
-      findsOneWidget,
-    );
+    expect(find.text('Prepared questions'), findsOneWidget);
+    expect(find.text('Where should I start in this tree?'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).last, 'Explain the tree');
     await tester.tap(find.text('Send'));
@@ -205,20 +209,29 @@ void main() {
     controller.changeLocale(AppLocale.en);
     controller.loginWithProvider('google');
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MyApp(),
-      ),
-    );
+    await tester.pumpWidget(buildTestApp(container, const HomePage()));
     await pumpScene(tester);
 
-    await tester.scrollUntilVisible(find.text('Open catalog'), 300);
-    await tester.tap(find.text('Open catalog'));
+    await tester.scrollUntilVisible(
+      find.text('Courses from the community'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Courses from the community'), findsOneWidget);
+
+    await tester.pumpWidget(buildTestApp(container, const CommunityCoursesPage()));
     await pumpScene(tester);
 
     expect(find.text('Community courses'), findsOneWidget);
-    await tester.tap(find.text('Portfolio Engineering for Students'));
+
+    await tester.pumpWidget(
+      buildTestApp(
+        container,
+        const CommunityCourseDetailPage(
+          courseId: 'course_portfolio_engineering',
+        ),
+      ),
+    );
     await pumpScene(tester);
 
     expect(find.text('Save course'), findsOneWidget);
@@ -262,7 +275,7 @@ void main() {
     await tester.pumpWidget(buildTestApp(container, const ProfilePage()));
     await pumpScene(tester);
 
-    await tester.tap(find.text('Open menu'));
+    await tester.tap(find.text('Open'));
     await pumpScene(tester);
 
     expect(find.text('Unlocked'), findsOneWidget);

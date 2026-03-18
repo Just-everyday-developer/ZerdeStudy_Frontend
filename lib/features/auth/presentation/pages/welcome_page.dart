@@ -8,6 +8,7 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 import '../widgets/animated_welcome_text.dart';
 import '../widgets/auth_background_wrapper.dart';
 import '../widgets/tech_action_button.dart';
@@ -20,6 +21,7 @@ class WelcomePage extends ConsumerWidget {
     final state = ref.watch(demoAppControllerProvider);
     final controller = ref.read(demoAppControllerProvider.notifier);
     final l10n = context.l10n;
+    final colors = context.appColors;
 
     return AuthBackgroundWrapper(
       child: SafeArea(
@@ -40,7 +42,7 @@ class WelcomePage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 18),
                   GlowCard(
-                    accent: AppColors.primary,
+                    accent: colors.primary,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -69,7 +71,7 @@ class WelcomePage extends ConsumerWidget {
                         Text(
                           l10n.text('tagline'),
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: AppColors.textSecondary,
+                                color: colors.textSecondary,
                                 height: 1.45,
                               ),
                         ),

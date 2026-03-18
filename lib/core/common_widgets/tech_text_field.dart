@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/app_theme_colors.dart';
 
 class TechTextField extends StatelessWidget {
   const TechTextField({
@@ -18,16 +18,17 @@ class TechTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return TextField(
       controller: controller,
       obscureText: isObscure,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
+      style: TextStyle(
+        color: colors.textPrimary,
         fontWeight: FontWeight.w600,
       ),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: AppColors.primary),
+        prefixIcon: Icon(icon, color: colors.primary),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 18,

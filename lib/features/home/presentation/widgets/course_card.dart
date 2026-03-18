@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 
 class CourseCard extends StatelessWidget {
   const CourseCard({
@@ -23,6 +23,8 @@ class CourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(28),
@@ -41,15 +43,15 @@ class CourseCard extends StatelessWidget {
                       Text(
                         title,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: AppColors.textPrimary,
+                              color: colors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         subtitle,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: TextStyle(
+                          color: colors.textSecondary,
                           height: 1.45,
                         ),
                       ),
@@ -68,7 +70,7 @@ class CourseCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 8,
-                backgroundColor: AppColors.backgroundElevated,
+                backgroundColor: colors.backgroundElevated,
                 color: color,
               ),
             ),

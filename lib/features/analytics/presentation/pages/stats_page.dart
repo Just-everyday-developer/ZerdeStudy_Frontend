@@ -7,8 +7,8 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 
 class StatsPage extends ConsumerWidget {
   const StatsPage({super.key});
@@ -17,55 +17,51 @@ class StatsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
     final catalog = ref.watch(demoCatalogProvider);
-    final l10n = context.l10n;
     final unlockedAchievements = catalog
         .achievementsFor(state)
         .where((item) => item.unlocked)
         .length;
+    final colors = context.appColors;
 
     return AppPageScaffold(
-      title: l10n.text('stats'),
+      title: context.l10n.text('stats'),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
           GlowCard(
-            accent: AppColors.primary,
+            accent: colors.primary,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final compact = constraints.maxWidth < 560;
-                final cardWidth = compact
-                    ? (constraints.maxWidth - 12) / 2
-                    : (constraints.maxWidth - 32) / 3;
+                final compact = constraints.maxWidth < 540;
+                final columns = compact ? 2 : 3;
+                final itemWidth =
+                    (constraints.maxWidth - (12 * (columns - 1))) / columns;
 
                 return Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    _MetricTile(
-                      label: 'XP',
-                      value: '${state.xp}',
-                      width: cardWidth,
-                    ),
+                    _MetricTile(label: 'XP', value: '${state.xp}', width: itemWidth),
                     _MetricTile(
                       label: 'Level',
                       value: '${state.level}',
-                      width: cardWidth,
+                      width: itemWidth,
                     ),
                     _MetricTile(
                       label: 'Streak',
                       value: '${state.streak}d',
-                      width: cardWidth,
+                      width: itemWidth,
                     ),
                     _MetricTile(
                       label: 'Units',
                       value:
                           '${catalog.totalCompletedUnits(state)}/${catalog.totalUnits()}',
-                      width: cardWidth,
+                      width: itemWidth,
                     ),
                     _MetricTile(
                       label: 'Achievements',
                       value: '$unlockedAchievements',
-                      width: cardWidth,
+                      width: itemWidth,
                     ),
                   ],
                 );
@@ -74,12 +70,12 @@ class StatsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           GlowCard(
-            accent: AppColors.accent,
+            accent: colors.accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.text('weekly_activity'),
+                  context.l10n.text('weekly_activity'),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
@@ -89,7 +85,7 @@ class StatsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           GlowCard(
-            accent: AppColors.success,
+            accent: colors.success,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -130,7 +126,7 @@ class StatsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           GlowCard(
-            accent: AppColors.primary,
+            accent: colors.primary,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -150,15 +146,15 @@ class StatsPage extends ConsumerWidget {
                       children: [
                         Text(
                           zoneTitle,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
+                          style: TextStyle(
+                            color: colors.textPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           '$completed / $total units',
-                          style: const TextStyle(color: AppColors.textSecondary),
+                          style: TextStyle(color: colors.textSecondary),
                         ),
                         const SizedBox(height: 8),
                         ClipRRect(
@@ -166,10 +162,10 @@ class StatsPage extends ConsumerWidget {
                           child: LinearProgressIndicator(
                             value: total == 0 ? 0 : completed / total,
                             minHeight: 8,
-                            backgroundColor: AppColors.backgroundElevated,
+                            backgroundColor: colors.backgroundElevated,
                             color: zone == TrackZone.computerScienceCore
-                                ? AppColors.primary
-                                : AppColors.accent,
+                                ? colors.primary
+                                : colors.accent,
                           ),
                         ),
                       ],
@@ -181,7 +177,7 @@ class StatsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           GlowCard(
-            accent: AppColors.accent,
+            accent: colors.accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -199,15 +195,15 @@ class StatsPage extends ConsumerWidget {
                       children: [
                         Text(
                           track.title.resolve(state.locale),
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
+                          style: TextStyle(
+                            color: colors.textPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${progress.completedUnits}/${progress.totalUnits} units | ${progress.state.name}',
-                          style: const TextStyle(color: AppColors.textSecondary),
+                          style: TextStyle(color: colors.textSecondary),
                         ),
                         const SizedBox(height: 8),
                         ClipRRect(
@@ -215,7 +211,7 @@ class StatsPage extends ConsumerWidget {
                           child: LinearProgressIndicator(
                             value: progress.fraction,
                             minHeight: 6,
-                            backgroundColor: AppColors.backgroundElevated,
+                            backgroundColor: colors.backgroundElevated,
                             color: track.color,
                           ),
                         ),
@@ -228,7 +224,7 @@ class StatsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           GlowCard(
-            accent: AppColors.success,
+            accent: colors.success,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -243,11 +239,11 @@ class StatsPage extends ConsumerWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
                           child: Icon(
                             Icons.bolt_rounded,
-                            color: AppColors.success,
+                            color: colors.success,
                             size: 18,
                           ),
                         ),
@@ -255,8 +251,8 @@ class StatsPage extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             milestone.resolve(state.locale),
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
+                            style: TextStyle(
+                              color: colors.textSecondary,
                               height: 1.35,
                             ),
                           ),
@@ -287,18 +283,20 @@ class _MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Container(
       width: width,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: AppColors.surfaceSoft,
-        border: Border.all(color: AppColors.divider),
+        color: colors.surfaceSoft,
+        border: Border.all(color: colors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(label, style: TextStyle(color: colors.textSecondary)),
           const SizedBox(height: 8),
           Text(value, style: Theme.of(context).textTheme.headlineSmall),
         ],
@@ -316,6 +314,7 @@ class _WeeklyActivityChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final normalizedValues = values.length >= 7
         ? values.take(7).toList(growable: false)
         : <int>[...values, ...List<int>.filled(7 - values.length, 0)];
@@ -323,56 +322,48 @@ class _WeeklyActivityChart extends StatelessWidget {
     const days = <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     return SizedBox(
-      height: 210,
+      height: 220,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: List<Widget>.generate(days.length, (index) {
           final value = normalizedValues[index];
           return Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  const reservedHeight = 56.0;
-                  final barAreaHeight =
-                      math.max(40.0, constraints.maxHeight - reservedHeight);
-                  final barHeight = value == 0
-                      ? 8.0
-                      : (barAreaHeight * (value / maxValue)).clamp(
-                          8.0,
-                          barAreaHeight,
-                        );
-
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        '$value',
-                        style: const TextStyle(color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: barAreaHeight,
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Container(
-                            width: double.infinity,
-                            height: barHeight,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(18),
-                              color: AppColors.primary.withValues(alpha: 0.88),
-                            ),
+              child: Column(
+                children: [
+                  Text(
+                    '$value',
+                    style: TextStyle(color: colors.textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: FractionallySizedBox(
+                        heightFactor: value == 0 ? 0.12 : value / maxValue,
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            color: colors.primary.withValues(alpha: 0.88),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 16,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
                         days[index],
-                        style: const TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: colors.textSecondary),
                       ),
-                    ],
-                  );
-                },
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -393,6 +384,8 @@ class _BreakdownRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
@@ -400,13 +393,13 @@ class _BreakdownRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: colors.textSecondary),
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: colors.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),

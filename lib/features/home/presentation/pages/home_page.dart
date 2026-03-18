@@ -8,8 +8,8 @@ import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 import '../widgets/course_card.dart';
 
 class HomePage extends ConsumerWidget {
@@ -22,13 +22,15 @@ class HomePage extends ConsumerWidget {
     final l10n = context.l10n;
     final currentTrack = catalog.trackById(state.currentTrackId);
     final currentProgress = catalog.progressForTrack(state, currentTrack.id);
-    final achievements = catalog.achievementsFor(state).take(4).toList(growable: false);
-    final leaderboard = catalog.leaderboardFor(state).take(5).toList(growable: false);
+    final achievements =
+        catalog.achievementsFor(state).take(4).toList(growable: false);
+    final leaderboard =
+        catalog.leaderboardFor(state).take(5).toList(growable: false);
     final recommendedTracks = catalog.tracks.take(4).toList(growable: false);
     final courses = catalog.communityCourses.take(3).toList(growable: false);
+    final colors = context.appColors;
 
     return AppPageScaffold(
-      title: l10n.text('dashboard'),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
         children: [
@@ -39,12 +41,18 @@ class HomePage extends ConsumerWidget {
               children: [
                 Text(
                   '${state.user?.name ?? 'Talgat'}, ${l10n.text('continue_learning').toLowerCase()}',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 28),
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineMedium
+                      ?.copyWith(fontSize: 28),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   currentTrack.description.resolve(state.locale),
-                  style: const TextStyle(color: AppColors.textSecondary, height: 1.45),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    height: 1.45,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Wrap(
@@ -54,15 +62,21 @@ class HomePage extends ConsumerWidget {
                     _MetricBadge(label: 'XP', value: '${state.xp}'),
                     _MetricBadge(label: 'Level', value: '${state.level}'),
                     _MetricBadge(label: 'Streak', value: '${state.streak}d'),
-                    _MetricBadge(label: 'Mastered', value: '${catalog.masteredTracks(state)}'),
+                    _MetricBadge(
+                      label: 'Mastered',
+                      value: '${catalog.masteredTracks(state)}',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 18),
-                Text(currentTrack.title.resolve(state.locale), style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  currentTrack.title.resolve(state.locale),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 6),
                 Text(
                   '${currentProgress.completedUnits}/${currentProgress.totalUnits} completed units',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: colors.textSecondary),
                 ),
                 const SizedBox(height: 14),
                 ClipRRect(
@@ -70,7 +84,7 @@ class HomePage extends ConsumerWidget {
                   child: LinearProgressIndicator(
                     value: currentProgress.fraction,
                     minHeight: 10,
-                    backgroundColor: AppColors.backgroundElevated,
+                    backgroundColor: colors.backgroundElevated,
                     color: currentTrack.color,
                   ),
                 ),
@@ -98,17 +112,23 @@ class HomePage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           GlowCard(
-            accent: AppColors.accent,
+            accent: colors.accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(l10n.text('daily_mission'), style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  l10n.text('daily_mission'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   state.dailyMissionDone
                       ? l10n.text('daily_mission_done')
                       : l10n.text('daily_mission_pending'),
-                  style: const TextStyle(color: AppColors.textSecondary, height: 1.45),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    height: 1.45,
+                  ),
                 ),
               ],
             ),
@@ -137,17 +157,21 @@ class HomePage extends ConsumerWidget {
             onTap: () => context.push(AppRoutes.courses),
           ),
           const SizedBox(height: 12),
-          ...courses.map((course) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _CommunityPreviewCard(course: course),
-              )),
+          ...courses.map(
+            (course) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _CommunityPreviewCard(course: course),
+            ),
+          ),
           const SizedBox(height: 8),
           _SectionTitle(title: l10n.text('achievements')),
           const SizedBox(height: 12),
-          ...achievements.map((achievement) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _AchievementPreview(achievement: achievement),
-              )),
+          ...achievements.map(
+            (achievement) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _AchievementPreview(achievement: achievement),
+            ),
+          ),
           const SizedBox(height: 8),
           _SectionTitle(
             title: l10n.text('leaderboard'),
@@ -156,7 +180,7 @@ class HomePage extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           GlowCard(
-            accent: AppColors.success,
+            accent: colors.success,
             child: Column(
               children: leaderboard.map((entry) {
                 final index = leaderboard.indexOf(entry) + 1;
@@ -166,12 +190,16 @@ class HomePage extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 16,
-                        backgroundColor: (entry.isCurrentUser ? AppColors.primary : AppColors.surfaceSoft)
+                        backgroundColor: (entry.isCurrentUser
+                                ? colors.primary
+                                : colors.surfaceSoft)
                             .withValues(alpha: 0.18),
                         child: Text(
                           '$index',
                           style: TextStyle(
-                            color: entry.isCurrentUser ? AppColors.primary : AppColors.textSecondary,
+                            color: entry.isCurrentUser
+                                ? colors.primary
+                                : colors.textSecondary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -181,13 +209,28 @@ class HomePage extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(entry.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+                            Text(
+                              entry.name,
+                              style: TextStyle(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                             const SizedBox(height: 2),
-                            Text('${entry.role} • ${entry.focus}', style: const TextStyle(color: AppColors.textSecondary)),
+                            Text(
+                              '${entry.role} | ${entry.focus}',
+                              style: TextStyle(color: colors.textSecondary),
+                            ),
                           ],
                         ),
                       ),
-                      Text('${entry.xp} XP', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+                      Text(
+                        '${entry.xp} XP',
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                 );
@@ -215,7 +258,12 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Text(title, style: Theme.of(context).textTheme.titleLarge)),
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
         if (actionLabel != null && onTap != null)
           TextButton(onPressed: onTap, child: Text(actionLabel!)),
       ],
@@ -234,18 +282,29 @@ class _MetricBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: AppColors.surfaceSoft,
+        color: colors.surfaceSoft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(
+            label,
+            style: TextStyle(color: colors.textSecondary, fontSize: 12),
+          ),
           const SizedBox(height: 2),
-          Text(value, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800)),
+          Text(
+            value,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
@@ -263,6 +322,7 @@ class _CommunityPreviewCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
     final saved = state.savedCommunityCourseIds.contains(course.id);
+    final colors = context.appColors;
 
     return GlowCard(
       accent: course.color,
@@ -278,26 +338,42 @@ class _CommunityPreviewCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(course.title.resolve(state.locale), style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        course.title.resolve(state.locale),
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                       const SizedBox(height: 6),
-                      Text(course.subtitle.resolve(state.locale), style: const TextStyle(color: AppColors.textSecondary, height: 1.35)),
+                      Text(
+                        course.subtitle.resolve(state.locale),
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          height: 1.35,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
                     color: course.color.withValues(alpha: 0.14),
                   ),
-                  child: Text(saved ? 'Saved' : course.level, style: TextStyle(color: course.color, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    saved ? 'Saved' : course.level,
+                    style: TextStyle(
+                      color: course.color,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
             Text(
-              '${course.author.name} • ${course.author.role} • ${course.rating.toStringAsFixed(1)}',
-              style: const TextStyle(color: AppColors.textSecondary),
+              '${course.author.name} | ${course.author.role} | ${course.rating.toStringAsFixed(1)}',
+              style: TextStyle(color: colors.textSecondary),
             ),
           ],
         ),
@@ -315,8 +391,10 @@ class _AchievementPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return GlowCard(
-      accent: achievement.unlocked ? AppColors.primary : AppColors.divider,
+      accent: achievement.unlocked ? colors.primary : colors.divider,
       child: Row(
         children: [
           Container(
@@ -324,12 +402,13 @@ class _AchievementPreview extends StatelessWidget {
             height: 52,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: (achievement.unlocked ? AppColors.primary : AppColors.surfaceSoft)
+              color: (achievement.unlocked ? colors.primary : colors.surfaceSoft)
                   .withValues(alpha: 0.16),
             ),
             child: Icon(
               achievement.icon,
-              color: achievement.unlocked ? AppColors.primary : AppColors.textSecondary,
+              color:
+                  achievement.unlocked ? colors.primary : colors.textSecondary,
             ),
           ),
           const SizedBox(width: 14),
@@ -337,17 +416,30 @@ class _AchievementPreview extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(achievement.title.ru, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+                Text(
+                  achievement.title.ru,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(achievement.description.ru, style: const TextStyle(color: AppColors.textSecondary, height: 1.35)),
+                Text(
+                  achievement.description.ru,
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
                   child: LinearProgressIndicator(
                     value: achievement.fraction,
                     minHeight: 6,
-                    backgroundColor: AppColors.backgroundElevated,
-                    color: achievement.unlocked ? AppColors.success : AppColors.primary,
+                    backgroundColor: colors.backgroundElevated,
+                    color:
+                        achievement.unlocked ? colors.success : colors.primary,
                   ),
                 ),
               ],

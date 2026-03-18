@@ -1,48 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../constants/app_colors.dart';
+import 'app_theme_colors.dart';
 
 class AppTheme {
-  static ThemeData get darkTheme {
-    final baseTextTheme = GoogleFonts.ibmPlexSansTextTheme(
-      ThemeData.dark(useMaterial3: true).textTheme,
-    );
+  static ThemeData get darkTheme => _buildTheme(
+        brightness: Brightness.dark,
+        palette: AppThemeColors.dark,
+      );
 
-    return ThemeData(
+  static ThemeData get lightTheme => _buildTheme(
+        brightness: Brightness.light,
+        palette: AppThemeColors.light,
+      );
+
+  static ThemeData _buildTheme({
+    required Brightness brightness,
+    required AppThemeColors palette,
+  }) {
+    final baseTheme = ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.dark(
-        surface: AppColors.surface,
-        primary: AppColors.primary,
-        secondary: AppColors.accent,
-        error: AppColors.danger,
+      brightness: brightness,
+    );
+    final baseTextTheme = GoogleFonts.ibmPlexSansTextTheme(baseTheme.textTheme);
+
+    return baseTheme.copyWith(
+      scaffoldBackgroundColor: palette.background,
+      colorScheme: ColorScheme.fromSeed(
+        brightness: brightness,
+        seedColor: palette.primary,
+        primary: palette.primary,
+        secondary: palette.accent,
+        surface: palette.surface,
+        error: palette.danger,
       ),
-      textTheme: baseTextTheme.copyWith(
+      extensions: <ThemeExtension<dynamic>>[palette],
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: palette.textPrimary,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
+      textTheme: baseTextTheme.apply(
+        bodyColor: palette.textPrimary,
+        displayColor: palette.textPrimary,
+      ).copyWith(
         displayLarge: GoogleFonts.orbitron(
           textStyle: baseTextTheme.displayLarge,
           fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
+          color: palette.textPrimary,
         ),
         displayMedium: GoogleFonts.orbitron(
           textStyle: baseTextTheme.displayMedium,
           fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
+          color: palette.textPrimary,
         ),
         headlineLarge: GoogleFonts.orbitron(
           textStyle: baseTextTheme.headlineLarge,
           fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
+          color: palette.textPrimary,
         ),
         headlineMedium: GoogleFonts.orbitron(
           textStyle: baseTextTheme.headlineMedium,
           fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
+          color: palette.textPrimary,
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.surface.withValues(alpha: 0.94),
+        backgroundColor: palette.surface.withValues(alpha: 0.94),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         labelTextStyle: WidgetStateProperty.all(
           GoogleFonts.ibmPlexSans(
             fontSize: 12,
@@ -52,42 +78,34 @@ class AppTheme {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           return IconThemeData(
             color: states.contains(WidgetState.selected)
-                ? AppColors.primary
-                : AppColors.textSecondary,
+                ? palette.primary
+                : palette.textSecondary,
           );
         }),
-        indicatorColor: AppColors.primary.withValues(alpha: 0.14),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.surfaceSoft,
-        contentTextStyle: GoogleFonts.ibmPlexSans(
-          color: AppColors.textPrimary,
-          fontWeight: FontWeight.w500,
-        ),
-        behavior: SnackBarBehavior.floating,
+        indicatorColor: palette.primary.withValues(alpha: 0.14),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceSoft.withValues(alpha: 0.92),
+        fillColor: palette.surfaceSoft.withValues(alpha: 0.92),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.8)),
+          borderSide: BorderSide(color: palette.divider.withValues(alpha: 0.8)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.8)),
+          borderSide: BorderSide(color: palette.divider.withValues(alpha: 0.8)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
+          borderSide: BorderSide(color: palette.primary, width: 1.4),
         ),
         hintStyle: GoogleFonts.ibmPlexSans(
-          color: AppColors.textSecondary,
+          color: palette.textSecondary,
         ),
       ),
-      dividerColor: AppColors.divider,
+      dividerColor: palette.divider,
       cardTheme: CardThemeData(
-        color: AppColors.surface,
+        color: palette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         margin: EdgeInsets.zero,
       ),
