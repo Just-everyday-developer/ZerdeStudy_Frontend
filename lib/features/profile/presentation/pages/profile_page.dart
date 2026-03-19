@@ -23,20 +23,17 @@ class ProfilePage extends ConsumerWidget {
     final state = ref.watch(demoAppControllerProvider);
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
+    final l10n = context.l10n;
     final achievements = catalog.achievementsFor(state);
     final unlocked =
         achievements.where((item) => item.unlocked).toList(growable: false);
-    final preview = <Achievement>[
-      ...unlocked.take(3),
-      ...achievements.where((item) => !item.unlocked).take(1),
-    ].take(4).toList(growable: false);
+    final preview = achievements.take(6).toList(growable: false);
     final favorites = catalog.savedCoursesFor(state);
     final completedTracks = catalog.completedTracksFor(state);
     final completedModules = catalog.completedModulesFor(state);
     final completedLessons = catalog.completedLessonsFor(state);
     final completedPractices = catalog.completedPracticesFor(state);
-    final history = state.learningHistory
-        .toList(growable: false)
+    final history = state.learningHistory.toList(growable: false)
       ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
     final user = state.user;
     final colors = context.appColors;
@@ -46,7 +43,7 @@ class ProfilePage extends ConsumerWidget {
         IconButton(
           onPressed: () => _showSettingsSheet(context, ref),
           icon: Icon(Icons.settings_rounded, color: colors.textPrimary),
-          tooltip: 'Settings',
+          tooltip: l10n.text('settings'),
         ),
       ],
       child: ListView(
@@ -86,11 +83,14 @@ class ProfilePage extends ConsumerWidget {
                   alignment: WrapAlignment.center,
                   children: [
                     _Pill(label: 'XP', value: '${state.xp}'),
-                    _Pill(label: 'Level', value: '${state.level}'),
-                    _Pill(label: 'Streak', value: '${state.streak}d'),
+                    _Pill(label: l10n.text('level'), value: '${state.level}'),
                     _Pill(
-                      label: 'Theme',
-                      value: state.themeMode.label,
+                      label: l10n.text('streak'),
+                      value: '${state.streak}d',
+                    ),
+                    _Pill(
+                      label: l10n.text('theme'),
+                      value: _themeLabel(l10n, state.themeMode),
                     ),
                   ],
                 ),
@@ -104,12 +104,12 @@ class ProfilePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.l10n.text('profile_goal'),
+                  l10n.text('profile_goal'),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  user?.goal ?? 'Reach confident demo flow in 14 days',
+                  user?.goal ?? l10n.text('default_goal'),
                   style: TextStyle(
                     color: colors.textSecondary,
                     height: 1.45,
@@ -122,11 +122,12 @@ class ProfilePage extends ConsumerWidget {
                   children: [
                     _InfoTag(
                       icon: Icons.language_rounded,
-                      label: 'Language: ${state.locale.label}',
+                      label: '${l10n.text('locale')}: ${state.locale.label}',
                     ),
                     _InfoTag(
                       icon: Icons.palette_outlined,
-                      label: 'Theme: ${state.themeMode.label}',
+                      label:
+                          '${l10n.text('theme')}: ${_themeLabel(l10n, state.themeMode)}',
                     ),
                   ],
                 ),
@@ -146,29 +147,26 @@ class ProfilePage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            context.l10n.text('achievements'),
+                            l10n.text('achievements'),
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '${unlocked.length}/${achievements.length} unlocked',
+                            '${unlocked.length}/${achievements.length} ${l10n.text('unlocked').toLowerCase()}',
                             style: TextStyle(color: colors.textSecondary),
                           ),
                         ],
                       ),
                     ),
                     TextButton.icon(
-                      onPressed: () => _showAchievementsSheet(
-                        context,
-                        achievements,
-                        state.locale,
-                      ),
+                      onPressed: () =>
+                          _showAchievementsSheet(context, achievements, state.locale),
                       icon: Icon(
                         Icons.workspace_premium_rounded,
                         color: colors.success,
                       ),
                       label: Text(
-                        'Open',
+                        l10n.text('show_all'),
                         style: TextStyle(
                           color: colors.success,
                           fontWeight: FontWeight.w700,
@@ -178,14 +176,22 @@ class ProfilePage extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                ...preview.map(
-                  (achievement) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _AchievementRow(
-                      achievement: achievement,
-                      locale: state.locale,
-                    ),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 0.72,
                   ),
+                  itemCount: preview.length,
+                  itemBuilder: (context, index) {
+                    return _AchievementGridItem(
+                      achievement: preview[index],
+                      locale: state.locale,
+                    );
+                  },
                 ),
               ],
             ),
@@ -200,12 +206,12 @@ class ProfilePage extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Favorites',
+                        l10n.text('favorites'),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
                     Text(
-                      '${favorites.length} saved',
+                      '${favorites.length} ${l10n.text('saved').toLowerCase()}',
                       style: TextStyle(color: colors.textSecondary),
                     ),
                   ],
@@ -213,7 +219,7 @@ class ProfilePage extends ConsumerWidget {
                 const SizedBox(height: 12),
                 if (favorites.isEmpty)
                   Text(
-                    'Save community courses to keep them here for quick access.',
+                    l10n.text('favorites_empty'),
                     style: TextStyle(
                       color: colors.textSecondary,
                       height: 1.4,
@@ -224,9 +230,9 @@ class ProfilePage extends ConsumerWidget {
                         (course) => Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _ProfileLinkTile(
-                            title: course.title.resolve(state.locale),
+                            title: course.title.en,
                             subtitle:
-                                '${course.author.name}  •  ${course.level}  •  ${course.rating.toStringAsFixed(1)}',
+                                '${course.author.name} • ${l10n.courseLevelLabel(course.level)} • ${course.rating.toStringAsFixed(1)}',
                             accent: course.color,
                             icon: Icons.bookmark_rounded,
                             onTap: () => context.push(
@@ -245,7 +251,7 @@ class ProfilePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Completed',
+                  l10n.text('completed'),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 12),
@@ -253,10 +259,22 @@ class ProfilePage extends ConsumerWidget {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    _Pill(label: 'Tracks', value: '${completedTracks.length}'),
-                    _Pill(label: 'Modules', value: '${completedModules.length}'),
-                    _Pill(label: 'Lessons', value: '${completedLessons.length}'),
-                    _Pill(label: 'Practices', value: '${completedPractices.length}'),
+                    _Pill(
+                      label: l10n.text('tracks'),
+                      value: '${completedTracks.length}',
+                    ),
+                    _Pill(
+                      label: l10n.text('modules'),
+                      value: '${completedModules.length}',
+                    ),
+                    _Pill(
+                      label: l10n.text('lessons'),
+                      value: '${completedLessons.length}',
+                    ),
+                    _Pill(
+                      label: l10n.text('practices'),
+                      value: '${completedPractices.length}',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -267,7 +285,7 @@ class ProfilePage extends ConsumerWidget {
                           child: _ProfileLinkTile(
                             title: track.title.resolve(state.locale),
                             subtitle:
-                                'Assessment ${catalog.bestAssessmentPercentFor(state, track.id)}%  •  ${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} units',
+                                '${l10n.text('tree_assessments')} ${catalog.bestAssessmentPercentFor(state, track.id)}% • ${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} ${l10n.text('tree_units')}',
                             accent: track.color,
                             icon: Icons.check_circle_rounded,
                             onTap: () => context.push(
@@ -278,7 +296,7 @@ class ProfilePage extends ConsumerWidget {
                       )
                 else
                   Text(
-                    'Completed tracks, modules, lessons, and practices will appear here.',
+                    l10n.text('completed_empty'),
                     style: TextStyle(
                       color: colors.textSecondary,
                       height: 1.4,
@@ -294,13 +312,13 @@ class ProfilePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Result history',
+                  l10n.text('result_history'),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 12),
                 if (history.isEmpty)
                   Text(
-                    'Assessment attempts and completion events will appear here.',
+                    l10n.text('result_history_empty'),
                     style: TextStyle(
                       color: colors.textSecondary,
                       height: 1.4,
@@ -310,9 +328,7 @@ class ProfilePage extends ConsumerWidget {
                   ...history.take(8).map(
                         (entry) => Padding(
                           padding: const EdgeInsets.only(bottom: 10),
-                          child: _HistoryTile(
-                            entry: entry,
-                          ),
+                          child: _HistoryTile(entry: entry),
                         ),
                       ),
               ],
@@ -320,32 +336,32 @@ class ProfilePage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           AppButton.secondary(
-            label: context.l10n.text('view_stats'),
+            label: l10n.text('view_stats'),
             icon: Icons.insights_rounded,
             onPressed: () => context.push(AppRoutes.stats),
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
-            label: context.l10n.text('view_leaderboard'),
+            label: l10n.text('view_leaderboard'),
             icon: Icons.leaderboard_rounded,
             onPressed: () => context.push(AppRoutes.leaderboard),
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
-            label: context.l10n.text('delete_history'),
+            label: l10n.text('delete_history'),
             icon: Icons.restart_alt_rounded,
             onPressed: () {
               controller.resetDemo();
               AppNotice.show(
                 context,
-                message: context.l10n.text('reset_demo'),
+                message: l10n.text('reset_demo'),
                 type: AppNoticeType.success,
               );
             },
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
-            label: context.l10n.text('logout'),
+            label: l10n.text('logout'),
             icon: Icons.logout_rounded,
             onPressed: () {
               controller.logout();
@@ -361,6 +377,7 @@ class ProfilePage extends ConsumerWidget {
     final state = ref.read(demoAppControllerProvider);
     final controller = ref.read(demoAppControllerProvider.notifier);
     final colors = context.appColors;
+    final l10n = context.l10n;
 
     showModalBottomSheet<void>(
       context: context,
@@ -392,12 +409,12 @@ class ProfilePage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'Settings',
+                    l10n.text('settings'),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'Language',
+                    l10n.text('locale'),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 10),
@@ -407,7 +424,7 @@ class ProfilePage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'Theme',
+                    l10n.text('theme'),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 10),
@@ -417,7 +434,7 @@ class ProfilePage extends ConsumerWidget {
                     children: AppThemeMode.values.map((mode) {
                       final selected = mode == state.themeMode;
                       return ChoiceChip(
-                        label: Text(mode.label),
+                        label: Text(_themeLabel(l10n, mode)),
                         selected: selected,
                         onSelected: (_) => controller.changeThemeMode(mode),
                         selectedColor: colors.primary.withValues(alpha: 0.16),
@@ -426,9 +443,7 @@ class ProfilePage extends ConsumerWidget {
                           color: selected ? colors.primary : colors.divider,
                         ),
                         labelStyle: TextStyle(
-                          color: selected
-                              ? colors.primary
-                              : colors.textSecondary,
+                          color: selected ? colors.primary : colors.textSecondary,
                           fontWeight: FontWeight.w700,
                         ),
                       );
@@ -453,6 +468,7 @@ class ProfilePage extends ConsumerWidget {
     final locked =
         achievements.where((item) => !item.unlocked).toList(growable: false);
     final colors = context.appColors;
+    final l10n = context.l10n;
 
     showModalBottomSheet<void>(
       context: context,
@@ -485,24 +501,24 @@ class ProfilePage extends ConsumerWidget {
                       child: ListView(
                         children: [
                           Text(
-                            'Achievements',
+                            l10n.text('achievements'),
                             style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '${unlocked.length} unlocked | ${locked.length} locked',
+                            '${unlocked.length} ${l10n.text('unlocked').toLowerCase()} • ${locked.length} ${l10n.text('locked').toLowerCase()}',
                             style: TextStyle(color: colors.textSecondary),
                           ),
                           const SizedBox(height: 18),
                           _AchievementSection(
-                            title: 'Unlocked',
+                            title: l10n.text('unlocked'),
                             accent: colors.success,
                             achievements: unlocked,
                             locale: locale,
                           ),
                           const SizedBox(height: 18),
                           _AchievementSection(
-                            title: 'Locked',
+                            title: l10n.text('locked'),
                             accent: colors.textSecondary,
                             achievements: locked,
                             locale: locale,
@@ -518,6 +534,15 @@ class ProfilePage extends ConsumerWidget {
         );
       },
     );
+  }
+
+  String _themeLabel(AppLocalizations l10n, AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.dark:
+        return l10n.text('theme_dark');
+      case AppThemeMode.light:
+        return l10n.text('theme_light');
+    }
   }
 }
 
@@ -537,6 +562,7 @@ class _AchievementSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final l10n = context.l10n;
 
     return GlowCard(
       accent: accent,
@@ -553,18 +579,26 @@ class _AchievementSection extends StatelessWidget {
           const SizedBox(height: 12),
           if (achievements.isEmpty)
             Text(
-              'No items here yet.',
+              l10n.text('no_items_yet'),
               style: TextStyle(color: colors.textSecondary),
             )
           else
-            ...achievements.map(
-              (achievement) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _AchievementRow(
-                  achievement: achievement,
-                  locale: locale,
-                ),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.72,
               ),
+              itemCount: achievements.length,
+              itemBuilder: (context, index) {
+                return _AchievementGridItem(
+                  achievement: achievements[index],
+                  locale: locale,
+                );
+              },
             ),
         ],
       ),
@@ -572,8 +606,8 @@ class _AchievementSection extends StatelessWidget {
   }
 }
 
-class _AchievementRow extends StatelessWidget {
-  const _AchievementRow({
+class _AchievementGridItem extends StatelessWidget {
+  const _AchievementGridItem({
     required this.achievement,
     required this.locale,
   });
@@ -587,57 +621,59 @@ class _AchievementRow extends StatelessWidget {
     final accent = achievement.unlocked ? colors.success : colors.textSecondary;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         color: colors.surfaceSoft,
-        border: Border.all(color: colors.divider),
+        border: Border.all(
+          color:
+              achievement.unlocked ? accent.withValues(alpha: 0.45) : colors.divider,
+        ),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             backgroundColor: accent.withValues(alpha: 0.16),
             child: Icon(achievement.icon, color: accent),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  achievement.title.resolve(locale),
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  achievement.description.resolve(locale),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: achievement.fraction,
-                    minHeight: 6,
-                    backgroundColor: colors.backgroundElevated,
-                    color: accent,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 12),
+          Text(
+            achievement.title.resolve(locale),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(height: 6),
+          Text(
+            achievement.description.resolve(locale),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+          const Spacer(),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: achievement.fraction,
+              minHeight: 6,
+              backgroundColor: colors.backgroundElevated,
+              color: accent,
+            ),
+          ),
+          const SizedBox(height: 8),
           Text(
             '${achievement.progress}/${achievement.goal}',
             style: TextStyle(
-              color: colors.textSecondary,
+              color: accent,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -648,7 +684,10 @@ class _AchievementRow extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({required this.label, required this.value});
+  const _Pill({
+    required this.label,
+    required this.value,
+  });
 
   final String label;
   final String value;
@@ -803,6 +842,7 @@ class _HistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final l10n = context.l10n;
     final accent = switch (entry.kind) {
       LearningHistoryKind.lessonCompleted => colors.primary,
       LearningHistoryKind.practiceCompleted => colors.accent,
@@ -843,7 +883,7 @@ class _HistoryTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.title,
+                  _historyTitle(l10n, entry.kind),
                   style: TextStyle(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -879,11 +919,28 @@ class _HistoryTile extends StatelessWidget {
     );
   }
 
+  String _historyTitle(AppLocalizations l10n, LearningHistoryKind kind) {
+    switch (kind) {
+      case LearningHistoryKind.lessonCompleted:
+        return l10n.text('history_lesson_completed');
+      case LearningHistoryKind.practiceCompleted:
+        return l10n.text('history_practice_completed');
+      case LearningHistoryKind.moduleCompleted:
+        return l10n.text('history_module_completed');
+      case LearningHistoryKind.trackCompleted:
+        return l10n.text('history_track_completed');
+      case LearningHistoryKind.assessmentCompleted:
+        return l10n.text('history_assessment_completed');
+      case LearningHistoryKind.courseSaved:
+        return l10n.text('history_course_saved');
+    }
+  }
+
   String _formatHistoryTimestamp(DateTime timestamp) {
     final month = timestamp.month.toString().padLeft(2, '0');
     final day = timestamp.day.toString().padLeft(2, '0');
     final hour = timestamp.hour.toString().padLeft(2, '0');
     final minute = timestamp.minute.toString().padLeft(2, '0');
-    return '$day.$month ${timestamp.year}  $hour:$minute';
+    return '$day.$month.${timestamp.year}  $hour:$minute';
   }
 }

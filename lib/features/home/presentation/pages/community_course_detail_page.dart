@@ -5,6 +5,7 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
 class CommunityCourseDetailPage extends ConsumerStatefulWidget {
@@ -40,6 +41,7 @@ class _CommunityCourseDetailPageState
     final course = catalog.courseById(widget.courseId);
     final saved = state.savedCommunityCourseIds.contains(widget.courseId);
     final colors = context.appColors;
+    final l10n = context.l10n;
 
     return AppPageScaffold(
       title: course.title.resolve(state.locale),
@@ -68,9 +70,14 @@ class _CommunityCourseDetailPageState
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    _Meta(label: course.level),
-                    _Meta(label: '${course.rating.toStringAsFixed(1)} rating'),
-                    _Meta(label: '${course.enrollmentCount} enrolled'),
+                    _Meta(label: l10n.courseLevelLabel(course.level)),
+                    _Meta(
+                      label:
+                          '${course.rating.toStringAsFixed(1)} ${l10n.text('rating')}',
+                    ),
+                    _Meta(
+                      label: '${course.enrollmentCount} ${l10n.text('enrolled')}',
+                    ),
                     _Meta(label: '${course.estimatedHours}h'),
                   ],
                 ),
@@ -126,7 +133,10 @@ class _CommunityCourseDetailPageState
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      '${lesson.durationMinutes} min preview',
+                      l10n.format(
+                        'preview_minutes',
+                        <String, Object>{'minutes': lesson.durationMinutes},
+                      ),
                       style: TextStyle(color: colors.textSecondary),
                     ),
                   ],
@@ -135,7 +145,7 @@ class _CommunityCourseDetailPageState
             ),
           ),
           AppButton.primary(
-            label: saved ? 'Saved to profile' : 'Save course',
+            label: saved ? l10n.text('saved_to_profile') : l10n.text('save_course'),
             icon:
                 saved ? Icons.check_circle_rounded : Icons.bookmark_add_rounded,
             onPressed: saved

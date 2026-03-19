@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_colors.dart';
 import 'demo_app_state.dart';
 import 'demo_catalog_cs_data.dart';
+import 'demo_catalog_course_data.dart';
 import 'demo_catalog_it_data.dart';
 import 'demo_catalog_support.dart';
 import 'demo_models.dart';
+
+const String courseTopicProgrammingLanguages = 'programming_languages';
+const String courseTopicDataAnalytics = 'data_analytics';
+const String courseTopicAi = 'ai';
+const String courseTopicSqlDatabases = 'sql_databases';
+const String courseTopicSoftSkills = 'soft_skills';
 
 class DemoCatalog {
   DemoCatalog()
@@ -45,6 +51,103 @@ class DemoCatalog {
 
   CommunityCourse courseById(String courseId) =>
       _coursesById[courseId] ?? communityCourses.first;
+
+  List<String> courseTopicKeys() => const <String>[
+        courseTopicProgrammingLanguages,
+        courseTopicDataAnalytics,
+        courseTopicAi,
+        courseTopicSqlDatabases,
+        courseTopicSoftSkills,
+      ];
+
+  List<String> courseLevels() =>
+      const <String>['All', 'Beginner', 'Intermediate', 'Advanced'];
+
+  List<String> frequentSearchTerms() => const <String>[
+        'linux',
+        'qa_testing',
+        'statistics',
+        'cybersecurity',
+        'postgresql',
+      ];
+
+  List<CommunityCourse> coursesForTopic(String topicKey) {
+    return communityCourses
+        .where((course) => course.topicKeys.contains(topicKey))
+        .toList(growable: false);
+  }
+
+  List<CommunityCourse> popularCourses() {
+    return communityCourses
+        .where((course) => course.isPopular)
+        .toList(growable: false);
+  }
+
+  List<CommunityCourse> recommendedCourses(DemoAppState state) {
+    final focusedTrack = trackById(state.currentTrackId);
+    final related = communityCourses.where((course) {
+      return course.isRecommended &&
+          (course.searchKeywords.any(
+                (keyword) => focusedTrack.title.en.toLowerCase().contains(keyword),
+              ) ||
+              course.topicKeys.any(
+                (topic) => focusedTrack.title.en.toLowerCase().contains(
+                      topic.split('_').first,
+                    ),
+              ));
+    }).toList(growable: false);
+    if (related.length >= 13) {
+      return related;
+    }
+    return <CommunityCourse>[
+      ...related,
+      ...communityCourses.where(
+        (course) => course.isRecommended && !related.contains(course),
+      ),
+    ];
+  }
+
+  List<CommunityCourseAuthor> popularAuthors() {
+    final authorsById = <String, CommunityCourseAuthor>{};
+    for (final course in communityCourses) {
+      authorsById[course.author.id] = course.author;
+    }
+    final authors = authorsById.values.toList(growable: false);
+    authors.sort((left, right) => right.followersCount.compareTo(left.followersCount));
+    return authors;
+  }
+
+  List<CommunityCourse> searchCourses({
+    String query = '',
+    String? topicKey,
+    String? level,
+    String? authorId,
+  }) {
+    final normalizedQuery = query.trim().toLowerCase();
+    return communityCourses.where((course) {
+      final topicMatch = topicKey == null ||
+          topicKey.isEmpty ||
+          course.topicKeys.contains(topicKey);
+      final levelMatch = level == null ||
+          level.isEmpty ||
+          level == 'All' ||
+          course.level == level;
+      final authorMatch =
+          authorId == null || authorId.isEmpty || course.author.id == authorId;
+      final queryMatch = normalizedQuery.isEmpty ||
+          course.title.en.toLowerCase().contains(normalizedQuery) ||
+          course.subtitle.en.toLowerCase().contains(normalizedQuery) ||
+          course.description.en.toLowerCase().contains(normalizedQuery) ||
+          course.searchKeywords.any(
+            (keyword) => keyword.toLowerCase().contains(normalizedQuery),
+          ) ||
+          course.tags.any(
+            (tag) => tag.toLowerCase().contains(normalizedQuery),
+          ) ||
+          course.author.name.toLowerCase().contains(normalizedQuery);
+      return topicMatch && levelMatch && authorMatch && queryMatch;
+    }).toList(growable: false);
+  }
 
   TrackAssessment assessmentForTrack(String trackId) =>
       trackById(trackId).assessment ??
@@ -579,98 +682,7 @@ class DemoCatalog {
 }
 
 List<CommunityCourse> _buildCommunityCourses() {
-  return <CommunityCourse>[
-    buildCommunityCourse(
-      id: 'course_portfolio_engineering',
-      title: 'Portfolio Engineering for Students',
-      subtitle: 'Turn side projects into convincing product stories',
-      description: 'A mock course on structuring projects, demos, and README narratives for internships.',
-      level: 'Beginner',
-      rating: 4.8,
-      enrollmentCount: 1240,
-      estimatedHours: 5,
-      color: AppColors.primary,
-      author: const CommunityCourseAuthor(name: 'Aruzhan Bek', role: 'Product Engineer', accentLabel: 'Demo design'),
-      tags: <String>['portfolio', 'frontend', 'career'],
-      lessons: <CommunityCourseLessonPreview>[
-        buildCourseLesson('Tell the project story', 'Frame the problem, the user, and the outcome.'),
-        buildCourseLesson('Show technical depth', 'Pick 2-3 implementation decisions worth discussing.'),
-        buildCourseLesson('Present without dead ends', 'Design a demo flow that feels alive and intentional.'),
-      ],
-    ),
-    buildCommunityCourse(
-      id: 'course_sql_for_analysts',
-      title: 'SQL for Product Analysts',
-      subtitle: 'Queries, cohorts, funnels, and experiment reads',
-      description: 'A mock community course that packages practical SQL patterns around product questions.',
-      level: 'Intermediate',
-      rating: 4.7,
-      enrollmentCount: 980,
-      estimatedHours: 7,
-      color: const Color(0xFFFFD166),
-      author: const CommunityCourseAuthor(name: 'Maksat Y.', role: 'Analytics Lead', accentLabel: 'SQL coaching'),
-      tags: <String>['sql', 'analytics', 'experiments'],
-      lessons: <CommunityCourseLessonPreview>[
-        buildCourseLesson('Count, filter, compare', 'Write readable queries for product metrics.'),
-        buildCourseLesson('Funnel reasoning', 'Translate behavior into stage-based analysis.'),
-        buildCourseLesson('Experiment snapshots', 'Read lift without overstating certainty.'),
-      ],
-    ),
-    buildCommunityCourse(
-      id: 'course_ml_journal_club',
-      title: 'ML Journal Club Lite',
-      subtitle: 'Read one paper idea and map it into product language',
-      description: 'A mock club-style course that connects research ideas to product intuition.',
-      level: 'Intermediate',
-      rating: 4.9,
-      enrollmentCount: 560,
-      estimatedHours: 4,
-      color: const Color(0xFFA78BFA),
-      author: const CommunityCourseAuthor(name: 'Dana S.', role: 'ML Engineer', accentLabel: 'Research to product'),
-      tags: <String>['ml', 'reading', 'research'],
-      lessons: <CommunityCourseLessonPreview>[
-        buildCourseLesson('Read the abstract for product meaning', 'Extract the real-world problem quickly.'),
-        buildCourseLesson('Map methods to intuition', 'Explain the method without dense notation.'),
-        buildCourseLesson('Find deployment relevance', 'Identify where the idea fits in a product.'),
-      ],
-    ),
-    buildCommunityCourse(
-      id: 'course_secure_api_clinic',
-      title: 'Secure API Clinic',
-      subtitle: 'A guided walkthrough of auth, validation, and incident hints',
-      description: 'A mock course from a staff backend engineer focused on defensive API design.',
-      level: 'Advanced',
-      rating: 4.6,
-      enrollmentCount: 430,
-      estimatedHours: 6,
-      color: AppColors.danger,
-      author: const CommunityCourseAuthor(name: 'Rustem K.', role: 'Staff Backend Engineer', accentLabel: 'Security review'),
-      tags: <String>['security', 'backend', 'api'],
-      lessons: <CommunityCourseLessonPreview>[
-        buildCourseLesson('Threat model the endpoint', 'Identify assets, actors, and misuse paths early.'),
-        buildCourseLesson('Validate at the edge', 'Reduce trust assumptions before deeper logic.'),
-        buildCourseLesson('Observe and respond', 'Connect signals to an action plan.'),
-      ],
-    ),
-    buildCommunityCourse(
-      id: 'course_design_systems_from_scratch',
-      title: 'Design Systems from Scratch',
-      subtitle: 'Tokens, hierarchy, reusable components, and product coherence',
-      description: 'A mock course that frames design systems as a language for teams.',
-      level: 'Intermediate',
-      rating: 4.8,
-      enrollmentCount: 760,
-      estimatedHours: 5,
-      color: const Color(0xFFFF9F68),
-      author: const CommunityCourseAuthor(name: 'Aigerim N.', role: 'Design Systems Lead', accentLabel: 'UI systems'),
-      tags: <String>['design-system', 'frontend', 'mobile'],
-      lessons: <CommunityCourseLessonPreview>[
-        buildCourseLesson('Name your primitives', 'Create a vocabulary for surfaces and emphasis.'),
-        buildCourseLesson('Design for states', 'Component systems are strongest when states are first-class.'),
-        buildCourseLesson('Teach the system', 'Adoption depends on examples and narrative, not only tokens.'),
-      ],
-    ),
-  ];
+  return buildDiscoveryCourses();
 }
 
 List<LeaderboardEntry> _buildLeaderboardSeed() {

@@ -323,6 +323,11 @@ CommunityCourse buildCommunityCourse({
   required int estimatedHours,
   required Color color,
   required CommunityCourseAuthor author,
+  required String categoryKey,
+  required List<String> topicKeys,
+  required List<String> searchKeywords,
+  required bool isPopular,
+  required bool isRecommended,
   required List<String> tags,
   required List<CommunityCourseLessonPreview> lessons,
 }) {
@@ -337,6 +342,11 @@ CommunityCourse buildCommunityCourse({
     estimatedHours: estimatedHours,
     color: color,
     author: author,
+    categoryKey: categoryKey,
+    topicKeys: topicKeys,
+    searchKeywords: searchKeywords,
+    isPopular: isPopular,
+    isRecommended: isRecommended,
     tags: tags,
     lessons: lessons,
   );

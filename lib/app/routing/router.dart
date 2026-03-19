@@ -204,7 +204,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const CommunityCoursesPage(),
+          child: CommunityCoursesPage(
+            initialTopicKey: state.uri.queryParameters['topic'],
+            initialSearchQuery: state.uri.queryParameters['search'],
+            initialLevel: state.uri.queryParameters['level'],
+            initialAuthorId: state.uri.queryParameters['author'],
+          ),
         ),
       ),
       GoRoute(

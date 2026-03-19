@@ -134,7 +134,7 @@ class WelcomePage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'Войти через',
+                    l10n.text('login_with'),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: colors.textPrimary,
                           fontWeight: FontWeight.w800,

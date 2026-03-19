@@ -11,6 +11,7 @@ import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../tree_map_config.dart';
 
@@ -36,6 +37,7 @@ class KnowledgeTreePage extends ConsumerWidget {
     final activeAssessments = visibleTracks
         .where((track) => catalog.bestAssessmentPercentFor(state, track.id) > 0)
         .length;
+    final l10n = context.l10n;
 
     return AppPageScaffold(
       child: ListView(
@@ -47,7 +49,7 @@ class KnowledgeTreePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'One connected knowledge tree grows from Computer Science foundations into applied engineering paths.',
+                  l10n.text('tree_summary'),
                   style: TextStyle(
                     color: colors.textSecondary,
                     height: 1.45,
@@ -59,18 +61,18 @@ class KnowledgeTreePage extends ConsumerWidget {
                   runSpacing: 10,
                   children: [
                     _SummaryPill(
-                      label: 'Visible branches',
+                      label: l10n.text('tree_visible_branches'),
                       value: '${visibleTracks.length}',
                       color: colors.primary,
                     ),
                     _SummaryPill(
-                      label: 'Completed',
+                      label: l10n.text('tree_completed'),
                       value: '$completedBranches',
                       color: colors.success,
                     ),
                     _SummaryPill(
-                      label: 'Assessments',
-                      value: '$activeAssessments scored',
+                      label: l10n.text('tree_assessments'),
+                      value: '$activeAssessments',
                       color: colors.accent,
                     ),
                   ],
@@ -85,28 +87,28 @@ class KnowledgeTreePage extends ConsumerWidget {
               children: [
                 Expanded(
                   child: _LegendChip(
-                    label: 'Available',
+                    label: l10n.text('tree_available'),
                     color: colors.primary,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _LegendChip(
-                    label: 'In progress',
+                    label: l10n.text('tree_in_progress'),
                     color: colors.accent,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _LegendChip(
-                    label: 'Completed',
+                    label: l10n.text('tree_completed'),
                     color: colors.success,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _LegendChip(
-                    label: 'Mastered',
+                    label: l10n.text('tree_mastered'),
                     color: const Color(0xFFFFD166),
                   ),
                 ),
@@ -438,7 +440,9 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                         border: Border.all(color: accent.withValues(alpha: 0.5)),
                       ),
                       child: Text(
-                        bestPercent == 0 ? _statusLabel(availability) : '$bestPercent%',
+                        bestPercent == 0
+                            ? _statusLabel(context, availability)
+                            : '$bestPercent%',
                         style: TextStyle(
                           color: accent,
                           fontWeight: FontWeight.w800,
@@ -459,7 +463,7 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                 color: accent.withValues(alpha: 0.12),
               ),
               child: Text(
-                '${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} units',
+                '${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} ${context.l10n.text('tree_units')}',
                 style: TextStyle(
                   color: accent,
                   fontWeight: FontWeight.w700,
@@ -490,16 +494,16 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
     }
   }
 
-  static String _statusLabel(TrackAvailability availability) {
+  static String _statusLabel(BuildContext context, TrackAvailability availability) {
     switch (availability) {
       case TrackAvailability.available:
-        return 'Open';
+        return context.l10n.text('tree_available');
       case TrackAvailability.inProgress:
-        return 'Live';
+        return context.l10n.text('tree_in_progress');
       case TrackAvailability.completed:
-        return 'Done';
+        return context.l10n.text('tree_completed');
       case TrackAvailability.mastered:
-        return 'Mastered';
+        return context.l10n.text('tree_mastered');
     }
   }
 }
@@ -550,15 +554,15 @@ class _KnowledgeTreePainter extends CustomPainter {
   }
 
   Path _buildBranchPath(Offset start, Offset end) {
-    final midY = (start.dy + end.dy) / 2;
-    final horizontalBias = (end.dx - start.dx) * 0.18;
+    final verticalDistance = (end.dy - start.dy).abs();
+    final controlOffset = math.max(70, verticalDistance * 0.24);
     return Path()
       ..moveTo(start.dx, start.dy)
       ..cubicTo(
         start.dx,
-        midY - 46,
-        end.dx - horizontalBias,
-        midY + 26,
+        start.dy + controlOffset,
+        end.dx,
+        end.dy - controlOffset,
         end.dx,
         end.dy,
       );

@@ -708,14 +708,22 @@ class LearningTarget {
 
 class CommunityCourseAuthor {
   const CommunityCourseAuthor({
+    required this.id,
     required this.name,
     required this.role,
     required this.accentLabel,
+    required this.followersCount,
+    required this.courseCount,
+    required this.topicKeys,
   });
 
+  final String id;
   final String name;
   final String role;
   final String accentLabel;
+  final int followersCount;
+  final int courseCount;
+  final List<String> topicKeys;
 }
 
 class CommunityCourseLessonPreview {
@@ -742,6 +750,11 @@ class CommunityCourse {
     required this.estimatedHours,
     required this.color,
     required this.author,
+    required this.categoryKey,
+    required this.topicKeys,
+    required this.searchKeywords,
+    required this.isPopular,
+    required this.isRecommended,
     required this.tags,
     required this.lessons,
   });
@@ -756,6 +769,11 @@ class CommunityCourse {
   final int estimatedHours;
   final Color color;
   final CommunityCourseAuthor author;
+  final String categoryKey;
+  final List<String> topicKeys;
+  final List<String> searchKeywords;
+  final bool isPopular;
+  final bool isRecommended;
   final List<String> tags;
   final List<CommunityCourseLessonPreview> lessons;
 }

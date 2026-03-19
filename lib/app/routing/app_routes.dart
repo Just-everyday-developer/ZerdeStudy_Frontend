@@ -24,4 +24,20 @@ class AppRoutes {
   static String assessmentByTrackId(String trackId) => '$assessment/$trackId';
 
   static String courseById(String courseId) => '$courses/$courseId';
+
+  static String coursesCatalog({
+    String? topic,
+    String? search,
+    String? level,
+    String? author,
+  }) {
+    final queryParameters = <String, String>{
+      if (topic != null && topic.isNotEmpty) 'topic': topic,
+      if (search != null && search.isNotEmpty) 'search': search,
+      if (level != null && level.isNotEmpty) 'level': level,
+      if (author != null && author.isNotEmpty) 'author': author,
+    };
+    final uri = Uri(path: courses, queryParameters: queryParameters);
+    return uri.toString();
+  }
 }
