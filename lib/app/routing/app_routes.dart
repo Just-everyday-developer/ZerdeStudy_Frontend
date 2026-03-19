@@ -14,6 +14,7 @@ class AppRoutes {
   static const String stats = '/stats';
   static const String leaderboard = '/leaderboard';
   static const String courses = '/courses';
+  static const String coursePlayer = '/course-player';
 
   static String trackById(String trackId) => '$track/$trackId';
 
@@ -25,17 +26,31 @@ class AppRoutes {
 
   static String courseById(String courseId) => '$courses/$courseId';
 
+  static String coursePlayerById(String courseId, {bool skipIntro = false}) {
+    final uri = Uri(
+      path: '$coursePlayer/$courseId',
+      queryParameters: skipIntro ? const <String, String>{'skipIntro': '1'} : null,
+    );
+    return uri.toString();
+  }
+
   static String coursesCatalog({
     String? topic,
     String? search,
     String? level,
     String? author,
+    double? minRating,
+    String? duration,
+    bool? certificate,
   }) {
     final queryParameters = <String, String>{
       if (topic != null && topic.isNotEmpty) 'topic': topic,
       if (search != null && search.isNotEmpty) 'search': search,
       if (level != null && level.isNotEmpty) 'level': level,
       if (author != null && author.isNotEmpty) 'author': author,
+      if (minRating != null && minRating > 0) 'minRating': '$minRating',
+      if (duration != null && duration.isNotEmpty) 'duration': duration,
+      if (certificate == true) 'certificate': '1',
     };
     final uri = Uri(path: courses, queryParameters: queryParameters);
     return uri.toString();

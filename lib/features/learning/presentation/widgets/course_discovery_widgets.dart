@@ -12,12 +12,14 @@ class CourseDiscoverySearchBar extends StatelessWidget {
     required this.hintText,
     required this.onChanged,
     required this.onFilterTap,
+    this.focusNode,
   });
 
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String> onChanged;
   final VoidCallback onFilterTap;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,7 @@ class CourseDiscoverySearchBar extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: 16,
-        vertical: tall ? 12 : 8,
+        vertical: tall ? 12 : 10,
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -48,11 +50,25 @@ class CourseDiscoverySearchBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              focusNode: focusNode,
               onChanged: onChanged,
+              textAlignVertical: TextAlignVertical.center,
+              maxLines: 1,
+              minLines: 1,
+              style: TextStyle(
+                color: colors.textPrimary,
+                height: 1.2,
+              ),
+              cursorHeight: 22,
+              strutStyle: const StrutStyle(
+                height: 1.2,
+                forceStrutHeight: true,
+              ),
               decoration: InputDecoration(
                 hintText: hintText,
                 border: InputBorder.none,
-                isCollapsed: true,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
               ),
             ),
           ),
@@ -138,6 +154,8 @@ class DiscoveryCourseCard extends StatelessWidget {
     required this.saved,
     required this.levelLabel,
     required this.savedLabel,
+    required this.rating,
+    required this.reviewCount,
     required this.onTap,
   });
 
@@ -145,6 +163,8 @@ class DiscoveryCourseCard extends StatelessWidget {
   final bool saved;
   final String levelLabel;
   final String savedLabel;
+  final double rating;
+  final int reviewCount;
   final VoidCallback onTap;
 
   @override
@@ -154,6 +174,8 @@ class DiscoveryCourseCard extends StatelessWidget {
       saved: saved,
       levelLabel: levelLabel,
       savedLabel: savedLabel,
+      rating: rating,
+      reviewCount: reviewCount,
       onTap: onTap,
       width: 244,
       showExtendedMeta: false,
@@ -168,6 +190,8 @@ class DiscoveryWideCourseCard extends StatelessWidget {
     required this.saved,
     required this.levelLabel,
     required this.savedLabel,
+    required this.rating,
+    required this.reviewCount,
     required this.onTap,
   });
 
@@ -175,6 +199,8 @@ class DiscoveryWideCourseCard extends StatelessWidget {
   final bool saved;
   final String levelLabel;
   final String savedLabel;
+  final double rating;
+  final int reviewCount;
   final VoidCallback onTap;
 
   @override
@@ -184,6 +210,8 @@ class DiscoveryWideCourseCard extends StatelessWidget {
       saved: saved,
       levelLabel: levelLabel,
       savedLabel: savedLabel,
+      rating: rating,
+      reviewCount: reviewCount,
       onTap: onTap,
       width: double.infinity,
       showExtendedMeta: true,
@@ -197,6 +225,8 @@ class _BaseDiscoveryCourseCard extends StatelessWidget {
     required this.saved,
     required this.levelLabel,
     required this.savedLabel,
+    required this.rating,
+    required this.reviewCount,
     required this.onTap,
     required this.width,
     required this.showExtendedMeta,
@@ -206,6 +236,8 @@ class _BaseDiscoveryCourseCard extends StatelessWidget {
   final bool saved;
   final String levelLabel;
   final String savedLabel;
+  final double rating;
+  final int reviewCount;
   final VoidCallback onTap;
   final double width;
   final bool showExtendedMeta;
@@ -371,12 +403,12 @@ class _BaseDiscoveryCourseCard extends StatelessWidget {
                       children: [
                         _MetaChip(
                           icon: Icons.star_rounded,
-                          label: course.rating.toStringAsFixed(1),
+                          label: rating.toStringAsFixed(1),
                           color: course.color,
                         ),
                         _MetaChip(
-                          icon: Icons.groups_rounded,
-                          label: '${course.enrollmentCount}',
+                          icon: Icons.rate_review_rounded,
+                          label: '$reviewCount',
                           color: colors.textSecondary,
                         ),
                         _MetaChip(

@@ -12,6 +12,7 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/providers/course_search_focus_provider.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../widgets/course_discovery_widgets.dart';
 
@@ -24,20 +25,27 @@ class LearnPage extends ConsumerStatefulWidget {
 
 class _LearnPageState extends ConsumerState<LearnPage> {
   late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
 
   String _query = '';
   String? _selectedTopicKey;
   String _selectedLevel = 'All';
+  String? _selectedAuthorId;
+  double? _selectedMinRating;
+  CourseDurationBucket? _selectedDurationBucket;
+  bool _certificateOnly = false;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -48,6 +56,10 @@ class _LearnPageState extends ConsumerState<LearnPage> {
   ) async {
     var draftTopicKey = _selectedTopicKey;
     var draftLevel = _selectedLevel;
+    var draftAuthorId = _selectedAuthorId;
+    var draftMinRating = _selectedMinRating;
+    var draftDurationBucket = _selectedDurationBucket;
+    var draftCertificateOnly = _certificateOnly;
 
     await showAdaptivePanel<void>(
       context: context,
@@ -68,51 +80,122 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 18),
-                  Text(
-                    l10n.text('filter_topic'),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      ChoiceChip(
-                        label: Text(l10n.text('all_topics')),
-                        selected: draftTopicKey == null,
-                        onSelected: (_) {
-                          setModalState(() => draftTopicKey = null);
-                        },
+                  DropdownButtonFormField<String>(
+                    initialValue: draftTopicKey ?? '',
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_topic'),
+                    ),
+                    items: <DropdownMenuItem<String>>[
+                      DropdownMenuItem<String>(
+                        value: '',
+                        child: Text(l10n.text('all_topics')),
                       ),
                       ...catalog.courseTopicKeys().map(
-                            (topicKey) => ChoiceChip(
-                              label: Text(l10n.courseTopicLabel(topicKey)),
-                              selected: draftTopicKey == topicKey,
-                              onSelected: (_) {
-                                setModalState(() => draftTopicKey = topicKey);
-                              },
+                            (topicKey) => DropdownMenuItem<String>(
+                              value: topicKey,
+                              child: Text(l10n.courseTopicLabel(topicKey)),
                             ),
                           ),
                     ],
+                    onChanged: (value) {
+                      setModalState(() => draftTopicKey =
+                          (value == null || value.isEmpty) ? null : value);
+                    },
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    l10n.text('filter_level'),
-                    style: Theme.of(context).textTheme.titleMedium,
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: draftLevel,
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_level'),
+                    ),
+                    items: catalog.courseLevels()
+                        .map(
+                          (level) => DropdownMenuItem<String>(
+                            value: level,
+                            child: Text(l10n.courseLevelLabel(level)),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      setModalState(() => draftLevel = value ?? 'All');
+                    },
                   ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: catalog.courseLevels().map((level) {
-                      return ChoiceChip(
-                        label: Text(l10n.courseLevelLabel(level)),
-                        selected: draftLevel == level,
-                        onSelected: (_) {
-                          setModalState(() => draftLevel = level);
-                        },
-                      );
-                    }).toList(growable: false),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: draftAuthorId ?? '',
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_author'),
+                    ),
+                    items: <DropdownMenuItem<String>>[
+                      DropdownMenuItem<String>(
+                        value: '',
+                        child: Text(l10n.text('all_authors')),
+                      ),
+                      ...catalog.courseAuthors().map(
+                            (author) => DropdownMenuItem<String>(
+                              value: author.id,
+                              child: Text(author.name),
+                            ),
+                          ),
+                    ],
+                    onChanged: (value) {
+                      setModalState(() => draftAuthorId =
+                          (value == null || value.isEmpty) ? null : value);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<double>(
+                    initialValue: draftMinRating ?? 0,
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_min_rating'),
+                    ),
+                    items: <DropdownMenuItem<double>>[
+                      DropdownMenuItem<double>(
+                        value: 0,
+                        child: Text(l10n.text('any_rating')),
+                      ),
+                      const DropdownMenuItem<double>(value: 3, child: Text('3.0+')),
+                      const DropdownMenuItem<double>(value: 4, child: Text('4.0+')),
+                      const DropdownMenuItem<double>(value: 4.5, child: Text('4.5+')),
+                    ],
+                    onChanged: (value) {
+                      setModalState(() => draftMinRating =
+                          value == null || value == 0 ? null : value);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: draftDurationBucket?.code ?? '',
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_duration'),
+                    ),
+                    items: <DropdownMenuItem<String>>[
+                      DropdownMenuItem<String>(
+                        value: '',
+                        child: Text(l10n.text('any_duration')),
+                      ),
+                      ...catalog.courseDurationBuckets().map(
+                            (bucket) => DropdownMenuItem<String>(
+                              value: bucket.code,
+                              child: Text(_durationLabel(l10n, bucket)),
+                            ),
+                          ),
+                    ],
+                    onChanged: (value) {
+                      setModalState(() => draftDurationBucket =
+                          value == null || value.isEmpty
+                              ? null
+                              : CourseDurationBucket.fromCode(value));
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.text('filter_certificate')),
+                    value: draftCertificateOnly,
+                    onChanged: (value) {
+                      setModalState(() => draftCertificateOnly = value);
+                    },
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -123,6 +206,10 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                             setState(() {
                               _selectedTopicKey = null;
                               _selectedLevel = 'All';
+                              _selectedAuthorId = null;
+                              _selectedMinRating = null;
+                              _selectedDurationBucket = null;
+                              _certificateOnly = false;
                             });
                             Navigator.of(context).pop();
                           },
@@ -136,6 +223,10 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                             setState(() {
                               _selectedTopicKey = draftTopicKey;
                               _selectedLevel = draftLevel;
+                              _selectedAuthorId = draftAuthorId;
+                              _selectedMinRating = draftMinRating;
+                              _selectedDurationBucket = draftDurationBucket;
+                              _certificateOnly = draftCertificateOnly;
                             });
                             Navigator.of(context).pop();
                           },
@@ -159,13 +250,25 @@ class _LearnPageState extends ConsumerState<LearnPage> {
     final catalog = ref.watch(demoCatalogProvider);
     final l10n = context.l10n;
     final colors = context.appColors;
-    final authors = _filterAuthors(catalog.popularAuthors());
+    ref.listen<int>(courseSearchFocusRequestProvider, (previous, next) {
+      if (previous == next) {
+        return;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _searchFocusNode.requestFocus();
+        }
+      });
+    });
+    final authors = _filterAuthors(catalog.courseAuthors());
 
     final sections = <_CourseRailSection>[
       _CourseRailSection(
         title: l10n.text('section_programming_languages'),
         topicKey: courseTopicProgrammingLanguages,
         courses: _filterCourses(
+          state,
+          catalog,
           catalog.coursesForTopic(courseTopicProgrammingLanguages),
         ),
       ),
@@ -173,6 +276,8 @@ class _LearnPageState extends ConsumerState<LearnPage> {
         title: l10n.text('section_data_analytics'),
         topicKey: courseTopicDataAnalytics,
         courses: _filterCourses(
+          state,
+          catalog,
           catalog.coursesForTopic(courseTopicDataAnalytics),
         ),
       ),
@@ -180,6 +285,8 @@ class _LearnPageState extends ConsumerState<LearnPage> {
         title: l10n.text('section_ai'),
         topicKey: courseTopicAi,
         courses: _filterCourses(
+          state,
+          catalog,
           catalog.coursesForTopic(courseTopicAi),
         ),
       ),
@@ -187,6 +294,8 @@ class _LearnPageState extends ConsumerState<LearnPage> {
         title: l10n.text('section_sql_databases'),
         topicKey: courseTopicSqlDatabases,
         courses: _filterCourses(
+          state,
+          catalog,
           catalog.coursesForTopic(courseTopicSqlDatabases),
         ),
       ),
@@ -194,16 +303,18 @@ class _LearnPageState extends ConsumerState<LearnPage> {
         title: l10n.text('section_soft_skills'),
         topicKey: courseTopicSoftSkills,
         courses: _filterCourses(
+          state,
+          catalog,
           catalog.coursesForTopic(courseTopicSoftSkills),
         ),
       ),
       _CourseRailSection(
         title: l10n.text('section_popular_courses'),
-        courses: _filterCourses(catalog.popularCourses()),
+        courses: _filterCourses(state, catalog, catalog.popularCourses()),
       ),
       _CourseRailSection(
         title: l10n.text('section_recommended_courses'),
-        courses: _filterCourses(catalog.recommendedCourses(state)),
+        courses: _filterCourses(state, catalog, catalog.recommendedCourses(state)),
       ),
     ].where((section) => section.courses.isNotEmpty).toList(growable: false);
 
@@ -216,6 +327,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
             children: [
               CourseDiscoverySearchBar(
                 controller: _searchController,
+                focusNode: _searchFocusNode,
                 hintText: l10n.text('search_courses'),
                 onChanged: (value) => setState(() => _query = value),
                 onFilterTap: () => _openFilters(context, catalog, l10n),
@@ -223,37 +335,17 @@ class _LearnPageState extends ConsumerState<LearnPage> {
               const SizedBox(height: 16),
               GlowCard(
                 accent: colors.primary,
-                child: compact
-                    ? _DiscoveryHero(
-                        query: _query,
-                        selectedTopicKey: _selectedTopicKey,
-                        selectedLevel: _selectedLevel,
-                      )
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: _DiscoveryHero(
-                              query: _query,
-                              selectedTopicKey: _selectedTopicKey,
-                              selectedLevel: _selectedLevel,
-                            ),
-                          ),
-                          const SizedBox(width: 18),
-                          Expanded(
-                            flex: 2,
-                            child: _DiscoverySignalCard(
-                              sectionCount: sections.length,
-                              authorCount: authors.length,
-                              recommendationCount:
-                                  catalog.recommendedCourses(state).length,
-                            ),
-                          ),
-                        ],
-                      ),
+                child: _DiscoveryHero(
+                  query: _query,
+                  selectedTopicKey: _selectedTopicKey,
+                  selectedLevel: _selectedLevel,
+                  selectedAuthorId: _selectedAuthorId,
+                  selectedMinRating: _selectedMinRating,
+                  selectedDurationBucket: _selectedDurationBucket,
+                  certificateOnly: _certificateOnly,
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               if (sections.isEmpty)
                 GlowCard(
                   accent: colors.accent,
@@ -284,16 +376,21 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                         search: _query.isEmpty ? null : _query,
                         level:
                             _selectedLevel == 'All' ? null : _selectedLevel,
+                        author: _selectedAuthorId,
+                        minRating: _selectedMinRating,
+                        duration: _selectedDurationBucket?.code,
+                        certificate: _certificateOnly ? true : null,
                       ),
                     );
                   }
 
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 24),
+                    padding: const EdgeInsets.only(bottom: 32),
                     child: compact
                         ? _CompactCourseRail(
                             section: section,
                             state: state,
+                            catalog: catalog,
                             viewAllLabel: l10n.text('view_all_courses'),
                             levelLabelBuilder: l10n.courseLevelLabel,
                             savedLabel: l10n.text('saved'),
@@ -302,6 +399,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                         : _DesktopCourseRail(
                             section: section,
                             state: state,
+                            catalog: catalog,
                             viewAllLabel: l10n.text('view_all_courses'),
                             levelLabelBuilder: l10n.courseLevelLabel,
                             savedLabel: l10n.text('saved'),
@@ -332,7 +430,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                   },
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               GlowCard(
                 accent: colors.accent,
                 child: Column(
@@ -367,13 +465,30 @@ class _LearnPageState extends ConsumerState<LearnPage> {
     );
   }
 
-  List<CommunityCourse> _filterCourses(List<CommunityCourse> courses) {
+  List<CommunityCourse> _filterCourses(
+    DemoAppState state,
+    DemoCatalog catalog,
+    List<CommunityCourse> courses,
+  ) {
     return courses.where((course) {
-      if (_selectedTopicKey != null &&
-          !course.topicKeys.contains(_selectedTopicKey)) {
+      if (_selectedTopicKey != null && !course.topicKeys.contains(_selectedTopicKey)) {
         return false;
       }
       if (_selectedLevel != 'All' && course.level != _selectedLevel) {
+        return false;
+      }
+      if (_selectedAuthorId != null && course.author.id != _selectedAuthorId) {
+        return false;
+      }
+      if (_selectedMinRating != null &&
+          catalog.displayCourseRatingFor(state, course.id) < _selectedMinRating!) {
+        return false;
+      }
+      if (_selectedDurationBucket != null &&
+          catalog.courseDurationBucketFor(course) != _selectedDurationBucket) {
+        return false;
+      }
+      if (_certificateOnly && !course.facts.hasCertificate) {
         return false;
       }
       if (_query.isEmpty) {
@@ -386,22 +501,14 @@ class _LearnPageState extends ConsumerState<LearnPage> {
           course.description.en.toLowerCase().contains(normalizedQuery) ||
           course.heroBadge.toLowerCase().contains(normalizedQuery) ||
           course.heroHeadline.toLowerCase().contains(normalizedQuery) ||
-          course.learningOutcomes.any(
-            (item) => item.toLowerCase().contains(normalizedQuery),
-          ) ||
+          course.learningOutcomes.any((item) => item.toLowerCase().contains(normalizedQuery)) ||
           course.moduleSections.any(
             (section) =>
                 section.title.toLowerCase().contains(normalizedQuery) ||
-                section.items.any(
-                  (item) => item.title.toLowerCase().contains(normalizedQuery),
-                ),
+                section.items.any((item) => item.title.toLowerCase().contains(normalizedQuery)),
           ) ||
-          course.searchKeywords.any(
-            (keyword) => keyword.toLowerCase().contains(normalizedQuery),
-          ) ||
-          course.tags.any(
-            (tag) => tag.toLowerCase().contains(normalizedQuery),
-          ) ||
+          course.searchKeywords.any((keyword) => keyword.toLowerCase().contains(normalizedQuery)) ||
+          course.tags.any((tag) => tag.toLowerCase().contains(normalizedQuery)) ||
           course.author.name.toLowerCase().contains(normalizedQuery);
     }).toList(growable: false);
   }
@@ -410,6 +517,9 @@ class _LearnPageState extends ConsumerState<LearnPage> {
     return authors.where((author) {
       if (_selectedTopicKey != null &&
           !author.topicKeys.contains(_selectedTopicKey)) {
+        return false;
+      }
+      if (_selectedAuthorId != null && author.id != _selectedAuthorId) {
         return false;
       }
       if (_query.isEmpty) {
@@ -431,6 +541,17 @@ class _LearnPageState extends ConsumerState<LearnPage> {
         return key;
     }
   }
+
+  String _durationLabel(AppLocalizations l10n, CourseDurationBucket bucket) {
+    switch (bucket) {
+      case CourseDurationBucket.quick:
+        return l10n.text('duration_quick');
+      case CourseDurationBucket.focused:
+        return l10n.text('duration_focused');
+      case CourseDurationBucket.deep:
+        return l10n.text('duration_deep');
+    }
+  }
 }
 
 class _DiscoveryHero extends ConsumerWidget {
@@ -438,11 +559,19 @@ class _DiscoveryHero extends ConsumerWidget {
     required this.query,
     required this.selectedTopicKey,
     required this.selectedLevel,
+    required this.selectedAuthorId,
+    required this.selectedMinRating,
+    required this.selectedDurationBucket,
+    required this.certificateOnly,
   });
 
   final String query;
   final String? selectedTopicKey;
   final String selectedLevel;
+  final String? selectedAuthorId;
+  final double? selectedMinRating;
+  final CourseDurationBucket? selectedDurationBucket;
+  final bool certificateOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -485,6 +614,30 @@ class _DiscoveryHero extends ConsumerWidget {
                   label: l10n.courseLevelLabel(selectedLevel),
                   icon: Icons.signal_cellular_alt_rounded,
                 ),
+              if (selectedAuthorId != null)
+                _FilterPill(
+                  label: l10n.text('filter_author_active'),
+                  icon: Icons.person_rounded,
+                ),
+              if (selectedMinRating != null)
+                _FilterPill(
+                  label: '${selectedMinRating!.toStringAsFixed(selectedMinRating! % 1 == 0 ? 0 : 1)}+',
+                  icon: Icons.star_rounded,
+                ),
+              if (selectedDurationBucket != null)
+                _FilterPill(
+                  label: switch (selectedDurationBucket!) {
+                    CourseDurationBucket.quick => l10n.text('duration_quick'),
+                    CourseDurationBucket.focused => l10n.text('duration_focused'),
+                    CourseDurationBucket.deep => l10n.text('duration_deep'),
+                  },
+                  icon: Icons.schedule_rounded,
+                ),
+              if (certificateOnly)
+                _FilterPill(
+                  label: l10n.text('filter_certificate'),
+                  icon: Icons.workspace_premium_rounded,
+                ),
             ],
           ),
         ],
@@ -493,55 +646,11 @@ class _DiscoveryHero extends ConsumerWidget {
   }
 }
 
-class _DiscoverySignalCard extends StatelessWidget {
-  const _DiscoverySignalCard({
-    required this.sectionCount,
-    required this.authorCount,
-    required this.recommendationCount,
-  });
-
-  final int sectionCount;
-  final int authorCount;
-  final int recommendationCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final l10n = context.l10n;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: colors.surfaceSoft,
-        border: Border.all(color: colors.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.text('section_recommended_courses'),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 12),
-          _SignalRow(label: l10n.text('learn_signal_sections'), value: '$sectionCount'),
-          _SignalRow(label: l10n.text('learn_signal_authors'), value: '$authorCount'),
-          _SignalRow(
-            label: l10n.text('learn_signal_curated'),
-            value: '$recommendationCount',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CompactCourseRail extends ConsumerWidget {
   const _CompactCourseRail({
     required this.section,
     required this.state,
+    required this.catalog,
     required this.viewAllLabel,
     required this.levelLabelBuilder,
     required this.savedLabel,
@@ -550,6 +659,7 @@ class _CompactCourseRail extends ConsumerWidget {
 
   final _CourseRailSection section;
   final DemoAppState state;
+  final DemoCatalog catalog;
   final String viewAllLabel;
   final String Function(String level) levelLabelBuilder;
   final String savedLabel;
@@ -582,6 +692,8 @@ class _CompactCourseRail extends ConsumerWidget {
                 saved: state.savedCommunityCourseIds.contains(course.id),
                 levelLabel: levelLabelBuilder(course.level),
                 savedLabel: savedLabel,
+                rating: catalog.displayCourseRatingFor(state, course.id),
+                reviewCount: catalog.displayCourseReviewCountFor(state, course.id),
                 onTap: () => context.push(AppRoutes.courseById(course.id)),
               );
             },
@@ -596,6 +708,7 @@ class _DesktopCourseRail extends ConsumerWidget {
   const _DesktopCourseRail({
     required this.section,
     required this.state,
+    required this.catalog,
     required this.viewAllLabel,
     required this.levelLabelBuilder,
     required this.savedLabel,
@@ -604,6 +717,7 @@ class _DesktopCourseRail extends ConsumerWidget {
 
   final _CourseRailSection section;
   final DemoAppState state;
+  final DemoCatalog catalog;
   final String viewAllLabel;
   final String Function(String level) levelLabelBuilder;
   final String savedLabel;
@@ -642,6 +756,8 @@ class _DesktopCourseRail extends ConsumerWidget {
               saved: state.savedCommunityCourseIds.contains(course.id),
               levelLabel: levelLabelBuilder(course.level),
               savedLabel: savedLabel,
+              rating: catalog.displayCourseRatingFor(state, course.id),
+              reviewCount: catalog.displayCourseReviewCountFor(state, course.id),
               onTap: () => context.push(AppRoutes.courseById(course.id)),
             );
           },
@@ -696,41 +812,6 @@ class _FilterPill extends StatelessWidget {
             style: TextStyle(
               color: colors.textPrimary,
               fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SignalRow extends StatelessWidget {
-  const _SignalRow({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(color: colors.textSecondary),
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w700,
             ),
           ),
         ],

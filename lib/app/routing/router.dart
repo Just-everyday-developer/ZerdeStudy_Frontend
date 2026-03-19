@@ -11,6 +11,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
 import '../../features/home/presentation/pages/community_course_detail_page.dart';
+import '../../features/home/presentation/pages/community_course_player_page.dart';
 import '../../features/home/presentation/pages/community_courses_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/knowledge_tree/presentation/pages/knowledge_tree.dart';
@@ -209,6 +210,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             initialSearchQuery: state.uri.queryParameters['search'],
             initialLevel: state.uri.queryParameters['level'],
             initialAuthorId: state.uri.queryParameters['author'],
+            initialMinRating:
+                double.tryParse(state.uri.queryParameters['minRating'] ?? ''),
+            initialDurationCode: state.uri.queryParameters['duration'],
+            initialCertificateOnly:
+                state.uri.queryParameters['certificate'] == '1',
           ),
         ),
       ),
@@ -219,6 +225,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state: state,
           child: CommunityCourseDetailPage(
             courseId: state.pathParameters['courseId'] ?? '',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.coursePlayer}/:courseId',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: CommunityCoursePlayerPage(
+            courseId: state.pathParameters['courseId'] ?? '',
+            skipIntro: state.uri.queryParameters['skipIntro'] == '1',
           ),
         ),
       ),

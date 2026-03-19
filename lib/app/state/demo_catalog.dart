@@ -63,6 +63,16 @@ class DemoCatalog {
   List<String> courseLevels() =>
       const <String>['All', 'Beginner', 'Intermediate', 'Advanced'];
 
+  List<CommunityCourseAuthor> courseAuthors() {
+    final authors = popularAuthors().toList();
+    authors.sort((left, right) => left.name.compareTo(right.name));
+    return authors;
+  }
+
+  List<CourseDurationBucket> courseDurationBuckets() {
+    return CourseDurationBucket.values;
+  }
+
   List<String> frequentSearchTerms() => const <String>[
         'linux',
         'qa_testing',
@@ -118,10 +128,14 @@ class DemoCatalog {
   }
 
   List<CommunityCourse> searchCourses({
+    DemoAppState? state,
     String query = '',
     String? topicKey,
     String? level,
     String? authorId,
+    double? minRating,
+    CourseDurationBucket? durationBucket,
+    bool? certificateOnly,
   }) {
     final normalizedQuery = query.trim().toLowerCase();
     return communityCourses.where((course) {
@@ -134,6 +148,11 @@ class DemoCatalog {
           course.level == level;
       final authorMatch =
           authorId == null || authorId.isEmpty || course.author.id == authorId;
+      final ratingMatch = minRating == null ||
+          displayCourseRatingFor(state, course.id) >= minRating;
+      final durationMatch = durationBucket == null ||
+          courseDurationBucketFor(course) == durationBucket;
+      final certificateMatch = certificateOnly != true || course.facts.hasCertificate;
       final queryMatch = normalizedQuery.isEmpty ||
           course.title.en.toLowerCase().contains(normalizedQuery) ||
           course.subtitle.en.toLowerCase().contains(normalizedQuery) ||
@@ -163,8 +182,108 @@ class DemoCatalog {
                 instructor.name.toLowerCase().contains(normalizedQuery) ||
                 instructor.role.toLowerCase().contains(normalizedQuery),
           );
-      return topicMatch && levelMatch && authorMatch && queryMatch;
+      return topicMatch &&
+          levelMatch &&
+          authorMatch &&
+          ratingMatch &&
+          durationMatch &&
+          certificateMatch &&
+          queryMatch;
     }).toList(growable: false);
+  }
+
+  CourseDurationBucket courseDurationBucketFor(CommunityCourse course) {
+    return CourseDurationBucket.fromHours(course.estimatedHours);
+  }
+
+  double displayCourseRatingFor(DemoAppState? state, String courseId) {
+    final course = courseById(courseId);
+    final userRating = state?.courseRatingsByCourseId[courseId];
+    if (userRating == null) {
+      return course.reviewSummary.averageRating;
+    }
+    final baseCount = course.reviewSummary.reviewCount;
+    final updatedAverage =
+        ((course.reviewSummary.averageRating * baseCount) + userRating) /
+            (baseCount + 1);
+    return updatedAverage;
+  }
+
+  int displayCourseReviewCountFor(DemoAppState? state, String courseId) {
+    final course = courseById(courseId);
+    final userRating = state?.courseRatingsByCourseId[courseId];
+    return course.reviewSummary.reviewCount + (userRating == null ? 0 : 1);
+  }
+
+  CommunityCourseReviewSummary displayCourseReviewSummaryFor(
+    DemoAppState? state,
+    String courseId,
+  ) {
+    final course = courseById(courseId);
+    final userRating = state?.courseRatingsByCourseId[courseId];
+    if (userRating == null) {
+      return course.reviewSummary;
+    }
+    final distribution = Map<int, int>.from(course.reviewSummary.ratingDistribution);
+    distribution[userRating] = (distribution[userRating] ?? 0) + 1;
+    return CommunityCourseReviewSummary(
+      averageRating: displayCourseRatingFor(state, courseId),
+      reviewCount: displayCourseReviewCountFor(state, courseId),
+      ratingDistribution: distribution,
+    );
+  }
+
+  bool isCourseEnrolled(DemoAppState state, String courseId) {
+    return state.enrolledCommunityCourseIds.contains(courseId);
+  }
+
+  CoursePlayerProgress? coursePlayerProgressFor(
+    DemoAppState state,
+    String courseId,
+  ) {
+    return state.coursePlayerProgressByCourseId[courseId];
+  }
+
+  CoursePlayerLesson? currentCourseLessonFor(
+    DemoAppState state,
+    String courseId,
+  ) {
+    final course = courseById(courseId);
+    final progress = coursePlayerProgressFor(state, courseId);
+    final allLessons = <CoursePlayerLesson>[
+      for (final module in course.coursePlayerModules) ...module.lessons,
+    ];
+    if (allLessons.isEmpty) {
+      return null;
+    }
+    final currentLessonId = progress?.currentLessonId;
+    return allLessons.firstWhere(
+      (lesson) => lesson.id == currentLessonId,
+      orElse: () => allLessons.first,
+    );
+  }
+
+  List<CourseCertificate> certificatesFor(DemoAppState state) {
+    return communityCourses
+        .where((course) => state.coursePlayerProgressByCourseId[course.id]?.completedAt != null)
+        .map(
+          (course) => CourseCertificate(
+            id: 'certificate_${course.id}',
+            courseId: course.id,
+            title: course.title.resolve(state.locale),
+            recipientName: state.user?.name ?? 'Talgat',
+            issuedAt: state.coursePlayerProgressByCourseId[course.id]!.completedAt!,
+            accent: course.color,
+          ),
+        )
+        .toList()
+      ..sort((left, right) => right.issuedAt.compareTo(left.issuedAt));
+  }
+
+  List<CommunityCourse> enrolledCoursesFor(DemoAppState state) {
+    return communityCourses
+        .where((course) => state.enrolledCommunityCourseIds.contains(course.id))
+        .toList(growable: false);
   }
 
   TrackAssessment assessmentForTrack(String trackId) =>

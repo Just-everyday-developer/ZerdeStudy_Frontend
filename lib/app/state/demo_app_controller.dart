@@ -35,9 +35,22 @@ class DemoAppController extends Notifier<DemoAppState> {
     }
 
     try {
+      final seeded = _seedState();
+      final restored = DemoAppState.fromJson(
+        jsonDecode(savedState) as Map<String, dynamic>,
+      );
       return _withDerived(
-        DemoAppState.fromJson(
-          jsonDecode(savedState) as Map<String, dynamic>,
+        restored.copyWith(
+          courseRatingsByCourseId: restored.courseRatingsByCourseId.isEmpty
+              ? seeded.courseRatingsByCourseId
+              : restored.courseRatingsByCourseId,
+          enrolledCommunityCourseIds: restored.enrolledCommunityCourseIds.isEmpty
+              ? seeded.enrolledCommunityCourseIds
+              : restored.enrolledCommunityCourseIds,
+          coursePlayerProgressByCourseId:
+              restored.coursePlayerProgressByCourseId.isEmpty
+                  ? seeded.coursePlayerProgressByCourseId
+                  : restored.coursePlayerProgressByCourseId,
         ),
       );
     } catch (_) {
@@ -313,6 +326,206 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
+  void rateCommunityCourse(String courseId, int stars) {
+    final normalized = stars.clamp(1, 5);
+    final updatedRatings = Map<String, int>.from(state.courseRatingsByCourseId)
+      ..[courseId] = normalized;
+    final firstRating = !state.courseRatingsByCourseId.containsKey(courseId);
+    final course = _catalog.courseById(courseId);
+    final timestamp = DateTime.now();
+
+    state = _withDerived(
+      state.copyWith(
+        courseRatingsByCourseId: updatedRatings,
+        xp: state.xp + (firstRating ? 5 : 1),
+        learningHistory: <LearningHistoryEntry>[
+          LearningHistoryEntry(
+            id: 'history-course-rating-${timestamp.microsecondsSinceEpoch}',
+            kind: LearningHistoryKind.courseSaved,
+            title: 'Course rating updated',
+            subtitle: '${course.title.resolve(state.locale)} • $normalized/5',
+            createdAt: timestamp,
+            refId: courseId,
+          ),
+          ...state.learningHistory,
+        ],
+      ),
+    );
+    _persist();
+  }
+
+  void enrollCommunityCourse(String courseId) {
+    if (state.enrolledCommunityCourseIds.contains(courseId)) {
+      return;
+    }
+
+    final course = _catalog.courseById(courseId);
+    final allLessons = <CoursePlayerLesson>[
+      for (final module in course.coursePlayerModules) ...module.lessons,
+    ];
+    final timestamp = DateTime.now();
+    final updatedEnrollments = Set<String>.from(state.enrolledCommunityCourseIds)
+      ..add(courseId);
+    final updatedProgress =
+        Map<String, CoursePlayerProgress>.from(state.coursePlayerProgressByCourseId)
+          ..[courseId] = CoursePlayerProgress(
+            courseId: courseId,
+            completedLessonIds: const <String>{},
+            enrolledAt: timestamp,
+            currentLessonId: allLessons.isEmpty ? null : allLessons.first.id,
+            lastOpenedAt: timestamp,
+          );
+
+    state = _withDerived(
+      state.copyWith(
+        enrolledCommunityCourseIds: updatedEnrollments,
+        coursePlayerProgressByCourseId: updatedProgress,
+        xp: state.xp + 14,
+        learningHistory: <LearningHistoryEntry>[
+          LearningHistoryEntry(
+            id: 'history-course-enrolled-${timestamp.microsecondsSinceEpoch}',
+            kind: LearningHistoryKind.courseEnrolled,
+            title: 'Course enrolled',
+            subtitle: course.title.resolve(state.locale),
+            createdAt: timestamp,
+            refId: course.id,
+          ),
+          ...state.learningHistory,
+        ],
+      ),
+    );
+    _persist();
+  }
+
+  CoursePlayerProgress advanceCoursePlayer({
+    required String courseId,
+    required String lessonId,
+  }) {
+    final course = _catalog.courseById(courseId);
+    final allLessons = <CoursePlayerLesson>[
+      for (final module in course.coursePlayerModules) ...module.lessons,
+    ];
+    final currentProgress = state.coursePlayerProgressByCourseId[courseId] ??
+        CoursePlayerProgress(
+          courseId: courseId,
+          completedLessonIds: const <String>{},
+          enrolledAt: DateTime.now(),
+          currentLessonId: allLessons.isEmpty ? null : allLessons.first.id,
+        );
+    final updatedCompletedIds = Set<String>.from(currentProgress.completedLessonIds)
+      ..add(lessonId);
+    final currentIndex = allLessons.indexWhere((lesson) => lesson.id == lessonId);
+    final nextLessonId =
+        currentIndex >= 0 && currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1].id : null;
+    final finishedCourse = updatedCompletedIds.length >= allLessons.length &&
+        allLessons.isNotEmpty;
+    final timestamp = DateTime.now();
+    final updatedProgress = currentProgress.copyWith(
+      completedLessonIds: updatedCompletedIds,
+      currentLessonId: finishedCourse ? null : nextLessonId,
+      lastOpenedAt: timestamp,
+      completedAt: finishedCourse ? timestamp : currentProgress.completedAt,
+    );
+
+    final progressMap =
+        Map<String, CoursePlayerProgress>.from(state.coursePlayerProgressByCourseId)
+          ..[courseId] = updatedProgress;
+
+    final historyEntries = <LearningHistoryEntry>[
+      LearningHistoryEntry(
+        id: 'history-course-lesson-${timestamp.microsecondsSinceEpoch}',
+        kind: LearningHistoryKind.lessonCompleted,
+        title: 'Course lesson completed',
+        subtitle: allLessons
+            .firstWhere((lesson) => lesson.id == lessonId)
+            .title
+            .resolve(state.locale),
+        createdAt: timestamp,
+        refId: lessonId,
+      ),
+    ];
+    if (finishedCourse) {
+      historyEntries.addAll(<LearningHistoryEntry>[
+        LearningHistoryEntry(
+          id: 'history-course-completed-${timestamp.microsecondsSinceEpoch}',
+          kind: LearningHistoryKind.courseCompleted,
+          title: 'Course completed',
+          subtitle: course.title.resolve(state.locale),
+          createdAt: timestamp,
+          refId: courseId,
+        ),
+        LearningHistoryEntry(
+          id: 'history-certificate-${timestamp.microsecondsSinceEpoch}',
+          kind: LearningHistoryKind.certificateEarned,
+          title: 'Certificate earned',
+          subtitle: course.title.resolve(state.locale),
+          createdAt: timestamp,
+          refId: 'certificate_$courseId',
+        ),
+      ]);
+    }
+
+    state = _withDerived(
+      state.copyWith(
+        coursePlayerProgressByCourseId: progressMap,
+        enrolledCommunityCourseIds:
+            Set<String>.from(state.enrolledCommunityCourseIds)..add(courseId),
+        xp: state.xp + (finishedCourse ? 26 : 12),
+        dailyMissionDone: true,
+        weeklyActivity: _bumpToday(state.weeklyActivity),
+        learningHistory: <LearningHistoryEntry>[
+          ...historyEntries,
+          ...state.learningHistory,
+        ],
+      ),
+    );
+    _persist();
+    return updatedProgress;
+  }
+
+  String askInlineCourseAi({
+    required String courseId,
+    required String prompt,
+  }) {
+    final trimmed = prompt.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+    final course = _catalog.courseById(courseId);
+    final progress = state.coursePlayerProgressByCourseId[courseId];
+    final currentLesson = progress?.currentLessonId == null
+        ? null
+        : _catalog.currentCourseLessonFor(state, courseId);
+    final reply = _courseAiReply(
+      course: course,
+      currentLesson: currentLesson,
+      prompt: trimmed,
+    );
+    final timestamp = DateTime.now();
+    state = _withDerived(
+      state.copyWith(
+        aiMessages: <AiMessage>[
+          ...state.aiMessages,
+          AiMessage(
+            id: 'inline-user-${timestamp.microsecondsSinceEpoch}',
+            author: AiAuthor.user,
+            text: trimmed,
+            createdAt: timestamp,
+          ),
+          AiMessage(
+            id: 'inline-mentor-${timestamp.microsecondsSinceEpoch}',
+            author: AiAuthor.mentor,
+            text: reply,
+            createdAt: timestamp.add(const Duration(milliseconds: 180)),
+          ),
+        ],
+        xp: state.xp + 3,
+      ),
+    );
+    _persist();
+    return reply;
+  }
+
   TrackAssessmentResult submitTrackAssessment({
     required String trackId,
     required Map<String, String> selectedOptionIds,
@@ -579,6 +792,36 @@ class DemoAppController extends Notifier<DemoAppState> {
       savedCommunityCourseIds: <String>{
         'course_ml_journal_club',
       },
+      courseRatingsByCourseId: <String, int>{
+        'course_dart_first_widget': 5,
+        'course_sql_for_analysts': 4,
+      },
+      enrolledCommunityCourseIds: <String>{
+        'course_dart_first_widget',
+        'course_portfolio_engineering',
+      },
+      coursePlayerProgressByCourseId: <String, CoursePlayerProgress>{
+        'course_dart_first_widget': CoursePlayerProgress(
+          courseId: 'course_dart_first_widget',
+          completedLessonIds: <String>{
+            'course_dart_first_widget_player_lesson_1',
+            'course_dart_first_widget_player_lesson_2',
+            'course_dart_first_widget_player_lesson_3',
+          },
+          enrolledAt: DateTime(2026, 3, 14, 9, 0),
+          lastOpenedAt: DateTime(2026, 3, 15, 10, 10),
+          completedAt: DateTime(2026, 3, 15, 10, 10),
+        ),
+        'course_portfolio_engineering': CoursePlayerProgress(
+          courseId: 'course_portfolio_engineering',
+          completedLessonIds: <String>{
+            'course_portfolio_engineering_player_lesson_1',
+          },
+          enrolledAt: DateTime(2026, 3, 18, 16, 0),
+          currentLessonId: 'course_portfolio_engineering_player_lesson_2',
+          lastOpenedAt: DateTime(2026, 3, 18, 16, 20),
+        ),
+      },
       xp: 468,
       streak: 7,
       dailyMissionDone: false,
@@ -747,5 +990,25 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void _persist() {
     _preferences.setString(_storageKey, jsonEncode(state.toJson()));
+  }
+
+  String _courseAiReply({
+    required CommunityCourse course,
+    required CoursePlayerLesson? currentLesson,
+    required String prompt,
+  }) {
+    final normalized = prompt.toLowerCase();
+    final lessonTitle = currentLesson?.title.resolve(state.locale) ?? course.title.resolve(state.locale);
+
+    if (normalized.contains('code') || normalized.contains('пример') || normalized.contains('example')) {
+      return 'Start from the smallest moving part in $lessonTitle, then point to the final print. In ${course.title.resolve(state.locale)}, that usually makes the code explanation feel much calmer.';
+    }
+    if (normalized.contains('next') || normalized.contains('дальше') || normalized.contains('step')) {
+      return 'The clean next step is to finish $lessonTitle, then open the task block and explain the pattern in one sentence before solving it.';
+    }
+    if (normalized.contains('why') || normalized.contains('зачем') || normalized.contains('why this')) {
+      return '${course.title.resolve(state.locale)} is useful because it turns a broad topic into one repeatable workflow you can explain, demonstrate, and then reuse in practice.';
+    }
+    return 'For $lessonTitle, focus on three beats: the idea, one small code example, and the practical takeaway. If you want, ask me about the output or the next task.';
   }
 }

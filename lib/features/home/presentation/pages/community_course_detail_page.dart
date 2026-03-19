@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
+import '../../../../core/common_widgets/adaptive_panel.dart';
 import '../../../../core/common_widgets/app_button.dart';
+import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -41,6 +45,9 @@ class _CommunityCourseDetailPageState
     final catalog = ref.watch(demoCatalogProvider);
     final course = catalog.courseById(widget.courseId);
     final saved = state.savedCommunityCourseIds.contains(widget.courseId);
+    final enrolled = state.enrolledCommunityCourseIds.contains(widget.courseId);
+    final userRating = state.courseRatingsByCourseId[widget.courseId];
+    final reviewSummary = catalog.displayCourseReviewSummaryFor(state, widget.courseId);
     final colors = context.appColors;
 
     return Scaffold(
@@ -53,16 +60,134 @@ class _CommunityCourseDetailPageState
                 ? _CompactCourseDetailLayout(
                     course: course,
                     saved: saved,
+                    enrolled: enrolled,
+                    reviewSummary: reviewSummary,
+                    userRating: userRating,
                     onSave: () => controller.saveCommunityCourse(widget.courseId),
+                    onRate: (stars) =>
+                        controller.rateCommunityCourse(widget.courseId, stars),
+                    onPrimaryTap: () => _handlePrimaryTap(context, course, controller),
                   )
                 : _WideCourseDetailLayout(
                     course: course,
                     saved: saved,
+                    enrolled: enrolled,
+                    reviewSummary: reviewSummary,
+                    userRating: userRating,
                     onSave: () => controller.saveCommunityCourse(widget.courseId),
+                    onRate: (stars) =>
+                        controller.rateCommunityCourse(widget.courseId, stars),
+                    onPrimaryTap: () => _handlePrimaryTap(context, course, controller),
                   ),
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _handlePrimaryTap(
+    BuildContext context,
+    CommunityCourse course,
+    DemoAppController controller,
+  ) async {
+    if (!course.supportsCoursePlayer) {
+      AppNotice.show(
+        context,
+        message: context.l10n.text('course_preview_notice'),
+        type: AppNoticeType.info,
+      );
+      return;
+    }
+
+    if (context.isCompactLayout) {
+      controller.enrollCommunityCourse(course.id);
+      if (!context.mounted) {
+        return;
+      }
+      context.push(AppRoutes.coursePlayerById(course.id));
+      return;
+    }
+
+    await showAdaptivePanel<void>(
+      context: context,
+      wideMaxWidth: 620,
+      builder: (panelContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AdaptivePanelHandle(),
+              const SizedBox(height: 18),
+              Text(
+                context.l10n.text('course_enroll_title'),
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                course.title.en,
+                style: TextStyle(
+                  color: context.appColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                context.l10n.text('course_enroll_body'),
+                style: TextStyle(
+                  color: context.appColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...course.learningOutcomes.take(3).map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.check_rounded, color: course.color),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              item,
+                              style: TextStyle(
+                                color: context.appColors.textSecondary,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(panelContext).pop(),
+                      child: Text(panelContext.l10n.text('close')),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        controller.enrollCommunityCourse(course.id);
+                        Navigator.of(panelContext).pop();
+                        context.push(AppRoutes.coursePlayerById(course.id, skipIntro: true));
+                      },
+                      child: Text(panelContext.l10n.text('course_start_now')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -71,12 +196,22 @@ class _CompactCourseDetailLayout extends StatelessWidget {
   const _CompactCourseDetailLayout({
     required this.course,
     required this.saved,
+    required this.enrolled,
+    required this.reviewSummary,
+    required this.userRating,
     required this.onSave,
+    required this.onRate,
+    required this.onPrimaryTap,
   });
 
   final CommunityCourse course;
   final bool saved;
+  final bool enrolled;
+  final CommunityCourseReviewSummary reviewSummary;
+  final int? userRating;
   final VoidCallback onSave;
+  final ValueChanged<int> onRate;
+  final VoidCallback onPrimaryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +229,12 @@ class _CompactCourseDetailLayout extends StatelessWidget {
                 child: _MobileHeroCard(
                   course: course,
                   saved: saved,
+                  enrolled: enrolled,
+                  reviewSummary: reviewSummary,
+                  userRating: userRating,
                   onSave: onSave,
+                  onRate: onRate,
+                  onPrimaryTap: onPrimaryTap,
                 ),
               ),
             ),
@@ -125,7 +265,13 @@ class _CompactCourseDetailLayout extends StatelessWidget {
         body: TabBarView(
           children: [
             _CompactInfoTab(course: course),
-            _CourseReviewsSection(course: course, compact: true),
+            _CourseReviewsSection(
+              course: course,
+              compact: true,
+              summary: reviewSummary,
+              userRating: userRating,
+              onRate: onRate,
+            ),
             _CourseUpdatesSection(course: course, compact: true),
             _CourseProgramSection(course: course, compact: true),
           ],
@@ -139,12 +285,22 @@ class _WideCourseDetailLayout extends StatelessWidget {
   const _WideCourseDetailLayout({
     required this.course,
     required this.saved,
+    required this.enrolled,
+    required this.reviewSummary,
+    required this.userRating,
     required this.onSave,
+    required this.onRate,
+    required this.onPrimaryTap,
   });
 
   final CommunityCourse course;
   final bool saved;
+  final bool enrolled;
+  final CommunityCourseReviewSummary reviewSummary;
+  final int? userRating;
   final VoidCallback onSave;
+  final ValueChanged<int> onRate;
+  final VoidCallback onPrimaryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +333,10 @@ class _WideCourseDetailLayout extends StatelessWidget {
                             .backButtonTooltip,
                       ),
                       const SizedBox(height: 8),
-                      _DesktopHeroCard(course: course),
+                      _DesktopHeroCard(
+                        course: course,
+                        reviewSummary: reviewSummary,
+                      ),
                       const SizedBox(height: 18),
                       _CourseTextSection(
                         title: context.l10n.text('course_about'),
@@ -203,7 +362,13 @@ class _WideCourseDetailLayout extends StatelessWidget {
                       const SizedBox(height: 16),
                       _CourseCertificateSection(course: course),
                       const SizedBox(height: 16),
-                      _CourseReviewsSection(course: course, compact: false),
+                      _CourseReviewsSection(
+                        course: course,
+                        compact: false,
+                        summary: reviewSummary,
+                        userRating: userRating,
+                        onRate: onRate,
+                      ),
                     ],
                   ),
                 ),
@@ -215,7 +380,12 @@ class _WideCourseDetailLayout extends StatelessWidget {
                   child: _CourseSidebar(
                     course: course,
                     saved: saved,
+                    enrolled: enrolled,
+                    reviewSummary: reviewSummary,
+                    userRating: userRating,
                     onSave: onSave,
+                    onRate: onRate,
+                    onPrimaryTap: onPrimaryTap,
                   ),
                 ),
               ),
@@ -230,9 +400,11 @@ class _WideCourseDetailLayout extends StatelessWidget {
 class _DesktopHeroCard extends StatelessWidget {
   const _DesktopHeroCard({
     required this.course,
+    required this.reviewSummary,
   });
 
   final CommunityCourse course;
+  final CommunityCourseReviewSummary reviewSummary;
 
   @override
   Widget build(BuildContext context) {
@@ -372,7 +544,7 @@ class _DesktopHeroCard extends StatelessWidget {
                       Icon(Icons.star_rounded, color: course.color, size: 20),
                       const SizedBox(width: 6),
                       Text(
-                        course.reviewSummary.averageRating.toStringAsFixed(1),
+                        reviewSummary.averageRating.toStringAsFixed(1),
                         style: TextStyle(
                           color: colors.textPrimary,
                           fontWeight: FontWeight.w800,
@@ -380,7 +552,7 @@ class _DesktopHeroCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        '${course.reviewSummary.reviewCount} ${context.l10n.text('course_reviews_count')}',
+                        '${reviewSummary.reviewCount} ${context.l10n.text('course_reviews_count')}',
                         style: TextStyle(color: colors.textSecondary),
                       ),
                     ],
@@ -399,12 +571,22 @@ class _MobileHeroCard extends StatelessWidget {
   const _MobileHeroCard({
     required this.course,
     required this.saved,
+    required this.enrolled,
+    required this.reviewSummary,
+    required this.userRating,
     required this.onSave,
+    required this.onRate,
+    required this.onPrimaryTap,
   });
 
   final CommunityCourse course;
   final bool saved;
+  final bool enrolled;
+  final CommunityCourseReviewSummary reviewSummary;
+  final int? userRating;
   final VoidCallback onSave;
+  final ValueChanged<int> onRate;
+  final VoidCallback onPrimaryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -455,9 +637,12 @@ class _MobileHeroCard extends StatelessWidget {
           const SizedBox(height: 18),
           Center(
             child: AppButton.primary(
-              label: context.l10n.text('course_primary_cta'),
+              label: enrolled
+                  ? context.l10n.text('course_open_cta')
+                  : context.l10n.text('course_primary_cta'),
               icon: Icons.play_circle_fill_rounded,
-              onPressed: () {},
+              maxWidth: 320,
+              onPressed: onPrimaryTap,
             ),
           ),
           const SizedBox(height: 18),
@@ -467,7 +652,7 @@ class _MobileHeroCard extends StatelessWidget {
               Icon(Icons.star_rounded, color: course.color, size: 18),
               const SizedBox(width: 6),
               Text(
-                course.reviewSummary.averageRating.toStringAsFixed(1),
+                reviewSummary.averageRating.toStringAsFixed(1),
                 style: TextStyle(
                   color: colors.textPrimary,
                   fontWeight: FontWeight.w800,
@@ -492,6 +677,12 @@ class _MobileHeroCard extends StatelessWidget {
               color: colors.textSecondary,
               height: 1.4,
             ),
+          ),
+          const SizedBox(height: 14),
+          _CourseRatingEditor(
+            rating: userRating,
+            accent: course.color,
+            onRate: onRate,
           ),
         ],
       ),
@@ -541,12 +732,22 @@ class _CourseSidebar extends StatelessWidget {
   const _CourseSidebar({
     required this.course,
     required this.saved,
+    required this.enrolled,
+    required this.reviewSummary,
+    required this.userRating,
     required this.onSave,
+    required this.onRate,
+    required this.onPrimaryTap,
   });
 
   final CommunityCourse course;
   final bool saved;
+  final bool enrolled;
+  final CommunityCourseReviewSummary reviewSummary;
+  final int? userRating;
   final VoidCallback onSave;
+  final ValueChanged<int> onRate;
+  final VoidCallback onPrimaryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -563,6 +764,25 @@ class _CourseSidebar extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.star_rounded, color: course.color, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                reviewSummary.averageRating.toStringAsFixed(1),
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${reviewSummary.reviewCount} ${l10n.text('course_reviews_count')}',
+                style: TextStyle(color: colors.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           _SidebarMeta(
             icon: Icons.pie_chart_rounded,
             label: course.offer.installmentLabel,
@@ -574,14 +794,18 @@ class _CourseSidebar extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           AppButton.primary(
-            label: l10n.text('course_primary_cta'),
-            icon: Icons.shopping_bag_rounded,
-            onPressed: () {},
+            label: enrolled
+                ? l10n.text('course_open_cta')
+                : l10n.text('course_primary_cta'),
+            icon: Icons.play_circle_fill_rounded,
+            maxWidth: 260,
+            onPressed: onPrimaryTap,
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
             label: l10n.text('course_preview_cta'),
             icon: Icons.play_circle_outline_rounded,
+            maxWidth: 260,
             onPressed: () {},
           ),
           const SizedBox(height: 12),
@@ -590,7 +814,14 @@ class _CourseSidebar extends StatelessWidget {
                 ? l10n.text('saved_to_profile')
                 : l10n.text('course_save_cta'),
             icon: saved ? Icons.check_circle_rounded : Icons.favorite_border_rounded,
+            maxWidth: 260,
             onPressed: saved ? null : onSave,
+          ),
+          const SizedBox(height: 16),
+          _CourseRatingEditor(
+            rating: userRating,
+            accent: course.color,
+            onRate: onRate,
           ),
           const SizedBox(height: 18),
           Text(
@@ -964,15 +1195,20 @@ class _CourseReviewsSection extends StatelessWidget {
   const _CourseReviewsSection({
     required this.course,
     required this.compact,
+    required this.summary,
+    required this.userRating,
+    required this.onRate,
   });
 
   final CommunityCourse course;
   final bool compact;
+  final CommunityCourseReviewSummary summary;
+  final int? userRating;
+  final ValueChanged<int> onRate;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final summary = course.reviewSummary;
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1046,6 +1282,12 @@ class _CourseReviewsSection extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 18),
+        _CourseRatingEditor(
+          rating: userRating,
+          accent: course.color,
+          onRate: onRate,
         ),
         const SizedBox(height: 18),
         ...course.reviews.map(
@@ -1141,6 +1383,63 @@ class _CourseReviewsSection extends StatelessWidget {
     return GlowCard(
       accent: course.color,
       child: content,
+    );
+  }
+}
+
+class _CourseRatingEditor extends StatelessWidget {
+  const _CourseRatingEditor({
+    required this.rating,
+    required this.accent,
+    required this.onRate,
+  });
+
+  final int? rating;
+  final Color accent;
+  final ValueChanged<int> onRate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: context.appColors.surfaceSoft,
+        border: Border.all(color: context.appColors.divider),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              context.l10n.text('course_rate_prompt'),
+              style: TextStyle(
+                color: context.appColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Wrap(
+            spacing: 4,
+            children: List<Widget>.generate(
+              5,
+              (index) => IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                tooltip: '${index + 1}',
+                onPressed: () => onRate(index + 1),
+                icon: Icon(
+                  Icons.star_rounded,
+                  color: (rating ?? 0) >= index + 1
+                      ? accent
+                      : context.appColors.divider,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

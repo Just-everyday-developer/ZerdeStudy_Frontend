@@ -11,6 +11,7 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/providers/course_search_focus_provider.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../learning/presentation/widgets/course_discovery_widgets.dart';
 
@@ -21,12 +22,18 @@ class CommunityCoursesPage extends ConsumerStatefulWidget {
     this.initialSearchQuery,
     this.initialLevel,
     this.initialAuthorId,
+    this.initialMinRating,
+    this.initialDurationCode,
+    this.initialCertificateOnly = false,
   });
 
   final String? initialTopicKey;
   final String? initialSearchQuery;
   final String? initialLevel;
   final String? initialAuthorId;
+  final double? initialMinRating;
+  final String? initialDurationCode;
+  final bool initialCertificateOnly;
 
   @override
   ConsumerState<CommunityCoursesPage> createState() =>
@@ -35,11 +42,15 @@ class CommunityCoursesPage extends ConsumerStatefulWidget {
 
 class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
   late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
 
   late String _query;
   String? _selectedTopicKey;
   late String _selectedLevel;
   String? _selectedAuthorId;
+  double? _selectedMinRating;
+  CourseDurationBucket? _selectedDurationBucket;
+  late bool _certificateOnly;
 
   @override
   void initState() {
@@ -48,12 +59,19 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
     _selectedTopicKey = widget.initialTopicKey;
     _selectedLevel = widget.initialLevel ?? 'All';
     _selectedAuthorId = widget.initialAuthorId;
+    _selectedMinRating = widget.initialMinRating;
+    _selectedDurationBucket = widget.initialDurationCode == null
+        ? null
+        : CourseDurationBucket.fromCode(widget.initialDurationCode);
+    _certificateOnly = widget.initialCertificateOnly;
     _searchController = TextEditingController(text: _query);
+    _searchFocusNode = FocusNode();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -64,10 +82,14 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
   ) async {
     var draftTopic = _selectedTopicKey;
     var draftLevel = _selectedLevel;
+    var draftAuthor = _selectedAuthorId;
+    var draftMinRating = _selectedMinRating;
+    var draftDuration = _selectedDurationBucket;
+    var draftCertificateOnly = _certificateOnly;
 
     await showAdaptivePanel<void>(
       context: context,
-      wideMaxWidth: 680,
+      wideMaxWidth: 720,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -84,49 +106,126 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 18),
-                  Text(
-                    l10n.text('filter_topic'),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      ChoiceChip(
-                        label: Text(l10n.text('all_topics')),
-                        selected: draftTopic == null,
-                        onSelected: (_) =>
-                            setModalState(() => draftTopic = null),
+                  DropdownButtonFormField<String>(
+                    initialValue: draftTopic ?? '',
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_topic'),
+                    ),
+                    items: <DropdownMenuItem<String>>[
+                      DropdownMenuItem<String>(
+                        value: '',
+                        child: Text(l10n.text('all_topics')),
                       ),
                       ...catalog.courseTopicKeys().map(
-                            (topicKey) => ChoiceChip(
-                              label: Text(l10n.courseTopicLabel(topicKey)),
-                              selected: draftTopic == topicKey,
-                              onSelected: (_) => setModalState(
-                                () => draftTopic = topicKey,
-                              ),
+                            (topicKey) => DropdownMenuItem<String>(
+                              value: topicKey,
+                              child: Text(l10n.courseTopicLabel(topicKey)),
                             ),
                           ),
                     ],
+                    onChanged: (value) {
+                      setModalState(() {
+                        draftTopic = value == null || value.isEmpty ? null : value;
+                      });
+                    },
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    l10n.text('filter_level'),
-                    style: Theme.of(context).textTheme.titleMedium,
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: draftLevel,
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_level'),
+                    ),
+                    items: catalog.courseLevels()
+                        .map(
+                          (level) => DropdownMenuItem<String>(
+                            value: level,
+                            child: Text(l10n.courseLevelLabel(level)),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      setModalState(() => draftLevel = value ?? 'All');
+                    },
                   ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: catalog.courseLevels().map(
-                      (level) => ChoiceChip(
-                        label: Text(l10n.courseLevelLabel(level)),
-                        selected: draftLevel == level,
-                        onSelected: (_) =>
-                            setModalState(() => draftLevel = level),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: draftAuthor ?? '',
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_author'),
+                    ),
+                    items: <DropdownMenuItem<String>>[
+                      DropdownMenuItem<String>(
+                        value: '',
+                        child: Text(l10n.text('all_authors')),
                       ),
-                    ).toList(growable: false),
+                      ...catalog.courseAuthors().map(
+                            (author) => DropdownMenuItem<String>(
+                              value: author.id,
+                              child: Text(author.name),
+                            ),
+                          ),
+                    ],
+                    onChanged: (value) {
+                      setModalState(() {
+                        draftAuthor = value == null || value.isEmpty ? null : value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<double>(
+                    initialValue: draftMinRating ?? 0,
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_min_rating'),
+                    ),
+                    items: <DropdownMenuItem<double>>[
+                      DropdownMenuItem<double>(
+                        value: 0,
+                        child: Text(l10n.text('any_rating')),
+                      ),
+                      const DropdownMenuItem<double>(value: 3, child: Text('3.0+')),
+                      const DropdownMenuItem<double>(value: 4, child: Text('4.0+')),
+                      const DropdownMenuItem<double>(value: 4.5, child: Text('4.5+')),
+                    ],
+                    onChanged: (value) {
+                      setModalState(() {
+                        draftMinRating = value == null || value == 0 ? null : value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: draftDuration?.code ?? '',
+                    decoration: InputDecoration(
+                      labelText: l10n.text('filter_duration'),
+                    ),
+                    items: <DropdownMenuItem<String>>[
+                      DropdownMenuItem<String>(
+                        value: '',
+                        child: Text(l10n.text('any_duration')),
+                      ),
+                      ...catalog.courseDurationBuckets().map(
+                            (bucket) => DropdownMenuItem<String>(
+                              value: bucket.code,
+                              child: Text(_durationLabel(l10n, bucket)),
+                            ),
+                          ),
+                    ],
+                    onChanged: (value) {
+                      setModalState(() {
+                        draftDuration = value == null || value.isEmpty
+                            ? null
+                            : CourseDurationBucket.fromCode(value);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.text('filter_certificate')),
+                    value: draftCertificateOnly,
+                    onChanged: (value) {
+                      setModalState(() => draftCertificateOnly = value);
+                    },
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -138,6 +237,9 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                               _selectedTopicKey = null;
                               _selectedLevel = 'All';
                               _selectedAuthorId = null;
+                              _selectedMinRating = null;
+                              _selectedDurationBucket = null;
+                              _certificateOnly = false;
                             });
                             Navigator.of(context).pop();
                           },
@@ -151,6 +253,10 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                             setState(() {
                               _selectedTopicKey = draftTopic;
                               _selectedLevel = draftLevel;
+                              _selectedAuthorId = draftAuthor;
+                              _selectedMinRating = draftMinRating;
+                              _selectedDurationBucket = draftDuration;
+                              _certificateOnly = draftCertificateOnly;
                             });
                             Navigator.of(context).pop();
                           },
@@ -174,13 +280,28 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
     final catalog = ref.watch(demoCatalogProvider);
     final l10n = context.l10n;
     final colors = context.appColors;
+    ref.listen<int>(courseSearchFocusRequestProvider, (previous, next) {
+      if (previous == next) {
+        return;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _searchFocusNode.requestFocus();
+        }
+      });
+    });
+
     final results = catalog.searchCourses(
+      state: state,
       query: _query,
       topicKey: _selectedTopicKey,
       level: _selectedLevel,
       authorId: _selectedAuthorId,
+      minRating: _selectedMinRating,
+      durationBucket: _selectedDurationBucket,
+      certificateOnly: _certificateOnly ? true : null,
     );
-    final authors = catalog.popularAuthors();
+    final authors = catalog.courseAuthors();
 
     return AppPageScaffold(
       title: context.isCompactLayout ? l10n.text('catalog_title') : null,
@@ -194,11 +315,12 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
             children: [
               CourseDiscoverySearchBar(
                 controller: _searchController,
+                focusNode: _searchFocusNode,
                 hintText: l10n.text('search_courses'),
                 onChanged: (value) => setState(() => _query = value),
                 onFilterTap: () => _openFilters(context, catalog, l10n),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               GlowCard(
                 accent: colors.primary,
                 child: Column(
@@ -246,6 +368,22 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                                 .name,
                             icon: Icons.person_rounded,
                           ),
+                        if (_selectedMinRating != null)
+                          _CatalogPill(
+                            label:
+                                '${_selectedMinRating!.toStringAsFixed(_selectedMinRating! % 1 == 0 ? 0 : 1)}+',
+                            icon: Icons.star_rounded,
+                          ),
+                        if (_selectedDurationBucket != null)
+                          _CatalogPill(
+                            label: _durationLabel(l10n, _selectedDurationBucket!),
+                            icon: Icons.schedule_rounded,
+                          ),
+                        if (_certificateOnly)
+                          _CatalogPill(
+                            label: l10n.text('filter_certificate'),
+                            icon: Icons.workspace_premium_rounded,
+                          ),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -262,7 +400,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               if (results.isEmpty)
                 GlowCard(
                   accent: colors.accent,
@@ -287,7 +425,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
               else if (compact)
                 ...results.map(
                   (course) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: SizedBox(
                       height: 432,
                       child: DiscoveryWideCourseCard(
@@ -295,6 +433,9 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                         saved: state.savedCommunityCourseIds.contains(course.id),
                         levelLabel: l10n.courseLevelLabel(course.level),
                         savedLabel: l10n.text('saved'),
+                        rating: catalog.displayCourseRatingFor(state, course.id),
+                        reviewCount:
+                            catalog.displayCourseReviewCountFor(state, course.id),
                         onTap: () => context.push(AppRoutes.courseById(course.id)),
                       ),
                     ),
@@ -307,7 +448,11 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                   selectedAuthorId: _selectedAuthorId,
                   selectedLevel: _selectedLevel,
                   selectedTopicKey: _selectedTopicKey,
+                  selectedMinRating: _selectedMinRating,
+                  selectedDurationBucket: _selectedDurationBucket,
+                  certificateOnly: _certificateOnly,
                   isWide: wide,
+                  catalog: catalog,
                   onAuthorTap: (authorId) {
                     setState(() => _selectedAuthorId = authorId);
                   },
@@ -321,6 +466,17 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
       ),
     );
   }
+
+  String _durationLabel(AppLocalizations l10n, CourseDurationBucket bucket) {
+    switch (bucket) {
+      case CourseDurationBucket.quick:
+        return l10n.text('duration_quick');
+      case CourseDurationBucket.focused:
+        return l10n.text('duration_focused');
+      case CourseDurationBucket.deep:
+        return l10n.text('duration_deep');
+    }
+  }
 }
 
 class _DesktopCatalogLayout extends ConsumerWidget {
@@ -330,7 +486,11 @@ class _DesktopCatalogLayout extends ConsumerWidget {
     required this.selectedAuthorId,
     required this.selectedLevel,
     required this.selectedTopicKey,
+    required this.selectedMinRating,
+    required this.selectedDurationBucket,
+    required this.certificateOnly,
     required this.isWide,
+    required this.catalog,
     required this.onAuthorTap,
     required this.onClearAuthor,
   });
@@ -340,7 +500,11 @@ class _DesktopCatalogLayout extends ConsumerWidget {
   final String? selectedAuthorId;
   final String selectedLevel;
   final String? selectedTopicKey;
+  final double? selectedMinRating;
+  final CourseDurationBucket? selectedDurationBucket;
+  final bool certificateOnly;
   final bool isWide;
+  final DemoCatalog catalog;
   final ValueChanged<String> onAuthorTap;
   final VoidCallback onClearAuthor;
 
@@ -349,14 +513,16 @@ class _DesktopCatalogLayout extends ConsumerWidget {
     final state = ref.watch(demoAppControllerProvider);
     final l10n = context.l10n;
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: isWide ? 280 : 240,
-          child: Column(
-            children: [
-              CatalogFilterCard(
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            SizedBox(
+              width: isWide ? 220 : 200,
+              child: CatalogFilterCard(
                 title: l10n.text('filter_topic'),
                 child: Text(
                   selectedTopicKey == null
@@ -364,17 +530,58 @@ class _DesktopCatalogLayout extends ConsumerWidget {
                       : l10n.courseTopicLabel(selectedTopicKey!),
                 ),
               ),
-              const SizedBox(height: 14),
-              CatalogFilterCard(
+            ),
+            SizedBox(
+              width: isWide ? 220 : 200,
+              child: CatalogFilterCard(
                 title: l10n.text('filter_level'),
                 child: Text(l10n.courseLevelLabel(selectedLevel)),
               ),
-              const SizedBox(height: 14),
-              CatalogFilterCard(
+            ),
+            SizedBox(
+              width: isWide ? 220 : 200,
+              child: CatalogFilterCard(
+                title: l10n.text('filter_min_rating'),
+                child: Text(
+                  selectedMinRating == null
+                      ? l10n.text('any_rating')
+                      : '${selectedMinRating!.toStringAsFixed(selectedMinRating! % 1 == 0 ? 0 : 1)}+',
+                ),
+              ),
+            ),
+            SizedBox(
+              width: isWide ? 220 : 200,
+              child: CatalogFilterCard(
+                title: l10n.text('filter_duration'),
+                child: Text(
+                  selectedDurationBucket == null
+                      ? l10n.text('any_duration')
+                      : switch (selectedDurationBucket!) {
+                          CourseDurationBucket.quick => l10n.text('duration_quick'),
+                          CourseDurationBucket.focused => l10n.text('duration_focused'),
+                          CourseDurationBucket.deep => l10n.text('duration_deep'),
+                        },
+                ),
+              ),
+            ),
+            SizedBox(
+              width: isWide ? 220 : 200,
+              child: CatalogFilterCard(
+                title: l10n.text('filter_certificate'),
+                child: Text(
+                  certificateOnly
+                      ? l10n.text('course_certificate')
+                      : l10n.text('show_all'),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: isWide ? 320 : 300,
+              child: CatalogFilterCard(
                 title: l10n.text('section_popular_authors'),
                 child: Column(
                   children: [
-                    ...authors.take(5).map(
+                    ...authors.take(isWide ? 4 : 3).map(
                           (author) => Padding(
                             padding: const EdgeInsets.only(bottom: 10),
                             child: InkWell(
@@ -399,14 +606,11 @@ class _DesktopCatalogLayout extends ConsumerWidget {
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             author.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                            style: const TextStyle(fontWeight: FontWeight.w700),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
@@ -428,40 +632,41 @@ class _DesktopCatalogLayout extends ConsumerWidget {
                     if (selectedAuthorId != null)
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: TextButton(
+                        child: TextButton.icon(
                           onPressed: onClearAuthor,
-                          child: Text(l10n.text('clear_filters')),
+                          icon: const Icon(Icons.close_rounded),
+                          label: Text(l10n.text('clear_filters')),
                         ),
                       ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 18),
-        Expanded(
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: results.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: isWide ? 3 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: isWide ? 0.88 : 0.82,
             ),
-            itemBuilder: (context, index) {
-              final course = results[index];
-              return DiscoveryWideCourseCard(
-                course: course,
-                saved: state.savedCommunityCourseIds.contains(course.id),
-                levelLabel: l10n.courseLevelLabel(course.level),
-                savedLabel: l10n.text('saved'),
-                onTap: () => context.push(AppRoutes.courseById(course.id)),
-              );
-            },
+          ],
+        ),
+        const SizedBox(height: 20),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: results.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: isWide ? 3 : 2,
+            crossAxisSpacing: 18,
+            mainAxisSpacing: 18,
+            childAspectRatio: isWide ? 0.9 : 0.82,
           ),
+          itemBuilder: (context, index) {
+            final course = results[index];
+            return DiscoveryWideCourseCard(
+              course: course,
+              saved: state.savedCommunityCourseIds.contains(course.id),
+              levelLabel: l10n.courseLevelLabel(course.level),
+              savedLabel: l10n.text('saved'),
+              rating: catalog.displayCourseRatingFor(state, course.id),
+              reviewCount: catalog.displayCourseReviewCountFor(state, course.id),
+              onTap: () => context.push(AppRoutes.courseById(course.id)),
+            );
+          },
         ),
       ],
     );

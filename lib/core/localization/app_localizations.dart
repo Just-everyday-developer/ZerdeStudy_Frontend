@@ -950,6 +950,146 @@ class AppLocalizations {
           AppLocale.en: 'Interactive items',
           AppLocale.kk: 'Интерактив элементтер',
         },
+        'filter_author': {
+          AppLocale.ru: 'Автор',
+          AppLocale.en: 'Author',
+          AppLocale.kk: 'Автор',
+        },
+        'all_authors': {
+          AppLocale.ru: 'Все авторы',
+          AppLocale.en: 'All authors',
+          AppLocale.kk: 'Барлық авторлар',
+        },
+        'filter_min_rating': {
+          AppLocale.ru: 'Минимальный рейтинг',
+          AppLocale.en: 'Minimum rating',
+          AppLocale.kk: 'Ең төмен рейтинг',
+        },
+        'any_rating': {
+          AppLocale.ru: 'Любой рейтинг',
+          AppLocale.en: 'Any rating',
+          AppLocale.kk: 'Кез келген рейтинг',
+        },
+        'filter_duration': {
+          AppLocale.ru: 'Длительность',
+          AppLocale.en: 'Duration',
+          AppLocale.kk: 'Ұзақтығы',
+        },
+        'any_duration': {
+          AppLocale.ru: 'Любая длительность',
+          AppLocale.en: 'Any duration',
+          AppLocale.kk: 'Кез келген ұзақтық',
+        },
+        'filter_certificate': {
+          AppLocale.ru: 'С сертификатом',
+          AppLocale.en: 'With certificate',
+          AppLocale.kk: 'Сертификатпен',
+        },
+        'duration_quick': {
+          AppLocale.ru: 'Быстрый',
+          AppLocale.en: 'Quick',
+          AppLocale.kk: 'Жылдам',
+        },
+        'duration_focused': {
+          AppLocale.ru: 'Средний',
+          AppLocale.en: 'Focused',
+          AppLocale.kk: 'Орташа',
+        },
+        'duration_deep': {
+          AppLocale.ru: 'Глубокий',
+          AppLocale.en: 'Deep',
+          AppLocale.kk: 'Терең',
+        },
+        'certificates': {
+          AppLocale.ru: 'Сертификаты',
+          AppLocale.en: 'Certificates',
+          AppLocale.kk: 'Сертификаттар',
+        },
+        'certificates_hint': {
+          AppLocale.ru: 'Сертификаты появляются после завершения мини-курсов.',
+          AppLocale.en: 'Certificates appear after finishing mini-courses.',
+          AppLocale.kk: 'Сертификаттар мини-курстар аяқталғаннан кейін пайда болады.',
+        },
+        'course_player_intro': {
+          AppLocale.ru: 'Краткое введение',
+          AppLocale.en: 'Quick introduction',
+          AppLocale.kk: 'Қысқаша кіріспе',
+        },
+        'ask_ai_inline': {
+          AppLocale.ru: 'Спросить у ИИ',
+          AppLocale.en: 'Ask AI',
+          AppLocale.kk: 'AI-дан сұрау',
+        },
+        'next_step': {
+          AppLocale.ru: 'Дальше',
+          AppLocale.en: 'Next',
+          AppLocale.kk: 'Келесі',
+        },
+        'course_player_task': {
+          AppLocale.ru: 'Следующий шаг',
+          AppLocale.en: 'Next task',
+          AppLocale.kk: 'Келесі қадам',
+        },
+        'course_completed': {
+          AppLocale.ru: 'Курс завершён',
+          AppLocale.en: 'Course completed',
+          AppLocale.kk: 'Курс аяқталды',
+        },
+        'course_certificate_earned_notice': {
+          AppLocale.ru: 'Сертификат добавлен в профиль',
+          AppLocale.en: 'Certificate added to profile',
+          AppLocale.kk: 'Сертификат профильге қосылды',
+        },
+        'course_ai_prompt_hint': {
+          AppLocale.ru: 'Спросите про пример кода, вывод или следующий шаг',
+          AppLocale.en: 'Ask about the code example, output, or next step',
+          AppLocale.kk: 'Код үлгісі, нәтиже немесе келесі қадам туралы сұраңыз',
+        },
+        'close': {
+          AppLocale.ru: 'Закрыть',
+          AppLocale.en: 'Close',
+          AppLocale.kk: 'Жабу',
+        },
+        'course_player_step': {
+          AppLocale.ru: 'Шаг {current} из {total}',
+          AppLocale.en: 'Step {current} of {total}',
+          AppLocale.kk: '{total} қадамның {current}-қадамы',
+        },
+        'course_preview_notice': {
+          AppLocale.ru: 'Для этого курса пока доступен только детальный просмотр.',
+          AppLocale.en: 'This course currently supports detail preview only.',
+          AppLocale.kk: 'Бұл курс үшін әзірге тек толық шолу қолжетімді.',
+        },
+        'course_enroll_title': {
+          AppLocale.ru: 'Начать курс',
+          AppLocale.en: 'Start course',
+          AppLocale.kk: 'Курсты бастау',
+        },
+        'course_enroll_body': {
+          AppLocale.ru: 'Откройте короткий onboarding и затем перейдите в мини-player с объяснением, кодом и заданиями.',
+          AppLocale.en: 'Open a short onboarding flow and then continue into the mini player with explanation, code, and tasks.',
+          AppLocale.kk: 'Қысқа onboarding ағынын ашып, кейін түсіндірме, код және тапсырмалары бар mini-player-ге өтіңіз.',
+        },
+        'course_start_now': {
+          AppLocale.ru: 'Начать',
+          AppLocale.en: 'Start now',
+          AppLocale.kk: 'Қазір бастау',
+        },
+        'course_open_cta': {
+          AppLocale.ru: 'Открыть курс',
+          AppLocale.en: 'Open course',
+          AppLocale.kk: 'Курсты ашу',
+        },
+        'course_rate_prompt': {
+          AppLocale.ru: 'Оцените курс',
+          AppLocale.en: 'Rate this course',
+          AppLocale.kk: 'Курсты бағалаңыз',
+        },
+        'filter_author_active': {
+          AppLocale.ru: 'Автор выбран',
+          AppLocale.en: 'Author selected',
+          AppLocale.kk: 'Автор таңдалды',
+        },
       };
 }
 

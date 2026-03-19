@@ -21,6 +21,9 @@ class DemoAppState {
     required this.learningHistory,
     required this.viewedCommunityCourseIds,
     required this.savedCommunityCourseIds,
+    required this.courseRatingsByCourseId,
+    required this.enrolledCommunityCourseIds,
+    required this.coursePlayerProgressByCourseId,
     required this.xp,
     required this.streak,
     required this.dailyMissionDone,
@@ -49,6 +52,9 @@ class DemoAppState {
   final List<LearningHistoryEntry> learningHistory;
   final Set<String> viewedCommunityCourseIds;
   final Set<String> savedCommunityCourseIds;
+  final Map<String, int> courseRatingsByCourseId;
+  final Set<String> enrolledCommunityCourseIds;
+  final Map<String, CoursePlayerProgress> coursePlayerProgressByCourseId;
   final int xp;
   final int streak;
   final bool dailyMissionDone;
@@ -99,6 +105,9 @@ class DemoAppState {
     List<LearningHistoryEntry>? learningHistory,
     Set<String>? viewedCommunityCourseIds,
     Set<String>? savedCommunityCourseIds,
+    Map<String, int>? courseRatingsByCourseId,
+    Set<String>? enrolledCommunityCourseIds,
+    Map<String, CoursePlayerProgress>? coursePlayerProgressByCourseId,
     int? xp,
     int? streak,
     bool? dailyMissionDone,
@@ -137,6 +146,12 @@ class DemoAppState {
           Set<String>.from(this.viewedCommunityCourseIds),
       savedCommunityCourseIds:
           savedCommunityCourseIds ?? Set<String>.from(this.savedCommunityCourseIds),
+      courseRatingsByCourseId:
+          courseRatingsByCourseId ?? Map<String, int>.from(this.courseRatingsByCourseId),
+      enrolledCommunityCourseIds: enrolledCommunityCourseIds ??
+          Set<String>.from(this.enrolledCommunityCourseIds),
+      coursePlayerProgressByCourseId: coursePlayerProgressByCourseId ??
+          Map<String, CoursePlayerProgress>.from(this.coursePlayerProgressByCourseId),
       xp: xp ?? this.xp,
       streak: streak ?? this.streak,
       dailyMissionDone: dailyMissionDone ?? this.dailyMissionDone,
@@ -172,6 +187,11 @@ class DemoAppState {
           learningHistory.map((entry) => entry.toJson()).toList(),
       'viewedCommunityCourseIds': viewedCommunityCourseIds.toList(),
       'savedCommunityCourseIds': savedCommunityCourseIds.toList(),
+      'courseRatingsByCourseId': courseRatingsByCourseId,
+      'enrolledCommunityCourseIds': enrolledCommunityCourseIds.toList(),
+      'coursePlayerProgressByCourseId': coursePlayerProgressByCourseId.map<String, dynamic>(
+        (key, value) => MapEntry<String, dynamic>(key, value.toJson()),
+      ),
       'xp': xp,
       'streak': streak,
       'dailyMissionDone': dailyMissionDone,
@@ -243,6 +263,25 @@ class DemoAppState {
       savedCommunityCourseIds: Set<String>.from(
         (json['savedCommunityCourseIds'] as List<dynamic>? ?? <dynamic>[])
             .cast<String>(),
+      ),
+      courseRatingsByCourseId:
+          (json['courseRatingsByCourseId'] as Map<String, dynamic>? ??
+                  <String, dynamic>{})
+              .map<String, int>(
+        (key, value) => MapEntry<String, int>(key, value as int? ?? 0),
+      ),
+      enrolledCommunityCourseIds: Set<String>.from(
+        (json['enrolledCommunityCourseIds'] as List<dynamic>? ?? <dynamic>[])
+            .cast<String>(),
+      ),
+      coursePlayerProgressByCourseId:
+          (json['coursePlayerProgressByCourseId'] as Map<String, dynamic>? ??
+                  <String, dynamic>{})
+              .map<String, CoursePlayerProgress>(
+        (key, value) => MapEntry<String, CoursePlayerProgress>(
+          key,
+          CoursePlayerProgress.fromJson(value as Map<String, dynamic>),
+        ),
       ),
       xp: json['xp'] as int? ?? 240,
       streak: json['streak'] as int? ?? 4,

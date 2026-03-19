@@ -88,10 +88,7 @@ class _AdaptivePanelFrame extends StatelessWidget {
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: child,
-      ),
+      child: SafeArea(top: false, child: child),
     );
 
     if (compact) {

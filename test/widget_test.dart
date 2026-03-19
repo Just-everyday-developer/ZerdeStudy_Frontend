@@ -292,7 +292,7 @@ void main() {
     expect(storedState, isNotNull);
   });
 
-  testWidgets('profile shows achievements grid favorites and history',
+  testWidgets('profile shows achievements preview favorites and history',
       (tester) async {
     await configureSurface(tester);
     final container = await createContainer();
@@ -325,7 +325,7 @@ void main() {
     await pumpScene(tester);
 
     expect(find.text('Achievements'), findsOneWidget);
-    expect(find.byType(GridView), findsWidgets);
+    expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
     await tester.scrollUntilVisible(
       find.text('Favorites'),
       250,

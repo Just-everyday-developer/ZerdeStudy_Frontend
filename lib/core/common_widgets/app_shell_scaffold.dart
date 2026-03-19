@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/routing/app_routes.dart';
 import '../../app/state/app_locale.dart';
 import '../../app/state/demo_app_controller.dart';
 import '../localization/app_localizations.dart';
+import '../providers/course_search_focus_provider.dart';
 import '../theme/app_theme_colors.dart';
 
 class AppShellScaffold extends ConsumerStatefulWidget {
@@ -55,6 +57,10 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
     _branchHistory.remove(index);
     _branchHistory.add(currentIndex);
     widget.navigationShell.goBranch(index);
+  }
+
+  void _requestSearchFocus() {
+    ref.read(courseSearchFocusRequestProvider.notifier).ping();
   }
 
   @override
@@ -122,7 +128,10 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                       currentUserName: state.user?.name ?? 'Talgat',
                       onDestinationSelected: _onDestinationSelected,
                       onBackTap: () => _handleBack(),
-                      onSearchTap: () => context.push(AppRoutes.courses),
+                      onSearchTap: () {
+                        _onDestinationSelected(2);
+                        _requestSearchFocus();
+                      },
                       onProfileTap: () => _onDestinationSelected(4),
                       onLocaleSelected: ref
                           .read(demoAppControllerProvider.notifier)
@@ -141,24 +150,69 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                   ],
                 );
 
-          return Scaffold(
-            backgroundColor: colors.background,
-            body: shellBody,
-            bottomNavigationBar: compact
-                ? NavigationBar(
-                    selectedIndex: widget.navigationShell.currentIndex,
-                    onDestinationSelected: _onDestinationSelected,
-                    destinations: destinations
-                        .map(
-                          (destination) => NavigationDestination(
-                            icon: Icon(destination.icon),
-                            selectedIcon: Icon(destination.selectedIcon),
-                            label: destination.label,
-                          ),
+          return Shortcuts(
+            shortcuts: <ShortcutActivator, Intent>{
+              const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true):
+                  const _BackIntent(),
+              const SingleActivator(LogicalKeyboardKey.digit1, alt: true):
+                  const _BranchIntent(0),
+              const SingleActivator(LogicalKeyboardKey.digit2, alt: true):
+                  const _BranchIntent(1),
+              const SingleActivator(LogicalKeyboardKey.digit3, alt: true):
+                  const _BranchIntent(2),
+              const SingleActivator(LogicalKeyboardKey.digit4, alt: true):
+                  const _BranchIntent(3),
+              const SingleActivator(LogicalKeyboardKey.digit5, alt: true):
+                  const _BranchIntent(4),
+              const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+                  const _FocusSearchIntent(),
+              const SingleActivator(LogicalKeyboardKey.keyL, control: true):
+                  const _BranchIntent(2),
+              const SingleActivator(LogicalKeyboardKey.keyT, control: true):
+                  const _BranchIntent(1),
+            },
+            child: Actions(
+              actions: <Type, Action<Intent>>{
+                _BackIntent: CallbackAction<_BackIntent>(
+                  onInvoke: (intent) => _handleBack(),
+                ),
+                _BranchIntent: CallbackAction<_BranchIntent>(
+                  onInvoke: (intent) {
+                    _onDestinationSelected(intent.index);
+                    return null;
+                  },
+                ),
+                _FocusSearchIntent: CallbackAction<_FocusSearchIntent>(
+                  onInvoke: (intent) {
+                    _onDestinationSelected(2);
+                    _requestSearchFocus();
+                    return null;
+                  },
+                ),
+              },
+              child: Focus(
+                autofocus: true,
+                child: Scaffold(
+                  backgroundColor: colors.background,
+                  body: shellBody,
+                  bottomNavigationBar: compact
+                      ? NavigationBar(
+                          selectedIndex: widget.navigationShell.currentIndex,
+                          onDestinationSelected: _onDestinationSelected,
+                          destinations: destinations
+                              .map(
+                                (destination) => NavigationDestination(
+                                  icon: Icon(destination.icon),
+                                  selectedIcon: Icon(destination.selectedIcon),
+                                  label: destination.label,
+                                ),
+                              )
+                              .toList(growable: false),
                         )
-                        .toList(growable: false),
-                  )
-                : null,
+                      : null,
+                ),
+              ),
+            ),
           );
         },
       ),
@@ -212,25 +266,12 @@ class _DesktopShellBar extends StatelessWidget {
               ),
               const SizedBox(width: 8),
             ],
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                color: colors.surface.withValues(alpha: 0.92),
-                border: Border.all(color: colors.divider),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.auto_awesome_rounded, color: colors.primary),
-                  const SizedBox(width: 10),
-                  Text(
-                    context.l10n.text('app_name'),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+            Text(
+              context.l10n.text('app_name'),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
                   ),
-                ],
-              ),
             ),
             const SizedBox(width: 18),
             Expanded(
@@ -402,4 +443,18 @@ class _ShellDestination {
   final String route;
   final IconData icon;
   final IconData selectedIcon;
+}
+
+class _BackIntent extends Intent {
+  const _BackIntent();
+}
+
+class _FocusSearchIntent extends Intent {
+  const _FocusSearchIntent();
+}
+
+class _BranchIntent extends Intent {
+  const _BranchIntent(this.index);
+
+  final int index;
 }

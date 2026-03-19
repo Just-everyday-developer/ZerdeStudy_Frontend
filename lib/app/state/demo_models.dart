@@ -632,6 +632,9 @@ enum LearningHistoryKind {
   trackCompleted,
   assessmentCompleted,
   courseSaved,
+  courseEnrolled,
+  courseCompleted,
+  certificateEarned,
 }
 
 class LearningHistoryEntry {
@@ -704,6 +707,155 @@ class LearningTarget {
   LocalizedText get title => isPractice ? practice!.title : lesson!.title;
 
   String get trackId => isPractice ? practice!.trackId : lesson!.trackId;
+}
+
+enum CourseDurationBucket {
+  quick,
+  focused,
+  deep;
+
+  String get code => name;
+
+  static CourseDurationBucket fromHours(int hours) {
+    if (hours <= 4) {
+      return CourseDurationBucket.quick;
+    }
+    if (hours <= 8) {
+      return CourseDurationBucket.focused;
+    }
+    return CourseDurationBucket.deep;
+  }
+
+  static CourseDurationBucket fromCode(String? code) {
+    return CourseDurationBucket.values.firstWhere(
+      (bucket) => bucket.code == code,
+      orElse: () => CourseDurationBucket.focused,
+    );
+  }
+}
+
+class CoursePlayerLesson {
+  const CoursePlayerLesson({
+    required this.id,
+    required this.title,
+    required this.annotation,
+    required this.explanation,
+    required this.codeSnippet,
+    required this.exampleOutput,
+    required this.nextActionLabel,
+  });
+
+  final String id;
+  final LocalizedText title;
+  final LocalizedText annotation;
+  final LocalizedText explanation;
+  final String codeSnippet;
+  final String exampleOutput;
+  final LocalizedText nextActionLabel;
+}
+
+class CoursePlayerModule {
+  const CoursePlayerModule({
+    required this.id,
+    required this.title,
+    required this.summary,
+    required this.lessons,
+  });
+
+  final String id;
+  final LocalizedText title;
+  final LocalizedText summary;
+  final List<CoursePlayerLesson> lessons;
+}
+
+class CoursePlayerProgress {
+  const CoursePlayerProgress({
+    required this.courseId,
+    required this.completedLessonIds,
+    required this.enrolledAt,
+    this.currentLessonId,
+    this.lastOpenedAt,
+    this.completedAt,
+  });
+
+  final String courseId;
+  final Set<String> completedLessonIds;
+  final DateTime enrolledAt;
+  final String? currentLessonId;
+  final DateTime? lastOpenedAt;
+  final DateTime? completedAt;
+
+  bool get isCompleted => completedAt != null;
+
+  CoursePlayerProgress copyWith({
+    Set<String>? completedLessonIds,
+    Object? currentLessonId = _coursePlayerProgressSentinel,
+    DateTime? enrolledAt,
+    Object? lastOpenedAt = _coursePlayerProgressSentinel,
+    Object? completedAt = _coursePlayerProgressSentinel,
+  }) {
+    return CoursePlayerProgress(
+      courseId: courseId,
+      completedLessonIds:
+          completedLessonIds ?? Set<String>.from(this.completedLessonIds),
+      enrolledAt: enrolledAt ?? this.enrolledAt,
+      currentLessonId: identical(currentLessonId, _coursePlayerProgressSentinel)
+          ? this.currentLessonId
+          : currentLessonId as String?,
+      lastOpenedAt: identical(lastOpenedAt, _coursePlayerProgressSentinel)
+          ? this.lastOpenedAt
+          : lastOpenedAt as DateTime?,
+      completedAt: identical(completedAt, _coursePlayerProgressSentinel)
+          ? this.completedAt
+          : completedAt as DateTime?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'courseId': courseId,
+      'completedLessonIds': completedLessonIds.toList(),
+      'enrolledAt': enrolledAt.toIso8601String(),
+      'currentLessonId': currentLessonId,
+      'lastOpenedAt': lastOpenedAt?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
+    };
+  }
+
+  factory CoursePlayerProgress.fromJson(Map<String, dynamic> json) {
+    return CoursePlayerProgress(
+      courseId: json['courseId'] as String? ?? '',
+      completedLessonIds: Set<String>.from(
+        (json['completedLessonIds'] as List<dynamic>? ?? const <dynamic>[])
+            .cast<String>(),
+      ),
+      enrolledAt:
+          DateTime.tryParse(json['enrolledAt'] as String? ?? '') ?? DateTime.now(),
+      currentLessonId: json['currentLessonId'] as String?,
+      lastOpenedAt: DateTime.tryParse(json['lastOpenedAt'] as String? ?? ''),
+      completedAt: DateTime.tryParse(json['completedAt'] as String? ?? ''),
+    );
+  }
+}
+
+const Object _coursePlayerProgressSentinel = Object();
+
+class CourseCertificate {
+  const CourseCertificate({
+    required this.id,
+    required this.courseId,
+    required this.title,
+    required this.recipientName,
+    required this.issuedAt,
+    required this.accent,
+  });
+
+  final String id;
+  final String courseId;
+  final String title;
+  final String recipientName;
+  final DateTime issuedAt;
+  final Color accent;
 }
 
 class CommunityCourseAuthor {
@@ -841,6 +993,7 @@ class CommunityCourseFacts {
     required this.assessmentCount,
     required this.interactiveCount,
     required this.languageLabel,
+    required this.hasCertificate,
     required this.certificateLabel,
     required this.startModeLabel,
   });
@@ -850,6 +1003,7 @@ class CommunityCourseFacts {
   final int assessmentCount;
   final int interactiveCount;
   final String languageLabel;
+  final bool hasCertificate;
   final String certificateLabel;
   final String startModeLabel;
 }
@@ -901,6 +1055,8 @@ class CommunityCourse {
     required this.updates,
     required this.facts,
     required this.offer,
+    required this.supportsCoursePlayer,
+    required this.coursePlayerModules,
   });
 
   final String id;
@@ -932,6 +1088,8 @@ class CommunityCourse {
   final List<CommunityCourseUpdate> updates;
   final CommunityCourseFacts facts;
   final CommunityCourseOffer offer;
+  final bool supportsCoursePlayer;
+  final List<CoursePlayerModule> coursePlayerModules;
 }
 
 class QuizAnswerStat {

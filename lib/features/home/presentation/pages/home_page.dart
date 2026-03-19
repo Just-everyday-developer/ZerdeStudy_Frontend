@@ -7,6 +7,7 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../widgets/course_card.dart';
@@ -90,6 +91,7 @@ class HomePage extends ConsumerWidget {
                       ? l10n.text('start_track')
                       : l10n.text('continue_learning'),
                   icon: Icons.play_circle_fill_rounded,
+                  maxWidth: context.isCompactLayout ? null : 360,
                   onPressed: () {
                     final target = currentProgress.nextTarget;
                     if (target == null) {

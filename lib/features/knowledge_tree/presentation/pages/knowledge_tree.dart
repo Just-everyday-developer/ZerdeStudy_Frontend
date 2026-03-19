@@ -195,6 +195,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
           math.max(0.1, (viewportSize.width - 24) / knowledgeTreeCanvasSize.width),
           math.max(0.1, (viewportSize.height - 24) / knowledgeTreeCanvasSize.height),
         );
+        final desktopLike = !context.isCompactLayout;
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(28),
@@ -224,8 +225,15 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                     transformationController: _controller,
                     constrained: false,
                     minScale: fitScale * 0.95,
-                    maxScale: math.max(fitScale * 2.8, 1.8),
-                    boundaryMargin: const EdgeInsets.all(72),
+                    maxScale: desktopLike
+                        ? fitScale * 1.02
+                        : math.max(fitScale * 2.8, 1.8),
+                    scaleEnabled: !desktopLike,
+                    trackpadScrollCausesScale: false,
+                    boundaryMargin: EdgeInsets.symmetric(
+                      horizontal: desktopLike ? 18 : 72,
+                      vertical: desktopLike ? 32 : 72,
+                    ),
                     child: SizedBox(
                       width: knowledgeTreeCanvasSize.width,
                       height: knowledgeTreeCanvasSize.height,

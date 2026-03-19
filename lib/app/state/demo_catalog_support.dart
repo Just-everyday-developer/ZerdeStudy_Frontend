@@ -330,11 +330,13 @@ CommunityCourse buildCommunityCourse({
   required bool isRecommended,
   required List<String> tags,
   required List<CommunityCourseLessonPreview> lessons,
+  bool supportsCoursePlayer = false,
   List<String>? learningOutcomes,
   List<String>? audience,
   List<String>? requirements,
   List<CommunityCourseInstructor>? instructors,
   List<CommunityCourseModuleSection>? moduleSections,
+  List<CoursePlayerModule>? coursePlayerModules,
   CommunityCourseReviewSummary? reviewSummary,
   List<CommunityCourseReview>? reviews,
   List<CommunityCourseUpdate>? updates,
@@ -354,6 +356,7 @@ CommunityCourse buildCommunityCourse({
         level: level,
         estimatedHours: estimatedHours,
         moduleSections: resolvedModules,
+        hasCertificate: estimatedHours >= 5 || level != 'Beginner',
       );
   final resolvedReviewSummary = reviewSummary ??
       _defaultReviewSummary(
@@ -404,6 +407,15 @@ CommunityCourse buildCommunityCourse({
         _defaultOffer(
           estimatedHours: estimatedHours,
           level: level,
+        ),
+    supportsCoursePlayer: supportsCoursePlayer,
+    coursePlayerModules: coursePlayerModules ??
+        _defaultCoursePlayerModules(
+          id: id,
+          title: title,
+          subtitle: subtitle,
+          tags: tags,
+          lessons: lessons,
         ),
   );
 }
@@ -640,6 +652,7 @@ CommunityCourseFacts _defaultFacts({
   required String level,
   required int estimatedHours,
   required List<CommunityCourseModuleSection> moduleSections,
+  required bool hasCertificate,
 }) {
   final lessonCount = moduleSections.fold<int>(
     0,
@@ -651,7 +664,9 @@ CommunityCourseFacts _defaultFacts({
     assessmentCount: lessonCount + 4,
     interactiveCount: lessonCount * 3,
     languageLabel: 'English / Russian',
-    certificateLabel: 'Certificate available',
+    hasCertificate: hasCertificate,
+    certificateLabel:
+        hasCertificate ? 'Certificate available' : 'No certificate in this edition',
     startModeLabel: level == 'Beginner' ? 'Start anytime' : 'Self-paced access',
   );
 }
@@ -697,4 +712,81 @@ LocalizedText localizedText(String ru, String en, String kk) {
     en: en,
     kk: kk,
   );
+}
+
+List<CoursePlayerModule> _defaultCoursePlayerModules({
+  required String id,
+  required String title,
+  required String subtitle,
+  required List<String> tags,
+  required List<CommunityCourseLessonPreview> lessons,
+}) {
+  final topicTag = tags.isEmpty ? title : tags.first;
+  final lessonSeeds = <CoursePlayerLesson>[
+    CoursePlayerLesson(
+      id: '${id}_player_lesson_1',
+      title: sameText('Orientation'),
+      annotation: sameText('We start with the key idea behind $title and the mental model you will reuse later.'),
+      explanation: sameText(
+        'This course treats $topicTag as a repeatable pattern: observe the problem, name the moving parts, and then apply a compact implementation.',
+      ),
+      codeSnippet: 'final goal = "$topicTag";\nfinal nextStep = "${subtitle.split(' ').first.toLowerCase()}";\nprint("Focus: \$goal -> \$nextStep");',
+      exampleOutput: 'Focus: $topicTag -> ${subtitle.split(' ').first.toLowerCase()}',
+      nextActionLabel: sameText('Continue to the first worked example'),
+    ),
+    CoursePlayerLesson(
+      id: '${id}_player_lesson_2',
+      title: sameText('Worked example'),
+      annotation: sameText('A tiny example shows how the idea turns into a concrete, explainable action.'),
+      explanation: sameText(
+        'Notice the sequence: define a small input, transform it once, and print a result that can be checked immediately. This keeps the explanation calm and presentation-friendly.',
+      ),
+      codeSnippet: 'final items = ["observe", "reason", "ship"];\nfinal summary = items.join(" -> ");\nprint(summary);',
+      exampleOutput: 'observe -> reason -> ship',
+      nextActionLabel: sameText('Move to the practice checkpoint'),
+    ),
+    CoursePlayerLesson(
+      id: '${id}_player_lesson_3',
+      title: sameText('Practice checkpoint'),
+      annotation: sameText('You now connect the concept to a real team scenario and prepare for the task view.'),
+      explanation: sameText(
+        'Before moving into assignments, summarize the technique in one sentence and name one place where your team could use it this week.',
+      ),
+      codeSnippet: 'String explainPattern(String domain) {\n  return "Use a small loop: learn, test, and refine in \$domain.";\n}\n\nprint(explainPattern("$title"));',
+      exampleOutput: 'Use a small loop: learn, test, and refine in $title.',
+      nextActionLabel: sameText('Open the assignment block'),
+    ),
+  ];
+
+  return <CoursePlayerModule>[
+    CoursePlayerModule(
+      id: '${id}_player_module_1',
+      title: sameText('Launch pad'),
+      summary: sameText('Start with the concept, one worked example, and a practice-oriented wrap-up.'),
+      lessons: lessonSeeds,
+    ),
+    CoursePlayerModule(
+      id: '${id}_player_module_2',
+      title: sameText('Task bridge'),
+      summary: sameText('Use the final lesson list as a checklist for your independent task flow.'),
+      lessons: List<CoursePlayerLesson>.generate(
+        lessons.length,
+        (index) {
+          final preview = lessons[index];
+          return CoursePlayerLesson(
+            id: '${id}_player_bridge_${index + 1}',
+            title: preview.title,
+            annotation: preview.summary,
+            explanation: sameText(
+              'This bridge lesson keeps the authored course language intact while giving you a short explanation and a safe next step into tasks.',
+            ),
+            codeSnippet:
+                'final topic = "${preview.title.en}";\nprint("Ready for: \$topic");',
+            exampleOutput: 'Ready for: ${preview.title.en}',
+            nextActionLabel: sameText('Continue to the next lesson'),
+          );
+        },
+      ),
+    ),
+  ];
 }

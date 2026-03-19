@@ -9,6 +9,13 @@ const String _topicDataAnalytics = 'data_analytics';
 const String _topicAi = 'ai';
 const String _topicSqlDatabases = 'sql_databases';
 const String _topicSoftSkills = 'soft_skills';
+const Set<String> _flagshipCourseIds = <String>{
+  'course_dart_first_widget',
+  'course_data_storytelling',
+  'course_ml_journal_club',
+  'course_sql_for_analysts',
+  'course_portfolio_engineering',
+};
 
 List<CommunityCourse> buildDiscoveryCourses() {
   final authors = <String, CommunityCourseAuthor>{
@@ -919,6 +926,7 @@ List<CommunityCourse> buildDiscoveryCourses() {
           isRecommended: seed.isRecommended,
           tags: seed.tags,
           lessons: _defaultCourseLessons(seed.title),
+          supportsCoursePlayer: _flagshipCourseIds.contains(seed.id),
         ),
       )
       .toList(growable: false);

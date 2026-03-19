@@ -30,6 +30,7 @@ class ProfilePage extends ConsumerWidget {
     final unlocked =
         achievements.where((item) => item.unlocked).toList(growable: false);
     final preview = achievements.take(6).toList(growable: false);
+    final certificates = catalog.certificatesFor(state);
     final favorites = catalog.savedCoursesFor(state);
     final completedTracks = catalog.completedTracksFor(state);
     final completedModules = catalog.completedModulesFor(state);
@@ -178,23 +179,73 @@ class ProfilePage extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.72,
+                SizedBox(
+                  height: context.isWideLayout ? 164 : 186,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: preview.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      return SizedBox(
+                        width: context.isWideLayout ? 220 : 206,
+                        child: _AchievementPreviewCard(
+                          achievement: preview[index],
+                          locale: state.locale,
+                          onOpen: () => _showAchievementsSheet(
+                            context,
+                            achievements,
+                            state.locale,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  itemCount: preview.length,
-                  itemBuilder: (context, index) {
-                    return _AchievementGridItem(
-                      achievement: preview[index],
-                      locale: state.locale,
-                    );
-                  },
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          GlowCard(
+            accent: colors.primary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.text('certificates'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.text('certificates_hint'),
+                  style: TextStyle(color: colors.textSecondary),
+                ),
+                const SizedBox(height: 14),
+                if (certificates.isEmpty)
+                  Text(
+                    l10n.text('no_items_yet'),
+                    style: TextStyle(color: colors.textSecondary),
+                  )
+                else
+                  SizedBox(
+                    height: context.isWideLayout ? 176 : 188,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: certificates.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final certificate = certificates[index];
+                        return SizedBox(
+                          width: context.isWideLayout ? 260 : 228,
+                          child: _CertificatePreviewCard(
+                            certificate: certificate,
+                            onTap: () => context.push(
+                              AppRoutes.courseById(certificate.courseId),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
@@ -234,7 +285,7 @@ class ProfilePage extends ConsumerWidget {
                           child: _ProfileLinkTile(
                             title: course.title.en,
                             subtitle:
-                                '${course.author.name} • ${l10n.courseLevelLabel(course.level)} • ${course.rating.toStringAsFixed(1)}',
+                                '${course.author.name} • ${l10n.courseLevelLabel(course.level)} • ${catalog.displayCourseRatingFor(state, course.id).toStringAsFixed(1)}',
                             accent: course.color,
                             icon: Icons.bookmark_rounded,
                             onTap: () => context.push(
@@ -591,6 +642,195 @@ class _AchievementSection extends StatelessWidget {
   }
 }
 
+class _AchievementPreviewCard extends StatelessWidget {
+  const _AchievementPreviewCard({
+    required this.achievement,
+    required this.locale,
+    required this.onOpen,
+  });
+
+  final Achievement achievement;
+  final AppLocale locale;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = achievement.unlocked ? colors.success : colors.textSecondary;
+    final isWide = context.isWideLayout;
+
+    return Container(
+      padding: EdgeInsets.all(isWide ? 12 : 13),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: colors.surfaceSoft,
+        border: Border.all(
+          color: achievement.unlocked
+              ? accent.withValues(alpha: 0.45)
+              : colors.divider,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: isWide ? 16 : 18,
+                backgroundColor: accent.withValues(alpha: 0.16),
+                child: Icon(
+                  achievement.icon,
+                  color: accent,
+                  size: isWide ? 16 : 18,
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: 30,
+                height: 30,
+                child: IconButton(
+                  onPressed: onOpen,
+                  padding: EdgeInsets.zero,
+                  iconSize: 18,
+                  splashRadius: 18,
+                  icon: Icon(
+                    Icons.chevron_right_rounded,
+                    color: colors.textSecondary,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isWide ? 6 : 8),
+          Text(
+            achievement.title.resolve(locale),
+            maxLines: isWide ? 1 : 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: isWide ? 15 : 16,
+              height: 1.15,
+            ),
+          ),
+          SizedBox(height: isWide ? 4 : 6),
+          Text(
+            achievement.description.resolve(locale),
+            maxLines: isWide ? 1 : 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: 11.5,
+              height: 1.25,
+            ),
+          ),
+          SizedBox(height: isWide ? 8 : 10),
+          const Spacer(),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: achievement.fraction,
+              minHeight: 6,
+              backgroundColor: colors.backgroundElevated,
+              color: accent,
+            ),
+          ),
+          SizedBox(height: isWide ? 6 : 8),
+          Text(
+            '${achievement.progress}/${achievement.goal}',
+            style: TextStyle(
+              color: accent,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CertificatePreviewCard extends StatelessWidget {
+  const _CertificatePreviewCard({
+    required this.certificate,
+    required this.onTap,
+  });
+
+  final CourseCertificate certificate;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final isWide = context.isWideLayout;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        padding: EdgeInsets.all(isWide ? 14 : 15),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              certificate.accent.withValues(alpha: 0.2),
+              colors.surface,
+              colors.surfaceSoft,
+            ],
+          ),
+          border: Border.all(color: certificate.accent.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.workspace_premium_rounded,
+              color: certificate.accent,
+              size: isWide ? 22 : 20,
+            ),
+            SizedBox(height: isWide ? 10 : 12),
+            Text(
+              certificate.title,
+              maxLines: isWide ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: isWide ? 16 : 15,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              certificate.recipientName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${context.l10n.text('course_certificate')} • ${_formatDate(certificate.issuedAt)}',
+              style: TextStyle(
+                color: colors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '${value.year}-$month-$day';
+  }
+}
+
 class _AchievementGridItem extends StatelessWidget {
   const _AchievementGridItem({
     required this.achievement,
@@ -837,6 +1077,9 @@ class _HistoryTile extends StatelessWidget {
       LearningHistoryKind.trackCompleted => const Color(0xFFFFD166),
       LearningHistoryKind.assessmentCompleted => colors.success,
       LearningHistoryKind.courseSaved => colors.primary,
+      LearningHistoryKind.courseEnrolled => colors.primary,
+      LearningHistoryKind.courseCompleted => colors.success,
+      LearningHistoryKind.certificateEarned => const Color(0xFFFFD166),
     };
 
     return Container(
@@ -860,6 +1103,10 @@ class _HistoryTile extends StatelessWidget {
                 LearningHistoryKind.assessmentCompleted =>
                   Icons.assignment_turned_in_rounded,
                 LearningHistoryKind.courseSaved => Icons.bookmark_rounded,
+                LearningHistoryKind.courseEnrolled => Icons.school_rounded,
+                LearningHistoryKind.courseCompleted => Icons.check_circle_rounded,
+                LearningHistoryKind.certificateEarned =>
+                  Icons.workspace_premium_rounded,
               },
               color: accent,
             ),
@@ -920,6 +1167,12 @@ class _HistoryTile extends StatelessWidget {
         return l10n.text('history_assessment_completed');
       case LearningHistoryKind.courseSaved:
         return l10n.text('history_course_saved');
+      case LearningHistoryKind.courseEnrolled:
+        return l10n.text('course_enroll_title');
+      case LearningHistoryKind.courseCompleted:
+        return l10n.text('course_completed');
+      case LearningHistoryKind.certificateEarned:
+        return l10n.text('course_certificate');
     }
   }
 
