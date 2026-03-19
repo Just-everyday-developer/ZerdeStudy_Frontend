@@ -138,13 +138,31 @@ class DemoCatalog {
           course.title.en.toLowerCase().contains(normalizedQuery) ||
           course.subtitle.en.toLowerCase().contains(normalizedQuery) ||
           course.description.en.toLowerCase().contains(normalizedQuery) ||
+          course.heroBadge.toLowerCase().contains(normalizedQuery) ||
+          course.heroHeadline.toLowerCase().contains(normalizedQuery) ||
+          course.learningOutcomes.any(
+            (item) => item.toLowerCase().contains(normalizedQuery),
+          ) ||
+          course.moduleSections.any(
+            (section) =>
+                section.title.toLowerCase().contains(normalizedQuery) ||
+                section.items.any(
+                  (item) => item.title.toLowerCase().contains(normalizedQuery),
+                ),
+          ) ||
           course.searchKeywords.any(
             (keyword) => keyword.toLowerCase().contains(normalizedQuery),
           ) ||
           course.tags.any(
             (tag) => tag.toLowerCase().contains(normalizedQuery),
           ) ||
-          course.author.name.toLowerCase().contains(normalizedQuery);
+          course.author.name.toLowerCase().contains(normalizedQuery) ||
+          course.author.role.toLowerCase().contains(normalizedQuery) ||
+          course.instructors.any(
+            (instructor) =>
+                instructor.name.toLowerCase().contains(normalizedQuery) ||
+                instructor.role.toLowerCase().contains(normalizedQuery),
+          );
       return topicMatch && levelMatch && authorMatch && queryMatch;
     }).toList(growable: false);
   }

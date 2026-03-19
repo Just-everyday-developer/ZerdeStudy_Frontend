@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_button.dart';
@@ -38,6 +39,8 @@ class _LessonPageState extends ConsumerState<LessonPage> {
     final completed = state.completedLessonIds.contains(widget.lessonId);
     final requirementsMet = catalog.lessonRequirementsMet(state, widget.lessonId);
     final colors = context.appColors;
+    final l10n = context.l10n;
+    final locale = state.locale;
 
     return AppPageScaffold(
       title: lesson.title.resolve(state.locale),
@@ -60,11 +63,11 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                 Wrap(
                   spacing: 10,
                   children: [
-                    _Pill(label: '${lesson.durationMinutes} ${context.l10n.text('minutes')}'),
+                    _Pill(label: '${lesson.durationMinutes} ${l10n.text('minutes')}'),
                     _Pill(label: '${lesson.xpReward} XP'),
                     _Pill(
-                      label:
-                          '${lesson.quizzes.length} quiz | ${lesson.codeTrainers.length} lab',
+                      label: '${lesson.quizzes.length} ${l10n.text('lesson_quizzes_count')} | '
+                          '${lesson.codeTrainers.length} ${l10n.text('lesson_labs_count')}',
                     ),
                   ],
                 ),
@@ -120,7 +123,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Code Example',
+                  l10n.text('lesson_code_example'),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 12),
@@ -142,7 +145,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Expected output: ${lesson.exampleOutput}',
+                  '${l10n.text('lesson_expected_output')}: ${lesson.exampleOutput}',
                   style: TextStyle(color: colors.textSecondary),
                 ),
               ],
@@ -154,6 +157,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               padding: const EdgeInsets.only(bottom: 16),
               child: _QuizCard(
                 quiz: quiz,
+                locale: locale,
                 selectedOptionId: _selectedQuizAnswers[quiz.id],
                 completed: state.completedQuizIds.contains(quiz.id),
                 onOptionSelected: (optionId) =>
@@ -168,8 +172,8 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                   AppNotice.show(
                     context,
                     message: correct
-                        ? 'Correct answer'
-                        : 'Try again: check the final state change',
+                        ? l10n.text('lesson_quiz_correct')
+                        : l10n.text('lesson_quiz_retry'),
                     type:
                         correct ? AppNoticeType.success : AppNoticeType.error,
                   );
@@ -182,6 +186,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               padding: const EdgeInsets.only(bottom: 16),
               child: _TrainerCard(
                 trainer: trainer,
+                locale: locale,
                 selectedOptionId: _selectedTrainerAnswers[trainer.id],
                 selectedSequence: _trainerSequences[trainer.id] ?? <String>[],
                 completed: state.completedTrainerIds.contains(trainer.id),
@@ -198,8 +203,8 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                   AppNotice.show(
                     context,
                     message: isCorrect
-                        ? 'Memory lab completed'
-                        : 'Re-check the structure and try again',
+                        ? l10n.text('lesson_memory_completed')
+                        : l10n.text('lesson_memory_retry'),
                     type:
                         isCorrect ? AppNoticeType.success : AppNoticeType.error,
                   );
@@ -209,8 +214,8 @@ class _LessonPageState extends ConsumerState<LessonPage> {
           ),
           AppButton.primary(
             label: completed
-                ? context.l10n.text('status_completed')
-                : context.l10n.text('complete_lesson'),
+                ? l10n.text('status_completed')
+                : l10n.text('complete_lesson'),
             icon: completed ? Icons.check_circle_rounded : Icons.done_rounded,
             onPressed: completed || !requirementsMet
                 ? null
@@ -225,7 +230,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
-            label: context.l10n.text('ask_ai'),
+            label: l10n.text('ask_ai'),
             icon: Icons.smart_toy_rounded,
             onPressed: () {
               controller.focusLesson(widget.lessonId);
@@ -252,6 +257,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
 class _QuizCard extends StatelessWidget {
   const _QuizCard({
     required this.quiz,
+    required this.locale,
     required this.selectedOptionId,
     required this.completed,
     required this.onOptionSelected,
@@ -259,6 +265,7 @@ class _QuizCard extends StatelessWidget {
   });
 
   final LessonQuiz quiz;
+  final AppLocale locale;
   final String? selectedOptionId;
   final bool completed;
   final ValueChanged<String> onOptionSelected;
@@ -271,10 +278,13 @@ class _QuizCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Output Quiz', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            context.l10n.text('lesson_output_quiz'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 8),
           Text(
-            quiz.prompt.ru,
+            quiz.prompt.resolve(locale),
             style: TextStyle(
               color: context.appColors.textSecondary,
               height: 1.35,
@@ -283,14 +293,16 @@ class _QuizCard extends StatelessWidget {
           const SizedBox(height: 12),
           ...quiz.options.map(
             (option) => _OptionTile(
-              label: option.label.ru,
+              label: option.label.resolve(locale),
               selected: selectedOptionId == option.id,
               enabled: !completed,
               onTap: () => onOptionSelected(option.id),
             ),
           ),
           AppButton.primary(
-            label: completed ? 'Solved' : 'Check answer',
+            label: completed
+                ? context.l10n.text('lesson_solved')
+                : context.l10n.text('lesson_check_answer'),
             icon: completed ? Icons.check_circle_rounded : Icons.quiz_rounded,
             onPressed: completed || selectedOptionId == null ? null : onSubmit,
           ),
@@ -303,6 +315,7 @@ class _QuizCard extends StatelessWidget {
 class _TrainerCard extends StatelessWidget {
   const _TrainerCard({
     required this.trainer,
+    required this.locale,
     required this.selectedOptionId,
     required this.selectedSequence,
     required this.completed,
@@ -312,6 +325,7 @@ class _TrainerCard extends StatelessWidget {
   });
 
   final CodeTrainer trainer;
+  final AppLocale locale;
   final String? selectedOptionId;
   final List<String> selectedSequence;
   final bool completed;
@@ -329,12 +343,12 @@ class _TrainerCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Code Memory Lab',
+            context.l10n.text('lesson_memory_lab'),
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           Text(
-            trainer.instruction.ru,
+            trainer.instruction.resolve(locale),
             style: TextStyle(
               color: colors.textSecondary,
               height: 1.35,
@@ -377,14 +391,16 @@ class _TrainerCard extends StatelessWidget {
           else
             ...trainer.options.map(
               (option) => _OptionTile(
-                label: option.label.ru,
+                label: option.label.resolve(locale),
                 selected: selectedOptionId == option.id,
                 enabled: !completed,
                 onTap: () => onOptionSelected(option.id),
               ),
             ),
           AppButton.primary(
-            label: completed ? 'Solved' : 'Complete lab',
+            label: completed
+                ? context.l10n.text('lesson_solved')
+                : context.l10n.text('lesson_complete_lab'),
             icon: completed ? Icons.check_circle_rounded : Icons.memory_rounded,
             onPressed: completed ||
                     (trainer.kind == CodeTrainerKind.reorderLines

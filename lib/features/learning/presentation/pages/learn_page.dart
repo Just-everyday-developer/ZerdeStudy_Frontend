@@ -4,10 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/demo_app_controller.dart';
+import '../../../../app/state/demo_app_state.dart';
 import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
+import '../../../../core/common_widgets/adaptive_panel.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../widgets/course_discovery_widgets.dart';
@@ -25,9 +28,6 @@ class _LearnPageState extends ConsumerState<LearnPage> {
   String _query = '';
   String? _selectedTopicKey;
   String _selectedLevel = 'All';
-
-  bool get _hasActiveFilters =>
-      _selectedTopicKey != null || _selectedLevel != 'All';
 
   @override
   void initState() {
@@ -49,127 +49,102 @@ class _LearnPageState extends ConsumerState<LearnPage> {
     var draftTopicKey = _selectedTopicKey;
     var draftLevel = _selectedLevel;
 
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
+      wideMaxWidth: 680,
       builder: (context) {
-        final colors = context.appColors;
-
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Container(
-              decoration: BoxDecoration(
-                color: colors.background,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AdaptivePanelHandle(),
+                  const SizedBox(height: 18),
+                  Text(
+                    l10n.text('filters'),
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    l10n.text('filter_topic'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
                     children: [
-                      Center(
-                        child: Container(
-                          width: 44,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: colors.divider,
-                            borderRadius: BorderRadius.circular(999),
+                      ChoiceChip(
+                        label: Text(l10n.text('all_topics')),
+                        selected: draftTopicKey == null,
+                        onSelected: (_) {
+                          setModalState(() => draftTopicKey = null);
+                        },
+                      ),
+                      ...catalog.courseTopicKeys().map(
+                            (topicKey) => ChoiceChip(
+                              label: Text(l10n.courseTopicLabel(topicKey)),
+                              selected: draftTopicKey == topicKey,
+                              onSelected: (_) {
+                                setModalState(() => draftTopicKey = topicKey);
+                              },
+                            ),
                           ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    l10n.text('filter_level'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: catalog.courseLevels().map((level) {
+                      return ChoiceChip(
+                        label: Text(l10n.courseLevelLabel(level)),
+                        selected: draftLevel == level,
+                        onSelected: (_) {
+                          setModalState(() => draftLevel = level);
+                        },
+                      );
+                    }).toList(growable: false),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedTopicKey = null;
+                              _selectedLevel = 'All';
+                            });
+                            Navigator.of(context).pop();
+                          },
+                          child: Text(l10n.text('clear_filters')),
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      Text(
-                        l10n.text('filters'),
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        l10n.text('filter_topic'),
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          ChoiceChip(
-                            label: Text(l10n.text('all_topics')),
-                            selected: draftTopicKey == null,
-                            onSelected: (_) {
-                              setModalState(() => draftTopicKey = null);
-                            },
-                          ),
-                          ...catalog.courseTopicKeys().map(
-                                (topicKey) => ChoiceChip(
-                                  label: Text(l10n.courseTopicLabel(topicKey)),
-                                  selected: draftTopicKey == topicKey,
-                                  onSelected: (_) {
-                                    setModalState(() => draftTopicKey = topicKey);
-                                  },
-                                ),
-                              ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        l10n.text('filter_level'),
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: catalog.courseLevels().map(
-                          (level) {
-                            return ChoiceChip(
-                              label: Text(l10n.courseLevelLabel(level)),
-                              selected: draftLevel == level,
-                              onSelected: (_) {
-                                setModalState(() => draftLevel = level);
-                              },
-                            );
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedTopicKey = draftTopicKey;
+                              _selectedLevel = draftLevel;
+                            });
+                            Navigator.of(context).pop();
                           },
-                        ).toList(growable: false),
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedTopicKey = null;
-                                  _selectedLevel = 'All';
-                                });
-                                Navigator.of(context).pop();
-                              },
-                              child: Text(l10n.text('clear_filters')),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedTopicKey = draftTopicKey;
-                                  _selectedLevel = draftLevel;
-                                });
-                                Navigator.of(context).pop();
-                              },
-                              child: Text(l10n.text('show_all')),
-                            ),
-                          ),
-                        ],
+                          child: Text(l10n.text('show_all')),
+                        ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
             );
           },
@@ -233,179 +208,161 @@ class _LearnPageState extends ConsumerState<LearnPage> {
     ].where((section) => section.courses.isNotEmpty).toList(growable: false);
 
     return AppPageScaffold(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-        children: [
-          CourseDiscoverySearchBar(
-            controller: _searchController,
-            hintText: l10n.text('search_courses'),
-            onChanged: (value) => setState(() => _query = value),
-            onFilterTap: () => _openFilters(context, catalog, l10n),
-          ),
-          const SizedBox(height: 16),
-          GlowCard(
-            accent: colors.primary,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.text('catalog_title'),
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.text('catalog_subtitle'),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
-                if (_query.isNotEmpty || _hasActiveFilters) ...[
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 700;
+          return ListView(
+            padding: EdgeInsets.fromLTRB(20, 8, 20, compact ? 120 : 48),
+            children: [
+              CourseDiscoverySearchBar(
+                controller: _searchController,
+                hintText: l10n.text('search_courses'),
+                onChanged: (value) => setState(() => _query = value),
+                onFilterTap: () => _openFilters(context, catalog, l10n),
+              ),
+              const SizedBox(height: 16),
+              GlowCard(
+                accent: colors.primary,
+                child: compact
+                    ? _DiscoveryHero(
+                        query: _query,
+                        selectedTopicKey: _selectedTopicKey,
+                        selectedLevel: _selectedLevel,
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: _DiscoveryHero(
+                              query: _query,
+                              selectedTopicKey: _selectedTopicKey,
+                              selectedLevel: _selectedLevel,
+                            ),
+                          ),
+                          const SizedBox(width: 18),
+                          Expanded(
+                            flex: 2,
+                            child: _DiscoverySignalCard(
+                              sectionCount: sections.length,
+                              authorCount: authors.length,
+                              recommendationCount:
+                                  catalog.recommendedCourses(state).length,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 24),
+              if (sections.isEmpty)
+                GlowCard(
+                  accent: colors.accent,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (_query.isNotEmpty)
-                        _FilterPill(
-                          label: _query,
-                          icon: Icons.search_rounded,
+                      Text(
+                        l10n.text('catalog_empty_title'),
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.text('catalog_empty_subtitle'),
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          height: 1.45,
                         ),
-                      if (_selectedTopicKey != null)
-                        _FilterPill(
-                          label: l10n.courseTopicLabel(_selectedTopicKey!),
-                          icon: Icons.category_rounded,
-                        ),
-                      if (_selectedLevel != 'All')
-                        _FilterPill(
-                          label: l10n.courseLevelLabel(_selectedLevel),
-                          icon: Icons.signal_cellular_alt_rounded,
-                        ),
+                      ),
                     ],
                   ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          if (sections.isEmpty)
-            GlowCard(
-              accent: colors.accent,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.text('catalog_empty_title'),
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.text('catalog_empty_subtitle'),
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      height: 1.45,
-                    ),
-                  ),
-                ],
+                )
+              else
+                ...sections.map((section) {
+                  void viewAllTap() {
+                    context.push(
+                      AppRoutes.coursesCatalog(
+                        topic: section.topicKey,
+                        search: _query.isEmpty ? null : _query,
+                        level:
+                            _selectedLevel == 'All' ? null : _selectedLevel,
+                      ),
+                    );
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: compact
+                        ? _CompactCourseRail(
+                            section: section,
+                            state: state,
+                            viewAllLabel: l10n.text('view_all_courses'),
+                            levelLabelBuilder: l10n.courseLevelLabel,
+                            savedLabel: l10n.text('saved'),
+                            onViewAllTap: viewAllTap,
+                          )
+                        : _DesktopCourseRail(
+                            section: section,
+                            state: state,
+                            viewAllLabel: l10n.text('view_all_courses'),
+                            levelLabelBuilder: l10n.courseLevelLabel,
+                            savedLabel: l10n.text('saved'),
+                            onViewAllTap: viewAllTap,
+                          ),
+                  );
+                }),
+              CourseDiscoverySectionHeader(
+                title: l10n.text('section_popular_authors'),
               ),
-            )
-          else
-            ...sections.expand(
-              (section) => <Widget>[
-                CourseDiscoverySectionHeader(title: section.title),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 270,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: section.visibleCourses.length + 1,
-                    separatorBuilder: (_, __) => const SizedBox(width: 14),
-                    itemBuilder: (context, index) {
-                      if (index == section.visibleCourses.length) {
-                        return DiscoveryViewAllCard(
-                          label: l10n.text('view_all_courses'),
-                          onTap: () => context.push(
+              const SizedBox(height: 12),
+              SizedBox(
+                height: compact ? 264 : 288,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: authors.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 14),
+                  itemBuilder: (context, index) {
+                    final author = authors[index];
+                    return DiscoveryAuthorCard(
+                      author: author,
+                      followersLabel: l10n.text('followers'),
+                      coursesLabel: l10n.text('courses_label'),
+                      onTap: () => context.push(
+                        AppRoutes.coursesCatalog(author: author.id),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+              GlowCard(
+                accent: colors.accent,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.text('section_frequent_searches'),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: catalog.frequentSearchTerms().map((termKey) {
+                        return ActionChip(
+                          label: Text(l10n.frequentSearchLabel(termKey)),
+                          onPressed: () => context.push(
                             AppRoutes.coursesCatalog(
-                              topic: section.topicKey,
-                              search: _query.isEmpty ? null : _query,
-                              level: _selectedLevel == 'All'
-                                  ? null
-                                  : _selectedLevel,
+                              search: _searchQueryForFrequentTerm(termKey),
                             ),
                           ),
                         );
-                      }
-
-                      final course = section.visibleCourses[index];
-                      final saved =
-                          state.savedCommunityCourseIds.contains(course.id);
-                      return DiscoveryCourseCard(
-                        course: course,
-                        saved: saved,
-                        levelLabel: l10n.courseLevelLabel(course.level),
-                        savedLabel: l10n.text('saved'),
-                        onTap: () => context.push(
-                          AppRoutes.courseById(course.id),
-                        ),
-                      );
-                    },
-                  ),
+                      }).toList(growable: false),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-              ],
-            ),
-          CourseDiscoverySectionHeader(
-            title: l10n.text('section_popular_authors'),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 246,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: authors.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
-              itemBuilder: (context, index) {
-                final author = authors[index];
-                return DiscoveryAuthorCard(
-                  author: author,
-                  followersLabel: l10n.text('followers'),
-                  coursesLabel: l10n.text('courses_label'),
-                  onTap: () => context.push(
-                    AppRoutes.coursesCatalog(author: author.id),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 24),
-          GlowCard(
-            accent: colors.accent,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.text('section_frequent_searches'),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: catalog.frequentSearchTerms().map((termKey) {
-                    return ActionChip(
-                      label: Text(l10n.frequentSearchLabel(termKey)),
-                      onPressed: () => context.push(
-                        AppRoutes.coursesCatalog(
-                          search: _searchQueryForFrequentTerm(termKey),
-                        ),
-                      ),
-                    );
-                  }).toList(growable: false),
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -427,6 +384,18 @@ class _LearnPageState extends ConsumerState<LearnPage> {
       return course.title.en.toLowerCase().contains(normalizedQuery) ||
           course.subtitle.en.toLowerCase().contains(normalizedQuery) ||
           course.description.en.toLowerCase().contains(normalizedQuery) ||
+          course.heroBadge.toLowerCase().contains(normalizedQuery) ||
+          course.heroHeadline.toLowerCase().contains(normalizedQuery) ||
+          course.learningOutcomes.any(
+            (item) => item.toLowerCase().contains(normalizedQuery),
+          ) ||
+          course.moduleSections.any(
+            (section) =>
+                section.title.toLowerCase().contains(normalizedQuery) ||
+                section.items.any(
+                  (item) => item.title.toLowerCase().contains(normalizedQuery),
+                ),
+          ) ||
           course.searchKeywords.any(
             (keyword) => keyword.toLowerCase().contains(normalizedQuery),
           ) ||
@@ -449,7 +418,8 @@ class _LearnPageState extends ConsumerState<LearnPage> {
       final normalizedQuery = _query.trim().toLowerCase();
       return author.name.toLowerCase().contains(normalizedQuery) ||
           author.role.toLowerCase().contains(normalizedQuery) ||
-          author.accentLabel.toLowerCase().contains(normalizedQuery);
+          author.accentLabel.toLowerCase().contains(normalizedQuery) ||
+          author.summary.toLowerCase().contains(normalizedQuery);
     }).toList(growable: false);
   }
 
@@ -460,6 +430,224 @@ class _LearnPageState extends ConsumerState<LearnPage> {
       default:
         return key;
     }
+  }
+}
+
+class _DiscoveryHero extends ConsumerWidget {
+  const _DiscoveryHero({
+    required this.query,
+    required this.selectedTopicKey,
+    required this.selectedLevel,
+  });
+
+  final String query;
+  final String? selectedTopicKey;
+  final String selectedLevel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.text('catalog_title'),
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.text('catalog_subtitle'),
+          style: TextStyle(
+            color: colors.textSecondary,
+            height: 1.45,
+          ),
+        ),
+        if (query.isNotEmpty || selectedTopicKey != null || selectedLevel != 'All') ...[
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              if (query.isNotEmpty)
+                _FilterPill(
+                  label: query,
+                  icon: Icons.search_rounded,
+                ),
+              if (selectedTopicKey != null)
+                _FilterPill(
+                  label: l10n.courseTopicLabel(selectedTopicKey!),
+                  icon: Icons.category_rounded,
+                ),
+              if (selectedLevel != 'All')
+                _FilterPill(
+                  label: l10n.courseLevelLabel(selectedLevel),
+                  icon: Icons.signal_cellular_alt_rounded,
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DiscoverySignalCard extends StatelessWidget {
+  const _DiscoverySignalCard({
+    required this.sectionCount,
+    required this.authorCount,
+    required this.recommendationCount,
+  });
+
+  final int sectionCount;
+  final int authorCount;
+  final int recommendationCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final l10n = context.l10n;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: colors.surfaceSoft,
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.text('section_recommended_courses'),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 12),
+          _SignalRow(label: l10n.text('learn_signal_sections'), value: '$sectionCount'),
+          _SignalRow(label: l10n.text('learn_signal_authors'), value: '$authorCount'),
+          _SignalRow(
+            label: l10n.text('learn_signal_curated'),
+            value: '$recommendationCount',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactCourseRail extends ConsumerWidget {
+  const _CompactCourseRail({
+    required this.section,
+    required this.state,
+    required this.viewAllLabel,
+    required this.levelLabelBuilder,
+    required this.savedLabel,
+    required this.onViewAllTap,
+  });
+
+  final _CourseRailSection section;
+  final DemoAppState state;
+  final String viewAllLabel;
+  final String Function(String level) levelLabelBuilder;
+  final String savedLabel;
+  final VoidCallback onViewAllTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CourseDiscoverySectionHeader(title: section.title),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 352,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: section.visibleCourses.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemBuilder: (context, index) {
+              if (index == section.visibleCourses.length) {
+                return DiscoveryViewAllCard(
+                  label: viewAllLabel,
+                  onTap: onViewAllTap,
+                );
+              }
+
+              final course = section.visibleCourses[index];
+              return DiscoveryCourseCard(
+                course: course,
+                saved: state.savedCommunityCourseIds.contains(course.id),
+                levelLabel: levelLabelBuilder(course.level),
+                savedLabel: savedLabel,
+                onTap: () => context.push(AppRoutes.courseById(course.id)),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopCourseRail extends ConsumerWidget {
+  const _DesktopCourseRail({
+    required this.section,
+    required this.state,
+    required this.viewAllLabel,
+    required this.levelLabelBuilder,
+    required this.savedLabel,
+    required this.onViewAllTap,
+  });
+
+  final _CourseRailSection section;
+  final DemoAppState state;
+  final String viewAllLabel;
+  final String Function(String level) levelLabelBuilder;
+  final String savedLabel;
+  final VoidCallback onViewAllTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final columns = context.isWideLayout ? 4 : 3;
+    final courses = section.visibleCourses
+        .take(context.isWideLayout ? 8 : 6)
+        .toList(growable: false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CourseDiscoverySectionHeader(
+          title: section.title,
+          actionLabel: viewAllLabel,
+          onActionTap: onViewAllTap,
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: courses.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 0.8,
+          ),
+          itemBuilder: (context, index) {
+            final course = courses[index];
+            return DiscoveryWideCourseCard(
+              course: course,
+              saved: state.savedCommunityCourseIds.contains(course.id),
+              levelLabel: levelLabelBuilder(course.level),
+              savedLabel: savedLabel,
+              onTap: () => context.push(AppRoutes.courseById(course.id)),
+            );
+          },
+        ),
+      ],
+    );
   }
 }
 
@@ -474,7 +662,8 @@ class _CourseRailSection {
   final List<CommunityCourse> courses;
   final String? topicKey;
 
-  List<CommunityCourse> get visibleCourses => courses.take(13).toList(growable: false);
+  List<CommunityCourse> get visibleCourses =>
+      courses.take(13).toList(growable: false);
 }
 
 class _FilterPill extends StatelessWidget {
@@ -507,6 +696,41 @@ class _FilterPill extends StatelessWidget {
             style: TextStyle(
               color: colors.textPrimary,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SignalRow extends StatelessWidget {
+  const _SignalRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: colors.textSecondary),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

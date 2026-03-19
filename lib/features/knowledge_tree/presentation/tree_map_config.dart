@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/state/demo_models.dart';
 
-const Size knowledgeTreeCanvasSize = Size(1180, 2160);
+const Size knowledgeTreeCanvasSize = Size(1440, 2520);
 
 const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
   KnowledgeTreeNodeSpec(
@@ -17,7 +17,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Foundation',
       kk: 'Foundation',
     ),
-    position: Offset(590, 120),
+    position: Offset(720, 120),
     radius: 98,
     isHub: true,
   ),
@@ -29,7 +29,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Mathematics',
       kk: 'Mathematics',
     ),
-    position: Offset(270, 310),
+    position: Offset(300, 360),
     radius: 86,
   ),
   KnowledgeTreeNodeSpec(
@@ -40,7 +40,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Mathematical Analysis',
       kk: 'Mathematical Analysis',
     ),
-    position: Offset(120, 500),
+    position: Offset(150, 620),
     radius: 58,
   ),
   KnowledgeTreeNodeSpec(
@@ -51,7 +51,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Discrete Math',
       kk: 'Discrete Math',
     ),
-    position: Offset(270, 610),
+    position: Offset(300, 790),
     radius: 60,
   ),
   KnowledgeTreeNodeSpec(
@@ -62,7 +62,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Linear Algebra',
       kk: 'Linear Algebra',
     ),
-    position: Offset(430, 500),
+    position: Offset(490, 620),
     radius: 58,
   ),
   KnowledgeTreeNodeSpec(
@@ -73,14 +73,14 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Probability & Statistics',
       kk: 'Probability & Statistics',
     ),
-    position: Offset(270, 760),
+    position: Offset(300, 980),
     radius: 62,
   ),
   KnowledgeTreeNodeSpec(
     id: 'databases',
     trackId: 'databases',
     title: LocalizedText(ru: 'Databases', en: 'Databases', kk: 'Databases'),
-    position: Offset(780, 330),
+    position: Offset(910, 340),
     radius: 74,
   ),
   KnowledgeTreeNodeSpec(
@@ -91,7 +91,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Algorithms & Data Structures',
       kk: 'Algorithms & Data Structures',
     ),
-    position: Offset(980, 510),
+    position: Offset(1160, 560),
     radius: 78,
   ),
   KnowledgeTreeNodeSpec(
@@ -102,14 +102,14 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Information Networks',
       kk: 'Information Networks',
     ),
-    position: Offset(790, 730),
+    position: Offset(1030, 820),
     radius: 72,
   ),
   KnowledgeTreeNodeSpec(
     id: 'ai_theory',
     trackId: 'ai_theory',
     title: LocalizedText(ru: 'AI Theory', en: 'AI Theory', kk: 'AI Theory'),
-    position: Offset(1010, 860),
+    position: Offset(1220, 1020),
     radius: 70,
   ),
   KnowledgeTreeNodeSpec(
@@ -120,7 +120,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Computer Architecture',
       kk: 'Computer Architecture',
     ),
-    position: Offset(780, 1020),
+    position: Offset(930, 1230),
     radius: 72,
   ),
   KnowledgeTreeNodeSpec(
@@ -131,7 +131,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Information Security',
       kk: 'Information Security',
     ),
-    position: Offset(1010, 1160),
+    position: Offset(1170, 1430),
     radius: 70,
   ),
   KnowledgeTreeNodeSpec(
@@ -142,7 +142,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Operating Systems',
       kk: 'Operating Systems',
     ),
-    position: Offset(590, 1280),
+    position: Offset(720, 1540),
     radius: 96,
   ),
   KnowledgeTreeNodeSpec(
@@ -157,7 +157,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Specializations',
       kk: 'Specializations',
     ),
-    position: Offset(590, 1460),
+    position: Offset(720, 1760),
     radius: 86,
     isHub: true,
   ),
@@ -165,28 +165,28 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
     id: 'frontend',
     trackId: 'frontend',
     title: LocalizedText(ru: 'Frontend', en: 'Frontend', kk: 'Frontend'),
-    position: Offset(170, 1620),
+    position: Offset(210, 1950),
     radius: 70,
   ),
   KnowledgeTreeNodeSpec(
     id: 'backend',
     trackId: 'backend',
     title: LocalizedText(ru: 'Backend', en: 'Backend', kk: 'Backend'),
-    position: Offset(390, 1740),
+    position: Offset(460, 2100),
     radius: 70,
   ),
   KnowledgeTreeNodeSpec(
     id: 'mobile',
     trackId: 'mobile',
     title: LocalizedText(ru: 'Mobile', en: 'Mobile', kk: 'Mobile'),
-    position: Offset(620, 1745),
+    position: Offset(760, 2120),
     radius: 82,
   ),
   KnowledgeTreeNodeSpec(
     id: 'sre_devops',
     trackId: 'sre_devops',
     title: LocalizedText(ru: 'DevOps / SRE', en: 'DevOps / SRE', kk: 'DevOps / SRE'),
-    position: Offset(930, 1620),
+    position: Offset(1080, 1950),
     radius: 70,
   ),
   KnowledgeTreeNodeSpec(
@@ -197,7 +197,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'ML Engineer',
       kk: 'ML Engineer',
     ),
-    position: Offset(200, 1950),
+    position: Offset(180, 2280),
     radius: 68,
   ),
   KnowledgeTreeNodeSpec(
@@ -208,7 +208,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'QA Engineer',
       kk: 'QA Engineer',
     ),
-    position: Offset(430, 2060),
+    position: Offset(420, 2430),
     radius: 62,
   ),
   KnowledgeTreeNodeSpec(
@@ -219,7 +219,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'System Admin',
       kk: 'System Admin',
     ),
-    position: Offset(980, 1925),
+    position: Offset(1160, 2290),
     radius: 66,
   ),
   KnowledgeTreeNodeSpec(
@@ -230,21 +230,21 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Cybersecurity',
       kk: 'Cybersecurity',
     ),
-    position: Offset(840, 2070),
+    position: Offset(1060, 2440),
     radius: 68,
   ),
   KnowledgeTreeNodeSpec(
     id: 'android_development',
     trackId: 'android_development',
     title: LocalizedText(ru: 'Android', en: 'Android', kk: 'Android'),
-    position: Offset(530, 1900),
+    position: Offset(640, 2280),
     radius: 54,
   ),
   KnowledgeTreeNodeSpec(
     id: 'ios_development',
     trackId: 'ios_development',
     title: LocalizedText(ru: 'iOS', en: 'iOS', kk: 'iOS'),
-    position: Offset(700, 1900),
+    position: Offset(880, 2280),
     radius: 54,
   ),
   KnowledgeTreeNodeSpec(
@@ -255,7 +255,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Crossplatform',
       kk: 'Crossplatform',
     ),
-    position: Offset(620, 2060),
+    position: Offset(760, 2440),
     radius: 56,
   ),
 ];

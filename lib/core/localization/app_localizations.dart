@@ -755,6 +755,201 @@ class AppLocalizations {
           AppLocale.en: 'Course saved',
           AppLocale.kk: 'Курс сақталды',
         },
+        'learn_signal_sections': {
+          AppLocale.ru: 'Разделы',
+          AppLocale.en: 'Sections',
+          AppLocale.kk: 'Бөлімдер',
+        },
+        'learn_signal_authors': {
+          AppLocale.ru: 'Авторы',
+          AppLocale.en: 'Authors',
+          AppLocale.kk: 'Авторлар',
+        },
+        'learn_signal_curated': {
+          AppLocale.ru: 'Подборки',
+          AppLocale.en: 'Curated picks',
+          AppLocale.kk: 'Іріктемелер',
+        },
+        'lesson_code_example': {
+          AppLocale.ru: 'Пример кода',
+          AppLocale.en: 'Code Example',
+          AppLocale.kk: 'Код үлгісі',
+        },
+        'lesson_expected_output': {
+          AppLocale.ru: 'Ожидаемый вывод',
+          AppLocale.en: 'Expected output',
+          AppLocale.kk: 'Күтілетін нәтиже',
+        },
+        'lesson_output_quiz': {
+          AppLocale.ru: 'Викторина по выводу',
+          AppLocale.en: 'Output Quiz',
+          AppLocale.kk: 'Шығыс бойынша тест',
+        },
+        'lesson_memory_lab': {
+          AppLocale.ru: 'Лаборатория памяти кода',
+          AppLocale.en: 'Code Memory Lab',
+          AppLocale.kk: 'Кодты есте сақтау зертханасы',
+        },
+        'lesson_check_answer': {
+          AppLocale.ru: 'Проверить ответ',
+          AppLocale.en: 'Check answer',
+          AppLocale.kk: 'Жауапты тексеру',
+        },
+        'lesson_complete_lab': {
+          AppLocale.ru: 'Завершить тренажер',
+          AppLocale.en: 'Complete lab',
+          AppLocale.kk: 'Жаттығуды аяқтау',
+        },
+        'lesson_solved': {
+          AppLocale.ru: 'Решено',
+          AppLocale.en: 'Solved',
+          AppLocale.kk: 'Орындалды',
+        },
+        'lesson_quiz_correct': {
+          AppLocale.ru: 'Верный ответ',
+          AppLocale.en: 'Correct answer',
+          AppLocale.kk: 'Дұрыс жауап',
+        },
+        'lesson_quiz_retry': {
+          AppLocale.ru: 'Попробуйте ещё раз: проверьте финальное состояние',
+          AppLocale.en: 'Try again: check the final state change',
+          AppLocale.kk: 'Қайта көріңіз: соңғы күй өзгерісін тексеріңіз',
+        },
+        'lesson_memory_completed': {
+          AppLocale.ru: 'Тренажер завершен',
+          AppLocale.en: 'Memory lab completed',
+          AppLocale.kk: 'Жаттығу аяқталды',
+        },
+        'lesson_memory_retry': {
+          AppLocale.ru: 'Проверьте структуру и попробуйте снова',
+          AppLocale.en: 'Re-check the structure and try again',
+          AppLocale.kk: 'Құрылымды қайта қарап, тағы көріңіз',
+        },
+        'lesson_quizzes_count': {
+          AppLocale.ru: 'викторин',
+          AppLocale.en: 'quizzes',
+          AppLocale.kk: 'тест',
+        },
+        'lesson_labs_count': {
+          AppLocale.ru: 'тренажеров',
+          AppLocale.en: 'labs',
+          AppLocale.kk: 'зертхана',
+        },
+        'course_tab_info': {
+          AppLocale.ru: 'Инфо',
+          AppLocale.en: 'Info',
+          AppLocale.kk: 'Ақпарат',
+        },
+        'course_tab_reviews': {
+          AppLocale.ru: 'Отзывы',
+          AppLocale.en: 'Reviews',
+          AppLocale.kk: 'Пікірлер',
+        },
+        'course_tab_news': {
+          AppLocale.ru: 'Новости',
+          AppLocale.en: 'News',
+          AppLocale.kk: 'Жаңалықтар',
+        },
+        'course_tab_modules': {
+          AppLocale.ru: 'Модули',
+          AppLocale.en: 'Modules',
+          AppLocale.kk: 'Модульдер',
+        },
+        'course_about': {
+          AppLocale.ru: 'О курсе',
+          AppLocale.en: 'About course',
+          AppLocale.kk: 'Курс туралы',
+        },
+        'course_what_you_will_learn': {
+          AppLocale.ru: 'Чему вы научитесь',
+          AppLocale.en: 'What you will learn',
+          AppLocale.kk: 'Нені үйренесіз',
+        },
+        'course_primary_cta': {
+          AppLocale.ru: 'Поступить на курс',
+          AppLocale.en: 'Join course',
+          AppLocale.kk: 'Курсқа қосылу',
+        },
+        'course_preview_cta': {
+          AppLocale.ru: 'Открыть превью',
+          AppLocale.en: 'Open preview',
+          AppLocale.kk: 'Превью ашу',
+        },
+        'course_save_cta': {
+          AppLocale.ru: 'Сохранить курс',
+          AppLocale.en: 'Save course',
+          AppLocale.kk: 'Курсты сақтау',
+        },
+        'course_reviews_count': {
+          AppLocale.ru: 'отзывов',
+          AppLocale.en: 'reviews',
+          AppLocale.kk: 'пікір',
+        },
+        'course_program': {
+          AppLocale.ru: 'Программа курса',
+          AppLocale.en: 'Course program',
+          AppLocale.kk: 'Курс бағдарламасы',
+        },
+        'course_audience_requirements': {
+          AppLocale.ru: 'Для кого и требования',
+          AppLocale.en: 'Audience and requirements',
+          AppLocale.kk: 'Аудитория мен талаптар',
+        },
+        'course_audience': {
+          AppLocale.ru: 'Целевая аудитория',
+          AppLocale.en: 'Audience',
+          AppLocale.kk: 'Мақсатты аудитория',
+        },
+        'course_requirements': {
+          AppLocale.ru: 'Начальные требования',
+          AppLocale.en: 'Requirements',
+          AppLocale.kk: 'Бастапқы талаптар',
+        },
+        'course_teachers': {
+          AppLocale.ru: 'Преподаватели',
+          AppLocale.en: 'Teachers',
+          AppLocale.kk: 'Оқытушылар',
+        },
+        'course_certificate_outcomes': {
+          AppLocale.ru: 'Сертификат и результаты',
+          AppLocale.en: 'Certificate and outcomes',
+          AppLocale.kk: 'Сертификат пен нәтижелер',
+        },
+        'course_certificate': {
+          AppLocale.ru: 'Сертификат',
+          AppLocale.en: 'Certificate',
+          AppLocale.kk: 'Сертификат',
+        },
+        'course_reviews': {
+          AppLocale.ru: 'Отзывы',
+          AppLocale.en: 'Reviews',
+          AppLocale.kk: 'Пікірлер',
+        },
+        'course_news': {
+          AppLocale.ru: 'Новости курса',
+          AppLocale.en: 'Course news',
+          AppLocale.kk: 'Курс жаңалықтары',
+        },
+        'course_start_mode': {
+          AppLocale.ru: 'Учиться можно сразу',
+          AppLocale.en: 'Start mode',
+          AppLocale.kk: 'Оқуды бірден бастау',
+        },
+        'course_includes': {
+          AppLocale.ru: 'В курс входят',
+          AppLocale.en: 'Course includes',
+          AppLocale.kk: 'Курсқа кіреді',
+        },
+        'course_video_time': {
+          AppLocale.ru: 'Видео время',
+          AppLocale.en: 'Video time',
+          AppLocale.kk: 'Бейне уақыты',
+        },
+        'course_interactive_items': {
+          AppLocale.ru: 'Интерактивные элементы',
+          AppLocale.en: 'Interactive items',
+          AppLocale.kk: 'Интерактив элементтер',
+        },
       };
 }
 

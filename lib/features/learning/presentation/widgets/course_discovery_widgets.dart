@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/state/demo_models.dart';
+import '../../../../core/layout/app_breakpoints.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
 class CourseDiscoverySearchBar extends StatelessWidget {
@@ -20,8 +22,13 @@ class CourseDiscoverySearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final tall = !context.isCompactLayout;
 
     return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: tall ? 12 : 8,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         color: colors.surface,
@@ -36,9 +43,8 @@ class CourseDiscoverySearchBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const SizedBox(width: 14),
           Icon(Icons.search_rounded, color: colors.textSecondary),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: TextField(
               controller: controller,
@@ -46,12 +52,37 @@ class CourseDiscoverySearchBar extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: hintText,
                 border: InputBorder.none,
+                isCollapsed: true,
               ),
             ),
           ),
-          IconButton(
-            onPressed: onFilterTap,
-            icon: Icon(Icons.tune_rounded, color: colors.primary),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: onFilterTap,
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                color: colors.primary.withValues(alpha: 0.12),
+                border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.tune_rounded, color: colors.primary, size: 18),
+                  if (!context.isCompactLayout) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      context.l10n.text('filters'),
+                      style: TextStyle(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -63,17 +94,39 @@ class CourseDiscoverySectionHeader extends StatelessWidget {
   const CourseDiscoverySectionHeader({
     super.key,
     required this.title,
+    this.actionLabel,
+    this.onActionTap,
   });
 
   final String title;
+  final String? actionLabel;
+  final VoidCallback? onActionTap;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
+    final colors = context.appColors;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
           ),
+        ),
+        if (actionLabel != null && onActionTap != null)
+          TextButton(
+            onPressed: onActionTap,
+            child: Text(
+              actionLabel!,
+              style: TextStyle(
+                color: colors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -96,16 +149,85 @@ class DiscoveryCourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _BaseDiscoveryCourseCard(
+      course: course,
+      saved: saved,
+      levelLabel: levelLabel,
+      savedLabel: savedLabel,
+      onTap: onTap,
+      width: 244,
+      showExtendedMeta: false,
+    );
+  }
+}
+
+class DiscoveryWideCourseCard extends StatelessWidget {
+  const DiscoveryWideCourseCard({
+    super.key,
+    required this.course,
+    required this.saved,
+    required this.levelLabel,
+    required this.savedLabel,
+    required this.onTap,
+  });
+
+  final CommunityCourse course;
+  final bool saved;
+  final String levelLabel;
+  final String savedLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _BaseDiscoveryCourseCard(
+      course: course,
+      saved: saved,
+      levelLabel: levelLabel,
+      savedLabel: savedLabel,
+      onTap: onTap,
+      width: double.infinity,
+      showExtendedMeta: true,
+    );
+  }
+}
+
+class _BaseDiscoveryCourseCard extends StatelessWidget {
+  const _BaseDiscoveryCourseCard({
+    required this.course,
+    required this.saved,
+    required this.levelLabel,
+    required this.savedLabel,
+    required this.onTap,
+    required this.width,
+    required this.showExtendedMeta,
+  });
+
+  final CommunityCourse course;
+  final bool saved;
+  final String levelLabel;
+  final String savedLabel;
+  final VoidCallback onTap;
+  final double width;
+  final bool showExtendedMeta;
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.appColors;
+    final compactCard = !showExtendedMeta;
+    final heroHeight = showExtendedMeta ? 132.0 : 108.0;
+    final heroPadding = showExtendedMeta ? 14.0 : 12.0;
+    final bodyPadding = showExtendedMeta ? 18.0 : 14.0;
+    final titleMaxLines = showExtendedMeta ? 2 : 2;
+    final subtitleMaxLines = showExtendedMeta ? 2 : 1;
+    final heroHeadlineMaxLines = showExtendedMeta ? 2 : 1;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(28),
       child: Container(
-        width: 232,
-        padding: const EdgeInsets.all(16),
+        width: width,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -118,98 +240,177 @@ class DiscoveryCourseCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: course.color.withValues(alpha: 0.12),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
+              blurRadius: 20,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+            Container(
+              height: heroHeight,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    course.color.withValues(alpha: 0.28),
+                    colors.backgroundElevated,
+                    colors.surface,
+                  ],
+                ),
+              ),
+              padding: EdgeInsets.all(heroPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(999),
+                            color: colors.surface.withValues(alpha: 0.92),
+                          ),
+                          child: Text(
+                            saved ? savedLabel : levelLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: course.color,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(
+                        Icons.arrow_outward_rounded,
+                        color: colors.textPrimary,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    course.heroHeadline,
+                    maxLines: heroHeadlineMaxLines,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          height: 1.16,
+                          fontSize: showExtendedMeta ? null : 16,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    course.heroBadge,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
                     ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: course.color.withValues(alpha: 0.14),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(bodyPadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.title.en,
+                      maxLines: titleMaxLines,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            height: 1.18,
+                            fontSize: showExtendedMeta ? null : 17,
+                          ),
                     ),
-                    child: Text(
-                      saved ? savedLabel : levelLabel,
+                    const SizedBox(height: 4),
+                    Text(
+                      course.subtitle.en,
+                      maxLines: subtitleMaxLines,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        height: 1.3,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (showExtendedMeta) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        course.description.en,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        _MetaChip(
+                          icon: Icons.star_rounded,
+                          label: course.rating.toStringAsFixed(1),
+                          color: course.color,
+                        ),
+                        _MetaChip(
+                          icon: Icons.groups_rounded,
+                          label: '${course.enrollmentCount}',
+                          color: colors.textSecondary,
+                        ),
+                        _MetaChip(
+                          icon: Icons.schedule_rounded,
+                          label: '${course.estimatedHours}h',
+                          color: colors.textSecondary,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      course.author.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: course.color,
+                        color: colors.textPrimary,
                         fontWeight: FontWeight.w700,
-                        fontSize: 12,
                       ),
                     ),
-                  ),
+                    if (!compactCard) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        course.author.role,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: colors.textSecondary,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              course.title.en,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    height: 1.18,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              course.subtitle.en,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: colors.textSecondary,
-                height: 1.35,
               ),
-            ),
-            const Spacer(),
-            Text(
-              course.author.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.star_rounded, size: 16, color: course.color),
-                const SizedBox(width: 6),
-                Text(
-                  course.rating.toStringAsFixed(1),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Icon(Icons.schedule_rounded, size: 16, color: colors.textSecondary),
-                const SizedBox(width: 6),
-                Text(
-                  '${course.estimatedHours}h',
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -223,10 +424,12 @@ class DiscoveryViewAllCard extends StatelessWidget {
     super.key,
     required this.label,
     required this.onTap,
+    this.width = 252,
   });
 
   final String label;
   final VoidCallback onTap;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
@@ -234,22 +437,25 @@ class DiscoveryViewAllCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(28),
       child: Container(
-        width: 232,
+        width: width,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
           color: colors.surface,
           border: Border.all(color: colors.divider),
         ),
         child: Center(
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w800,
-                ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
           ),
         ),
       ),
@@ -280,18 +486,18 @@ class DiscoveryAuthorCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
       child: Container(
-        width: 188,
+        width: context.isCompactLayout ? 188 : 224,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           color: colors.surface,
-          border: Border.all(color: accent.withValues(alpha: 0.3)),
+          border: Border.all(color: accent.withValues(alpha: 0.28)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              radius: 26,
+              radius: 22,
               backgroundColor: accent.withValues(alpha: 0.16),
               child: Text(
                 author.name.isEmpty ? '?' : author.name.substring(0, 1),
@@ -301,7 +507,7 @@ class DiscoveryAuthorCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             Text(
               author.name,
               maxLines: 1,
@@ -313,11 +519,23 @@ class DiscoveryAuthorCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               author.role,
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: colors.textSecondary,
                 height: 1.3,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              author.summary.isEmpty ? author.accentLabel : author.summary,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.textSecondary,
+                height: 1.35,
+                fontSize: 13,
               ),
             ),
             const Spacer(),
@@ -352,5 +570,83 @@ class DiscoveryAuthorCard extends StatelessWidget {
       hash = ((hash * 31) + codeUnit) & 0x7fffffff;
     }
     return accents[hash % accents.length];
+  }
+}
+
+class CatalogFilterCard extends StatelessWidget {
+  const CatalogFilterCard({
+    super.key,
+    required this.title,
+    required this.child,
+  });
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: colors.surface,
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: colors.surfaceSoft,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -715,6 +715,9 @@ class CommunityCourseAuthor {
     required this.followersCount,
     required this.courseCount,
     required this.topicKeys,
+    this.summary = '',
+    this.rating = 4.8,
+    this.studentCount = 0,
   });
 
   final String id;
@@ -724,6 +727,9 @@ class CommunityCourseAuthor {
   final int followersCount;
   final int courseCount;
   final List<String> topicKeys;
+  final String summary;
+  final double rating;
+  final int studentCount;
 }
 
 class CommunityCourseLessonPreview {
@@ -736,6 +742,132 @@ class CommunityCourseLessonPreview {
   final LocalizedText title;
   final LocalizedText summary;
   final int durationMinutes;
+}
+
+class CommunityCourseInstructor {
+  const CommunityCourseInstructor({
+    required this.id,
+    required this.name,
+    required this.role,
+    required this.bio,
+    required this.courseCount,
+    required this.studentCount,
+    required this.rating,
+  });
+
+  final String id;
+  final String name;
+  final String role;
+  final String bio;
+  final int courseCount;
+  final int studentCount;
+  final double rating;
+}
+
+class CommunityCourseModuleItem {
+  const CommunityCourseModuleItem({
+    required this.title,
+    required this.durationLabel,
+    required this.viewerCount,
+    required this.helpfulCount,
+  });
+
+  final String title;
+  final String durationLabel;
+  final int viewerCount;
+  final int helpfulCount;
+}
+
+class CommunityCourseModuleSection {
+  const CommunityCourseModuleSection({
+    required this.title,
+    required this.description,
+    required this.items,
+  });
+
+  final String title;
+  final String description;
+  final List<CommunityCourseModuleItem> items;
+}
+
+class CommunityCourseReviewSummary {
+  const CommunityCourseReviewSummary({
+    required this.averageRating,
+    required this.reviewCount,
+    required this.ratingDistribution,
+  });
+
+  final double averageRating;
+  final int reviewCount;
+  final Map<int, int> ratingDistribution;
+}
+
+class CommunityCourseReview {
+  const CommunityCourseReview({
+    required this.id,
+    required this.authorName,
+    required this.timeLabel,
+    required this.rating,
+    required this.text,
+    this.headline,
+  });
+
+  final String id;
+  final String authorName;
+  final String timeLabel;
+  final int rating;
+  final String text;
+  final String? headline;
+}
+
+class CommunityCourseUpdate {
+  const CommunityCourseUpdate({
+    required this.id,
+    required this.title,
+    required this.summary,
+    required this.timeLabel,
+  });
+
+  final String id;
+  final String title;
+  final String summary;
+  final String timeLabel;
+}
+
+class CommunityCourseFacts {
+  const CommunityCourseFacts({
+    required this.lessonCount,
+    required this.videoMinutes,
+    required this.assessmentCount,
+    required this.interactiveCount,
+    required this.languageLabel,
+    required this.certificateLabel,
+    required this.startModeLabel,
+  });
+
+  final int lessonCount;
+  final int videoMinutes;
+  final int assessmentCount;
+  final int interactiveCount;
+  final String languageLabel;
+  final String certificateLabel;
+  final String startModeLabel;
+}
+
+class CommunityCourseOffer {
+  const CommunityCourseOffer({
+    required this.priceLabel,
+    required this.installmentLabel,
+    required this.secondaryInstallmentLabel,
+    required this.previewLabel,
+    required this.favoriteLabel,
+  });
+
+  final String priceLabel;
+  final String installmentLabel;
+  final String secondaryInstallmentLabel;
+  final String previewLabel;
+  final String favoriteLabel;
 }
 
 class CommunityCourse {
@@ -757,6 +889,18 @@ class CommunityCourse {
     required this.isRecommended,
     required this.tags,
     required this.lessons,
+    required this.heroBadge,
+    required this.heroHeadline,
+    required this.learningOutcomes,
+    required this.audience,
+    required this.requirements,
+    required this.instructors,
+    required this.moduleSections,
+    required this.reviewSummary,
+    required this.reviews,
+    required this.updates,
+    required this.facts,
+    required this.offer,
   });
 
   final String id;
@@ -776,6 +920,18 @@ class CommunityCourse {
   final bool isRecommended;
   final List<String> tags;
   final List<CommunityCourseLessonPreview> lessons;
+  final String heroBadge;
+  final String heroHeadline;
+  final List<String> learningOutcomes;
+  final List<String> audience;
+  final List<String> requirements;
+  final List<CommunityCourseInstructor> instructors;
+  final List<CommunityCourseModuleSection> moduleSections;
+  final CommunityCourseReviewSummary reviewSummary;
+  final List<CommunityCourseReview> reviews;
+  final List<CommunityCourseUpdate> updates;
+  final CommunityCourseFacts facts;
+  final CommunityCourseOffer offer;
 }
 
 class QuizAnswerStat {

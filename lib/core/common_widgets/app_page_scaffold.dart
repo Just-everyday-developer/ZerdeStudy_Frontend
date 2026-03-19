@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../layout/app_breakpoints.dart';
 import '../theme/app_theme_colors.dart';
 
 class AppPageScaffold extends StatelessWidget {
@@ -10,6 +11,7 @@ class AppPageScaffold extends StatelessWidget {
     this.actions,
     this.safeAreaTop = true,
     this.bottomNavigationBar,
+    this.maxContentWidth,
   });
 
   final Widget child;
@@ -17,27 +19,30 @@ class AppPageScaffold extends StatelessWidget {
   final List<Widget>? actions;
   final bool safeAreaTop;
   final Widget? bottomNavigationBar;
+  final double? maxContentWidth;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final content = SafeArea(
-      top: safeAreaTop,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: child,
-        ),
-      ),
-    );
+    final navigator = Navigator.maybeOf(context);
+    final canPop = navigator?.canPop() ?? false;
+    final hasActions = actions != null && actions!.isNotEmpty;
+    final showBackOnlyBar = !context.isCompactLayout && canPop;
+    final showAppBar = title != null || hasActions || showBackOnlyBar;
 
     return Scaffold(
       backgroundColor: colors.background,
       bottomNavigationBar: bottomNavigationBar,
-      appBar: title == null && (actions == null || actions!.isEmpty)
+      appBar: !showAppBar
           ? null
           : AppBar(
+              leading: canPop
+                  ? IconButton(
+                      onPressed: () => Navigator.maybePop(context),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                    )
+                  : null,
               title: title == null ? null : Text(title!),
               centerTitle: false,
               backgroundColor: Colors.transparent,
@@ -46,7 +51,34 @@ class AppPageScaffold extends StatelessWidget {
       body: Stack(
         children: [
           const Positioned.fill(child: _Backdrop()),
-          content,
+          SafeArea(
+            top: safeAreaTop,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final horizontalPadding = context.appPageHorizontalPadding;
+                final availableWidth =
+                    constraints.maxWidth - (horizontalPadding * 2);
+                final contentWidth = maxContentWidth ?? context.appPageMaxWidth;
+                final clampedWidth =
+                    availableWidth <= 0 ? constraints.maxWidth : availableWidth;
+
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: clampedWidth < contentWidth
+                            ? clampedWidth
+                            : contentWidth,
+                      ),
+                      child: child,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );

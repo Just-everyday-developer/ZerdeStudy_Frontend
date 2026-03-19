@@ -8,10 +8,12 @@ import '../../../../app/state/app_theme_mode.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_button.dart';
+import '../../../../core/common_widgets/adaptive_panel.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
+import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
@@ -41,7 +43,7 @@ class ProfilePage extends ConsumerWidget {
     return AppPageScaffold(
       actions: [
         IconButton(
-          onPressed: () => _showSettingsSheet(context, ref),
+          onPressed: () => _showSettingsSheet(context),
           icon: Icon(Icons.settings_rounded, color: colors.textPrimary),
           tooltip: l10n.text('settings'),
         ),
@@ -373,87 +375,11 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  void _showSettingsSheet(BuildContext context, WidgetRef ref) {
-    final state = ref.read(demoAppControllerProvider);
-    final controller = ref.read(demoAppControllerProvider.notifier);
-    final colors = context.appColors;
-    final l10n = context.l10n;
-
-    showModalBottomSheet<void>(
+  void _showSettingsSheet(BuildContext context) {
+    showAdaptivePanel<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: colors.background,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: colors.divider,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.text('settings'),
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.text('locale'),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 10),
-                  LocaleSelector(
-                    currentLocale: state.locale,
-                    onChanged: controller.changeLocale,
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.text('theme'),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: AppThemeMode.values.map((mode) {
-                      final selected = mode == state.themeMode;
-                      return ChoiceChip(
-                        label: Text(_themeLabel(l10n, mode)),
-                        selected: selected,
-                        onSelected: (_) => controller.changeThemeMode(mode),
-                        selectedColor: colors.primary.withValues(alpha: 0.16),
-                        backgroundColor: colors.surfaceSoft,
-                        side: BorderSide(
-                          color: selected ? colors.primary : colors.divider,
-                        ),
-                        labelStyle: TextStyle(
-                          color: selected ? colors.primary : colors.textSecondary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      );
-                    }).toList(growable: false),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+        return const _SettingsPanelContent();
       },
     );
   }
@@ -470,69 +396,126 @@ class ProfilePage extends ConsumerWidget {
     final colors = context.appColors;
     final l10n = context.l10n;
 
-    showModalBottomSheet<void>(
+    showAdaptivePanel<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      wideMaxWidth: context.isWideLayout ? 780 : 560,
       builder: (context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: colors.background,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.78,
-                child: Column(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: colors.divider,
-                        borderRadius: BorderRadius.circular(999),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.78,
+            child: Column(
+              children: [
+                const AdaptivePanelHandle(),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      Text(
+                        l10n.text('achievements'),
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: ListView(
-                        children: [
-                          Text(
-                            l10n.text('achievements'),
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${unlocked.length} ${l10n.text('unlocked').toLowerCase()} • ${locked.length} ${l10n.text('locked').toLowerCase()}',
-                            style: TextStyle(color: colors.textSecondary),
-                          ),
-                          const SizedBox(height: 18),
-                          _AchievementSection(
-                            title: l10n.text('unlocked'),
-                            accent: colors.success,
-                            achievements: unlocked,
-                            locale: locale,
-                          ),
-                          const SizedBox(height: 18),
-                          _AchievementSection(
-                            title: l10n.text('locked'),
-                            accent: colors.textSecondary,
-                            achievements: locked,
-                            locale: locale,
-                          ),
-                        ],
+                      const SizedBox(height: 6),
+                      Text(
+                        '${unlocked.length} ${l10n.text('unlocked').toLowerCase()} • ${locked.length} ${l10n.text('locked').toLowerCase()}',
+                        style: TextStyle(color: colors.textSecondary),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 18),
+                      _AchievementSection(
+                        title: l10n.text('unlocked'),
+                        accent: colors.success,
+                        achievements: unlocked,
+                        locale: locale,
+                      ),
+                      const SizedBox(height: 18),
+                      _AchievementSection(
+                        title: l10n.text('locked'),
+                        accent: colors.textSecondary,
+                        achievements: locked,
+                        locale: locale,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+
+  String _themeLabel(AppLocalizations l10n, AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.dark:
+        return l10n.text('theme_dark');
+      case AppThemeMode.light:
+        return l10n.text('theme_light');
+    }
+  }
+}
+
+class _SettingsPanelContent extends ConsumerWidget {
+  const _SettingsPanelContent();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(demoAppControllerProvider);
+    final controller = ref.read(demoAppControllerProvider.notifier);
+    final colors = context.appColors;
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AdaptivePanelHandle(),
+          const SizedBox(height: 18),
+          Text(
+            l10n.text('settings'),
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            l10n.text('locale'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 10),
+          LocaleSelector(
+            currentLocale: state.locale,
+            onChanged: controller.changeLocale,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            l10n.text('theme'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: AppThemeMode.values.map((mode) {
+              final selected = mode == state.themeMode;
+              return ChoiceChip(
+                label: Text(_themeLabel(l10n, mode)),
+                selected: selected,
+                onSelected: (_) => controller.changeThemeMode(mode),
+                selectedColor: colors.primary.withValues(alpha: 0.16),
+                backgroundColor: colors.surfaceSoft,
+                side: BorderSide(
+                  color: selected ? colors.primary : colors.divider,
+                ),
+                labelStyle: TextStyle(
+                  color: selected ? colors.primary : colors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              );
+            }).toList(growable: false),
+          ),
+        ],
+      ),
     );
   }
 
@@ -563,6 +546,8 @@ class _AchievementSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final l10n = context.l10n;
+    final gridColumns = context.isWideLayout ? 4 : 2;
+    final gridAspectRatio = context.isWideLayout ? 0.92 : 0.72;
 
     return GlowCard(
       accent: accent,
@@ -586,11 +571,11 @@ class _AchievementSection extends StatelessWidget {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: gridColumns,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 0.72,
+                childAspectRatio: gridAspectRatio,
               ),
               itemCount: achievements.length,
               itemBuilder: (context, index) {
@@ -621,7 +606,7 @@ class _AchievementGridItem extends StatelessWidget {
     final accent = achievement.unlocked ? colors.success : colors.textSecondary;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         color: colors.surfaceSoft,
@@ -634,10 +619,11 @@ class _AchievementGridItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
+            radius: 18,
             backgroundColor: accent.withValues(alpha: 0.16),
-            child: Icon(achievement.icon, color: accent),
+            child: Icon(achievement.icon, color: accent, size: 18),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             achievement.title.resolve(locale),
             maxLines: 2,
@@ -646,16 +632,17 @@ class _AchievementGridItem extends StatelessWidget {
               color: colors.textPrimary,
               fontWeight: FontWeight.w800,
               height: 1.2,
+              fontSize: 13,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             achievement.description.resolve(locale),
-            maxLines: 3,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: colors.textSecondary,
-              fontSize: 12,
+              fontSize: 11,
               height: 1.35,
             ),
           ),

@@ -9,10 +9,8 @@ import 'package:frontend_flutter/core/common_widgets/glow_card.dart';
 import 'package:frontend_flutter/core/localization/app_localizations.dart';
 import 'package:frontend_flutter/core/theme/app_theme.dart';
 import 'package:frontend_flutter/features/ai/presentation/pages/ai_mentor_page.dart';
-import 'package:frontend_flutter/features/auth/presentation/pages/welcome_page.dart';
 import 'package:frontend_flutter/features/home/presentation/pages/community_courses_page.dart';
 import 'package:frontend_flutter/features/home/presentation/pages/home_page.dart';
-import 'package:frontend_flutter/features/knowledge_tree/presentation/pages/knowledge_tree.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/learn_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/lesson_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/track_assessment_page.dart';
@@ -205,6 +203,11 @@ void main() {
     await pumpScene(tester);
 
     expect(find.text('Output Quiz'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Code Memory Lab'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Code Memory Lab'), findsOneWidget);
 
     await tester.tap(find.text('3'));

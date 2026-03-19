@@ -330,7 +330,37 @@ CommunityCourse buildCommunityCourse({
   required bool isRecommended,
   required List<String> tags,
   required List<CommunityCourseLessonPreview> lessons,
+  List<String>? learningOutcomes,
+  List<String>? audience,
+  List<String>? requirements,
+  List<CommunityCourseInstructor>? instructors,
+  List<CommunityCourseModuleSection>? moduleSections,
+  CommunityCourseReviewSummary? reviewSummary,
+  List<CommunityCourseReview>? reviews,
+  List<CommunityCourseUpdate>? updates,
+  CommunityCourseFacts? facts,
+  CommunityCourseOffer? offer,
 }) {
+  final resolvedInstructors =
+      instructors ?? _defaultInstructors(author: author, title: title);
+  final resolvedModules = moduleSections ??
+      _defaultModuleSections(
+        title: title,
+        subtitle: subtitle,
+        lessons: lessons,
+      );
+  final resolvedFacts = facts ??
+      _defaultFacts(
+        level: level,
+        estimatedHours: estimatedHours,
+        moduleSections: resolvedModules,
+      );
+  final resolvedReviewSummary = reviewSummary ??
+      _defaultReviewSummary(
+        rating: rating,
+        enrollmentCount: enrollmentCount,
+      );
+
   return CommunityCourse(
     id: id,
     title: sameText(title),
@@ -349,6 +379,295 @@ CommunityCourse buildCommunityCourse({
     isRecommended: isRecommended,
     tags: tags,
     lessons: lessons,
+    heroBadge: tags.isEmpty ? level : tags.first,
+    heroHeadline: 'Structured path into $title',
+    learningOutcomes: learningOutcomes ??
+        _defaultLearningOutcomes(
+          title: title,
+          subtitle: subtitle,
+          tags: tags,
+        ),
+    audience: audience ?? _defaultAudience(title: title),
+    requirements: requirements ?? _defaultRequirements(level: level),
+    instructors: resolvedInstructors,
+    moduleSections: resolvedModules,
+    reviewSummary: resolvedReviewSummary,
+    reviews: reviews ??
+        _defaultReviews(
+          title: title,
+          author: author,
+          summary: resolvedReviewSummary,
+        ),
+    updates: updates ?? _defaultUpdates(title: title),
+    facts: resolvedFacts,
+    offer: offer ??
+        _defaultOffer(
+          estimatedHours: estimatedHours,
+          level: level,
+        ),
+  );
+}
+
+List<String> _defaultLearningOutcomes({
+  required String title,
+  required String subtitle,
+  required List<String> tags,
+}) {
+  return <String>[
+    'Understand the core workflow behind $title and explain it in plain language.',
+    'Apply the main patterns from "$subtitle" in small production-like scenarios.',
+    'Recognize common mistakes earlier and review your own work with more confidence.',
+    'Use ${tags.isEmpty ? 'course concepts' : tags.first} as a repeatable decision tool.',
+    'Build a cleaner narrative for demos, interviews, and portfolio walkthroughs.',
+    'Leave with a compact checklist you can reuse after the course ends.',
+  ];
+}
+
+List<String> _defaultAudience({
+  required String title,
+}) {
+  return <String>[
+    'Learners who want a structured and calmer entry into $title.',
+    'Students preparing portfolio demos, interviews, or a stronger first project.',
+    'Engineers who want clearer mental models before going deeper into documentation.',
+  ];
+}
+
+List<String> _defaultRequirements({
+  required String level,
+}) {
+  final beginner = level == 'Beginner';
+  return <String>[
+    beginner
+        ? 'No strict prerequisites beyond curiosity and consistency.'
+        : 'Comfort with basic programming syntax and command-line navigation.',
+    'A notebook or editor where you can repeat the examples and keep short notes.',
+    'Readiness to move from examples into small hands-on exercises.',
+  ];
+}
+
+List<CommunityCourseInstructor> _defaultInstructors({
+  required CommunityCourseAuthor author,
+  required String title,
+}) {
+  return <CommunityCourseInstructor>[
+    CommunityCourseInstructor(
+      id: author.id,
+      name: author.name,
+      role: author.role,
+      bio:
+          '${author.name} teaches $title with a product-minded focus on clarity, iteration, and confident delivery.',
+      courseCount: author.courseCount,
+      studentCount:
+          author.studentCount == 0 ? author.followersCount * 8 : author.studentCount,
+      rating: author.rating,
+    ),
+    CommunityCourseInstructor(
+      id: '${author.id}_mentor_team',
+      name: 'ZerdeStudy Mentor Team',
+      role: 'Course Editors',
+      bio:
+          'The internal mentor team packages examples, reviews the explanations, and keeps each mock course presentation-ready.',
+      courseCount: 12,
+      studentCount: author.followersCount * 5,
+      rating: 4.9,
+    ),
+  ];
+}
+
+List<CommunityCourseModuleSection> _defaultModuleSections({
+  required String title,
+  required String subtitle,
+  required List<CommunityCourseLessonPreview> lessons,
+}) {
+  final previews = lessons.isNotEmpty
+      ? lessons
+      : <CommunityCourseLessonPreview>[
+          buildCourseLesson(
+            '$title: foundations',
+            'Build the mental model and vocabulary you need before diving deeper.',
+          ),
+        ];
+
+  final first = previews.first;
+  final second = previews.length > 1 ? previews[1] : previews.first;
+  final third = previews.length > 2 ? previews[2] : previews.last;
+
+  return <CommunityCourseModuleSection>[
+    CommunityCourseModuleSection(
+      title: 'Orientation and foundations',
+      description: 'Get aligned on the mental model, vocabulary, and learning flow.',
+      items: <CommunityCourseModuleItem>[
+        _moduleItemFromPreview(first, viewersBase: 2200, helpfulBase: 74),
+        CommunityCourseModuleItem(
+          title: 'Why this topic matters in real teams',
+          durationLabel: '8 min',
+          viewerCount: 1980,
+          helpfulCount: 63,
+        ),
+      ],
+    ),
+    CommunityCourseModuleSection(
+      title: 'Worked examples',
+      description: 'Break down the examples and turn them into a repeatable routine.',
+      items: <CommunityCourseModuleItem>[
+        _moduleItemFromPreview(second, viewersBase: 1740, helpfulBase: 58),
+        CommunityCourseModuleItem(
+          title: 'Review checklist for $subtitle',
+          durationLabel: '11 min',
+          viewerCount: 1620,
+          helpfulCount: 49,
+        ),
+      ],
+    ),
+    CommunityCourseModuleSection(
+      title: 'Apply and extend',
+      description: 'Practice the pattern, reflect on tradeoffs, and prepare a clean explanation.',
+      items: <CommunityCourseModuleItem>[
+        _moduleItemFromPreview(third, viewersBase: 1480, helpfulBase: 42),
+        CommunityCourseModuleItem(
+          title: 'Capstone walkthrough: from idea to confident delivery',
+          durationLabel: '15 min',
+          viewerCount: 1370,
+          helpfulCount: 39,
+        ),
+      ],
+    ),
+  ];
+}
+
+CommunityCourseModuleItem _moduleItemFromPreview(
+  CommunityCourseLessonPreview preview, {
+  required int viewersBase,
+  required int helpfulBase,
+}) {
+  return CommunityCourseModuleItem(
+    title: preview.title.en,
+    durationLabel: '${preview.durationMinutes} min',
+    viewerCount: viewersBase,
+    helpfulCount: helpfulBase,
+  );
+}
+
+CommunityCourseReviewSummary _defaultReviewSummary({
+  required double rating,
+  required int enrollmentCount,
+}) {
+  final reviewCount = enrollmentCount > 0 ? (enrollmentCount / 3.8).round() : 120;
+  final fiveStar = (reviewCount * 0.78).round();
+  final fourStar = (reviewCount * 0.14).round();
+  final threeStar = (reviewCount * 0.05).round();
+  final twoStar = (reviewCount * 0.02).round();
+  final oneStar = reviewCount - fiveStar - fourStar - threeStar - twoStar;
+
+  return CommunityCourseReviewSummary(
+    averageRating: rating,
+    reviewCount: reviewCount,
+    ratingDistribution: <int, int>{
+      5: fiveStar,
+      4: fourStar,
+      3: threeStar,
+      2: twoStar,
+      1: oneStar,
+    },
+  );
+}
+
+List<CommunityCourseReview> _defaultReviews({
+  required String title,
+  required CommunityCourseAuthor author,
+  required CommunityCourseReviewSummary summary,
+}) {
+  return <CommunityCourseReview>[
+    CommunityCourseReview(
+      id: '${author.id}_review_1',
+      authorName: 'Aiman K.',
+      timeLabel: '2 days ago',
+      rating: 5,
+      headline: 'Clear structure',
+      text:
+          'The $title flow feels compact but very usable. I especially liked how the examples moved into a practical checklist instead of staying abstract.',
+    ),
+    CommunityCourseReview(
+      id: '${author.id}_review_2',
+      authorName: 'Arman S.',
+      timeLabel: '5 days ago',
+      rating: 5,
+      headline: 'Useful for demos',
+      text:
+          'This course helped me explain the topic aloud. The sequence from overview to examples to modules made the whole subject feel much more presentable.',
+    ),
+    CommunityCourseReview(
+      id: '${author.id}_review_3',
+      authorName: 'Dana Z.',
+      timeLabel: '1 week ago',
+      rating: summary.averageRating.round().clamp(4, 5),
+      text:
+          'I came in for quick revision and stayed because the structure was calm and focused. The review section and module list are especially helpful.',
+    ),
+  ];
+}
+
+List<CommunityCourseUpdate> _defaultUpdates({
+  required String title,
+}) {
+  return <CommunityCourseUpdate>[
+    CommunityCourseUpdate(
+      id: '${title.hashCode}_update_1',
+      title: 'Expanded examples',
+      summary:
+          'Added one more worked example and tightened the intro copy to make the first module easier to follow.',
+      timeLabel: '3 days ago',
+    ),
+    CommunityCourseUpdate(
+      id: '${title.hashCode}_update_2',
+      title: 'Program refresh',
+      summary:
+          'Reordered the module sequence so the course moves from foundation into applied scenarios more smoothly.',
+      timeLabel: '1 week ago',
+    ),
+    CommunityCourseUpdate(
+      id: '${title.hashCode}_update_3',
+      title: 'Review notes',
+      summary:
+          'Improved the lesson summaries and added stronger prompts for the final wrap-up sections.',
+      timeLabel: '2 weeks ago',
+    ),
+  ];
+}
+
+CommunityCourseFacts _defaultFacts({
+  required String level,
+  required int estimatedHours,
+  required List<CommunityCourseModuleSection> moduleSections,
+}) {
+  final lessonCount = moduleSections.fold<int>(
+    0,
+    (sum, section) => sum + section.items.length,
+  );
+  return CommunityCourseFacts(
+    lessonCount: lessonCount,
+    videoMinutes: estimatedHours * 52,
+    assessmentCount: lessonCount + 4,
+    interactiveCount: lessonCount * 3,
+    languageLabel: 'English / Russian',
+    certificateLabel: 'Certificate available',
+    startModeLabel: level == 'Beginner' ? 'Start anytime' : 'Self-paced access',
+  );
+}
+
+CommunityCourseOffer _defaultOffer({
+  required int estimatedHours,
+  required String level,
+}) {
+  final price = 1800 + (estimatedHours * 140) + (level == 'Advanced' ? 700 : 0);
+  final split = (price / 4).round();
+  return CommunityCourseOffer(
+    priceLabel: '$price ₸',
+    installmentLabel: '$split ₸ x 4 Split',
+    secondaryInstallmentLabel: '$split ₸ x 4 Milestone',
+    previewLabel: 'Open preview',
+    favoriteLabel: 'Save course',
   );
 }
 

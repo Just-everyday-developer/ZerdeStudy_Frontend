@@ -11,6 +11,7 @@ import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../tree_map_config.dart';
@@ -119,7 +120,7 @@ class KnowledgeTreePage extends ConsumerWidget {
           GlowCard(
             accent: colors.primary,
             child: SizedBox(
-              height: 760,
+              height: context.isCompactLayout ? 760 : 920,
               child: _KnowledgeTreeViewport(
                 visibleTracks: visibleTracks,
               ),
@@ -222,9 +223,9 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                   child: InteractiveViewer(
                     transformationController: _controller,
                     constrained: false,
-                    minScale: fitScale * 0.9,
+                    minScale: fitScale * 0.95,
                     maxScale: math.max(fitScale * 2.8, 1.8),
-                    boundaryMargin: const EdgeInsets.all(120),
+                    boundaryMargin: const EdgeInsets.all(72),
                     child: SizedBox(
                       width: knowledgeTreeCanvasSize.width,
                       height: knowledgeTreeCanvasSize.height,
@@ -273,7 +274,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
   ) {
     final orbSize = node.radius * 2;
     final widgetWidth =
-        (node.isHub ? orbSize + 56 : math.max(orbSize + 48, 124)).toDouble();
+        (node.isHub ? orbSize + 68 : math.max(orbSize + 64, 152)).toDouble();
     final widgetHeight = node.isHub ? orbSize + 60 : orbSize + 56;
 
     return Positioned(
@@ -555,13 +556,15 @@ class _KnowledgeTreePainter extends CustomPainter {
 
   Path _buildBranchPath(Offset start, Offset end) {
     final verticalDistance = (end.dy - start.dy).abs();
-    final controlOffset = math.max(70, verticalDistance * 0.24);
+    final controlOffset = math.max(90, verticalDistance * 0.18);
+    final midX = start.dx + ((end.dx - start.dx) * 0.18);
+    final endMidX = end.dx - ((end.dx - start.dx) * 0.18);
     return Path()
       ..moveTo(start.dx, start.dy)
       ..cubicTo(
-        start.dx,
+        midX,
         start.dy + controlOffset,
-        end.dx,
+        endMidX,
         end.dy - controlOffset,
         end.dx,
         end.dy,
