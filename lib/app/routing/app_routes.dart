@@ -10,6 +10,7 @@ class AppRoutes {
   static const String track = '/track';
   static const String lesson = '/lesson';
   static const String practice = '/practice';
+  static const String assessment = '/assessment';
   static const String stats = '/stats';
   static const String leaderboard = '/leaderboard';
   static const String courses = '/courses';
@@ -19,6 +20,8 @@ class AppRoutes {
   static String lessonById(String lessonId) => '$lesson/$lessonId';
 
   static String practiceById(String practiceId) => '$practice/$practiceId';
+
+  static String assessmentByTrackId(String trackId) => '$assessment/$trackId';
 
   static String courseById(String courseId) => '$courses/$courseId';
 }

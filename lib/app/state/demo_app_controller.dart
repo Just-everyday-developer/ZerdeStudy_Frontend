@@ -19,7 +19,7 @@ final demoAppControllerProvider =
     NotifierProvider<DemoAppController, DemoAppState>(DemoAppController.new);
 
 class DemoAppController extends Notifier<DemoAppState> {
-  static const String _storageKey = 'zerdestudy_demo_state_v3';
+  static const String _storageKey = 'zerdestudy_demo_state_v4';
 
   late final SharedPreferences _preferences;
   late final DemoCatalog _catalog;
@@ -99,6 +99,18 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void changeThemeMode(AppThemeMode themeMode) {
     state = _withDerived(state.copyWith(themeMode: themeMode));
+    _persist();
+  }
+
+  void recordHistoryEntry(LearningHistoryEntry entry) {
+    state = _withDerived(
+      state.copyWith(
+        learningHistory: <LearningHistoryEntry>[
+          entry,
+          ...state.learningHistory,
+        ],
+      ),
+    );
     _persist();
   }
 
@@ -188,6 +200,7 @@ class DemoAppController extends Notifier<DemoAppState> {
       return;
     }
 
+    final previousState = state;
     final lesson = _catalog.lessonById(lessonId);
     if (!_catalog.lessonRequirementsMet(state, lessonId)) {
       return;
@@ -196,16 +209,23 @@ class DemoAppController extends Notifier<DemoAppState> {
     final completedLessonIds = Set<String>.from(state.completedLessonIds)
       ..add(lessonId);
 
-    state = _withDerived(
-      state.copyWith(
+    final candidate = previousState.copyWith(
         currentTrackId: lesson.trackId,
         completedLessonIds: completedLessonIds,
-        xp: state.xp + lesson.xpReward,
-        streak: state.streak + 1,
+        xp: previousState.xp + lesson.xpReward,
+        streak: previousState.streak + 1,
         dailyMissionDone: true,
         focusedLessonId: lessonId,
         focusedPracticeId: null,
-        weeklyActivity: _bumpToday(state.weeklyActivity),
+        weeklyActivity: _bumpToday(previousState.weeklyActivity),
+      );
+
+    state = _withDerived(
+      candidate.copyWith(
+        learningHistory: <LearningHistoryEntry>[
+          ..._completionHistoryEntriesForLesson(previousState, candidate, lesson),
+          ...previousState.learningHistory,
+        ],
       ),
     );
     _persist();
@@ -216,20 +236,32 @@ class DemoAppController extends Notifier<DemoAppState> {
       return;
     }
 
+    final previousState = state;
     final practice = _catalog.practiceById(practiceId);
     final completedPracticeIds = Set<String>.from(state.completedPracticeIds)
       ..add(practiceId);
 
-    state = _withDerived(
-      state.copyWith(
+    final candidate = previousState.copyWith(
         currentTrackId: practice.trackId,
         completedPracticeIds: completedPracticeIds,
-        xp: state.xp + practice.xpReward,
-        streak: state.streak + 1,
+        xp: previousState.xp + practice.xpReward,
+        streak: previousState.streak + 1,
         dailyMissionDone: true,
         focusedPracticeId: practiceId,
         focusedLessonId: null,
-        weeklyActivity: _bumpToday(state.weeklyActivity),
+        weeklyActivity: _bumpToday(previousState.weeklyActivity),
+      );
+
+    state = _withDerived(
+      candidate.copyWith(
+        learningHistory: <LearningHistoryEntry>[
+          ..._completionHistoryEntriesForPractice(
+            previousState,
+            candidate,
+            practice,
+          ),
+          ...previousState.learningHistory,
+        ],
       ),
     );
     _persist();
@@ -260,13 +292,102 @@ class DemoAppController extends Notifier<DemoAppState> {
     final savedCommunityCourseIds =
         Set<String>.from(state.savedCommunityCourseIds)..add(courseId);
 
+    final course = _catalog.courseById(courseId);
     state = _withDerived(
       state.copyWith(
         savedCommunityCourseIds: savedCommunityCourseIds,
         xp: state.xp + 10,
+        learningHistory: <LearningHistoryEntry>[
+          LearningHistoryEntry(
+            id: 'history-course-${DateTime.now().microsecondsSinceEpoch}',
+            kind: LearningHistoryKind.courseSaved,
+            title: 'Saved community course',
+            subtitle: course.title.resolve(state.locale),
+            createdAt: DateTime.now(),
+            refId: course.id,
+          ),
+          ...state.learningHistory,
+        ],
       ),
     );
     _persist();
+  }
+
+  TrackAssessmentResult submitTrackAssessment({
+    required String trackId,
+    required Map<String, String> selectedOptionIds,
+  }) {
+    final previousState = state;
+    final assessment = _catalog.trackById(trackId).assessment!;
+    final correctAnswers = assessment.questions
+        .where(
+          (question) => selectedOptionIds[question.id] == question.correctOptionId,
+        )
+        .length;
+    final totalQuestions = assessment.questions.length;
+    final percent = ((correctAnswers / totalQuestions) * 100).round();
+    final passed = percent >= assessment.passPercent;
+    final timestamp = DateTime.now();
+    final attempt = AssessmentAttemptEntry(
+      trackId: trackId,
+      correctAnswers: correctAnswers,
+      totalQuestions: totalQuestions,
+      percent: percent,
+      passed: passed,
+      completedAt: timestamp,
+    );
+
+    final previousResult = previousState.assessmentResultsByTrackId[trackId];
+    final isBest = previousResult == null || percent >= previousResult.bestPercent;
+    final result = TrackAssessmentResult(
+      trackId: trackId,
+      bestPercent: isBest ? percent : previousResult.bestPercent,
+      lastPercent: percent,
+      bestCorrectAnswers:
+          isBest ? correctAnswers : previousResult.bestCorrectAnswers,
+      lastCorrectAnswers: correctAnswers,
+      attemptCount: (previousResult?.attemptCount ?? 0) + 1,
+      lastAttemptAt: timestamp,
+      lastPassed: passed,
+      history: <AssessmentAttemptEntry>[
+        attempt,
+        ...(previousResult?.history ?? const <AssessmentAttemptEntry>[]),
+      ],
+    );
+
+    final updatedResults =
+        Map<String, TrackAssessmentResult>.from(previousState.assessmentResultsByTrackId)
+          ..[trackId] = result;
+    final updatedAttemptHistory = <AssessmentAttemptEntry>[
+      attempt,
+      ...previousState.assessmentAttemptHistory,
+    ];
+    final updatedHistory = <LearningHistoryEntry>[
+      LearningHistoryEntry(
+        id: 'history-assessment-${timestamp.microsecondsSinceEpoch}',
+        kind: LearningHistoryKind.assessmentCompleted,
+        title: 'Track assessment completed',
+        subtitle: _catalog.trackById(trackId).title.resolve(previousState.locale),
+        scoreLabel: '$correctAnswers/$totalQuestions | $percent%',
+        createdAt: timestamp,
+        trackId: trackId,
+        refId: assessment.id,
+      ),
+      ...previousState.learningHistory,
+    ];
+
+    state = _withDerived(
+      previousState.copyWith(
+        assessmentResultsByTrackId: updatedResults,
+        assessmentAttemptHistory: updatedAttemptHistory,
+        learningHistory: updatedHistory,
+        xp: previousState.xp + (passed ? 24 : 10),
+        dailyMissionDone: true,
+        weeklyActivity: _bumpToday(previousState.weeklyActivity),
+      ),
+    );
+    _persist();
+    return result;
   }
 
   void sendAiMessage(String message) {
@@ -305,12 +426,14 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void resetDemo() {
     final locale = state.locale;
+    final themeMode = state.themeMode;
     final currentUser = state.user ??
         _createUser(
           email: 'demo@zerdestudy.app',
         );
     final seeded = _seedState().copyWith(
       locale: locale,
+      themeMode: themeMode,
       isAuthenticated: true,
       user: currentUser,
     );
@@ -360,6 +483,95 @@ class DemoAppController extends Notifier<DemoAppState> {
           correctAnswers: 1,
         ),
       },
+      assessmentResultsByTrackId: <String, TrackAssessmentResult>{
+        'fundamentals': TrackAssessmentResult(
+          trackId: 'fundamentals',
+          bestPercent: 80,
+          lastPercent: 80,
+          bestCorrectAnswers: 8,
+          lastCorrectAnswers: 8,
+          attemptCount: 1,
+          lastAttemptAt: DateTime(2026, 3, 16, 11, 20),
+          lastPassed: true,
+          history: <AssessmentAttemptEntry>[
+            AssessmentAttemptEntry(
+              trackId: 'fundamentals',
+              correctAnswers: 8,
+              totalQuestions: 10,
+              percent: 80,
+              passed: true,
+              completedAt: DateTime(2026, 3, 16, 11, 20),
+            ),
+          ],
+        ),
+        'frontend': TrackAssessmentResult(
+          trackId: 'frontend',
+          bestPercent: 70,
+          lastPercent: 70,
+          bestCorrectAnswers: 7,
+          lastCorrectAnswers: 7,
+          attemptCount: 1,
+          lastAttemptAt: DateTime(2026, 3, 17, 10, 0),
+          lastPassed: true,
+          history: <AssessmentAttemptEntry>[
+            AssessmentAttemptEntry(
+              trackId: 'frontend',
+              correctAnswers: 7,
+              totalQuestions: 10,
+              percent: 70,
+              passed: true,
+              completedAt: DateTime(2026, 3, 17, 10, 0),
+            ),
+          ],
+        ),
+      },
+      assessmentAttemptHistory: <AssessmentAttemptEntry>[
+        AssessmentAttemptEntry(
+          trackId: 'frontend',
+          correctAnswers: 7,
+          totalQuestions: 10,
+          percent: 70,
+          passed: true,
+          completedAt: DateTime(2026, 3, 17, 10, 0),
+        ),
+        AssessmentAttemptEntry(
+          trackId: 'fundamentals',
+          correctAnswers: 8,
+          totalQuestions: 10,
+          percent: 80,
+          passed: true,
+          completedAt: DateTime(2026, 3, 16, 11, 20),
+        ),
+      ],
+      learningHistory: <LearningHistoryEntry>[
+        LearningHistoryEntry(
+          id: 'history-seed-assessment-frontend',
+          kind: LearningHistoryKind.assessmentCompleted,
+          title: 'Track assessment completed',
+          subtitle: 'Frontend',
+          scoreLabel: '7/10 | 70%',
+          createdAt: DateTime(2026, 3, 17, 10, 0),
+          trackId: 'frontend',
+          refId: 'frontend_assessment',
+        ),
+        LearningHistoryEntry(
+          id: 'history-seed-lesson-front',
+          kind: LearningHistoryKind.lessonCompleted,
+          title: 'Lesson completed',
+          subtitle: 'UI structure and semantic HTML',
+          createdAt: DateTime(2026, 3, 17, 9, 20),
+          trackId: 'frontend',
+          refId: 'frontend_lesson_1_1',
+        ),
+        LearningHistoryEntry(
+          id: 'history-seed-course-saved',
+          kind: LearningHistoryKind.courseSaved,
+          title: 'Saved community course',
+          subtitle: 'ML Journal Club Lite',
+          createdAt: DateTime(2026, 3, 16, 14, 15),
+          refId: 'course_ml_journal_club',
+        ),
+      ],
       viewedCommunityCourseIds: <String>{
         'course_portfolio_engineering',
         'course_sql_for_analysts',
@@ -411,6 +623,126 @@ class DemoAppController extends Notifier<DemoAppState> {
     }
     updated[updated.length - 1] = updated.last + 1;
     return updated;
+  }
+
+  List<LearningHistoryEntry> _completionHistoryEntriesForLesson(
+    DemoAppState previousState,
+    DemoAppState nextState,
+    LessonItem lesson,
+  ) {
+    final module = _catalog
+        .trackById(lesson.trackId)
+        .modules
+        .firstWhere((item) => item.id == lesson.moduleId);
+    final timestamp = DateTime.now();
+    final entries = <LearningHistoryEntry>[
+      LearningHistoryEntry(
+        id: 'history-lesson-${timestamp.microsecondsSinceEpoch}',
+        kind: LearningHistoryKind.lessonCompleted,
+        title: 'Lesson completed',
+        subtitle: lesson.title.resolve(previousState.locale),
+        createdAt: timestamp,
+        trackId: lesson.trackId,
+        refId: lesson.id,
+      ),
+    ];
+
+    if (!_isModuleCompleted(previousState, module) && _isModuleCompleted(nextState, module)) {
+      entries.add(
+        LearningHistoryEntry(
+          id: 'history-module-${timestamp.microsecondsSinceEpoch}',
+          kind: LearningHistoryKind.moduleCompleted,
+          title: 'Module completed',
+          subtitle: module.title.resolve(previousState.locale),
+          createdAt: timestamp,
+          trackId: lesson.trackId,
+          refId: module.id,
+        ),
+      );
+    }
+    if (!_isTrackCompleted(previousState, lesson.trackId) &&
+        _isTrackCompleted(nextState, lesson.trackId)) {
+      entries.add(
+        LearningHistoryEntry(
+          id: 'history-track-${timestamp.microsecondsSinceEpoch}',
+          kind: LearningHistoryKind.trackCompleted,
+          title: 'Track completed',
+          subtitle: _catalog.trackById(lesson.trackId).title.resolve(previousState.locale),
+          createdAt: timestamp,
+          trackId: lesson.trackId,
+          refId: lesson.trackId,
+        ),
+      );
+    }
+    return entries;
+  }
+
+  List<LearningHistoryEntry> _completionHistoryEntriesForPractice(
+    DemoAppState previousState,
+    DemoAppState nextState,
+    PracticeTask practice,
+  ) {
+    final module = _catalog
+        .trackById(practice.trackId)
+        .modules
+        .firstWhere((item) => item.id == practice.moduleId);
+    final timestamp = DateTime.now();
+    final entries = <LearningHistoryEntry>[
+      LearningHistoryEntry(
+        id: 'history-practice-${timestamp.microsecondsSinceEpoch}',
+        kind: LearningHistoryKind.practiceCompleted,
+        title: 'Practice completed',
+        subtitle: practice.title.resolve(previousState.locale),
+        createdAt: timestamp,
+        trackId: practice.trackId,
+        refId: practice.id,
+      ),
+    ];
+
+    if (!_isModuleCompleted(previousState, module) && _isModuleCompleted(nextState, module)) {
+      entries.add(
+        LearningHistoryEntry(
+          id: 'history-module-${timestamp.microsecondsSinceEpoch}',
+          kind: LearningHistoryKind.moduleCompleted,
+          title: 'Module completed',
+          subtitle: module.title.resolve(previousState.locale),
+          createdAt: timestamp,
+          trackId: practice.trackId,
+          refId: module.id,
+        ),
+      );
+    }
+    if (!_isTrackCompleted(previousState, practice.trackId) &&
+        _isTrackCompleted(nextState, practice.trackId)) {
+      entries.add(
+        LearningHistoryEntry(
+          id: 'history-track-${timestamp.microsecondsSinceEpoch}',
+          kind: LearningHistoryKind.trackCompleted,
+          title: 'Track completed',
+          subtitle:
+              _catalog.trackById(practice.trackId).title.resolve(previousState.locale),
+          createdAt: timestamp,
+          trackId: practice.trackId,
+          refId: practice.trackId,
+        ),
+      );
+    }
+    return entries;
+  }
+
+  bool _isModuleCompleted(DemoAppState candidate, LearningModule module) {
+    final lessonsDone = module.lessons.every(
+      (lesson) => candidate.completedLessonIds.contains(lesson.id),
+    );
+    final practiceDone = module.practice == null ||
+        candidate.completedPracticeIds.contains(module.practice!.id);
+    return lessonsDone && practiceDone;
+  }
+
+  bool _isTrackCompleted(DemoAppState candidate, String trackId) {
+    final availability = _catalog.trackAvailabilityFor(candidate, trackId);
+    return availability == TrackAvailability.completed ||
+        availability == TrackAvailability.mastered;
   }
 
   void _persist() {

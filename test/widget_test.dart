@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:frontend_flutter/app/state/app_locale.dart';
 import 'package:frontend_flutter/app/state/demo_app_controller.dart';
+import 'package:frontend_flutter/core/common_widgets/glow_card.dart';
 import 'package:frontend_flutter/core/localization/app_localizations.dart';
 import 'package:frontend_flutter/core/theme/app_theme.dart';
 import 'package:frontend_flutter/features/ai/presentation/pages/ai_mentor_page.dart';
@@ -13,6 +14,7 @@ import 'package:frontend_flutter/features/home/presentation/pages/community_cour
 import 'package:frontend_flutter/features/home/presentation/pages/community_courses_page.dart';
 import 'package:frontend_flutter/features/home/presentation/pages/home_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/lesson_page.dart';
+import 'package:frontend_flutter/features/learning/presentation/pages/track_assessment_page.dart';
 import 'package:frontend_flutter/features/profile/presentation/pages/profile_page.dart';
 import 'package:frontend_flutter/main.dart';
 
@@ -79,7 +81,12 @@ void main() {
     await pumpScene(tester);
 
     expect(find.text('Log in'), findsOneWidget);
-    await tester.tap(find.text('GitHub'));
+    expect(find.text('Войти через'), findsOneWidget);
+    expect(find.text('GitHub'), findsOneWidget);
+    expect(find.text('Google'), findsOneWidget);
+    expect(find.text('Apple ID'), findsOneWidget);
+
+    await tester.tap(find.text('Google'));
     await pumpScene(tester);
 
     expect(find.text('Daily mission'), findsOneWidget);
@@ -118,20 +125,18 @@ void main() {
     await tester.tap(find.byIcon(Icons.account_tree_outlined));
     await pumpScene(tester);
 
-    expect(
-      find.textContaining('One unified tree starts from the computer science'),
-      findsOneWidget,
-    );
-    expect(find.text('Core branches'), findsOneWidget);
-    expect(find.text('Mathematical Analysis'), findsOneWidget);
-    expect(find.text('Discrete Math'), findsOneWidget);
-    expect(find.text('Linear Algebra'), findsOneWidget);
+    expect(find.textContaining('One connected knowledge tree grows'), findsOneWidget);
+    expect(find.text('Computer Science'), findsWidgets);
+    expect(find.text('Operating Systems'), findsWidgets);
+    expect(find.text('Frontend'), findsWidgets);
+    expect(find.text('Visible branches'), findsOneWidget);
 
     await tester.tap(find.text('Discrete Math').first);
     await pumpScene(tester);
 
     expect(find.text('Track overview'), findsOneWidget);
     expect(find.text('Modules'), findsOneWidget);
+    expect(find.text('Track assessment'), findsOneWidget);
   });
 
   testWidgets('lesson requires quiz and memory lab before completion', (tester) async {
@@ -237,6 +242,78 @@ void main() {
     expect(find.text('Save course'), findsOneWidget);
   });
 
+  testWidgets('track assessment submits and persists result', (tester) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+
+    await tester.pumpWidget(
+      buildTestApp(
+        container,
+        const TrackAssessmentPage(trackId: 'frontend'),
+      ),
+    );
+    await pumpScene(tester);
+
+    final assessment = container
+        .read(demoCatalogProvider)
+        .assessmentForTrack('frontend');
+
+    for (final question in assessment.questions) {
+      final prompt = question.prompt.resolve(AppLocale.en);
+      final correctOption = question.options
+          .firstWhere((option) => option.id == question.correctOptionId)
+          .label
+          .resolve(AppLocale.en);
+      final card = find.ancestor(
+        of: find.text(prompt),
+        matching: find.byType(GlowCard),
+      );
+
+      await tester.scrollUntilVisible(
+        find.text(prompt),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(
+        find.descendant(of: card.first, matching: find.text(correctOption)).first,
+      );
+      await pumpScene(tester);
+    }
+
+    await tester.scrollUntilVisible(
+      find.text('Submit assessment'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Submit assessment'));
+    await pumpScene(tester);
+
+    final submittedResult = container
+        .read(demoAppControllerProvider)
+        .assessmentResultsByTrackId['frontend'];
+    expect(submittedResult?.bestPercent, 100);
+    expect(submittedResult?.lastPercent, 100);
+    expect(submittedResult?.attemptCount, greaterThanOrEqualTo(1));
+
+    final preferences = await SharedPreferences.getInstance();
+    final storedState = preferences.getString('zerdestudy_demo_state_v4');
+    expect(storedState, isNotNull);
+
+    final restarted = await createContainer(
+      mockValues: <String, Object>{
+        'zerdestudy_demo_state_v4': storedState!,
+      },
+    );
+    expect(
+      restarted
+          .read(demoAppControllerProvider)
+          .assessmentResultsByTrackId['frontend']
+          ?.bestPercent,
+      100,
+    );
+  });
+
   testWidgets('profile reset restores seeded progress', (tester) async {
     await configureSurface(tester);
     final container = await createContainer();
@@ -280,5 +357,54 @@ void main() {
 
     expect(find.text('Unlocked'), findsOneWidget);
     expect(find.text('Locked'), findsOneWidget);
+  });
+
+  testWidgets('profile shows favorites completed items and history', (tester) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+    final controller = container.read(demoAppControllerProvider.notifier);
+    final catalog = container.read(demoCatalogProvider);
+    controller.changeLocale(AppLocale.en);
+    controller.loginWithProvider('google');
+    controller.saveCommunityCourse('course_secure_api_clinic');
+
+    final frontend = catalog.trackById('frontend');
+    for (final module in frontend.modules) {
+      for (final lesson in module.lessons) {
+        controller.completeQuiz(lesson.quizzes.first.id, isCorrect: true);
+        controller.completeTrainer(lesson.codeTrainers.first.id);
+        controller.completeLesson(lesson.id);
+      }
+      if (module.practice != null) {
+        controller.completePractice(module.practice!.id);
+      }
+    }
+    controller.submitTrackAssessment(
+      trackId: 'frontend',
+      selectedOptionIds: <String, String>{
+        for (final question in catalog.assessmentForTrack('frontend').questions)
+          question.id: question.correctOptionId,
+      },
+    );
+
+    await tester.pumpWidget(buildTestApp(container, const ProfilePage()));
+    await pumpScene(tester);
+
+    expect(find.text('Favorites'), findsOneWidget);
+    expect(find.text('Secure API Clinic'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Completed'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Completed'), findsOneWidget);
+    expect(find.text('Frontend'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Result history'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Result history'), findsOneWidget);
+    expect(find.text('Track assessment completed'), findsOneWidget);
   });
 }

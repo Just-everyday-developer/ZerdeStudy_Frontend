@@ -30,6 +30,14 @@ class ProfilePage extends ConsumerWidget {
       ...unlocked.take(3),
       ...achievements.where((item) => !item.unlocked).take(1),
     ].take(4).toList(growable: false);
+    final favorites = catalog.savedCoursesFor(state);
+    final completedTracks = catalog.completedTracksFor(state);
+    final completedModules = catalog.completedModulesFor(state);
+    final completedLessons = catalog.completedLessonsFor(state);
+    final completedPractices = catalog.completedPracticesFor(state);
+    final history = state.learningHistory
+        .toList(growable: false)
+      ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
     final user = state.user;
     final colors = context.appColors;
 
@@ -179,6 +187,134 @@ class ProfilePage extends ConsumerWidget {
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          GlowCard(
+            accent: colors.primary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Favorites',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    Text(
+                      '${favorites.length} saved',
+                      style: TextStyle(color: colors.textSecondary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (favorites.isEmpty)
+                  Text(
+                    'Save community courses to keep them here for quick access.',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      height: 1.4,
+                    ),
+                  )
+                else
+                  ...favorites.take(4).map(
+                        (course) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _ProfileLinkTile(
+                            title: course.title.resolve(state.locale),
+                            subtitle:
+                                '${course.author.name}  •  ${course.level}  •  ${course.rating.toStringAsFixed(1)}',
+                            accent: course.color,
+                            icon: Icons.bookmark_rounded,
+                            onTap: () => context.push(
+                              AppRoutes.courseById(course.id),
+                            ),
+                          ),
+                        ),
+                      ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          GlowCard(
+            accent: colors.accent,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Completed',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _Pill(label: 'Tracks', value: '${completedTracks.length}'),
+                    _Pill(label: 'Modules', value: '${completedModules.length}'),
+                    _Pill(label: 'Lessons', value: '${completedLessons.length}'),
+                    _Pill(label: 'Practices', value: '${completedPractices.length}'),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (completedTracks.isNotEmpty)
+                  ...completedTracks.take(3).map(
+                        (track) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _ProfileLinkTile(
+                            title: track.title.resolve(state.locale),
+                            subtitle:
+                                'Assessment ${catalog.bestAssessmentPercentFor(state, track.id)}%  •  ${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} units',
+                            accent: track.color,
+                            icon: Icons.check_circle_rounded,
+                            onTap: () => context.push(
+                              AppRoutes.trackById(track.id),
+                            ),
+                          ),
+                        ),
+                      )
+                else
+                  Text(
+                    'Completed tracks, modules, lessons, and practices will appear here.',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          GlowCard(
+            accent: colors.success,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Result history',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                if (history.isEmpty)
+                  Text(
+                    'Assessment attempts and completion events will appear here.',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      height: 1.4,
+                    ),
+                  )
+                else
+                  ...history.take(8).map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _HistoryTile(
+                            entry: entry,
+                          ),
+                        ),
+                      ),
               ],
             ),
           ),
@@ -585,5 +721,169 @@ class _InfoTag extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _ProfileLinkTile extends StatelessWidget {
+  const _ProfileLinkTile({
+    required this.title,
+    required this.subtitle,
+    required this.accent,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final Color accent;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: colors.surfaceSoft,
+          border: Border.all(color: colors.divider),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: accent.withValues(alpha: 0.16),
+              child: Icon(icon, color: accent),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: colors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryTile extends StatelessWidget {
+  const _HistoryTile({
+    required this.entry,
+  });
+
+  final LearningHistoryEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = switch (entry.kind) {
+      LearningHistoryKind.lessonCompleted => colors.primary,
+      LearningHistoryKind.practiceCompleted => colors.accent,
+      LearningHistoryKind.moduleCompleted => colors.success,
+      LearningHistoryKind.trackCompleted => const Color(0xFFFFD166),
+      LearningHistoryKind.assessmentCompleted => colors.success,
+      LearningHistoryKind.courseSaved => colors.primary,
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: colors.surfaceSoft,
+        border: Border.all(color: colors.divider),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            backgroundColor: accent.withValues(alpha: 0.16),
+            child: Icon(
+              switch (entry.kind) {
+                LearningHistoryKind.lessonCompleted => Icons.play_lesson_rounded,
+                LearningHistoryKind.practiceCompleted => Icons.code_rounded,
+                LearningHistoryKind.moduleCompleted => Icons.layers_rounded,
+                LearningHistoryKind.trackCompleted => Icons.account_tree_rounded,
+                LearningHistoryKind.assessmentCompleted =>
+                  Icons.assignment_turned_in_rounded,
+                LearningHistoryKind.courseSaved => Icons.bookmark_rounded,
+              },
+              color: accent,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.title,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (entry.subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    entry.subtitle!,
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Text(
+                  [
+                    if (entry.scoreLabel != null) entry.scoreLabel!,
+                    _formatHistoryTimestamp(entry.createdAt),
+                  ].join('  •  '),
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatHistoryTimestamp(DateTime timestamp) {
+    final month = timestamp.month.toString().padLeft(2, '0');
+    final day = timestamp.day.toString().padLeft(2, '0');
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    return '$day.$month ${timestamp.year}  $hour:$minute';
   }
 }

@@ -25,6 +25,7 @@ class TrackPage extends ConsumerWidget {
     final catalog = ref.watch(demoCatalogProvider);
     final track = catalog.trackById(trackId);
     final progress = catalog.progressForTrack(state, trackId);
+    final assessmentResult = catalog.assessmentResultFor(state, trackId);
     final colors = context.appColors;
 
     return AppPageScaffold(
@@ -81,6 +82,64 @@ class TrackPage extends ConsumerWidget {
                 Text(
                   '${progress.completedUnits}/${progress.totalUnits} units | ${progress.completedQuizzes}/${progress.totalQuizzes} quizzes | ${progress.completedTrainers}/${progress.totalTrainers} labs',
                   style: TextStyle(color: colors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: colors.surfaceSoft,
+                    border: Border.all(color: colors.divider),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Track assessment',
+                              style: TextStyle(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            assessmentResult == null
+                                ? 'Not started'
+                                : '${assessmentResult.bestPercent}% best',
+                            style: TextStyle(
+                              color: assessmentResult == null
+                                  ? colors.textSecondary
+                                  : track.color,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        assessmentResult == null
+                            ? 'Complete the 10-question branch assessment to store your result in the tree, profile, and statistics.'
+                            : 'Last result: ${assessmentResult.lastPercent}%  •  Attempts: ${assessmentResult.attemptCount}',
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      AppButton.secondary(
+                        label: assessmentResult == null
+                            ? 'Start assessment'
+                            : 'Retake assessment',
+                        icon: Icons.assignment_turned_in_rounded,
+                        onPressed: () => context.push(
+                          AppRoutes.assessmentByTrackId(track.id),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 18),
                 AppButton.primary(

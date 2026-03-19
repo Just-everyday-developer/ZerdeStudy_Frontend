@@ -21,6 +21,8 @@ class StatsPage extends ConsumerWidget {
         .achievementsFor(state)
         .where((item) => item.unlocked)
         .length;
+    final passedAssessments = catalog.passedAssessments(state);
+    final averageAssessment = catalog.averageBestAssessmentPercent(state);
     final colors = context.appColors;
 
     return AppPageScaffold(
@@ -61,6 +63,12 @@ class StatsPage extends ConsumerWidget {
                     _MetricTile(
                       label: 'Achievements',
                       value: '$unlockedAchievements',
+                      width: itemWidth,
+                    ),
+                    _MetricTile(
+                      label: 'Assessments',
+                      value:
+                          '$passedAssessments/${state.assessmentResultsByTrackId.length}',
                       width: itemWidth,
                     ),
                   ],
@@ -120,6 +128,18 @@ class StatsPage extends ConsumerWidget {
                   label: 'AI sessions',
                   value:
                       '${state.aiMessages.where((item) => item.author == AiAuthor.user).length}',
+                ),
+                _BreakdownRow(
+                  label: 'Assessment passes',
+                  value: '$passedAssessments',
+                ),
+                _BreakdownRow(
+                  label: 'Assessment average',
+                  value: '$averageAssessment%',
+                ),
+                _BreakdownRow(
+                  label: 'Assessment attempts',
+                  value: '${state.assessmentAttemptHistory.length}',
                 ),
               ],
             ),
@@ -202,7 +222,7 @@ class StatsPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${progress.completedUnits}/${progress.totalUnits} units | ${progress.state.name}',
+                          '${progress.completedUnits}/${progress.totalUnits} units | ${progress.state.name} | assessment ${catalog.bestAssessmentPercentFor(state, track.id)}%',
                           style: TextStyle(color: colors.textSecondary),
                         ),
                         const SizedBox(height: 8),

@@ -9,10 +9,7 @@ import 'demo_models.dart';
 
 class DemoCatalog {
   DemoCatalog()
-      : tracks = <LearningTrack>[
-          ...buildComputerScienceTracks(),
-          ...buildItSphereTracks(),
-        ],
+      : tracks = _buildTracksWithAssessments(),
         communityCourses = _buildCommunityCourses(),
         _leaderboardSeed = _buildLeaderboardSeed();
 
@@ -48,6 +45,68 @@ class DemoCatalog {
 
   CommunityCourse courseById(String courseId) =>
       _coursesById[courseId] ?? communityCourses.first;
+
+  TrackAssessment assessmentForTrack(String trackId) =>
+      trackById(trackId).assessment ??
+      _buildAssessmentForTrack(trackById(trackId), tracks);
+
+  TrackAssessmentResult? assessmentResultFor(DemoAppState state, String trackId) =>
+      state.assessmentResultsByTrackId[trackId];
+
+  int bestAssessmentPercentFor(DemoAppState state, String trackId) =>
+      assessmentResultFor(state, trackId)?.bestPercent ?? 0;
+
+  int lastAssessmentPercentFor(DemoAppState state, String trackId) =>
+      assessmentResultFor(state, trackId)?.lastPercent ?? 0;
+
+  int passedAssessments(DemoAppState state) {
+    return state.assessmentResultsByTrackId.values
+        .where((result) => result.lastPassed)
+        .length;
+  }
+
+  int averageBestAssessmentPercent(DemoAppState state) {
+    final results = state.assessmentResultsByTrackId.values.toList(growable: false);
+    if (results.isEmpty) {
+      return 0;
+    }
+    final total = results.fold<int>(0, (sum, result) => sum + result.bestPercent);
+    return (total / results.length).round();
+  }
+
+  List<CommunityCourse> savedCoursesFor(DemoAppState state) {
+    return communityCourses
+        .where((course) => state.savedCommunityCourseIds.contains(course.id))
+        .toList(growable: false);
+  }
+
+  List<LearningTrack> completedTracksFor(DemoAppState state) {
+    return tracks
+        .where((track) => _isTrackFinished(state, track.id))
+        .toList(growable: false);
+  }
+
+  List<LearningModule> completedModulesFor(DemoAppState state) {
+    return <LearningModule>[
+      for (final track in tracks)
+        for (final module in track.modules)
+          if (_isModuleCompleted(state, module)) module,
+    ];
+  }
+
+  List<LessonItem> completedLessonsFor(DemoAppState state) {
+    return <LessonItem>[
+      for (final lesson in _lessonsById.values)
+        if (state.completedLessonIds.contains(lesson.id)) lesson,
+    ];
+  }
+
+  List<PracticeTask> completedPracticesFor(DemoAppState state) {
+    return <PracticeTask>[
+      for (final practice in _practicesById.values)
+        if (state.completedPracticeIds.contains(practice.id)) practice,
+    ];
+  }
 
   List<LearningTrack> tracksForZone(TrackZone zone) {
     return tracks.where((track) => track.zone == zone).toList(growable: false);
@@ -164,6 +223,11 @@ class DemoCatalog {
   int totalTrainers() =>
       tracks.fold<int>(0, (sum, track) => sum + track.totalTrainers);
 
+  int totalAssessmentQuestions() => tracks.fold<int>(
+        0,
+        (sum, track) => sum + (track.assessment?.questions.length ?? 0),
+      );
+
   int completedTracks(DemoAppState state) {
     return tracks
         .where((track) {
@@ -187,6 +251,10 @@ class DemoCatalog {
     final completedTrainers = state.completedTrainerIds.length;
     final userMessages =
         state.aiMessages.where((message) => message.author == AiAuthor.user).length;
+    final assessmentPassed = passedAssessments(state);
+    final strongAssessmentScores = state.assessmentResultsByTrackId.values
+        .where((result) => result.bestPercent >= 80)
+        .length;
     final csDone = [
       'mathematics',
       'mathematical_analysis',
@@ -272,6 +340,8 @@ class DemoCatalog {
       _achievement('ml_pathfinder', 'ML pathfinder', 'Close the ML Engineer branch.', Icons.psychology_alt_rounded, 1, mlEngineerDone),
       _achievement('security_stack', 'Security stack', 'Finish Information Security and Cybersecurity.', Icons.shield_rounded, 2, securityStackDone),
       _achievement('community_curator', 'Community curator', 'View or save 4 community courses.', Icons.groups_rounded, 4, courseSignals),
+      _achievement('assessment_starter', 'Assessment starter', 'Pass 3 branch assessments.', Icons.assignment_turned_in_rounded, 3, assessmentPassed),
+      _achievement('assessment_sharp', 'Assessment sharp', 'Reach 80% or more on 4 assessments.', Icons.rule_rounded, 4, strongAssessmentScores),
       _achievement('mastery_badges', 'Mastery badges', 'Master 2 tracks with perfect quiz accuracy.', Icons.workspace_premium_rounded, 2, masteredTracks(state)),
     ];
   }
@@ -302,12 +372,27 @@ class DemoCatalog {
   }
 
   List<LocalizedText> recentMilestonesFor(DemoAppState state) {
-    return <LocalizedText>[
-      sameText('Completed ${totalCompletedUnits(state)} units across ${_activeTracks(state)} active branches.'),
+    final history = state.learningHistory.take(3).toList(growable: false);
+    final summary = <LocalizedText>[
+      sameText(
+        'Completed ${totalCompletedUnits(state)} units across ${_activeTracks(state)} active branches.',
+      ),
       sameText('Quiz accuracy: ${(state.quizAccuracy * 100).round()}%.'),
-      sameText('Community courses: ${state.viewedCommunityCourseIds.length} viewed, ${state.savedCommunityCourseIds.length} saved.'),
-      sameText('Mastered tracks: ${masteredTracks(state)}.'),
+      sameText(
+        'Assessment average: ${averageBestAssessmentPercent(state)}% across ${state.assessmentResultsByTrackId.length} branches.',
+      ),
+      sameText(
+        'Community courses: ${state.viewedCommunityCourseIds.length} viewed, ${state.savedCommunityCourseIds.length} saved.',
+      ),
     ];
+    return <LocalizedText>[
+      ...history.map(
+        (entry) => sameText(
+          '${entry.title}${entry.subtitle == null ? '' : ': ${entry.subtitle}'}${entry.scoreLabel == null ? '' : ' (${entry.scoreLabel})'}',
+        ),
+      ),
+      ...summary,
+    ].take(4).toList(growable: false);
   }
 
   List<String> suggestedPrompts(DemoAppState state) {
@@ -609,4 +694,339 @@ List<LeaderboardEntry> _buildLeaderboardSeed() {
     LeaderboardEntry(id: 'l17', name: 'Asel', xp: 650, level: 4, role: 'Security Apprentice', focus: 'Cybersecurity', isCurrentUser: false),
     LeaderboardEntry(id: 'l18', name: 'Ilia', xp: 620, level: 4, role: 'Cloud Curious', focus: 'SRE / DevOps', isCurrentUser: false),
   ];
+}
+
+List<LearningTrack> _buildTracksWithAssessments() {
+  final baseTracks = <LearningTrack>[
+    ...buildComputerScienceTracks(),
+    ...buildItSphereTracks(),
+  ];
+
+  return baseTracks
+      .map(
+        (track) => track.copyWith(
+          assessment: _buildAssessmentForTrack(track, baseTracks),
+        ),
+      )
+      .toList(growable: false);
+}
+
+TrackAssessment _buildAssessmentForTrack(
+  LearningTrack track,
+  List<LearningTrack> allTracks,
+) {
+  final lessons = <LessonItem>[
+    for (final module in track.modules) ...module.lessons,
+  ];
+  final practices = <PracticeTask>[
+    for (final module in track.modules)
+      if (module.practice != null) module.practice!,
+  ];
+  final connectionPool = allTracks
+      .where((candidate) => track.connections.contains(candidate.id))
+      .toList(growable: false);
+  final outsidePool = allTracks
+      .where(
+        (candidate) =>
+            candidate.id != track.id && !track.connections.contains(candidate.id),
+      )
+      .toList(growable: false);
+
+  final questions = <TrackAssessmentQuestion>[
+    for (final lesson in lessons.take(4))
+      _lessonAssessmentQuestion(track, lesson),
+    _moduleLessonQuestion(
+      id: '${track.id}_assessment_question_5',
+      track: track,
+      module: track.modules.first,
+      correctLesson: track.modules.first.lessons.first,
+      distractors: <String>[
+        if (track.modules.first.lessons.length > 1)
+          track.modules.first.lessons[1].title.en,
+        if (track.modules.length > 1) track.modules[1].lessons.first.title.en,
+        if (outsidePool.isNotEmpty)
+          outsidePool.first.modules.first.lessons.first.title.en,
+      ],
+      seed: '${track.id}-module-a',
+    ),
+    _moduleLessonQuestion(
+      id: '${track.id}_assessment_question_6',
+      track: track,
+      module: track.modules[1],
+      correctLesson: track.modules[1].lessons.first,
+      distractors: <String>[
+        if (track.modules[1].lessons.length > 1)
+          track.modules[1].lessons[1].title.en,
+        track.modules.first.lessons.first.title.en,
+        if (outsidePool.length > 1)
+          outsidePool[1].modules.first.lessons.first.title.en,
+      ],
+      seed: '${track.id}-module-b',
+    ),
+    _practiceQuestion(
+      id: '${track.id}_assessment_question_7',
+      module: track.modules.first,
+      correctPractice: practices.first,
+      distractors: _practiceDistractors(
+        allTracks,
+        excludedPracticeIds: <String>{practices.first.id},
+      ),
+      seed: '${track.id}-practice-a',
+    ),
+    _practiceQuestion(
+      id: '${track.id}_assessment_question_8',
+      module: track.modules[1],
+      correctPractice: practices[1],
+      distractors: _practiceDistractors(
+        allTracks,
+        excludedPracticeIds: <String>{practices.first.id, practices[1].id},
+      ),
+      seed: '${track.id}-practice-b',
+    ),
+    _connectedTrackQuestion(
+      id: '${track.id}_assessment_question_9',
+      track: track,
+      correctTrack: connectionPool.isNotEmpty ? connectionPool.first : outsidePool.first,
+      distractorTracks: outsidePool.take(3).toList(growable: false),
+      seed: '${track.id}-connections',
+    ),
+    _zoneQuestion(
+      id: '${track.id}_assessment_question_10',
+      track: track,
+      seed: '${track.id}-zone',
+    ),
+  ];
+
+  return TrackAssessment(
+    id: '${track.id}_assessment',
+    trackId: track.id,
+    title: sameText('${track.title.en} assessment'),
+    summary: sameText(
+      'Answer 10 questions to validate your understanding of ${track.title.en}.',
+    ),
+    passPercent: 70,
+    questions: questions,
+  );
+}
+
+TrackAssessmentQuestion _lessonAssessmentQuestion(
+  LearningTrack track,
+  LessonItem lesson,
+) {
+  final quiz = lesson.quizzes.first;
+  return TrackAssessmentQuestion(
+    id: '${track.id}_assessment_${lesson.id}',
+    prompt: sameText(
+      '${lesson.title.en}: what does the code example print or return?',
+    ),
+    options: _rotateAssessmentOptions(
+      quiz.options
+          .map(
+            (option) => TrackAssessmentOption(
+              id: option.id,
+              label: option.label,
+            ),
+          )
+          .toList(growable: false),
+      lesson.id,
+    ),
+    correctOptionId: quiz.correctOptionId,
+    explanation: quiz.explanation,
+  );
+}
+
+TrackAssessmentQuestion _moduleLessonQuestion({
+  required String id,
+  required LearningTrack track,
+  required LearningModule module,
+  required LessonItem correctLesson,
+  required List<String> distractors,
+  required String seed,
+}) {
+  final options = _rotateAssessmentOptions(
+    _buildStringOptions(
+      correctId: 'correct',
+      correctLabel: correctLesson.title.en,
+      distractorLabels: distractors,
+    ),
+    seed,
+  );
+
+  return TrackAssessmentQuestion(
+    id: id,
+    prompt: sameText(
+      'Which lesson belongs to the module "${module.title.en}" in ${track.title.en}?',
+    ),
+    options: options,
+    correctOptionId: 'correct',
+    explanation: sameText(
+      '${correctLesson.title.en} is part of ${module.title.en}.',
+    ),
+  );
+}
+
+TrackAssessmentQuestion _practiceQuestion({
+  required String id,
+  required LearningModule module,
+  required PracticeTask correctPractice,
+  required List<String> distractors,
+  required String seed,
+}) {
+  final options = _rotateAssessmentOptions(
+    _buildStringOptions(
+      correctId: 'correct',
+      correctLabel: correctPractice.title.en,
+      distractorLabels: distractors,
+    ),
+    seed,
+  );
+
+  return TrackAssessmentQuestion(
+    id: id,
+    prompt: sameText(
+      'Which practice belongs to the module "${module.title.en}"?',
+    ),
+    options: options,
+    correctOptionId: 'correct',
+    explanation: sameText(
+      '${correctPractice.title.en} is the hands-on task for ${module.title.en}.',
+    ),
+  );
+}
+
+TrackAssessmentQuestion _connectedTrackQuestion({
+  required String id,
+  required LearningTrack track,
+  required LearningTrack correctTrack,
+  required List<LearningTrack> distractorTracks,
+  required String seed,
+}) {
+  final options = _rotateAssessmentOptions(
+    _buildStringOptions(
+      correctId: 'correct',
+      correctLabel: correctTrack.title.en,
+      distractorLabels: distractorTracks.map((item) => item.title.en).toList(),
+    ),
+    seed,
+  );
+
+  return TrackAssessmentQuestion(
+    id: id,
+    prompt: sameText(
+      'Which branch is directly connected to ${track.title.en} on the knowledge tree?',
+    ),
+    options: options,
+    correctOptionId: 'correct',
+    explanation: sameText(
+      '${correctTrack.title.en} is connected to ${track.title.en} in the map configuration.',
+    ),
+  );
+}
+
+TrackAssessmentQuestion _zoneQuestion({
+  required String id,
+  required LearningTrack track,
+  required String seed,
+}) {
+  final correctLabel = track.zone == TrackZone.computerScienceCore
+      ? 'Computer Science Core'
+      : 'Applied IT Spheres';
+  final options = _rotateAssessmentOptions(
+    const <TrackAssessmentOption>[
+      TrackAssessmentOption(id: 'core', label: LocalizedText(ru: 'Computer Science Core', en: 'Computer Science Core', kk: 'Computer Science Core')),
+      TrackAssessmentOption(id: 'spheres', label: LocalizedText(ru: 'Applied IT Spheres', en: 'Applied IT Spheres', kk: 'Applied IT Spheres')),
+      TrackAssessmentOption(id: 'community', label: LocalizedText(ru: 'Community Courses', en: 'Community Courses', kk: 'Community Courses')),
+      TrackAssessmentOption(id: 'mentor', label: LocalizedText(ru: 'AI Mentor', en: 'AI Mentor', kk: 'AI Mentor')),
+    ],
+    seed,
+  );
+
+  return TrackAssessmentQuestion(
+    id: id,
+    prompt: sameText(
+      'Which zone contains the track ${track.title.en}?',
+    ),
+    options: options,
+    correctOptionId: correctLabel == 'Computer Science Core' ? 'core' : 'spheres',
+    explanation: sameText(
+      '${track.title.en} belongs to $correctLabel.',
+    ),
+  );
+}
+
+List<String> _practiceDistractors(
+  List<LearningTrack> tracks, {
+  required Set<String> excludedPracticeIds,
+}) {
+  return <String>[
+    for (final track in tracks)
+      for (final module in track.modules)
+        if (module.practice != null &&
+            !excludedPracticeIds.contains(module.practice!.id))
+          module.practice!.title.en,
+  ].take(3).toList(growable: false);
+}
+
+List<TrackAssessmentOption> _buildStringOptions({
+  required String correctId,
+  required String correctLabel,
+  required List<String> distractorLabels,
+}) {
+  final labels = <String>[correctLabel];
+  for (final label in distractorLabels) {
+    if (!labels.contains(label)) {
+      labels.add(label);
+    }
+    if (labels.length == 4) {
+      break;
+    }
+  }
+
+  while (labels.length < 4) {
+    labels.add('Option ${labels.length + 1}');
+  }
+
+  return <TrackAssessmentOption>[
+    TrackAssessmentOption(
+      id: correctId,
+      label: sameText(correctLabel),
+    ),
+    for (var index = 1; index < labels.length; index++)
+      TrackAssessmentOption(
+        id: 'option_$index',
+        label: sameText(labels[index]),
+      ),
+  ];
+}
+
+List<TrackAssessmentOption> _rotateAssessmentOptions(
+  List<TrackAssessmentOption> options,
+  String seed,
+) {
+  if (options.length < 2) {
+    return options;
+  }
+
+  final rotation = _hashValue(seed) % options.length;
+  return <TrackAssessmentOption>[
+    ...options.skip(rotation),
+    ...options.take(rotation),
+  ];
+}
+
+int _hashValue(String value) {
+  var hash = 0;
+  for (final codeUnit in value.codeUnits) {
+    hash = ((hash * 31) + codeUnit) & 0x7fffffff;
+  }
+  return hash;
+}
+
+bool _isModuleCompleted(DemoAppState state, LearningModule module) {
+  final lessonsDone = module.lessons.every(
+    (lesson) => state.completedLessonIds.contains(lesson.id),
+  );
+  final practiceDone = module.practice == null ||
+      state.completedPracticeIds.contains(module.practice!.id);
+  return lessonsDone && practiceDone;
 }

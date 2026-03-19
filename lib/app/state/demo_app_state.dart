@@ -16,6 +16,9 @@ class DemoAppState {
     required this.completedQuizIds,
     required this.completedTrainerIds,
     required this.quizAnswerStats,
+    required this.assessmentResultsByTrackId,
+    required this.assessmentAttemptHistory,
+    required this.learningHistory,
     required this.viewedCommunityCourseIds,
     required this.savedCommunityCourseIds,
     required this.xp,
@@ -41,6 +44,9 @@ class DemoAppState {
   final Set<String> completedQuizIds;
   final Set<String> completedTrainerIds;
   final Map<String, QuizAnswerStat> quizAnswerStats;
+  final Map<String, TrackAssessmentResult> assessmentResultsByTrackId;
+  final List<AssessmentAttemptEntry> assessmentAttemptHistory;
+  final List<LearningHistoryEntry> learningHistory;
   final Set<String> viewedCommunityCourseIds;
   final Set<String> savedCommunityCourseIds;
   final int xp;
@@ -88,6 +94,9 @@ class DemoAppState {
     Set<String>? completedQuizIds,
     Set<String>? completedTrainerIds,
     Map<String, QuizAnswerStat>? quizAnswerStats,
+    Map<String, TrackAssessmentResult>? assessmentResultsByTrackId,
+    List<AssessmentAttemptEntry>? assessmentAttemptHistory,
+    List<LearningHistoryEntry>? learningHistory,
     Set<String>? viewedCommunityCourseIds,
     Set<String>? savedCommunityCourseIds,
     int? xp,
@@ -118,6 +127,12 @@ class DemoAppState {
           completedTrainerIds ?? Set<String>.from(this.completedTrainerIds),
       quizAnswerStats:
           quizAnswerStats ?? Map<String, QuizAnswerStat>.from(this.quizAnswerStats),
+      assessmentResultsByTrackId: assessmentResultsByTrackId ??
+          Map<String, TrackAssessmentResult>.from(this.assessmentResultsByTrackId),
+      assessmentAttemptHistory: assessmentAttemptHistory ??
+          List<AssessmentAttemptEntry>.from(this.assessmentAttemptHistory),
+      learningHistory:
+          learningHistory ?? List<LearningHistoryEntry>.from(this.learningHistory),
       viewedCommunityCourseIds: viewedCommunityCourseIds ??
           Set<String>.from(this.viewedCommunityCourseIds),
       savedCommunityCourseIds:
@@ -148,6 +163,13 @@ class DemoAppState {
       'quizAnswerStats': quizAnswerStats.map<String, dynamic>(
         (key, value) => MapEntry<String, dynamic>(key, value.toJson()),
       ),
+      'assessmentResultsByTrackId': assessmentResultsByTrackId.map<String, dynamic>(
+        (key, value) => MapEntry<String, dynamic>(key, value.toJson()),
+      ),
+      'assessmentAttemptHistory':
+          assessmentAttemptHistory.map((attempt) => attempt.toJson()).toList(),
+      'learningHistory':
+          learningHistory.map((entry) => entry.toJson()).toList(),
       'viewedCommunityCourseIds': viewedCommunityCourseIds.toList(),
       'savedCommunityCourseIds': savedCommunityCourseIds.toList(),
       'xp': xp,
@@ -190,6 +212,30 @@ class DemoAppState {
           QuizAnswerStat.fromJson(value as Map<String, dynamic>),
         ),
       ),
+      assessmentResultsByTrackId:
+          (json['assessmentResultsByTrackId'] as Map<String, dynamic>? ??
+                  <String, dynamic>{})
+              .map<String, TrackAssessmentResult>(
+        (key, value) => MapEntry<String, TrackAssessmentResult>(
+          key,
+          TrackAssessmentResult.fromJson(value as Map<String, dynamic>),
+        ),
+      ),
+      assessmentAttemptHistory:
+          (json['assessmentAttemptHistory'] as List<dynamic>? ?? <dynamic>[])
+              .map(
+                (attempt) => AssessmentAttemptEntry.fromJson(
+                  attempt as Map<String, dynamic>,
+                ),
+              )
+              .toList(),
+      learningHistory: (json['learningHistory'] as List<dynamic>? ?? <dynamic>[])
+          .map(
+            (entry) => LearningHistoryEntry.fromJson(
+              entry as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
       viewedCommunityCourseIds: Set<String>.from(
         (json['viewedCommunityCourseIds'] as List<dynamic>? ?? <dynamic>[])
             .cast<String>(),

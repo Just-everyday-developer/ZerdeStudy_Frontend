@@ -183,6 +183,50 @@ class QuizOption {
   final LocalizedText label;
 }
 
+class TrackAssessmentOption {
+  const TrackAssessmentOption({
+    required this.id,
+    required this.label,
+  });
+
+  final String id;
+  final LocalizedText label;
+}
+
+class TrackAssessmentQuestion {
+  const TrackAssessmentQuestion({
+    required this.id,
+    required this.prompt,
+    required this.options,
+    required this.correctOptionId,
+    required this.explanation,
+  });
+
+  final String id;
+  final LocalizedText prompt;
+  final List<TrackAssessmentOption> options;
+  final String correctOptionId;
+  final LocalizedText explanation;
+}
+
+class TrackAssessment {
+  const TrackAssessment({
+    required this.id,
+    required this.trackId,
+    required this.title,
+    required this.summary,
+    required this.passPercent,
+    required this.questions,
+  });
+
+  final String id;
+  final String trackId;
+  final LocalizedText title;
+  final LocalizedText summary;
+  final int passPercent;
+  final List<TrackAssessmentQuestion> questions;
+}
+
 class LessonQuiz {
   const LessonQuiz({
     required this.id,
@@ -317,6 +361,36 @@ enum TrackZone { computerScienceCore, itSpheres }
 
 enum TrackAvailability { available, inProgress, completed, mastered }
 
+class KnowledgeTreeNodeSpec {
+  const KnowledgeTreeNodeSpec({
+    required this.id,
+    required this.title,
+    required this.position,
+    required this.radius,
+    this.trackId,
+    this.subtitle,
+    this.isHub = false,
+  });
+
+  final String id;
+  final LocalizedText title;
+  final LocalizedText? subtitle;
+  final Offset position;
+  final double radius;
+  final String? trackId;
+  final bool isHub;
+}
+
+class KnowledgeTreeEdgeSpec {
+  const KnowledgeTreeEdgeSpec({
+    required this.fromNodeId,
+    required this.toNodeId,
+  });
+
+  final String fromNodeId;
+  final String toNodeId;
+}
+
 class LearningTrack {
   const LearningTrack({
     required this.id,
@@ -334,6 +408,7 @@ class LearningTrack {
     required this.nodeId,
     required this.connections,
     required this.modules,
+    this.assessment,
   });
 
   final String id;
@@ -351,6 +426,30 @@ class LearningTrack {
   final String nodeId;
   final List<String> connections;
   final List<LearningModule> modules;
+  final TrackAssessment? assessment;
+
+  LearningTrack copyWith({
+    TrackAssessment? assessment,
+  }) {
+    return LearningTrack(
+      id: id,
+      title: title,
+      subtitle: subtitle,
+      description: description,
+      teaser: teaser,
+      outcome: outcome,
+      heroMetric: heroMetric,
+      icon: icon,
+      color: color,
+      zone: zone,
+      availability: availability,
+      order: order,
+      nodeId: nodeId,
+      connections: connections,
+      modules: modules,
+      assessment: assessment ?? this.assessment,
+    );
+  }
 
   int get totalUnits {
     return modules.fold<int>(0, (sum, module) => sum + module.totalUnits);
@@ -397,6 +496,193 @@ class TrackProgress {
       return 0;
     }
     return completedUnits / totalUnits;
+  }
+}
+
+class AssessmentAttemptEntry {
+  const AssessmentAttemptEntry({
+    required this.trackId,
+    required this.correctAnswers,
+    required this.totalQuestions,
+    required this.percent,
+    required this.passed,
+    required this.completedAt,
+  });
+
+  final String trackId;
+  final int correctAnswers;
+  final int totalQuestions;
+  final int percent;
+  final bool passed;
+  final DateTime completedAt;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'trackId': trackId,
+      'correctAnswers': correctAnswers,
+      'totalQuestions': totalQuestions,
+      'percent': percent,
+      'passed': passed,
+      'completedAt': completedAt.toIso8601String(),
+    };
+  }
+
+  factory AssessmentAttemptEntry.fromJson(Map<String, dynamic> json) {
+    return AssessmentAttemptEntry(
+      trackId: json['trackId'] as String? ?? '',
+      correctAnswers: json['correctAnswers'] as int? ?? 0,
+      totalQuestions: json['totalQuestions'] as int? ?? 0,
+      percent: json['percent'] as int? ?? 0,
+      passed: json['passed'] as bool? ?? false,
+      completedAt:
+          DateTime.tryParse(json['completedAt'] as String? ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+class TrackAssessmentResult {
+  const TrackAssessmentResult({
+    required this.trackId,
+    required this.bestPercent,
+    required this.lastPercent,
+    required this.bestCorrectAnswers,
+    required this.lastCorrectAnswers,
+    required this.attemptCount,
+    required this.lastAttemptAt,
+    required this.lastPassed,
+    required this.history,
+  });
+
+  final String trackId;
+  final int bestPercent;
+  final int lastPercent;
+  final int bestCorrectAnswers;
+  final int lastCorrectAnswers;
+  final int attemptCount;
+  final DateTime? lastAttemptAt;
+  final bool lastPassed;
+  final List<AssessmentAttemptEntry> history;
+
+  TrackAssessmentResult copyWith({
+    int? bestPercent,
+    int? lastPercent,
+    int? bestCorrectAnswers,
+    int? lastCorrectAnswers,
+    int? attemptCount,
+    Object? lastAttemptAt = _trackAssessmentSentinel,
+    bool? lastPassed,
+    List<AssessmentAttemptEntry>? history,
+  }) {
+    return TrackAssessmentResult(
+      trackId: trackId,
+      bestPercent: bestPercent ?? this.bestPercent,
+      lastPercent: lastPercent ?? this.lastPercent,
+      bestCorrectAnswers: bestCorrectAnswers ?? this.bestCorrectAnswers,
+      lastCorrectAnswers: lastCorrectAnswers ?? this.lastCorrectAnswers,
+      attemptCount: attemptCount ?? this.attemptCount,
+      lastAttemptAt: identical(lastAttemptAt, _trackAssessmentSentinel)
+          ? this.lastAttemptAt
+          : lastAttemptAt as DateTime?,
+      lastPassed: lastPassed ?? this.lastPassed,
+      history: history ?? List<AssessmentAttemptEntry>.from(this.history),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'trackId': trackId,
+      'bestPercent': bestPercent,
+      'lastPercent': lastPercent,
+      'bestCorrectAnswers': bestCorrectAnswers,
+      'lastCorrectAnswers': lastCorrectAnswers,
+      'attemptCount': attemptCount,
+      'lastAttemptAt': lastAttemptAt?.toIso8601String(),
+      'lastPassed': lastPassed,
+      'history': history.map((attempt) => attempt.toJson()).toList(),
+    };
+  }
+
+  factory TrackAssessmentResult.fromJson(Map<String, dynamic> json) {
+    return TrackAssessmentResult(
+      trackId: json['trackId'] as String? ?? '',
+      bestPercent: json['bestPercent'] as int? ?? 0,
+      lastPercent: json['lastPercent'] as int? ?? 0,
+      bestCorrectAnswers: json['bestCorrectAnswers'] as int? ?? 0,
+      lastCorrectAnswers: json['lastCorrectAnswers'] as int? ?? 0,
+      attemptCount: json['attemptCount'] as int? ?? 0,
+      lastAttemptAt: DateTime.tryParse(json['lastAttemptAt'] as String? ?? ''),
+      lastPassed: json['lastPassed'] as bool? ?? false,
+      history: (json['history'] as List<dynamic>? ?? <dynamic>[])
+          .map(
+            (attempt) => AssessmentAttemptEntry.fromJson(
+              attempt as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+const Object _trackAssessmentSentinel = Object();
+
+enum LearningHistoryKind {
+  lessonCompleted,
+  practiceCompleted,
+  moduleCompleted,
+  trackCompleted,
+  assessmentCompleted,
+  courseSaved,
+}
+
+class LearningHistoryEntry {
+  const LearningHistoryEntry({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.createdAt,
+    this.subtitle,
+    this.scoreLabel,
+    this.trackId,
+    this.refId,
+  });
+
+  final String id;
+  final LearningHistoryKind kind;
+  final String title;
+  final String? subtitle;
+  final String? scoreLabel;
+  final DateTime createdAt;
+  final String? trackId;
+  final String? refId;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'kind': kind.name,
+      'title': title,
+      'subtitle': subtitle,
+      'scoreLabel': scoreLabel,
+      'createdAt': createdAt.toIso8601String(),
+      'trackId': trackId,
+      'refId': refId,
+    };
+  }
+
+  factory LearningHistoryEntry.fromJson(Map<String, dynamic> json) {
+    return LearningHistoryEntry(
+      id: json['id'] as String? ?? '',
+      kind: LearningHistoryKind.values.firstWhere(
+        (kind) => kind.name == json['kind'],
+        orElse: () => LearningHistoryKind.lessonCompleted,
+      ),
+      title: json['title'] as String? ?? '',
+      subtitle: json['subtitle'] as String?,
+      scoreLabel: json['scoreLabel'] as String?,
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      trackId: json['trackId'] as String?,
+      refId: json['refId'] as String?,
+    );
   }
 }
 

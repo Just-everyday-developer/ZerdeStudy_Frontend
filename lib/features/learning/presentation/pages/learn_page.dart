@@ -21,6 +21,8 @@ class LearnPage extends ConsumerWidget {
     final catalog = ref.watch(demoCatalogProvider);
     final currentTrack = catalog.trackById(state.currentTrackId);
     final progress = catalog.progressForTrack(state, currentTrack.id);
+    final assessmentResult =
+        catalog.assessmentResultFor(state, currentTrack.id);
     final colors = context.appColors;
 
     return AppPageScaffold(
@@ -85,6 +87,52 @@ class LearnPage extends ConsumerWidget {
                 Text(
                   '${progress.completedUnits}/${progress.totalUnits} units | ${progress.completedQuizzes}/${progress.totalQuizzes} quizzes | ${progress.completedTrainers}/${progress.totalTrainers} labs',
                   style: TextStyle(color: colors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    color: colors.surfaceSoft,
+                    border: Border.all(color: colors.divider),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Assessment progress',
+                              style: TextStyle(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              assessmentResult == null
+                                  ? 'No attempts yet'
+                                  : 'Best ${assessmentResult.bestPercent}%  •  Last ${assessmentResult.lastPercent}%',
+                              style: TextStyle(
+                                color: colors.textSecondary,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => context.push(
+                          AppRoutes.assessmentByTrackId(currentTrack.id),
+                        ),
+                        icon: Icon(
+                          Icons.assignment_turned_in_rounded,
+                          color: currentTrack.color,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

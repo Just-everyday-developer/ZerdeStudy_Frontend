@@ -132,10 +132,21 @@ class WelcomePage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Row(
+                  const SizedBox(height: 18),
+                  Text(
+                    'Войти через',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
                     children: [
-                      Expanded(
+                      SizedBox(
+                        width: 160,
                         child: TechActionButton(
                           title: l10n.text('github'),
                           isPrimary: false,
@@ -146,8 +157,20 @@ class WelcomePage extends ConsumerWidget {
                           },
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
+                      SizedBox(
+                        width: 160,
+                        child: TechActionButton(
+                          title: l10n.text('google'),
+                          isPrimary: false,
+                          icon: Icons.language_rounded,
+                          onTap: () {
+                            controller.loginWithProvider('google');
+                            context.go(AppRoutes.home);
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        width: 160,
                         child: TechActionButton(
                           title: l10n.text('apple'),
                           isPrimary: false,
