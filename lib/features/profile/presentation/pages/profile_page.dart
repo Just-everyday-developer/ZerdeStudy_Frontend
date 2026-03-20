@@ -38,13 +38,14 @@ class ProfilePage extends ConsumerWidget {
       ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
     final user = state.user;
     final colors = context.appColors;
+    final compact = context.isCompactLayout;
 
     return AppPageScaffold(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+        padding: EdgeInsets.fromLTRB(0, compact ? 6 : 8, 0, compact ? 104 : 120),
         children: [
           Container(
-            padding: const EdgeInsets.all(22),
+            padding: EdgeInsets.all(compact ? 18 : 22),
             decoration: BoxDecoration(
               color: colors.surface.withValues(alpha: 0.96),
               borderRadius: BorderRadius.circular(28),
@@ -56,62 +57,136 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ],
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Hero(
-                  tag: 'shell-profile-avatar',
-                  child: Container(
-                    width: context.isCompactLayout ? 88 : 108,
-                    height: context.isCompactLayout ? 88 : 108,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colors.primary.withValues(alpha: 0.14),
-                    ),
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: colors.primary,
-                      size: context.isCompactLayout ? 42 : 52,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: Column(
+            child: compact
+                ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        user?.name ?? 'Dana S.',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        user?.email ?? 'demo@zerdestudy.app',
-                        style: TextStyle(color: colors.textSecondary),
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _Pill(label: 'XP', value: '${state.xp}'),
-                          _Pill(
-                            label: l10n.text('level'),
-                            value: '${state.level}',
+                          Hero(
+                            tag: 'shell-profile-avatar',
+                            child: Container(
+                              width: 96,
+                              height: 96,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: colors.primary.withValues(alpha: 0.14),
+                              ),
+                              child: Icon(
+                                Icons.person_rounded,
+                                color: colors.primary,
+                                size: 46,
+                              ),
+                            ),
                           ),
-                          _Pill(
-                            label: l10n.text('streak'),
-                            value: '${state.streak}d',
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user?.name ?? 'Dana S.',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(fontSize: 28),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  user?.email ?? 'demo@zerdestudy.app',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: colors.textSecondary,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(child: _Pill(label: 'XP', value: '${state.xp}')),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _Pill(
+                              label: l10n.text('level'),
+                              value: '${state.level}',
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _Pill(
+                              label: l10n.text('streak'),
+                              value: '${state.streak}d',
+                            ),
                           ),
                         ],
                       ),
                     ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Hero(
+                        tag: 'shell-profile-avatar',
+                        child: Container(
+                          width: 108,
+                          height: 108,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: colors.primary.withValues(alpha: 0.14),
+                          ),
+                          child: Icon(
+                            Icons.person_rounded,
+                            color: colors.primary,
+                            size: 52,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 18),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.name ?? 'Dana S.',
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              user?.email ?? 'demo@zerdestudy.app',
+                              style: TextStyle(color: colors.textSecondary),
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                _Pill(label: 'XP', value: '${state.xp}'),
+                                _Pill(
+                                  label: l10n.text('level'),
+                                  value: '${state.level}',
+                                ),
+                                _Pill(
+                                  label: l10n.text('streak'),
+                                  value: '${state.streak}d',
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 14 : 16),
           GlowCard(
             accent: colors.success,
             child: Column(
@@ -154,14 +229,18 @@ class ProfilePage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 14),
                 SizedBox(
-                  height: context.isWideLayout ? 164 : 186,
+                  height: compact ? 168 : context.isWideLayout ? 164 : 186,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: preview.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 12),
                     itemBuilder: (context, index) {
                       return SizedBox(
-                        width: context.isWideLayout ? 220 : 206,
+                        width: compact
+                            ? 176
+                            : context.isWideLayout
+                                ? 220
+                                : 206,
                         child: _AchievementPreviewCard(
                           achievement: preview[index],
                           locale: state.locale,
@@ -178,7 +257,7 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 14 : 16),
           GlowCard(
             accent: colors.primary,
             child: Column(
@@ -201,7 +280,7 @@ class ProfilePage extends ConsumerWidget {
                   )
                 else
                   SizedBox(
-                    height: context.isWideLayout ? 176 : 188,
+                    height: compact ? 174 : context.isWideLayout ? 176 : 188,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: certificates.length,
@@ -209,7 +288,11 @@ class ProfilePage extends ConsumerWidget {
                       itemBuilder: (context, index) {
                         final certificate = certificates[index];
                         return SizedBox(
-                          width: context.isWideLayout ? 260 : 228,
+                          width: compact
+                              ? 204
+                              : context.isWideLayout
+                                  ? 260
+                                  : 228,
                           child: _CertificatePreviewCard(
                             certificate: certificate,
                             onTap: () => context.push(
@@ -223,7 +306,7 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 14 : 16),
           GlowCard(
             accent: colors.primary,
             child: Column(
@@ -271,7 +354,7 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 14 : 16),
           GlowCard(
             accent: colors.accent,
             child: Column(
@@ -332,7 +415,7 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 14 : 16),
           GlowCard(
             accent: colors.success,
             child: Column(
@@ -361,7 +444,7 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 14 : 16),
           AppButton.secondary(
             label: l10n.text('view_stats'),
             icon: Icons.insights_rounded,

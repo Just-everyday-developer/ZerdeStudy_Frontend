@@ -12,6 +12,8 @@ class AppPageScaffold extends StatelessWidget {
     this.safeAreaTop = true,
     this.bottomNavigationBar,
     this.maxContentWidth,
+    this.horizontalPadding,
+    this.expandContent = false,
   });
 
   final Widget child;
@@ -20,6 +22,8 @@ class AppPageScaffold extends StatelessWidget {
   final bool safeAreaTop;
   final Widget? bottomNavigationBar;
   final double? maxContentWidth;
+  final double? horizontalPadding;
+  final bool expandContent;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +47,13 @@ class AppPageScaffold extends StatelessWidget {
                       tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                     )
                   : null,
-              title: title == null ? null : Text(title!),
+              title: title == null
+                  ? null
+                  : Text(
+                      title!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
               centerTitle: false,
               backgroundColor: Colors.transparent,
               actions: actions,
@@ -55,26 +65,35 @@ class AppPageScaffold extends StatelessWidget {
             top: safeAreaTop,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final horizontalPadding = context.appPageHorizontalPadding;
+                final horizontalPadding =
+                    this.horizontalPadding ?? context.appPageHorizontalPadding;
                 final availableWidth =
                     constraints.maxWidth - (horizontalPadding * 2);
                 final contentWidth = maxContentWidth ?? context.appPageMaxWidth;
                 final clampedWidth =
                     availableWidth <= 0 ? constraints.maxWidth : availableWidth;
 
+                final content = Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: expandContent
+                      ? child
+                      : ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: clampedWidth < contentWidth
+                                ? clampedWidth
+                                : contentWidth,
+                          ),
+                          child: child,
+                        ),
+                );
+
                 return Align(
-                  alignment: Alignment.topCenter,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: clampedWidth < contentWidth
-                            ? clampedWidth
-                            : contentWidth,
-                      ),
-                      child: child,
-                    ),
-                  ),
+                  alignment: expandContent ||
+                          context.isCompactLayout ||
+                          context.isNativeWindowsApp
+                      ? Alignment.topLeft
+                      : Alignment.topCenter,
+                  child: content,
                 );
               },
             ),

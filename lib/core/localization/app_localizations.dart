@@ -396,6 +396,46 @@ class AppLocalizations {
           AppLocale.en: 'Settings',
           AppLocale.kk: 'Баптаулар',
         },
+        'help': {
+          AppLocale.ru: 'РџРѕРјРѕС‰СЊ',
+          AppLocale.en: 'Help',
+          AppLocale.kk: 'РљУ©РјРµРє',
+        },
+        'hotkeys': {
+          AppLocale.ru: 'Р“РѕСЂСЏС‡РёРµ РєР»Р°РІРёС€Рё',
+          AppLocale.en: 'Hotkeys',
+          AppLocale.kk: 'Р«СЃС‚С‹Т› РїРµСЂРЅРµР»РµСЂ',
+        },
+        'hotkey_tabs_direct': {
+          AppLocale.ru: 'Р‘С‹СЃС‚СЂС‹Р№ РїРµСЂРµС…РѕРґ РЅР° РЅСѓР¶РЅСѓСЋ РІРєР»Р°РґРєСѓ shell.',
+          AppLocale.en: 'Jump directly to a specific shell tab.',
+          AppLocale.kk: 'Shell-С‚РµРіС– Т›Р°Р¶РµС‚ Т›РѕСЃС‹РјС€Р°Т“Р° С‚С–РєРµР»РµР№ У©С‚Сѓ.',
+        },
+        'hotkey_tabs_arrows': {
+          AppLocale.ru: 'РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РјРµР¶РґСѓ РІРєР»Р°РґРєР°РјРё РІРїРµСЂС‘Рґ Рё РЅР°Р·Р°Рґ.',
+          AppLocale.en: 'Move between shell tabs forward and backward.',
+          AppLocale.kk: 'Shell РІРєР»Р°РґРєР°Р»Р°СЂС‹РЅС‹ТЈ Р°СЂР°СЃС‹РЅРґР° Р°Р»Т“Р° Р¶У™РЅРµ РєРµСЂС– Р°СѓС‹СЃСѓ.',
+        },
+        'hotkey_next_screen': {
+          AppLocale.ru: 'РџРµСЂРµР№С‚Рё РЅР° СЃР»РµРґСѓСЋС‰РёР№ СЌРєСЂР°РЅ shell.',
+          AppLocale.en: 'Open the next shell screen.',
+          AppLocale.kk: 'Shell-С‚РµРіС– РєРµР»РµСЃС– СЌРєСЂР°РЅРЅС‹ Р°С€Сѓ.',
+        },
+        'hotkey_prev_screen': {
+          AppLocale.ru: 'Р’РµСЂРЅСѓС‚СЊСЃСЏ Рє РїСЂРµРґС‹РґСѓС‰РµРјСѓ СЌРєСЂР°РЅСѓ shell.',
+          AppLocale.en: 'Return to the previous shell screen.',
+          AppLocale.kk: 'Shell-С‚РµРіС– Р°Р»РґС‹РЅТ“С‹ СЌРєСЂР°РЅТ“Р° Т›Р°Р№С‚Сѓ.',
+        },
+        'hotkey_back': {
+          AppLocale.ru: 'Р’РµСЂРЅСѓС‚СЊСЃСЏ РЅР° РїСЂРµРґС‹РґСѓС‰СѓСЋ СЃС‚СЂР°РЅРёС†Сѓ РёР»Рё РїРѕ history.',
+          AppLocale.en: 'Go back to the previous page or tab history.',
+          AppLocale.kk: 'РђР»РґС‹РЅТ“С‹ Р±РµС‚РєРµ РЅРµРјРµСЃРµ history Р±РѕР№С‹РЅС€Р° Т›Р°Р№С‚Сѓ.',
+        },
+        'hotkey_focus_search': {
+          AppLocale.ru: 'РЎС„РѕРєСѓСЃРёСЂРѕРІР°С‚СЊ РїРѕРёСЃРє РєСѓСЂСЃРѕРІ РІ Learn.',
+          AppLocale.en: 'Focus the course search field in Learn.',
+          AppLocale.kk: 'Learn-С‚РµРіС– РєСѓСЂСЃС‚Р°СЂРґС‹ С–Р·РґРµСѓ ӨСЂС–СЃС–РЅРµ С„РѕРєСѓСЃ Р±РµСЂСѓ.',
+        },
         'theme': {
           AppLocale.ru: 'Тема',
           AppLocale.en: 'Theme',

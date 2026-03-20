@@ -29,7 +29,7 @@ class _AppSettingsPanelContent extends ConsumerWidget {
     final colors = context.appColors;
     final l10n = context.l10n;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -80,7 +80,7 @@ class _AppSettingsPanelContent extends ConsumerWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            l10n.text('faq_title'),
+            l10n.text('help'),
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 10),
@@ -132,6 +132,59 @@ class _AppSettingsPanelContent extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: colors.surfaceSoft,
+              border: Border.all(color: colors.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.keyboard_command_key_rounded, color: colors.primary),
+                    const SizedBox(width: 10),
+                    Text(
+                      l10n.text('hotkeys'),
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _ShortcutRow(
+                  combo: 'Alt + 1..5',
+                  description: l10n.text('hotkey_tabs_direct'),
+                ),
+                _ShortcutRow(
+                  combo: 'Left / Right',
+                  description: l10n.text('hotkey_tabs_arrows'),
+                ),
+                _ShortcutRow(
+                  combo: 'Ctrl + Tab',
+                  description: l10n.text('hotkey_next_screen'),
+                ),
+                _ShortcutRow(
+                  combo: 'Ctrl + Shift + Tab',
+                  description: l10n.text('hotkey_prev_screen'),
+                ),
+                _ShortcutRow(
+                  combo: 'Alt + Left / Alt + Z',
+                  description: l10n.text('hotkey_back'),
+                ),
+                _ShortcutRow(
+                  combo: 'Ctrl + K',
+                  description: l10n.text('hotkey_focus_search'),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -144,5 +197,55 @@ class _AppSettingsPanelContent extends ConsumerWidget {
       case AppThemeMode.light:
         return l10n.text('theme_light');
     }
+  }
+}
+
+class _ShortcutRow extends StatelessWidget {
+  const _ShortcutRow({
+    required this.combo,
+    required this.description,
+  });
+
+  final String combo;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: colors.backgroundElevated,
+              border: Border.all(color: colors.divider),
+            ),
+            child: Text(
+              combo,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              description,
+              style: TextStyle(
+                color: colors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

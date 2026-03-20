@@ -369,7 +369,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                   }
 
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 52),
+                    padding: const EdgeInsets.only(bottom: 64),
                     child: _CompactCourseRail(
                       section: section,
                       state: state,
@@ -391,7 +391,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: authors.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 14),
+                  separatorBuilder: (_, __) => const SizedBox(width: 18),
                   itemBuilder: (context, index) {
                     final author = authors[index];
                     return DiscoveryAuthorCard(
@@ -405,7 +405,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                   },
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 48),
               GlowCard(
                 accent: colors.accent,
                 child: Column(
@@ -552,13 +552,13 @@ class _CompactCourseRail extends ConsumerWidget {
           actionLabel: viewAllLabel,
           onActionTap: onViewAllTap,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SizedBox(
           height: context.isWideLayout ? 364 : 352,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: section.visibleCourses.length + 1,
-            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            separatorBuilder: (_, __) => const SizedBox(width: 22),
             itemBuilder: (context, index) {
               if (index == section.visibleCourses.length) {
                 return DiscoveryViewAllCard(

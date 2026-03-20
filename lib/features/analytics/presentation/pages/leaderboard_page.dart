@@ -19,46 +19,49 @@ class LeaderboardPage extends ConsumerWidget {
     final podium = entries.take(3).toList(growable: false);
     final rest = entries.skip(3).toList(growable: false);
     final colors = context.appColors;
+    final compact = context.isCompactLayout;
 
     return AppPageScaffold(
-      title: context.isCompactLayout ? context.l10n.text('leaderboard') : null,
+      title: compact ? context.l10n.text('leaderboard') : null,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        padding: EdgeInsets.fromLTRB(0, compact ? 6 : 8, 0, 40),
         children: [
           if (podium.length == 3)
             GlowCard(
               accent: colors.primary,
               child: SizedBox(
-                height: context.isCompactLayout ? 240 : 300,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: _PodiumColumn(
-                        entry: podium[1],
-                        rank: 2,
-                        heightFactor: 0.72,
+                height: compact ? 210 : 300,
+                child: compact
+                    ? _CompactPodium(entries: podium)
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: _PodiumColumn(
+                              entry: podium[1],
+                              rank: 2,
+                              heightFactor: 0.72,
+                            ),
+                          ),
+                          Expanded(
+                            child: _PodiumColumn(
+                              entry: podium[0],
+                              rank: 1,
+                              heightFactor: 1,
+                            ),
+                          ),
+                          Expanded(
+                            child: _PodiumColumn(
+                              entry: podium[2],
+                              rank: 3,
+                              heightFactor: 0.58,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Expanded(
-                      child: _PodiumColumn(
-                        entry: podium[0],
-                        rank: 1,
-                        heightFactor: 1,
-                      ),
-                    ),
-                    Expanded(
-                      child: _PodiumColumn(
-                        entry: podium[2],
-                        rank: 3,
-                        heightFactor: 0.58,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
-          const SizedBox(height: 18),
+          SizedBox(height: compact ? 14 : 18),
           ...rest.asMap().entries.map((item) {
             final rank = item.key + 4;
             final entry = item.value;
@@ -88,13 +91,15 @@ class LeaderboardPage extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             entry.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: colors.textPrimary,
                               fontWeight: FontWeight.w700,
@@ -103,22 +108,27 @@ class LeaderboardPage extends ConsumerWidget {
                           const SizedBox(height: 4),
                           Text(
                             'Level ${entry.level} | ${entry.role}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: colors.textSecondary),
                           ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _Tag(label: entry.focus),
-                              if (entry.isCurrentUser) _Tag(label: context.l10n.text('you_label')),
-                            ],
-                          ),
+                          if (entry.isCurrentUser) ...[
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _Tag(label: context.l10n.text('you_label')),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
                     Text(
                       '${entry.xp} XP',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: colors.textPrimary,
                         fontWeight: FontWeight.w700,
@@ -129,6 +139,147 @@ class LeaderboardPage extends ConsumerWidget {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactPodium extends StatelessWidget {
+  const _CompactPodium({
+    required this.entries,
+  });
+
+  final List<LeaderboardEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: _CompactPodiumColumn(
+            entry: entries[1],
+            rank: 2,
+            heightFactor: 0.7,
+          ),
+        ),
+        Expanded(
+          child: _CompactPodiumColumn(
+            entry: entries[0],
+            rank: 1,
+            heightFactor: 1,
+          ),
+        ),
+        Expanded(
+          child: _CompactPodiumColumn(
+            entry: entries[2],
+            rank: 3,
+            heightFactor: 0.58,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CompactPodiumColumn extends StatelessWidget {
+  const _CompactPodiumColumn({
+    required this.entry,
+    required this.rank,
+    required this.heightFactor,
+  });
+
+  final LeaderboardEntry entry;
+  final int rank;
+  final double heightFactor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = switch (rank) {
+      1 => const Color(0xFFFFD166),
+      2 => const Color(0xFFAEC5E6),
+      _ => const Color(0xFFFFB38A),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          SizedBox(
+            height: 30,
+            child: Center(
+              child: Text(
+                entry.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 18,
+            child: Center(
+              child: Text(
+                '${entry.xp} XP',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: heightFactor,
+                widthFactor: 0.92,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(18),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        accent.withValues(alpha: 0.92),
+                        accent.withValues(alpha: 0.28),
+                      ],
+                    ),
+                    border: Border.all(color: accent.withValues(alpha: 0.7)),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        '#$rank',
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -210,17 +361,6 @@ class _PodiumColumn extends StatelessWidget {
                             color: colors.textPrimary,
                             fontWeight: FontWeight.w900,
                             fontSize: 26,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          entry.focus,
-                          maxLines: 2,
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],

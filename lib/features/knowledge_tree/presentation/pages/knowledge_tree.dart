@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
@@ -12,7 +12,6 @@ import '../../../../app/state/demo_app_state.dart';
 import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
-import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
@@ -23,112 +22,25 @@ class KnowledgeTreePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(demoAppControllerProvider);
-    final catalog = ref.watch(demoCatalogProvider);
-    final colors = context.appColors;
-    final visibleTracks = knowledgeTreeNodes
-        .where((node) => node.trackId != null)
-        .map((node) => catalog.trackById(node.trackId!))
-        .toList(growable: false);
-    final completedBranches = visibleTracks
-        .where(
-          (track) =>
-              catalog.trackAvailabilityFor(state, track.id) == TrackAvailability.completed ||
-              catalog.trackAvailabilityFor(state, track.id) == TrackAvailability.mastered,
-        )
-        .length;
-    final activeAssessments = visibleTracks
-        .where((track) => catalog.bestAssessmentPercentFor(state, track.id) > 0)
-        .length;
-    final l10n = context.l10n;
+    final screenSize = MediaQuery.sizeOf(context);
+    final compact = context.isCompactLayout;
+    final treeHeight = math.max(
+      460.0,
+      screenSize.height - (compact ? 104 : 128),
+    );
+    final treeContentWidth = compact
+        ? screenSize.width
+        : math.min(screenSize.width - 56, 1220.0);
 
     return AppPageScaffold(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-        children: [
-          GlowCard(
-            accent: colors.primary,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.text('tree_summary'),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _SummaryPill(
-                      label: l10n.text('tree_visible_branches'),
-                      value: '${visibleTracks.length}',
-                      color: colors.primary,
-                    ),
-                    _SummaryPill(
-                      label: l10n.text('tree_completed'),
-                      value: '$completedBranches',
-                      color: colors.success,
-                    ),
-                    _SummaryPill(
-                      label: l10n.text('tree_assessments'),
-                      value: '$activeAssessments',
-                      color: colors.accent,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          GlowCard(
-            accent: colors.accent,
-            child: Row(
-              children: [
-                Expanded(
-                  child: _LegendChip(
-                    label: l10n.text('tree_available'),
-                    color: colors.primary,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _LegendChip(
-                    label: l10n.text('tree_in_progress'),
-                    color: colors.accent,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _LegendChip(
-                    label: l10n.text('tree_completed'),
-                    color: colors.success,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _LegendChip(
-                    label: l10n.text('tree_mastered'),
-                    color: const Color(0xFFFFD166),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          GlowCard(
-            accent: colors.primary,
-            child: SizedBox(
-              height: context.isCompactLayout ? 760 : 920,
-              child: _KnowledgeTreeViewport(
-                visibleTracks: visibleTracks,
-              ),
-            ),
-          ),
-        ],
+      horizontalPadding: 0,
+      expandContent: true,
+      child: SizedBox(
+        width: screenSize.width,
+        height: treeHeight,
+        child: _KnowledgeTreeViewport(
+          contentWidth: treeContentWidth,
+        ),
       ),
     );
   }
@@ -136,10 +48,10 @@ class KnowledgeTreePage extends ConsumerWidget {
 
 class _KnowledgeTreeViewport extends ConsumerStatefulWidget {
   const _KnowledgeTreeViewport({
-    required this.visibleTracks,
+    required this.contentWidth,
   });
 
-  final List<LearningTrack> visibleTracks;
+  final double contentWidth;
 
   @override
   ConsumerState<_KnowledgeTreeViewport> createState() =>
@@ -147,10 +59,13 @@ class _KnowledgeTreeViewport extends ConsumerStatefulWidget {
 }
 
 class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> {
+  static const double _windowsFixedScale = 0.64;
+
   final TransformationController _controller = TransformationController();
   Size? _lastViewportSize;
   double _fitScale = 1;
   bool _didInitialFit = false;
+  bool _legendOpen = false;
 
   @override
   void dispose() {
@@ -158,7 +73,17 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
     super.dispose();
   }
 
-  void _fitToViewport(Size viewport, {bool force = false}) {
+  bool _isWindowsDesktopViewport(bool compact) {
+    return !compact &&
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.windows;
+  }
+
+  void _fitToViewport(
+    Size viewport, {
+    bool force = false,
+    required bool windowsFixedViewport,
+  }) {
     if (viewport.isEmpty) {
       return;
     }
@@ -168,15 +93,18 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
 
     final availableWidth = math.max(1.0, viewport.width - 24);
     final availableHeight = math.max(1.0, viewport.height - 24);
-    final scale = math.min(
-      availableWidth / knowledgeTreeCanvasSize.width,
-      availableHeight / knowledgeTreeCanvasSize.height,
-    );
+    final scale = windowsFixedViewport
+        ? _windowsFixedScale
+        : math.min(
+            availableWidth / knowledgeTreeCanvasSize.width,
+            availableHeight / knowledgeTreeCanvasSize.height,
+          );
     _fitScale = scale;
     final offsetX =
         (viewport.width - (knowledgeTreeCanvasSize.width * scale)) / 2;
-    final offsetY =
-        (viewport.height - (knowledgeTreeCanvasSize.height * scale)) / 2;
+    final offsetY = windowsFixedViewport
+        ? 24.0
+        : (viewport.height - (knowledgeTreeCanvasSize.height * scale)) / 2;
     final matrix = Matrix4.identity()
       ..setEntry(0, 0, scale)
       ..setEntry(1, 1, scale);
@@ -218,11 +146,6 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
     _didInitialFit = true;
   }
 
-  void _zoomBy(double delta, {required bool compact}) {
-    final currentScale = _currentScale;
-    _setScale(currentScale + delta, compact: compact);
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
@@ -231,22 +154,11 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _fitToViewport(viewportSize);
-          }
-        });
-        final fitScale = math.min(
-          math.max(0.1, (viewportSize.width - 24) / knowledgeTreeCanvasSize.width),
-          math.max(0.1, (viewportSize.height - 24) / knowledgeTreeCanvasSize.height),
-        );
         final compact = context.isCompactLayout;
-        final desktopLike = !compact;
-        _fitScale = fitScale;
+        final contentWidth = math.min(widget.contentWidth, constraints.maxWidth);
 
         return ClipRRect(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(compact ? 0 : 28),
           child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -269,73 +181,137 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                   ),
                 ),
                 Positioned.fill(
-                  child: Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerSignal: (event) {
-                      if (event is! PointerScrollEvent || compact) {
-                        return;
-                      }
-                      final ctrlPressed = HardwareKeyboard.instance.isControlPressed;
-                      if (!ctrlPressed) {
-                        return;
-                      }
-                      final delta = event.scrollDelta.dy > 0 ? -0.08 : 0.08;
-                      _setScale(
-                        _currentScale + delta,
-                        focalPoint: event.localPosition,
-                        compact: compact,
-                      );
-                    },
-                    child: InteractiveViewer(
-                      transformationController: _controller,
-                      constrained: false,
-                      minScale: _minScale(compact),
-                      maxScale: _maxScale(compact),
-                      scaleEnabled: compact,
-                      trackpadScrollCausesScale: false,
-                      boundaryMargin: EdgeInsets.symmetric(
-                        horizontal: desktopLike ? 8 : 54,
-                        vertical: desktopLike ? 24 : 64,
-                      ),
-                      child: SizedBox(
-                        width: knowledgeTreeCanvasSize.width,
-                        height: knowledgeTreeCanvasSize.height,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Positioned.fill(
-                              child: IgnorePointer(
-                                child: CustomPaint(
-                                  painter: _KnowledgeTreePainter(
-                                    nodes: knowledgeTreeNodes,
-                                    edges: knowledgeTreeEdges,
-                                    colors: colors,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: contentWidth,
+                      height: constraints.maxHeight,
+                      child: LayoutBuilder(
+                        builder: (context, contentConstraints) {
+                          final viewportSize = Size(
+                            contentConstraints.maxWidth,
+                            contentConstraints.maxHeight,
+                          );
+                          final desktopLike = !compact;
+                          final windowsFixedViewport =
+                              _isWindowsDesktopViewport(compact);
+
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) {
+                              _fitToViewport(
+                                viewportSize,
+                                windowsFixedViewport: windowsFixedViewport,
+                              );
+                            }
+                          });
+                          final fitScale = math.min(
+                            math.max(
+                              0.1,
+                              (viewportSize.width - 24) /
+                                  knowledgeTreeCanvasSize.width,
+                            ),
+                            math.max(
+                              0.1,
+                              (viewportSize.height - 24) /
+                                  knowledgeTreeCanvasSize.height,
+                            ),
+                          );
+                          _fitScale =
+                              windowsFixedViewport ? _windowsFixedScale : fitScale;
+
+                          return Stack(
+                            children: [
+                              Positioned.fill(
+                                child: Listener(
+                                  behavior: HitTestBehavior.opaque,
+                                  onPointerSignal: (event) {
+                                    if (windowsFixedViewport) {
+                                      return;
+                                    }
+                                    if (event is! PointerScrollEvent ||
+                                        event.kind == PointerDeviceKind.touch) {
+                                      return;
+                                    }
+                                    final delta = (-event.scrollDelta.dy / 240)
+                                        .clamp(-0.18, 0.18);
+                                    _setScale(
+                                      _currentScale + delta,
+                                      focalPoint: event.localPosition,
+                                      compact: compact,
+                                    );
+                                  },
+                                  child: InteractiveViewer(
+                                    transformationController: _controller,
+                                    constrained: false,
+                                    minScale: _minScale(compact),
+                                    maxScale: windowsFixedViewport
+                                        ? _windowsFixedScale
+                                        : _maxScale(compact),
+                                    scaleEnabled: !windowsFixedViewport,
+                                    panEnabled: true,
+                                    trackpadScrollCausesScale: false,
+                                    boundaryMargin: EdgeInsets.symmetric(
+                                      horizontal: windowsFixedViewport
+                                          ? 36
+                                          : desktopLike
+                                              ? 8
+                                              : 44,
+                                      vertical: windowsFixedViewport
+                                          ? 80
+                                          : desktopLike
+                                              ? 24
+                                              : 64,
+                                    ),
+                                    child: SizedBox(
+                                      width: knowledgeTreeCanvasSize.width,
+                                      height: knowledgeTreeCanvasSize.height,
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Positioned.fill(
+                                            child: IgnorePointer(
+                                              child: CustomPaint(
+                                                painter: _KnowledgeTreePainter(
+                                                  nodes: knowledgeTreeNodes,
+                                                  edges: knowledgeTreeEdges,
+                                                  colors: colors,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          ...knowledgeTreeNodes.map(
+                                            (node) => _buildPositionedNode(
+                                              context,
+                                              node,
+                                              catalog,
+                                              state,
+                                              colors,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            ...knowledgeTreeNodes.map(
-                              (node) => _buildPositionedNode(
-                                context,
-                                node,
-                                catalog,
-                                state,
-                                colors,
+                              Positioned(
+                                right: 16,
+                                top: 16,
+                                child: _TreeLegendMenu(
+                                  compact: compact,
+                                  isOpen: _legendOpen,
+                                  onToggle: () {
+                                    setState(() {
+                                      _legendOpen = !_legendOpen;
+                                    });
+                                  },
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          );
+                        },
                       ),
                     ),
-                  ),
-                ),
-                Positioned(
-                  right: 16,
-                  top: 16,
-                  child: _TreeZoomControls(
-                    onZoomIn: () => _zoomBy(0.14, compact: compact),
-                    onZoomOut: () => _zoomBy(-0.14, compact: compact),
-                    onReset: () => _fitToViewport(viewportSize, force: true),
                   ),
                 ),
               ],
@@ -375,23 +351,20 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
   }
 }
 
-class _TreeZoomControls extends StatelessWidget {
-  const _TreeZoomControls({
-    required this.onZoomIn,
-    required this.onZoomOut,
-    required this.onReset,
+class _TreeLegendCard extends StatelessWidget {
+  const _TreeLegendCard({
+    required this.compact,
   });
 
-  final VoidCallback onZoomIn;
-  final VoidCallback onZoomOut;
-  final VoidCallback onReset;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
     return Container(
-      padding: const EdgeInsets.all(6),
+      width: double.infinity,
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         color: colors.surface.withValues(alpha: 0.94),
@@ -400,22 +373,28 @@ class _TreeZoomControls extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _TreeZoomButton(
-            icon: Icons.add_rounded,
-            tooltip: context.l10n.text('tree_zoom_in'),
-            onTap: onZoomIn,
+          _LegendChip(
+            label: context.l10n.text('tree_available'),
+            color: colors.primary,
+            compact: true,
           ),
           const SizedBox(height: 6),
-          _TreeZoomButton(
-            icon: Icons.remove_rounded,
-            tooltip: context.l10n.text('tree_zoom_out'),
-            onTap: onZoomOut,
+          _LegendChip(
+            label: context.l10n.text('tree_in_progress'),
+            color: colors.accent,
+            compact: true,
           ),
           const SizedBox(height: 6),
-          _TreeZoomButton(
-            icon: Icons.center_focus_strong_rounded,
-            tooltip: context.l10n.text('tree_zoom_reset'),
-            onTap: onReset,
+          _LegendChip(
+            label: context.l10n.text('tree_completed'),
+            color: colors.success,
+            compact: true,
+          ),
+          const SizedBox(height: 6),
+          _LegendChip(
+            label: context.l10n.text('tree_mastered'),
+            color: const Color(0xFFFFD166),
+            compact: true,
           ),
         ],
       ),
@@ -423,34 +402,55 @@ class _TreeZoomControls extends StatelessWidget {
   }
 }
 
-class _TreeZoomButton extends StatelessWidget {
-  const _TreeZoomButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
+class _TreeLegendMenu extends StatelessWidget {
+  const _TreeLegendMenu({
+    required this.compact,
+    required this.isOpen,
+    required this.onToggle,
   });
 
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
+  final bool compact;
+  final bool isOpen;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            color: colors.surfaceSoft,
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Material(
+            color: colors.surface.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              onTap: onToggle,
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: colors.divider),
+                ),
+                child: Icon(
+                  isOpen ? Icons.close_rounded : Icons.legend_toggle_rounded,
+                  color: colors.textPrimary,
+                ),
+              ),
+            ),
           ),
-          child: Icon(icon, color: colors.textPrimary),
-        ),
+          if (isOpen) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: compact ? 232 : 182,
+              child: _TreeLegendCard(compact: compact),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -793,67 +793,27 @@ class _BackdropPainter extends CustomPainter {
   }
 }
 
-class _SummaryPill extends StatelessWidget {
-  const _SummaryPill({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: colors.surfaceSoft,
-        border: Border.all(color: colors.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: colors.textSecondary,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _LegendChip extends StatelessWidget {
   const _LegendChip({
     required this.label,
     required this.color,
+    this.compact = false,
   });
 
   final String label;
   final Color color;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 10 : 12,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: colors.surfaceSoft,
@@ -878,6 +838,7 @@ class _LegendChip extends StatelessWidget {
               style: TextStyle(
                 color: colors.textPrimary,
                 fontWeight: FontWeight.w700,
+                fontSize: compact ? 13 : 14,
               ),
             ),
           ),

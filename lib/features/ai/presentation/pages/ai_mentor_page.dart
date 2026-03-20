@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
-import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
@@ -33,7 +33,11 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
   }
 
   void _send() {
-    ref.read(demoAppControllerProvider.notifier).sendAiMessage(_controller.text);
+    final message = _controller.text.trim();
+    if (message.isEmpty) {
+      return;
+    }
+    ref.read(demoAppControllerProvider.notifier).sendAiMessage(message);
     _controller.clear();
   }
 
@@ -44,6 +48,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
     final l10n = context.l10n;
     final prompts = catalog.suggestedPrompts(state);
     final colors = context.appColors;
+    final compact = context.isCompactLayout;
     final focusedTitle = state.focusedLessonId == null
         ? state.focusedPracticeId == null
             ? catalog.trackById(state.currentTrackId).title.resolve(state.locale)
@@ -58,7 +63,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
         children: [
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
+              padding: EdgeInsets.fromLTRB(0, compact ? 6 : 8, 0, 18),
               children: [
                 GlowCard(
                   accent: colors.primary,
@@ -145,24 +150,60 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: GlowCard(
-              accent: colors.primary,
-              child: Column(
+            padding: EdgeInsets.fromLTRB(0, 0, 0, compact ? 16 : 20),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
+              decoration: BoxDecoration(
+                color: colors.surface.withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: colors.divider),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.08),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
                 children: [
-                  TextField(
-                    controller: _controller,
-                    minLines: 1,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: l10n.text('message_hint'),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 3,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintText: l10n.text('message_hint'),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  AppButton.primary(
-                    label: l10n.text('send_message'),
-                    icon: Icons.send_rounded,
-                    onPressed: _send,
+                  const SizedBox(width: 12),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      InkWell(
+                        onTap: _send,
+                        borderRadius: BorderRadius.circular(999),
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: colors.textPrimary.withValues(alpha: 0.92),
+                          ),
+                          child: Icon(
+                            Icons.arrow_forward_rounded,
+                            color: colors.background,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -242,14 +283,12 @@ class _FaqSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            locale == AppLocale.ru ? 'Готовые вопросы' : 'Prepared questions',
+            context.l10n.text('prepared_questions'),
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           Text(
-            locale == AppLocale.ru
-                ? 'Выберите один из готовых вопросов и сразу отправьте его в чат.'
-                : 'Pick a prepared question and send it to the chat instantly.',
+            context.l10n.text('prepared_questions_hint'),
             style: TextStyle(
               color: colors.textSecondary,
               height: 1.4,
@@ -261,7 +300,7 @@ class _FaqSection extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 12),
               child: _FaqCard(
                 item: item,
-                askLabel: locale == AppLocale.ru ? 'Задать вопрос' : 'Ask now',
+                askLabel: context.l10n.text('ask_now'),
                 onAsk: () => onAsk(item.question),
               ),
             ),

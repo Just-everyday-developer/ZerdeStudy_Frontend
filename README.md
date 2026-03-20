@@ -1056,8 +1056,10 @@ Recent UI/debugging updates:
 - `lib/features/home/presentation/pages/community_courses_page.dart`
   Catalog filters use the same scrollable panel approach as `Learn`.
 - `lib/features/knowledge_tree/presentation/pages/knowledge_tree.dart`
-  Reset zoom now forces a real fit-to-viewport refresh. Desktop `Ctrl + wheel`
-  handling and the tree zoom controls were also stabilized.
+  Tree screen now runs in a viewport-only mode: the outer summary/legend cards
+  were removed, the legend lives inside the tree at the top-right, and the page
+  itself no longer scrolls. Mouse wheel on desktop now directly controls tree
+  zoom, so scaling no longer depends on `Ctrl + wheel`.
 - `lib/core/common_widgets/app_settings_panel.dart`
   FAQ entry moved inside Settings.
 - `lib/core/common_widgets/app_shell_scaffold.dart`
@@ -1075,3 +1077,86 @@ Debugging tip:
 - If a horizontal rail stops dragging with the mouse, first check
   `lib/core/common_widgets/app_scroll_behavior.dart` and then the target
   `ListView` in `Learn` or `Profile`.
+
+## 17. Debug Notes: 2026-03-20 Mobile Repair Pass
+
+Latest compact/mobile UI repairs:
+
+- `lib/core/common_widgets/app_page_scaffold.dart`
+  Added `horizontalPadding` and `expandContent` so screens like `Tree` can run
+  edge-to-edge without the default centered content constraint. App bar titles
+  now clamp to a single line with ellipsis.
+- `lib/core/common_widgets/glow_card.dart`
+  Added `showBorder` for cases where a card should keep the surface styling
+  without the visible border line.
+- `lib/features/knowledge_tree/presentation/pages/knowledge_tree.dart`
+  The tree now renders as the only viewport on the page. The outer card wrapper
+  and zoom buttons were removed, the legend moved into a toggle menu in the
+  top-right corner, pinch zoom remains enabled, and mouse-wheel zoom is handled
+  directly inside the tree listener. Compact mode uses tighter bounds and no
+  page-level scrolling.
+  Native Windows now uses a fixed tree scale and disables zoom interaction:
+  the map starts in one stable desktop resolution and can only be moved by
+  dragging with the mouse cursor.
+  The desktop tree viewport is also width-limited now, so the map window is
+  no longer stretched edge-to-edge; its height was increased to visually reach
+  the bottom of the available page area.
+  The outer tree background now stretches across the full available page
+  width, while the actual interactive map area stays narrower inside it.
+- `lib/features/home/presentation/pages/home_page.dart`
+  Compact layout now uses full-width page content, the first `continue learning`
+  card has no border on phone, and `daily mission` is hidden in compact mode.
+- `lib/features/profile/presentation/pages/profile_page.dart`
+  Reworked the compact profile header into a true mobile layout: larger avatar,
+  name/email to the right, and the XP/Level/Streak metrics in an even row below
+  instead of a narrow centered stack.
+- `lib/features/analytics/presentation/pages/leaderboard_page.dart`
+  Added a dedicated compact podium layout to remove the phone overflow. Names,
+  XP labels, and bar content are now clamped and sized specifically for small
+  screens.
+  The branch/focus subtitles like `Database` or `Frontend` were removed from
+  both the podium and the participant list, so leaderboard entries now show a
+  cleaner name/role presentation without the extra focus tag under each user.
+- `lib/features/learning/presentation/pages/learn_page.dart`
+  Discovery rails in `Learn` now use wider spacing between cards and slightly
+  larger gaps between sections so the course rows no longer feel visually
+  compressed.
+- `lib/features/ai/presentation/pages/ai_mentor_page.dart`
+  Replaced the old `TextField + full-width button` composer with a compact
+  inline message bar for phone and desktop. The prepared-questions section now
+  uses localization keys instead of hardcoded fallback strings.
+- `lib/core/common_widgets/app_scroll_behavior.dart`
+  Native Windows builds no longer show the Material desktop scrollbar on the
+  right edge. The scrollbar is hidden only for the Windows app; web and mobile
+  platforms keep their default behavior.
+- `lib/core/layout/app_breakpoints.dart`
+  Native Windows now uses roomier page widths and slightly tighter outer
+  paddings so content spreads more evenly across the window instead of sitting
+  in a narrow centered column.
+- `lib/core/common_widgets/app_page_scaffold.dart`
+  Desktop content alignment on the native Windows app now starts from the left
+  edge of the content area instead of being centered by default.
+- `lib/core/common_widgets/app_shell_scaffold.dart`
+  Desktop shell now supports richer keyboard navigation: `Alt + 1..5`,
+  `Left / Right`, `Ctrl + Tab`, `Ctrl + Shift + Tab`, `Alt + Z`, plus the
+  existing focused-search shortcut flow. Shortcut handling now runs through a
+  direct shell-level `onKeyEvent` path instead of the previous `Shortcuts`
+  mapping so Windows no longer needs duplicate presses and no longer falls back
+  to the system beep for handled combinations.
+- `lib/core/common_widgets/app_settings_panel.dart`
+  Settings now includes a `Help` section with FAQ access and a hotkeys list so
+  desktop navigation shortcuts are discoverable from the UI.
+- `lib/core/localization/app_localizations.dart`
+  Added localized labels and descriptions for the new `Help` and `Hotkeys`
+  settings content.
+- `test/widget_test.dart`
+  Updated widget expectations for the new mobile dashboard flow, legend toggle,
+  and AI send action.
+
+Debugging tips for this pass:
+
+- If the tree stops zooming, inspect `onPointerSignal` and `InteractiveViewer`
+  in `knowledge_tree.dart` first. The tree no longer depends on page scroll,
+  so gesture conflicts usually mean the viewport listener changed.
+- If a compact card looks too centered or too narrow, check the page's own
+  internal `ListView` padding before changing `AppPageScaffold`.

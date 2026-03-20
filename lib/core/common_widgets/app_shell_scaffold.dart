@@ -27,6 +27,13 @@ class AppShellScaffold extends ConsumerStatefulWidget {
 
 class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
   final List<int> _branchHistory = <int>[];
+  final FocusNode _shellFocusNode = FocusNode(debugLabel: 'app-shell-shortcuts');
+
+  @override
+  void dispose() {
+    _shellFocusNode.dispose();
+    super.dispose();
+  }
 
   Future<bool> _handleBack() async {
     final navigator = widget.navigatorKeys[widget.navigationShell.currentIndex]
@@ -62,6 +69,86 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
 
   void _requestSearchFocus() {
     ref.read(courseSearchFocusRequestProvider.notifier).ping();
+  }
+
+  bool _hasEditableTextFocus() {
+    final focusedContext = FocusManager.instance.primaryFocus?.context;
+    if (focusedContext == null) {
+      return false;
+    }
+    return focusedContext.widget is EditableText;
+  }
+
+  void _selectAdjacentBranch(int delta) {
+    final destinationsCount = 5;
+    final currentIndex = widget.navigationShell.currentIndex;
+    final nextIndex = (currentIndex + delta + destinationsCount) % destinationsCount;
+    _onDestinationSelected(nextIndex);
+  }
+
+  KeyEventResult _handleShellKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    final ctrlPressed = HardwareKeyboard.instance.isControlPressed;
+    final altPressed = HardwareKeyboard.instance.isAltPressed;
+    final shiftPressed = HardwareKeyboard.instance.isShiftPressed;
+
+    if (altPressed && !ctrlPressed) {
+      if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.keyZ) {
+        _handleBack();
+        return KeyEventResult.handled;
+      }
+
+      final directIndex = switch (key) {
+        LogicalKeyboardKey.digit1 || LogicalKeyboardKey.numpad1 => 0,
+        LogicalKeyboardKey.digit2 || LogicalKeyboardKey.numpad2 => 1,
+        LogicalKeyboardKey.digit3 || LogicalKeyboardKey.numpad3 => 2,
+        LogicalKeyboardKey.digit4 || LogicalKeyboardKey.numpad4 => 3,
+        LogicalKeyboardKey.digit5 || LogicalKeyboardKey.numpad5 => 4,
+        _ => null,
+      };
+      if (directIndex != null) {
+        _onDestinationSelected(directIndex);
+        return KeyEventResult.handled;
+      }
+    }
+
+    if (ctrlPressed && key == LogicalKeyboardKey.tab) {
+      _selectAdjacentBranch(shiftPressed ? -1 : 1);
+      return KeyEventResult.handled;
+    }
+
+    if (ctrlPressed && key == LogicalKeyboardKey.keyK) {
+      _onDestinationSelected(2);
+      _requestSearchFocus();
+      return KeyEventResult.handled;
+    }
+
+    if (ctrlPressed && key == LogicalKeyboardKey.keyL) {
+      _onDestinationSelected(2);
+      return KeyEventResult.handled;
+    }
+
+    if (ctrlPressed && key == LogicalKeyboardKey.keyT) {
+      _onDestinationSelected(1);
+      return KeyEventResult.handled;
+    }
+
+    if (!ctrlPressed && !altPressed && !_hasEditableTextFocus()) {
+      if (key == LogicalKeyboardKey.arrowLeft) {
+        _selectAdjacentBranch(-1);
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowRight) {
+        _selectAdjacentBranch(1);
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -152,68 +239,28 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                   ],
                 );
 
-          return Shortcuts(
-            shortcuts: <ShortcutActivator, Intent>{
-              const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true):
-                  const _BackIntent(),
-              const SingleActivator(LogicalKeyboardKey.digit1, alt: true):
-                  const _BranchIntent(0),
-              const SingleActivator(LogicalKeyboardKey.digit2, alt: true):
-                  const _BranchIntent(1),
-              const SingleActivator(LogicalKeyboardKey.digit3, alt: true):
-                  const _BranchIntent(2),
-              const SingleActivator(LogicalKeyboardKey.digit4, alt: true):
-                  const _BranchIntent(3),
-              const SingleActivator(LogicalKeyboardKey.digit5, alt: true):
-                  const _BranchIntent(4),
-              const SingleActivator(LogicalKeyboardKey.keyK, control: true):
-                  const _FocusSearchIntent(),
-              const SingleActivator(LogicalKeyboardKey.keyL, control: true):
-                  const _BranchIntent(2),
-              const SingleActivator(LogicalKeyboardKey.keyT, control: true):
-                  const _BranchIntent(1),
-            },
-            child: Actions(
-              actions: <Type, Action<Intent>>{
-                _BackIntent: CallbackAction<_BackIntent>(
-                  onInvoke: (intent) => _handleBack(),
-                ),
-                _BranchIntent: CallbackAction<_BranchIntent>(
-                  onInvoke: (intent) {
-                    _onDestinationSelected(intent.index);
-                    return null;
-                  },
-                ),
-                _FocusSearchIntent: CallbackAction<_FocusSearchIntent>(
-                  onInvoke: (intent) {
-                    _onDestinationSelected(2);
-                    _requestSearchFocus();
-                    return null;
-                  },
-                ),
-              },
-              child: Focus(
-                autofocus: true,
-                child: Scaffold(
-                  backgroundColor: colors.background,
-                  body: shellBody,
-                  bottomNavigationBar: compact
-                      ? NavigationBar(
-                          selectedIndex: widget.navigationShell.currentIndex,
-                          onDestinationSelected: _onDestinationSelected,
-                          destinations: destinations
-                              .map(
-                                (destination) => NavigationDestination(
-                                  icon: Icon(destination.icon),
-                                  selectedIcon: Icon(destination.selectedIcon),
-                                  label: destination.label,
-                                ),
-                              )
-                              .toList(growable: false),
-                        )
-                      : null,
-                ),
-              ),
+          return Focus(
+            focusNode: _shellFocusNode,
+            autofocus: true,
+            onKeyEvent: (_, event) => _handleShellKeyEvent(event),
+            child: Scaffold(
+              backgroundColor: colors.background,
+              body: shellBody,
+              bottomNavigationBar: compact
+                  ? NavigationBar(
+                      selectedIndex: widget.navigationShell.currentIndex,
+                      onDestinationSelected: _onDestinationSelected,
+                      destinations: destinations
+                          .map(
+                            (destination) => NavigationDestination(
+                              icon: Icon(destination.icon),
+                              selectedIcon: Icon(destination.selectedIcon),
+                              label: destination.label,
+                            ),
+                          )
+                          .toList(growable: false),
+                    )
+                  : null,
             ),
           );
         },
@@ -418,18 +465,4 @@ class _ShellDestination {
   final String route;
   final IconData icon;
   final IconData selectedIcon;
-}
-
-class _BackIntent extends Intent {
-  const _BackIntent();
-}
-
-class _FocusSearchIntent extends Intent {
-  const _FocusSearchIntent();
-}
-
-class _BranchIntent extends Intent {
-  const _BranchIntent(this.index);
-
-  final int index;
 }

@@ -88,10 +88,10 @@ void main() {
     await tester.tap(find.text('Google'));
     await pumpScene(tester);
 
-    expect(find.text('Daily mission'), findsOneWidget);
+    expect(find.text('Recommended tracks'), findsOneWidget);
   });
 
-  testWidgets('knowledge tree summary renders and opens track overview',
+  testWidgets('knowledge tree renders and opens track overview',
       (tester) async {
     await configureSurface(tester);
     final container = await createContainer();
@@ -110,8 +110,8 @@ void main() {
     await tester.tap(find.byIcon(Icons.account_tree_outlined));
     await pumpScene(tester);
 
-    expect(find.textContaining('single knowledge tree'), findsOneWidget);
-    expect(find.text('Visible branches'), findsOneWidget);
+    expect(find.byIcon(Icons.legend_toggle_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.add_rounded), findsNothing);
     expect(find.text('Operating Systems'), findsWidgets);
     expect(find.text('Frontend'), findsWidgets);
 
@@ -358,7 +358,7 @@ void main() {
     await pumpScene(tester);
 
     await tester.enterText(find.byType(TextField).last, 'Explain the tree');
-    await tester.tap(find.text('Send'));
+    await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
     await pumpScene(tester);
     final firstReply = container.read(demoAppControllerProvider).aiMessages.last.text;
 
@@ -366,7 +366,7 @@ void main() {
       find.byType(TextField).last,
       'Give me a hint for the next output quiz.',
     );
-    await tester.tap(find.text('Send'));
+    await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
     await pumpScene(tester);
     final secondReply =
         container.read(demoAppControllerProvider).aiMessages.last.text;

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 enum AppBreakpoint {
@@ -21,6 +22,10 @@ extension AppBreakpointX on BuildContext {
     return AppBreakpoint.fromWidth(MediaQuery.sizeOf(this).width);
   }
 
+  bool get isNativeWindowsApp {
+    return !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+  }
+
   bool get isCompactLayout => appBreakpoint == AppBreakpoint.compact;
 
   bool get isMediumLayout => appBreakpoint == AppBreakpoint.medium;
@@ -32,9 +37,9 @@ extension AppBreakpointX on BuildContext {
       case AppBreakpoint.compact:
         return 560;
       case AppBreakpoint.medium:
-        return 900;
+        return isNativeWindowsApp ? 1040 : 900;
       case AppBreakpoint.wide:
-        return 1360;
+        return isNativeWindowsApp ? 1560 : 1360;
     }
   }
 
@@ -43,9 +48,9 @@ extension AppBreakpointX on BuildContext {
       case AppBreakpoint.compact:
         return 16;
       case AppBreakpoint.medium:
-        return 24;
+        return isNativeWindowsApp ? 20 : 24;
       case AppBreakpoint.wide:
-        return 32;
+        return isNativeWindowsApp ? 24 : 32;
     }
   }
 }

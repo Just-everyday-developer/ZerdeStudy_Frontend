@@ -28,192 +28,168 @@ class HomePage extends ConsumerWidget {
     final incorrectExercises = catalog.incorrectCourseExercisesFor(state);
     final incorrectQuizzes = catalog.incorrectTrackQuizzesFor(state);
     final colors = context.appColors;
+    final compact = context.isCompactLayout;
 
     return AppPageScaffold(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+        padding: EdgeInsets.fromLTRB(0, compact ? 6 : 8, 0, compact ? 104 : 120),
         children: [
-          GlowCard(
-            accent: currentTrack.color,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${state.user?.name ?? 'Talgat'}, ${l10n.text('continue_learning').toLowerCase()}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineMedium
-                      ?.copyWith(fontSize: 28),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${state.user?.name ?? 'Talgat'}, ${l10n.text('continue_learning').toLowerCase()}',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontSize: compact ? 24 : 28),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                currentTrack.description.resolve(state.locale),
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  height: 1.45,
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  currentTrack.description.resolve(state.locale),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _MetricBadge(label: 'XP', value: '${state.xp}'),
-                    _MetricBadge(label: 'Level', value: '${state.level}'),
-                    _MetricBadge(label: 'Streak', value: '${state.streak}d'),
-                    _MetricBadge(
-                      label: 'Mastered',
-                      value: '${catalog.masteredTracks(state)}',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  currentTrack.title.resolve(state.locale),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${currentProgress.completedUnits}/${currentProgress.totalUnits} completed units',
-                  style: TextStyle(color: colors.textSecondary),
-                ),
-                const SizedBox(height: 14),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: currentProgress.fraction,
-                    minHeight: 10,
-                    backgroundColor: colors.backgroundElevated,
-                    color: currentTrack.color,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                AppButton.primary(
-                  label: currentProgress.nextTarget == null
-                      ? l10n.text('start_track')
-                      : l10n.text('continue_learning'),
-                  icon: Icons.play_circle_fill_rounded,
-                  maxWidth: context.isCompactLayout ? null : 360,
-                  onPressed: () {
-                    final target = currentProgress.nextTarget;
-                    if (target == null) {
-                      context.push(AppRoutes.trackById(currentTrack.id));
-                      return;
-                    }
-                    context.push(
-                      target.isPractice
-                          ? AppRoutes.practiceById(target.id)
-                          : AppRoutes.lessonById(target.id),
-                    );
-                  },
-                ),
-                if (incorrectExercises.isNotEmpty || incorrectQuizzes.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: colors.surfaceSoft,
-                      border: Border.all(color: colors.divider),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.text('repeat_wrong_answers'),
-                          style: TextStyle(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          l10n.format(
-                            'repeat_wrong_answers_hint',
-                            <String, Object>{
-                              'count': incorrectExercises.length + incorrectQuizzes.length,
-                            },
-                          ),
-                          style: TextStyle(
-                            color: colors.textSecondary,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...incorrectExercises.take(2).map(
-                              (exercise) => Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Text(
-                                  '• ${exercise.title.resolve(state.locale)}',
-                                  style: TextStyle(color: colors.textPrimary),
-                                ),
-                              ),
-                            ),
-                        ...incorrectQuizzes.take(2).map(
-                              (quiz) => Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Text(
-                                  '• ${quiz.title.resolve(state.locale)}',
-                                  style: TextStyle(color: colors.textPrimary),
-                                ),
-                              ),
-                            ),
-                        const SizedBox(height: 10),
-                        AppButton.secondary(
-                          label: l10n.text('repeat_wrong_answers'),
-                          icon: Icons.refresh_rounded,
-                          maxWidth: context.isCompactLayout ? null : 300,
-                          onPressed: () {
-                            if (state.enrolledCommunityCourseIds.isNotEmpty) {
-                              context.push(
-                                AppRoutes.coursePlayerById(
-                                  state.enrolledCommunityCourseIds.first,
-                                ),
-                              );
-                              return;
-                            }
-                            if (currentProgress.nextTarget != null) {
-                              final target = currentProgress.nextTarget!;
-                              context.push(
-                                target.isPractice
-                                    ? AppRoutes.practiceById(target.id)
-                                    : AppRoutes.lessonById(target.id),
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _MetricBadge(label: 'XP', value: '${state.xp}'),
+                  _MetricBadge(label: 'Level', value: '${state.level}'),
+                  _MetricBadge(label: 'Streak', value: '${state.streak}d'),
+                  _MetricBadge(
+                    label: 'Mastered',
+                    value: '${catalog.masteredTracks(state)}',
                   ),
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          GlowCard(
-            accent: colors.accent,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.text('daily_mission'),
-                  style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 18),
+              Text(
+                currentTrack.title.resolve(state.locale),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${currentProgress.completedUnits}/${currentProgress.totalUnits} completed units',
+                style: TextStyle(color: colors.textSecondary),
+              ),
+              const SizedBox(height: 14),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: currentProgress.fraction,
+                  minHeight: 10,
+                  backgroundColor: colors.backgroundElevated,
+                  color: currentTrack.color,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  state.dailyMissionDone
-                      ? l10n.text('daily_mission_done')
-                      : l10n.text('daily_mission_pending'),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.45,
+              ),
+              const SizedBox(height: 16),
+              AppButton.primary(
+                label: currentProgress.nextTarget == null
+                    ? l10n.text('start_track')
+                    : l10n.text('continue_learning'),
+                icon: Icons.play_circle_fill_rounded,
+                maxWidth: compact ? null : 360,
+                onPressed: () {
+                  final target = currentProgress.nextTarget;
+                  if (target == null) {
+                    context.push(AppRoutes.trackById(currentTrack.id));
+                    return;
+                  }
+                  context.push(
+                    target.isPractice
+                        ? AppRoutes.practiceById(target.id)
+                        : AppRoutes.lessonById(target.id),
+                  );
+                },
+              ),
+              if (incorrectExercises.isNotEmpty || incorrectQuizzes.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: colors.surfaceSoft,
+                    border: Border.all(color: colors.divider),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.text('repeat_wrong_answers'),
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.format(
+                          'repeat_wrong_answers_hint',
+                          <String, Object>{
+                            'count': incorrectExercises.length + incorrectQuizzes.length,
+                          },
+                        ),
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...incorrectExercises.take(2).map(
+                            (exercise) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Text(
+                                '• ${exercise.title.resolve(state.locale)}',
+                                style: TextStyle(color: colors.textPrimary),
+                              ),
+                            ),
+                          ),
+                      ...incorrectQuizzes.take(2).map(
+                            (quiz) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Text(
+                                '• ${quiz.title.resolve(state.locale)}',
+                                style: TextStyle(color: colors.textPrimary),
+                              ),
+                            ),
+                          ),
+                      const SizedBox(height: 10),
+                      AppButton.secondary(
+                        label: l10n.text('repeat_wrong_answers'),
+                        icon: Icons.refresh_rounded,
+                        maxWidth: compact ? null : 300,
+                        onPressed: () {
+                          if (state.enrolledCommunityCourseIds.isNotEmpty) {
+                            context.push(
+                              AppRoutes.coursePlayerById(
+                                state.enrolledCommunityCourseIds.first,
+                              ),
+                            );
+                            return;
+                          }
+                          if (currentProgress.nextTarget != null) {
+                            final target = currentProgress.nextTarget!;
+                            context.push(
+                              target.isPractice
+                                  ? AppRoutes.practiceById(target.id)
+                                  : AppRoutes.lessonById(target.id),
+                            );
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: compact ? 20 : 16),
+          if (!compact) const SizedBox(height: 24),
           _SectionTitle(title: l10n.text('recommended_tracks')),
           const SizedBox(height: 12),
           ...recommendedTracks.map((track) {
@@ -318,6 +294,8 @@ class _SectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleLarge,
           ),
         ),
