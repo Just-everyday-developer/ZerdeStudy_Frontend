@@ -13,6 +13,7 @@ class AppRoutes {
   static const String assessment = '/assessment';
   static const String stats = '/stats';
   static const String leaderboard = '/leaderboard';
+  static const String faq = '/faq';
   static const String courses = '/courses';
   static const String coursePlayer = '/course-player';
 
@@ -38,7 +39,6 @@ class AppRoutes {
     String? topic,
     String? search,
     String? level,
-    String? author,
     double? minRating,
     String? duration,
     bool? certificate,
@@ -47,7 +47,6 @@ class AppRoutes {
       if (topic != null && topic.isNotEmpty) 'topic': topic,
       if (search != null && search.isNotEmpty) 'search': search,
       if (level != null && level.isNotEmpty) 'level': level,
-      if (author != null && author.isNotEmpty) 'author': author,
       if (minRating != null && minRating > 0) 'minRating': '$minRating',
       if (duration != null && duration.isNotEmpty) 'duration': duration,
       if (certificate == true) 'certificate': '1',

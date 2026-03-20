@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/routing/app_routes.dart';
 import '../../app/state/app_locale.dart';
 import '../../app/state/demo_app_controller.dart';
+import 'app_settings_panel.dart';
 import '../localization/app_localizations.dart';
 import '../providers/course_search_focus_provider.dart';
 import '../theme/app_theme_colors.dart';
@@ -132,7 +133,9 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                         _onDestinationSelected(2);
                         _requestSearchFocus();
                       },
+                      onFaqTap: () => context.push(AppRoutes.faq),
                       onProfileTap: () => _onDestinationSelected(4),
+                      onSettingsTap: () => showAppSettingsPanel(context),
                       onLocaleSelected: ref
                           .read(demoAppControllerProvider.notifier)
                           .changeLocale,
@@ -228,7 +231,9 @@ class _DesktopShellBar extends StatelessWidget {
     required this.onDestinationSelected,
     required this.onBackTap,
     required this.onSearchTap,
+    required this.onFaqTap,
     required this.onProfileTap,
+    required this.onSettingsTap,
     required this.onLocaleSelected,
     required this.currentLocale,
     required this.canGoBack,
@@ -240,7 +245,9 @@ class _DesktopShellBar extends StatelessWidget {
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onBackTap;
   final VoidCallback onSearchTap;
+  final VoidCallback onFaqTap;
   final VoidCallback onProfileTap;
+  final VoidCallback onSettingsTap;
   final ValueChanged<AppLocale> onLocaleSelected;
   final AppLocale currentLocale;
   final bool canGoBack;
@@ -266,14 +273,6 @@ class _DesktopShellBar extends StatelessWidget {
               ),
               const SizedBox(width: 8),
             ],
-            Text(
-              context.l10n.text('app_name'),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.textPrimary,
-                  ),
-            ),
-            const SizedBox(width: 18),
             Expanded(
               child: Wrap(
                 spacing: 10,
@@ -293,6 +292,12 @@ class _DesktopShellBar extends StatelessWidget {
               onPressed: onSearchTap,
               icon: Icon(Icons.search_rounded, color: colors.textPrimary),
               tooltip: context.l10n.text('search_courses'),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: onFaqTap,
+              icon: Icon(Icons.quiz_rounded, color: colors.textPrimary),
+              tooltip: context.l10n.text('faq_title'),
             ),
             const SizedBox(width: 8),
             PopupMenuButton<AppLocale>(
@@ -337,39 +342,43 @@ class _DesktopShellBar extends StatelessWidget {
               onTap: onProfileTap,
               borderRadius: BorderRadius.circular(18),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
                   color: colors.surfaceSoft,
                   border: Border.all(color: colors.divider),
                 ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: colors.primary.withValues(alpha: 0.18),
-                      child: Text(
-                        currentUserName.isEmpty
-                            ? 'Z'
-                            : currentUserName.substring(0, 1).toUpperCase(),
-                        style: TextStyle(
-                          color: colors.primary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      currentUserName,
+                child: Hero(
+                  tag: 'shell-profile-avatar',
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: colors.primary.withValues(alpha: 0.18),
+                    child: Text(
+                      currentUserName.isEmpty
+                          ? 'Z'
+                          : currentUserName.substring(0, 1).toUpperCase(),
                       style: TextStyle(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w700,
+                        color: colors.primary,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
+            ),
+            const SizedBox(width: 10),
+            IconButton(
+              onPressed: onSettingsTap,
+              tooltip: context.l10n.text('settings'),
+              style: IconButton.styleFrom(
+                backgroundColor: colors.surfaceSoft,
+                side: BorderSide(color: colors.divider),
+                padding: const EdgeInsets.all(12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              icon: Icon(Icons.settings_rounded, color: colors.textPrimary),
             ),
           ],
         ),

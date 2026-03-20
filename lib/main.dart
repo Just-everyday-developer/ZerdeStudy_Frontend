@@ -8,11 +8,13 @@ import 'app/state/demo_app_controller.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/providers/background_controller.dart';
 import 'core/theme/app_theme.dart';
+import 'core/window/app_window.dart';
 
 final backgroundController = BackgroundController();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await configureAppWindow();
   final preferences = await SharedPreferences.getInstance();
 
   runApp(
@@ -60,6 +62,11 @@ class _MyAppState extends ConsumerState<MyApp>
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       title: 'ZerdeStudy',
+      builder: (context, child) {
+        return buildAppWindowFrame(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode.materialMode,

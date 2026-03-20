@@ -722,71 +722,283 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
   required List<CommunityCourseLessonPreview> lessons,
 }) {
   final topicTag = tags.isEmpty ? title : tags.first;
-  final lessonSeeds = <CoursePlayerLesson>[
-    CoursePlayerLesson(
-      id: '${id}_player_lesson_1',
-      title: sameText('Orientation'),
-      annotation: sameText('We start with the key idea behind $title and the mental model you will reuse later.'),
-      explanation: sameText(
-        'This course treats $topicTag as a repeatable pattern: observe the problem, name the moving parts, and then apply a compact implementation.',
-      ),
-      codeSnippet: 'final goal = "$topicTag";\nfinal nextStep = "${subtitle.split(' ').first.toLowerCase()}";\nprint("Focus: \$goal -> \$nextStep");',
-      exampleOutput: 'Focus: $topicTag -> ${subtitle.split(' ').first.toLowerCase()}',
-      nextActionLabel: sameText('Continue to the first worked example'),
-    ),
-    CoursePlayerLesson(
-      id: '${id}_player_lesson_2',
-      title: sameText('Worked example'),
-      annotation: sameText('A tiny example shows how the idea turns into a concrete, explainable action.'),
-      explanation: sameText(
-        'Notice the sequence: define a small input, transform it once, and print a result that can be checked immediately. This keeps the explanation calm and presentation-friendly.',
-      ),
-      codeSnippet: 'final items = ["observe", "reason", "ship"];\nfinal summary = items.join(" -> ");\nprint(summary);',
-      exampleOutput: 'observe -> reason -> ship',
-      nextActionLabel: sameText('Move to the practice checkpoint'),
-    ),
-    CoursePlayerLesson(
-      id: '${id}_player_lesson_3',
-      title: sameText('Practice checkpoint'),
-      annotation: sameText('You now connect the concept to a real team scenario and prepare for the task view.'),
-      explanation: sameText(
-        'Before moving into assignments, summarize the technique in one sentence and name one place where your team could use it this week.',
-      ),
-      codeSnippet: 'String explainPattern(String domain) {\n  return "Use a small loop: learn, test, and refine in \$domain.";\n}\n\nprint(explainPattern("$title"));',
-      exampleOutput: 'Use a small loop: learn, test, and refine in $title.',
-      nextActionLabel: sameText('Open the assignment block'),
-    ),
-  ];
+  final previewLessons = lessons.isEmpty
+      ? <CommunityCourseLessonPreview>[
+          buildCourseLesson(
+            '$title foundations',
+            'Build the core model before going deeper.',
+          ),
+          buildCourseLesson(
+            '$title worked example',
+            'Walk through one practical example and narrate it clearly.',
+          ),
+          buildCourseLesson(
+            '$title practice bridge',
+            'Move into exercises, feedback, and repetition.',
+          ),
+        ]
+      : lessons;
+
+  CoursePlayerLesson buildLesson({
+    required String lessonId,
+    required String lessonTitle,
+    required String annotation,
+    required String explanation,
+    required String objective,
+    required String videoLabel,
+    required String imageCaption,
+    required String codeSnippet,
+    required String exampleOutput,
+    required String nextAction,
+    required List<CoursePlayerExercise> exercises,
+  }) {
+    return CoursePlayerLesson(
+      id: lessonId,
+      title: sameText(lessonTitle),
+      annotation: sameText(annotation),
+      explanation: sameText(explanation),
+      objective: sameText(objective),
+      videoLabel: videoLabel,
+      imageCaption: imageCaption,
+      codeSnippet: codeSnippet,
+      exampleOutput: exampleOutput,
+      comments: _defaultCourseComments(title, lessonTitle),
+      exercises: exercises,
+      nextActionLabel: sameText(nextAction),
+    );
+  }
 
   return <CoursePlayerModule>[
     CoursePlayerModule(
       id: '${id}_player_module_1',
-      title: sameText('Launch pad'),
-      summary: sameText('Start with the concept, one worked example, and a practice-oriented wrap-up.'),
-      lessons: lessonSeeds,
+      title: sameText('Concept and examples'),
+      summary: sameText(
+        'Start with a mental model, watch one walkthrough, and then validate the core idea with interactive checks.',
+      ),
+      lessons: <CoursePlayerLesson>[
+        buildLesson(
+          lessonId: '${id}_player_lesson_1',
+          lessonTitle: previewLessons[0].title.en,
+          annotation:
+              'Start with the foundation behind $title and turn it into a reusable explanation.',
+          explanation:
+              'Treat $topicTag as a small repeatable loop: understand the input, apply one transformation, and explain the visible result in plain language.',
+          objective:
+              'By the end of this step, you should be able to explain the purpose of $title in one clear sentence.',
+          videoLabel: 'Intro walkthrough • 06:24',
+          imageCaption: 'A concept map showing how $topicTag moves from idea to implementation.',
+          codeSnippet:
+              'final topic = "$topicTag";\nconst stage = "foundation";\nprint("\$topic -> \$stage");',
+          exampleOutput: '$topicTag -> foundation',
+          nextAction: 'Move into the first worked example.',
+          exercises: <CoursePlayerExercise>[
+            CoursePlayerExercise(
+              id: '${id}_exercise_1',
+              kind: CourseExerciseKind.singleChoice,
+              title: sameText('Core idea'),
+              prompt: sameText('What is the main goal of the first lesson?'),
+              description: 'Choose the explanation that best matches the lesson objective.',
+              points: 10,
+              choices: const <CourseExerciseChoice>[
+                CourseExerciseChoice(id: 'a', label: 'Memorize every line without understanding the flow'),
+                CourseExerciseChoice(id: 'b', label: 'Build a small mental model and explain the pattern clearly'),
+                CourseExerciseChoice(id: 'c', label: 'Skip the concept and jump directly into advanced optimization'),
+              ],
+              correctChoiceIds: const <String>['b'],
+            ),
+            CoursePlayerExercise(
+              id: '${id}_exercise_2',
+              kind: CourseExerciseKind.fillBlank,
+              title: sameText('Fill the blank'),
+              prompt: sameText('Complete the output label used in the code example.'),
+              description: 'Type the missing word exactly as it should appear.',
+              points: 8,
+              blankTemplate: 'print("$topicTag -> ____");',
+              correctText: 'foundation',
+            ),
+          ],
+        ),
+        buildLesson(
+          lessonId: '${id}_player_lesson_2',
+          lessonTitle: previewLessons.length > 1
+              ? previewLessons[1].title.en
+              : 'Worked example',
+          annotation:
+              'Walk through one example and connect the explanation to visible state changes.',
+          explanation:
+              'A reliable explanation starts with the initial value, continues with the transformation, and ends by reading the final output aloud.',
+          objective:
+              'You should be able to read the example from top to bottom and predict the final result.',
+          videoLabel: 'Example breakdown • 08:10',
+          imageCaption: 'A layered diagram where input, transformation, and output are grouped into a clean flow.',
+          codeSnippet:
+              'final items = ["observe", "reason", "ship"];\nfinal summary = items.join(" -> ");\nprint(summary);',
+          exampleOutput: 'observe -> reason -> ship',
+          nextAction: 'Check how the sequence changes and then continue into practice.',
+          exercises: <CoursePlayerExercise>[
+            CoursePlayerExercise(
+              id: '${id}_exercise_3',
+              kind: CourseExerciseKind.matching,
+              title: sameText('Match the flow'),
+              prompt: sameText('Match each code part with its role.'),
+              description: 'Pick the correct pair for every step in the example.',
+              points: 12,
+              leftItems: const <String>['items', 'join(" -> ")', 'print(summary)'],
+              rightItems: const <String>['shows the final string', 'holds the starting values', 'combines the list into one line'],
+              correctMatches: const <String, String>{
+                'items': 'holds the starting values',
+                'join(" -> ")': 'combines the list into one line',
+                'print(summary)': 'shows the final string',
+              },
+            ),
+            CoursePlayerExercise(
+              id: '${id}_exercise_4',
+              kind: CourseExerciseKind.dragDrop,
+              title: sameText('Build the order'),
+              prompt: sameText('Arrange the explanation in the correct order.'),
+              description: 'Place the steps from first to last.',
+              points: 10,
+              draggableItems: const <String>[
+                'Read the final output',
+                'Notice the starting values',
+                'Explain the transformation',
+              ],
+              correctOrder: const <String>[
+                'Notice the starting values',
+                'Explain the transformation',
+                'Read the final output',
+              ],
+            ),
+          ],
+        ),
+        buildLesson(
+          lessonId: '${id}_player_lesson_3',
+          lessonTitle: previewLessons.length > 2
+              ? previewLessons[2].title.en
+              : 'Practice bridge',
+          annotation:
+              'Turn the concept into a task-ready habit and prepare for repetition.',
+          explanation:
+              'Before leaving the lesson, describe the pattern in one sentence and fill in the missing code so the output still matches your explanation.',
+          objective:
+              'You should be ready to move into exercises, comments, and repeat only the parts that were incorrect.',
+          videoLabel: 'Practice bridge • 07:42',
+          imageCaption: 'A compact checklist showing explanation, implementation, and review.',
+          codeSnippet:
+              'String explainPattern(String domain) {\n  return "Use a small loop: learn, test, and refine in \$domain.";\n}\n\nprint(explainPattern("$title"));',
+          exampleOutput: 'Use a small loop: learn, test, and refine in $title.',
+          nextAction: 'Complete the final code checks and open the next module.',
+          exercises: <CoursePlayerExercise>[
+            CoursePlayerExercise(
+              id: '${id}_exercise_5',
+              kind: CourseExerciseKind.codeInput,
+              title: sameText('Complete the code'),
+              prompt: sameText('Type the missing method name so the code prints the expected output.'),
+              description: 'Enter only the missing token.',
+              points: 14,
+              codeTemplate:
+                  'String explainPattern(String domain) {\n  return "Use a small loop: learn, test, and refine in \$domain.";\n}\n\nprint(________("$title"));',
+              correctCodeToken: 'explainPattern',
+            ),
+            CoursePlayerExercise(
+              id: '${id}_exercise_6',
+              kind: CourseExerciseKind.multipleChoice,
+              title: sameText('Review the lesson'),
+              prompt: sameText('Which habits make the walkthrough easier to present?'),
+              description: 'Choose all correct options.',
+              points: 12,
+              choices: const <CourseExerciseChoice>[
+                CourseExerciseChoice(id: 'a', label: 'Read the input, transformation, and output in order'),
+                CourseExerciseChoice(id: 'b', label: 'Skip the visible result and focus only on syntax'),
+                CourseExerciseChoice(id: 'c', label: 'Use one clear sentence to summarize the pattern'),
+                CourseExerciseChoice(id: 'd', label: 'Ignore mistakes instead of revisiting them'),
+              ],
+              correctChoiceIds: const <String>['a', 'c'],
+            ),
+          ],
+        ),
+      ],
     ),
     CoursePlayerModule(
       id: '${id}_player_module_2',
-      title: sameText('Task bridge'),
-      summary: sameText('Use the final lesson list as a checklist for your independent task flow.'),
+      title: sameText('Assignments and reflection'),
+      summary: sameText(
+        'Use the same rhythm again with authored lesson names, then reflect on mistakes and finish the course with a stronger narrative.',
+      ),
       lessons: List<CoursePlayerLesson>.generate(
-        lessons.length,
+        previewLessons.length,
         (index) {
-          final preview = lessons[index];
-          return CoursePlayerLesson(
-            id: '${id}_player_bridge_${index + 1}',
-            title: preview.title,
-            annotation: preview.summary,
-            explanation: sameText(
-              'This bridge lesson keeps the authored course language intact while giving you a short explanation and a safe next step into tasks.',
-            ),
+          final preview = previewLessons[index];
+          return buildLesson(
+            lessonId: '${id}_player_bridge_${index + 1}',
+            lessonTitle: preview.title.en,
+            annotation: preview.summary.en,
+            explanation:
+                'This bridge lesson keeps the authored course voice but adds one more explanation, one more visual cue, and a final exercise that checks transfer.',
+            objective:
+                'Connect the authored topic to a practical task you can explain without switching screens.',
+            videoLabel: 'Module preview • 05:${index + 3}0',
+            imageCaption: 'A visual note for ${preview.title.en} showing how the topic maps into a repeatable task.',
             codeSnippet:
-                'final topic = "${preview.title.en}";\nprint("Ready for: \$topic");',
-            exampleOutput: 'Ready for: ${preview.title.en}',
-            nextActionLabel: sameText('Continue to the next lesson'),
+                'final topic = "${preview.title.en}";\nfinal checkpoint = ${index + 1};\nprint("Ready for \$topic #\$checkpoint");',
+            exampleOutput: 'Ready for ${preview.title.en} #${index + 1}',
+            nextAction: 'Continue to the next lesson and keep the same explanation loop.',
+            exercises: <CoursePlayerExercise>[
+              CoursePlayerExercise(
+                id: '${id}_bridge_exercise_${index + 1}_a',
+                kind: CourseExerciseKind.singleChoice,
+                title: sameText('Transfer check'),
+                prompt: sameText('What is the best way to approach ${preview.title.en}?'),
+                description: 'Choose the option that preserves the same rhythm from earlier lessons.',
+                points: 8,
+                choices: <CourseExerciseChoice>[
+                  CourseExerciseChoice(id: 'a', label: 'Jump into the deepest edge case first'),
+                  CourseExerciseChoice(id: 'b', label: 'Start with one example, explain the output, then move into practice'),
+                  CourseExerciseChoice(id: 'c', label: 'Avoid reviewing the result after running the code'),
+                ],
+                correctChoiceIds: const <String>['b'],
+              ),
+              CoursePlayerExercise(
+                id: '${id}_bridge_exercise_${index + 1}_b',
+                kind: CourseExerciseKind.fillBlank,
+                title: sameText('Output phrase'),
+                prompt: sameText('Fill the final number used in the output.'),
+                description: 'Type the checkpoint number from the code block.',
+                points: 6,
+                blankTemplate:
+                    'print("Ready for ${preview.title.en} #__");',
+                correctText: '${index + 1}',
+              ),
+            ],
           );
         },
       ),
+    ),
+  ];
+}
+
+List<CoursePlayerComment> _defaultCourseComments(String courseTitle, String lessonTitle) {
+  return <CoursePlayerComment>[
+    CoursePlayerComment(
+      id: '${courseTitle.hashCode}_${lessonTitle.hashCode}_1',
+      authorName: 'Aruzhan B.',
+      role: 'Frontend learner',
+      message:
+          'I remembered this lesson faster when I said the input and output out loud before looking at the code.',
+    ),
+    CoursePlayerComment(
+      id: '${courseTitle.hashCode}_${lessonTitle.hashCode}_2',
+      authorName: 'Nursultan K.',
+      role: 'Backend student',
+      message:
+          'The visual block helped me connect the concept to the code example. I would revisit the matching exercise once after finishing.',
+    ),
+    CoursePlayerComment(
+      id: '${courseTitle.hashCode}_${lessonTitle.hashCode}_3',
+      authorName: 'Dana S.',
+      role: 'Mentor note',
+      message:
+          'If the output feels confusing, trace only one change at a time and keep the explanation short.',
     ),
   ];
 }

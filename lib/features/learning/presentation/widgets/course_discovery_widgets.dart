@@ -27,6 +27,7 @@ class CourseDiscoverySearchBar extends StatelessWidget {
     final tall = !context.isCompactLayout;
 
     return Container(
+      clipBehavior: Clip.hardEdge,
       padding: EdgeInsets.symmetric(
         horizontal: 16,
         vertical: tall ? 12 : 10,
@@ -44,31 +45,43 @@ class CourseDiscoverySearchBar extends StatelessWidget {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(Icons.search_rounded, color: colors.textSecondary),
           const SizedBox(width: 12),
           Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              onChanged: onChanged,
-              textAlignVertical: TextAlignVertical.center,
-              maxLines: 1,
-              minLines: 1,
-              style: TextStyle(
-                color: colors.textPrimary,
-                height: 1.2,
-              ),
-              cursorHeight: 22,
-              strutStyle: const StrutStyle(
-                height: 1.2,
-                forceStrutHeight: true,
-              ),
-              decoration: InputDecoration(
-                hintText: hintText,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
+            child: SizedBox(
+              height: tall ? 26 : 24,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  onChanged: onChanged,
+                  scrollPadding: EdgeInsets.zero,
+                  textAlignVertical: TextAlignVertical.center,
+                  maxLines: 1,
+                  minLines: 1,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    height: 1,
+                    fontSize: tall ? 17 : 16,
+                  ),
+                  cursorHeight: tall ? 19 : 18,
+                  cursorWidth: 1.6,
+                  cursorRadius: const Radius.circular(1.2),
+                  strutStyle: const StrutStyle(
+                    height: 1,
+                    forceStrutHeight: true,
+                  ),
+                  decoration: InputDecoration.collapsed(
+                    hintText: hintText,
+                    hintStyle: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: tall ? 17 : 16,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -101,6 +114,204 @@ class CourseDiscoverySearchBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class DiscoveryFilterPanelCard extends StatelessWidget {
+  const DiscoveryFilterPanelCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.child,
+    this.highlighted = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget child;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        color: colors.surface,
+        border: Border.all(
+          color: highlighted ? colors.primary : colors.divider,
+        ),
+        boxShadow: highlighted
+            ? [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: 0.12),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ]
+            : const <BoxShadow>[],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: colors.surfaceSoft,
+            ),
+            child: Icon(icon, color: highlighted ? colors.primary : colors.textSecondary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                child,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class DiscoveryFilterChoiceWrap<T> extends StatelessWidget {
+  const DiscoveryFilterChoiceWrap({
+    super.key,
+    required this.options,
+    required this.selectedValue,
+    required this.labelBuilder,
+    required this.onSelected,
+  });
+
+  final List<T> options;
+  final T selectedValue;
+  final String Function(T value) labelBuilder;
+  final ValueChanged<T> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: options.map((option) {
+        final selected = option == selectedValue;
+        return InkWell(
+          onTap: () => onSelected(option),
+          borderRadius: BorderRadius.circular(999),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              color: selected
+                  ? colors.primary.withValues(alpha: 0.16)
+                  : colors.surfaceSoft,
+              border: Border.all(
+                color: selected ? colors.primary : colors.divider,
+              ),
+            ),
+            child: Text(
+              labelBuilder(option),
+              style: TextStyle(
+                color: selected ? colors.primary : colors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        );
+      }).toList(growable: false),
+    );
+  }
+}
+
+class DiscoveryFilterToggleTile extends StatelessWidget {
+  const DiscoveryFilterToggleTile({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: colors.surfaceSoft,
+          border: Border.all(color: value ? colors.primary : colors.divider),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 54,
+              height: 30,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: value
+                    ? colors.primary.withValues(alpha: 0.18)
+                    : colors.backgroundElevated,
+              ),
+              child: Align(
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: value ? colors.primary : colors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

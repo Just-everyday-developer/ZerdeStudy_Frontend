@@ -162,7 +162,7 @@ void main() {
     );
     await pumpScene(tester);
 
-    expect(find.text('Catalog'), findsOneWidget);
+    expect(find.text('Search courses'), findsOneWidget);
     expect(find.text('SQL for Product Analysts'), findsOneWidget);
     expect(find.text('Feedback That Helps Teams Ship'), findsNothing);
 

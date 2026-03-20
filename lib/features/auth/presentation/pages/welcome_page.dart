@@ -22,6 +22,7 @@ class WelcomePage extends ConsumerWidget {
     final controller = ref.read(demoAppControllerProvider.notifier);
     final l10n = context.l10n;
     final colors = context.appColors;
+    final compact = MediaQuery.sizeOf(context).width < 700;
 
     return AuthBackgroundWrapper(
       child: SafeArea(
@@ -141,48 +142,92 @@ class WelcomePage extends ConsumerWidget {
                         ),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      SizedBox(
-                        width: 160,
-                        child: TechActionButton(
-                          title: l10n.text('github'),
-                          isPrimary: false,
-                          icon: Icons.code_rounded,
-                          onTap: () {
-                            controller.loginWithProvider('github');
-                            context.go(AppRoutes.home);
-                          },
+                  if (compact)
+                    Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: TechActionButton(
+                            title: l10n.text('github'),
+                            isPrimary: false,
+                            icon: Icons.code_rounded,
+                            onTap: () {
+                              controller.loginWithProvider('github');
+                              context.go(AppRoutes.home);
+                            },
+                          ),
                         ),
-                      ),
-                      SizedBox(
-                        width: 160,
-                        child: TechActionButton(
-                          title: l10n.text('google'),
-                          isPrimary: false,
-                          icon: Icons.language_rounded,
-                          onTap: () {
-                            controller.loginWithProvider('google');
-                            context.go(AppRoutes.home);
-                          },
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TechActionButton(
+                            title: l10n.text('google'),
+                            isPrimary: false,
+                            icon: Icons.language_rounded,
+                            onTap: () {
+                              controller.loginWithProvider('google');
+                              context.go(AppRoutes.home);
+                            },
+                          ),
                         ),
-                      ),
-                      SizedBox(
-                        width: 160,
-                        child: TechActionButton(
-                          title: l10n.text('apple'),
-                          isPrimary: false,
-                          icon: Icons.apple_rounded,
-                          onTap: () {
-                            controller.loginWithProvider('apple');
-                            context.go(AppRoutes.home);
-                          },
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TechActionButton(
+                            title: l10n.text('apple'),
+                            isPrimary: false,
+                            icon: Icons.apple_rounded,
+                            onTap: () {
+                              controller.loginWithProvider('apple');
+                              context.go(AppRoutes.home);
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  else
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        SizedBox(
+                          width: 160,
+                          child: TechActionButton(
+                            title: l10n.text('github'),
+                            isPrimary: false,
+                            icon: Icons.code_rounded,
+                            onTap: () {
+                              controller.loginWithProvider('github');
+                              context.go(AppRoutes.home);
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: 160,
+                          child: TechActionButton(
+                            title: l10n.text('google'),
+                            isPrimary: false,
+                            icon: Icons.language_rounded,
+                            onTap: () {
+                              controller.loginWithProvider('google');
+                              context.go(AppRoutes.home);
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: 160,
+                          child: TechActionButton(
+                            title: l10n.text('apple'),
+                            isPrimary: false,
+                            icon: Icons.apple_rounded,
+                            onTap: () {
+                              controller.loginWithProvider('apple');
+                              context.go(AppRoutes.home);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),

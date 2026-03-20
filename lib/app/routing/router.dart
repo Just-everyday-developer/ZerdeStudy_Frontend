@@ -10,6 +10,7 @@ import '../../features/analytics/presentation/pages/stats_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
+import '../../features/faq/presentation/pages/faq_page.dart';
 import '../../features/home/presentation/pages/community_course_detail_page.dart';
 import '../../features/home/presentation/pages/community_course_player_page.dart';
 import '../../features/home/presentation/pages/community_courses_page.dart';
@@ -201,6 +202,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: AppRoutes.faq,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const FaqPage(),
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.courses,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
@@ -209,7 +218,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             initialTopicKey: state.uri.queryParameters['topic'],
             initialSearchQuery: state.uri.queryParameters['search'],
             initialLevel: state.uri.queryParameters['level'],
-            initialAuthorId: state.uri.queryParameters['author'],
             initialMinRating:
                 double.tryParse(state.uri.queryParameters['minRating'] ?? ''),
             initialDurationCode: state.uri.queryParameters['duration'],

@@ -25,6 +25,8 @@ class HomePage extends ConsumerWidget {
     final leaderboard =
         catalog.leaderboardFor(state).take(5).toList(growable: false);
     final recommendedTracks = catalog.tracks.take(4).toList(growable: false);
+    final incorrectExercises = catalog.incorrectCourseExercisesFor(state);
+    final incorrectQuizzes = catalog.incorrectTrackQuizzesFor(state);
     final colors = context.appColors;
 
     return AppPageScaffold(
@@ -105,6 +107,86 @@ class HomePage extends ConsumerWidget {
                     );
                   },
                 ),
+                if (incorrectExercises.isNotEmpty || incorrectQuizzes.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: colors.surfaceSoft,
+                      border: Border.all(color: colors.divider),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.text('repeat_wrong_answers'),
+                          style: TextStyle(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.format(
+                            'repeat_wrong_answers_hint',
+                            <String, Object>{
+                              'count': incorrectExercises.length + incorrectQuizzes.length,
+                            },
+                          ),
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...incorrectExercises.take(2).map(
+                              (exercise) => Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  '• ${exercise.title.resolve(state.locale)}',
+                                  style: TextStyle(color: colors.textPrimary),
+                                ),
+                              ),
+                            ),
+                        ...incorrectQuizzes.take(2).map(
+                              (quiz) => Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  '• ${quiz.title.resolve(state.locale)}',
+                                  style: TextStyle(color: colors.textPrimary),
+                                ),
+                              ),
+                            ),
+                        const SizedBox(height: 10),
+                        AppButton.secondary(
+                          label: l10n.text('repeat_wrong_answers'),
+                          icon: Icons.refresh_rounded,
+                          maxWidth: context.isCompactLayout ? null : 300,
+                          onPressed: () {
+                            if (state.enrolledCommunityCourseIds.isNotEmpty) {
+                              context.push(
+                                AppRoutes.coursePlayerById(
+                                  state.enrolledCommunityCourseIds.first,
+                                ),
+                              );
+                              return;
+                            }
+                            if (currentProgress.nextTarget != null) {
+                              final target = currentProgress.nextTarget!;
+                              context.push(
+                                target.isPractice
+                                    ? AppRoutes.practiceById(target.id)
+                                    : AppRoutes.lessonById(target.id),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

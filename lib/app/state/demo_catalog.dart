@@ -36,9 +36,24 @@ class DemoCatalog {
       for (final module in track.modules)
         if (module.practice != null) module.practice!.id: module.practice!,
   };
+  late final Map<String, LessonQuiz> _lessonQuizzesById = <String, LessonQuiz>{
+    for (final lesson in _lessonsById.values)
+      for (final quiz in lesson.quizzes) quiz.id: quiz,
+  };
   late final Map<String, CommunityCourse> _coursesById =
       <String, CommunityCourse>{
     for (final course in communityCourses) course.id: course,
+  };
+  late final Map<String, CoursePlayerLesson> _courseLessonsById =
+      <String, CoursePlayerLesson>{
+    for (final course in communityCourses)
+      for (final module in course.coursePlayerModules)
+        for (final lesson in module.lessons) lesson.id: lesson,
+  };
+  late final Map<String, CoursePlayerExercise> _courseExercisesById =
+      <String, CoursePlayerExercise>{
+    for (final lesson in _courseLessonsById.values)
+      for (final exercise in lesson.exercises) exercise.id: exercise,
   };
 
   LearningTrack trackById(String trackId) => _tracksById[trackId] ?? tracks.first;
@@ -49,8 +64,15 @@ class DemoCatalog {
   PracticeTask practiceById(String practiceId) =>
       _practicesById[practiceId] ?? _practicesById.values.first;
 
+  LessonQuiz? lessonQuizById(String quizId) => _lessonQuizzesById[quizId];
+
   CommunityCourse courseById(String courseId) =>
       _coursesById[courseId] ?? communityCourses.first;
+
+  CoursePlayerLesson? courseLessonById(String lessonId) => _courseLessonsById[lessonId];
+
+  CoursePlayerExercise? courseExerciseById(String exerciseId) =>
+      _courseExercisesById[exerciseId];
 
   List<String> courseTopicKeys() => const <String>[
         courseTopicProgrammingLanguages,
@@ -132,7 +154,6 @@ class DemoCatalog {
     String query = '',
     String? topicKey,
     String? level,
-    String? authorId,
     double? minRating,
     CourseDurationBucket? durationBucket,
     bool? certificateOnly,
@@ -146,8 +167,6 @@ class DemoCatalog {
           level.isEmpty ||
           level == 'All' ||
           course.level == level;
-      final authorMatch =
-          authorId == null || authorId.isEmpty || course.author.id == authorId;
       final ratingMatch = minRating == null ||
           displayCourseRatingFor(state, course.id) >= minRating;
       final durationMatch = durationBucket == null ||
@@ -184,7 +203,6 @@ class DemoCatalog {
           );
       return topicMatch &&
           levelMatch &&
-          authorMatch &&
           ratingMatch &&
           durationMatch &&
           certificateMatch &&
@@ -263,18 +281,73 @@ class DemoCatalog {
     );
   }
 
+  List<CoursePlayerExercise> courseExercisesFor(String courseId) {
+    final course = courseById(courseId);
+    return <CoursePlayerExercise>[
+      for (final module in course.coursePlayerModules)
+        for (final lesson in module.lessons)
+          ...lesson.exercises,
+    ];
+  }
+
+  int totalCoursePlayerPoints(String courseId) {
+    return courseExercisesFor(courseId).fold<int>(
+      0,
+      (sum, exercise) => sum + exercise.points,
+    );
+  }
+
+  int earnedCoursePlayerPoints(DemoAppState state, String courseId) {
+    return state.coursePlayerProgressByCourseId[courseId]?.earnedPoints ?? 0;
+  }
+
+  int coursePlayerCompletionPercent(DemoAppState state, String courseId) {
+    final total = totalCoursePlayerPoints(courseId);
+    if (total == 0) {
+      return 0;
+    }
+    return ((earnedCoursePlayerPoints(state, courseId) / total) * 100).round();
+  }
+
+  List<CoursePlayerExercise> incorrectCourseExercisesFor(DemoAppState state) {
+    return state.coursePlayerProgressByCourseId.values
+        .expand((progress) => progress.incorrectExerciseIds)
+        .map(courseExerciseById)
+        .whereType<CoursePlayerExercise>()
+        .toList(growable: false);
+  }
+
+  List<LessonQuiz> incorrectTrackQuizzesFor(DemoAppState state) {
+    return state.quizAnswerStats.entries
+        .where((entry) => entry.value.attempts > entry.value.correctAnswers)
+        .map((entry) => lessonQuizById(entry.key))
+        .whereType<LessonQuiz>()
+        .toList(growable: false);
+  }
+
   List<CourseCertificate> certificatesFor(DemoAppState state) {
     return communityCourses
-        .where((course) => state.coursePlayerProgressByCourseId[course.id]?.completedAt != null)
+        .where((course) {
+          final progress = state.coursePlayerProgressByCourseId[course.id];
+          return progress?.completedAt != null &&
+              coursePlayerCompletionPercent(state, course.id) >= 70;
+        })
         .map(
-          (course) => CourseCertificate(
-            id: 'certificate_${course.id}',
-            courseId: course.id,
-            title: course.title.resolve(state.locale),
-            recipientName: state.user?.name ?? 'Talgat',
-            issuedAt: state.coursePlayerProgressByCourseId[course.id]!.completedAt!,
-            accent: course.color,
-          ),
+          (course) {
+            final percent = coursePlayerCompletionPercent(state, course.id);
+            return CourseCertificate(
+              id: 'certificate_${course.id}',
+              courseId: course.id,
+              title: course.title.resolve(state.locale),
+              recipientName: state.user?.name ?? 'Talgat',
+              issuedAt: state.coursePlayerProgressByCourseId[course.id]!.completedAt!,
+              accent: course.color,
+              tier: percent >= 100
+                  ? CourseCertificateTier.premium
+                  : CourseCertificateTier.standard,
+              completionPercent: percent,
+            );
+          },
         )
         .toList()
       ..sort((left, right) => right.issuedAt.compareTo(left.issuedAt));

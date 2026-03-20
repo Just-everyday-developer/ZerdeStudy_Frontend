@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
-import '../../../../app/state/app_theme_mode.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_button.dart';
@@ -12,7 +11,6 @@ import '../../../../core/common_widgets/adaptive_panel.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
-import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
@@ -42,97 +40,73 @@ class ProfilePage extends ConsumerWidget {
     final colors = context.appColors;
 
     return AppPageScaffold(
-      actions: [
-        IconButton(
-          onPressed: () => _showSettingsSheet(context),
-          icon: Icon(Icons.settings_rounded, color: colors.textPrimary),
-          tooltip: l10n.text('settings'),
-        ),
-      ],
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
         children: [
-          GlowCard(
-            accent: colors.primary,
-            child: Column(
-              children: [
-                Container(
-                  width: 82,
-                  height: 82,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: colors.primary.withValues(alpha: 0.14),
-                  ),
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: colors.primary,
-                    size: 40,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  user?.name ?? 'Dana S.',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  user?.email ?? 'demo@zerdestudy.app',
-                  style: TextStyle(color: colors.textSecondary),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _Pill(label: 'XP', value: '${state.xp}'),
-                    _Pill(label: l10n.text('level'), value: '${state.level}'),
-                    _Pill(
-                      label: l10n.text('streak'),
-                      value: '${state.streak}d',
-                    ),
-                    _Pill(
-                      label: l10n.text('theme'),
-                      value: _themeLabel(l10n, state.themeMode),
-                    ),
-                  ],
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.96),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: 0.08),
+                  blurRadius: 28,
+                  offset: const Offset(0, 16),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-          GlowCard(
-            accent: colors.accent,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  l10n.text('profile_goal'),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  user?.goal ?? l10n.text('default_goal'),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.45,
+                Hero(
+                  tag: 'shell-profile-avatar',
+                  child: Container(
+                    width: context.isCompactLayout ? 88 : 108,
+                    height: context.isCompactLayout ? 88 : 108,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors.primary.withValues(alpha: 0.14),
+                    ),
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: colors.primary,
+                      size: context.isCompactLayout ? 42 : 52,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _InfoTag(
-                      icon: Icons.language_rounded,
-                      label: '${l10n.text('locale')}: ${state.locale.label}',
-                    ),
-                    _InfoTag(
-                      icon: Icons.palette_outlined,
-                      label:
-                          '${l10n.text('theme')}: ${_themeLabel(l10n, state.themeMode)}',
-                    ),
-                  ],
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.name ?? 'Dana S.',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        user?.email ?? 'demo@zerdestudy.app',
+                        style: TextStyle(color: colors.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _Pill(label: 'XP', value: '${state.xp}'),
+                          _Pill(
+                            label: l10n.text('level'),
+                            value: '${state.level}',
+                          ),
+                          _Pill(
+                            label: l10n.text('streak'),
+                            value: '${state.streak}d',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -426,15 +400,6 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  void _showSettingsSheet(BuildContext context) {
-    showAdaptivePanel<void>(
-      context: context,
-      builder: (context) {
-        return const _SettingsPanelContent();
-      },
-    );
-  }
-
   void _showAchievementsSheet(
     BuildContext context,
     List<Achievement> achievements,
@@ -496,88 +461,6 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  String _themeLabel(AppLocalizations l10n, AppThemeMode mode) {
-    switch (mode) {
-      case AppThemeMode.dark:
-        return l10n.text('theme_dark');
-      case AppThemeMode.light:
-        return l10n.text('theme_light');
-    }
-  }
-}
-
-class _SettingsPanelContent extends ConsumerWidget {
-  const _SettingsPanelContent();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(demoAppControllerProvider);
-    final controller = ref.read(demoAppControllerProvider.notifier);
-    final colors = context.appColors;
-    final l10n = context.l10n;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const AdaptivePanelHandle(),
-          const SizedBox(height: 18),
-          Text(
-            l10n.text('settings'),
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 18),
-          Text(
-            l10n.text('locale'),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          LocaleSelector(
-            currentLocale: state.locale,
-            onChanged: controller.changeLocale,
-          ),
-          const SizedBox(height: 18),
-          Text(
-            l10n.text('theme'),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: AppThemeMode.values.map((mode) {
-              final selected = mode == state.themeMode;
-              return ChoiceChip(
-                label: Text(_themeLabel(l10n, mode)),
-                selected: selected,
-                onSelected: (_) => controller.changeThemeMode(mode),
-                selectedColor: colors.primary.withValues(alpha: 0.16),
-                backgroundColor: colors.surfaceSoft,
-                side: BorderSide(
-                  color: selected ? colors.primary : colors.divider,
-                ),
-                labelStyle: TextStyle(
-                  color: selected ? colors.primary : colors.textSecondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              );
-            }).toList(growable: false),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _themeLabel(AppLocalizations l10n, AppThemeMode mode) {
-    switch (mode) {
-      case AppThemeMode.dark:
-        return l10n.text('theme_dark');
-      case AppThemeMode.light:
-        return l10n.text('theme_light');
-    }
-  }
 }
 
 class _AchievementSection extends StatelessWidget {
@@ -943,44 +826,6 @@ class _Pill extends StatelessWidget {
             value,
             style: TextStyle(
               color: colors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoTag extends StatelessWidget {
-  const _InfoTag({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: colors.surfaceSoft,
-        border: Border.all(color: colors.divider),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: colors.primary),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: colors.textSecondary,
               fontWeight: FontWeight.w700,
             ),
           ),

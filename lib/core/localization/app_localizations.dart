@@ -1090,6 +1090,136 @@ class AppLocalizations {
           AppLocale.en: 'Author selected',
           AppLocale.kk: 'Автор таңдалды',
         },
+        'faq_title': {
+          AppLocale.ru: 'FAQ',
+          AppLocale.en: 'FAQ',
+          AppLocale.kk: 'FAQ',
+        },
+        'faq_subtitle': {
+          AppLocale.ru: 'Быстрые ответы о платформе, курсах, дереве знаний и сертификатах.',
+          AppLocale.en: 'Quick answers about the platform, courses, knowledge tree, and certificates.',
+          AppLocale.kk: 'Платформа, курстар, білім ағашы және сертификаттар туралы жылдам жауаптар.',
+        },
+        'faq_q_platform': {
+          AppLocale.ru: 'Что такое ZerdeStudy?',
+          AppLocale.en: 'What is ZerdeStudy?',
+          AppLocale.kk: 'ZerdeStudy деген не?',
+        },
+        'faq_a_platform': {
+          AppLocale.ru: 'ZerdeStudy — это локальный demo-first учебный продукт с маршрутами, курсами, AI-помощью и сохранением прогресса без backend.',
+          AppLocale.en: 'ZerdeStudy is a local demo-first learning product with tracks, courses, AI help, and saved progress without a backend.',
+          AppLocale.kk: 'ZerdeStudy — backend-сіз де жұмыс істейтін, бағыттар, курстар, AI көмегі және сақталатын прогресі бар local demo-first оқу өнімі.',
+        },
+        'faq_q_tree': {
+          AppLocale.ru: 'Как пользоваться деревом знаний?',
+          AppLocale.en: 'How do I use the knowledge tree?',
+          AppLocale.kk: 'Білім ағашын қалай қолданамын?',
+        },
+        'faq_a_tree': {
+          AppLocale.ru: 'Открывайте ветки из дерева, переходите в обзор трека и продолжайте обучение по урокам, практикам и тестам.',
+          AppLocale.en: 'Open branches from the tree, move into the track overview, and continue through lessons, practices, and assessments.',
+          AppLocale.kk: 'Ағаштағы тармақтарды ашып, трек шолуына өтіңіз де, сабақтар, практикалар және бағалаулар арқылы жалғастырыңыз.',
+        },
+        'faq_q_courses': {
+          AppLocale.ru: 'Чем Learn отличается от Tree?',
+          AppLocale.en: 'How is Learn different from Tree?',
+          AppLocale.kk: 'Learn мен Tree айырмашылығы қандай?',
+        },
+        'faq_a_courses': {
+          AppLocale.ru: 'Tree показывает учебные ветки и фундаментальные направления, а Learn работает как витрина и каталог курсов.',
+          AppLocale.en: 'Tree shows learning branches and foundational paths, while Learn works as a course showcase and catalog.',
+          AppLocale.kk: 'Tree оқу тармақтары мен іргелі бағыттарды көрсетеді, ал Learn курс витринасы және каталогы ретінде жұмыс істейді.',
+        },
+        'faq_q_ai': {
+          AppLocale.ru: 'Что умеет AI в приложении?',
+          AppLocale.en: 'What can the in-app AI do?',
+          AppLocale.kk: 'Қосымшадағы AI не істей алады?',
+        },
+        'faq_a_ai': {
+          AppLocale.ru: 'AI объясняет темы, помогает с кодом, подсказывает следующий шаг и отвечает прямо внутри некоторых экранов курса.',
+          AppLocale.en: 'AI explains topics, helps with code, suggests the next step, and answers directly inside some course screens.',
+          AppLocale.kk: 'AI тақырыптарды түсіндіреді, кодпен көмектеседі, келесі қадамды ұсынады және кейбір курс экрандарының ішінде бірден жауап береді.',
+        },
+        'faq_q_certificates': {
+          AppLocale.ru: 'Как выдаются сертификаты?',
+          AppLocale.en: 'How are certificates awarded?',
+          AppLocale.kk: 'Сертификаттар қалай беріледі?',
+        },
+        'faq_a_certificates': {
+          AppLocale.ru: 'Сертификат появляется после завершения mini-course. Стандартный сертификат выдаётся от 70%, а premium — при 100% прохождения.',
+          AppLocale.en: 'A certificate appears after finishing a mini-course. Standard is awarded from 70%, and premium at 100% completion.',
+          AppLocale.kk: 'Сертификат mini-course аяқталғаннан кейін пайда болады. Standard 70%-дан бастап, ал premium 100% өткенде беріледі.',
+        },
+        'faq_q_profile': {
+          AppLocale.ru: 'Что хранится в профиле?',
+          AppLocale.en: 'What is stored in the profile?',
+          AppLocale.kk: 'Профильде не сақталады?',
+        },
+        'faq_a_profile': {
+          AppLocale.ru: 'В профиле собраны прогресс, достижения, сертификаты, избранное, завершённые материалы и история результатов.',
+          AppLocale.en: 'The profile stores progress, achievements, certificates, favorites, completed materials, and result history.',
+          AppLocale.kk: 'Профильде прогресс, жетістіктер, сертификаттар, таңдаулылар, аяқталған материалдар және нәтижелер тарихы сақталады.',
+        },
+        'tree_zoom_in': {
+          AppLocale.ru: 'Приблизить',
+          AppLocale.en: 'Zoom in',
+          AppLocale.kk: 'Үлкейту',
+        },
+        'tree_zoom_out': {
+          AppLocale.ru: 'Отдалить',
+          AppLocale.en: 'Zoom out',
+          AppLocale.kk: 'Кішірейту',
+        },
+        'tree_zoom_reset': {
+          AppLocale.ru: 'Сбросить масштаб',
+          AppLocale.en: 'Reset zoom',
+          AppLocale.kk: 'Масштабты қалпына келтіру',
+        },
+        'filter_topic_hint': {
+          AppLocale.ru: 'Выберите тематическое направление.',
+          AppLocale.en: 'Choose a thematic direction.',
+          AppLocale.kk: 'Тақырыптық бағытты таңдаңыз.',
+        },
+        'filter_level_hint': {
+          AppLocale.ru: 'Укажите подходящий уровень сложности.',
+          AppLocale.en: 'Pick the learning difficulty level.',
+          AppLocale.kk: 'Қиындық деңгейін таңдаңыз.',
+        },
+        'filter_rating_hint': {
+          AppLocale.ru: 'Показывать курсы от выбранного рейтинга и выше.',
+          AppLocale.en: 'Show courses from the selected rating and above.',
+          AppLocale.kk: 'Таңдалған рейтингтен жоғары курстарды көрсету.',
+        },
+        'filter_duration_hint': {
+          AppLocale.ru: 'Отфильтруйте курсы по ожидаемой длительности.',
+          AppLocale.en: 'Filter courses by expected duration.',
+          AppLocale.kk: 'Курстарды күтілетін ұзақтығы бойынша сүзу.',
+        },
+        'filter_certificate_hint': {
+          AppLocale.ru: 'Показывать только курсы с доступным сертификатом.',
+          AppLocale.en: 'Show only courses with an available certificate.',
+          AppLocale.kk: 'Тек сертификаты бар курстарды көрсету.',
+        },
+        'repeat_wrong_answers': {
+          AppLocale.ru: 'Повторить ошибочные вопросы',
+          AppLocale.en: 'Repeat incorrect questions',
+          AppLocale.kk: 'Қате сұрақтарды қайта өту',
+        },
+        'repeat_wrong_answers_hint': {
+          AppLocale.ru: 'У вас накопилось {count} ошибок в тестах и заданиях. Их можно быстро повторить из этого блока.',
+          AppLocale.en: 'You currently have {count} incorrect answers across quizzes and course tasks. You can review them quickly from here.',
+          AppLocale.kk: 'Сізде тесттер мен тапсырмалар бойынша {count} қате жауап жиналды. Оларды осы жерден жылдам қайталауға болады.',
+        },
+        'certificate_standard': {
+          AppLocale.ru: 'Стандартный сертификат',
+          AppLocale.en: 'Standard certificate',
+          AppLocale.kk: 'Стандарт сертификат',
+        },
+        'certificate_premium': {
+          AppLocale.ru: 'Премиальный сертификат',
+          AppLocale.en: 'Premium certificate',
+          AppLocale.kk: 'Премиум сертификат',
+        },
       };
 }
 

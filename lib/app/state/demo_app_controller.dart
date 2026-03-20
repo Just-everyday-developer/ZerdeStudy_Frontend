@@ -371,6 +371,10 @@ class DemoAppController extends Notifier<DemoAppState> {
           ..[courseId] = CoursePlayerProgress(
             courseId: courseId,
             completedLessonIds: const <String>{},
+            attemptedExerciseIds: const <String>{},
+            correctExerciseIds: const <String>{},
+            incorrectExerciseIds: const <String>{},
+            earnedPoints: 0,
             enrolledAt: timestamp,
             currentLessonId: allLessons.isEmpty ? null : allLessons.first.id,
             lastOpenedAt: timestamp,
@@ -400,6 +404,10 @@ class DemoAppController extends Notifier<DemoAppState> {
   CoursePlayerProgress advanceCoursePlayer({
     required String courseId,
     required String lessonId,
+    Set<String> attemptedExerciseIds = const <String>{},
+    Set<String> correctExerciseIds = const <String>{},
+    Set<String> incorrectExerciseIds = const <String>{},
+    int earnedPointsDelta = 0,
   }) {
     final course = _catalog.courseById(courseId);
     final allLessons = <CoursePlayerLesson>[
@@ -409,6 +417,10 @@ class DemoAppController extends Notifier<DemoAppState> {
         CoursePlayerProgress(
           courseId: courseId,
           completedLessonIds: const <String>{},
+          attemptedExerciseIds: const <String>{},
+          correctExerciseIds: const <String>{},
+          incorrectExerciseIds: const <String>{},
+          earnedPoints: 0,
           enrolledAt: DateTime.now(),
           currentLessonId: allLessons.isEmpty ? null : allLessons.first.id,
         );
@@ -422,6 +434,15 @@ class DemoAppController extends Notifier<DemoAppState> {
     final timestamp = DateTime.now();
     final updatedProgress = currentProgress.copyWith(
       completedLessonIds: updatedCompletedIds,
+      attemptedExerciseIds:
+          Set<String>.from(currentProgress.attemptedExerciseIds)
+            ..addAll(attemptedExerciseIds),
+      correctExerciseIds: Set<String>.from(currentProgress.correctExerciseIds)
+        ..addAll(correctExerciseIds),
+      incorrectExerciseIds:
+          Set<String>.from(currentProgress.incorrectExerciseIds)
+            ..addAll(incorrectExerciseIds),
+      earnedPoints: currentProgress.earnedPoints + earnedPointsDelta,
       currentLessonId: finishedCourse ? null : nextLessonId,
       lastOpenedAt: timestamp,
       completedAt: finishedCourse ? timestamp : currentProgress.completedAt,
@@ -445,12 +466,19 @@ class DemoAppController extends Notifier<DemoAppState> {
       ),
     ];
     if (finishedCourse) {
+      final percent = _catalog.coursePlayerCompletionPercent(
+        state.copyWith(
+          coursePlayerProgressByCourseId: progressMap,
+        ),
+        courseId,
+      );
       historyEntries.addAll(<LearningHistoryEntry>[
         LearningHistoryEntry(
           id: 'history-course-completed-${timestamp.microsecondsSinceEpoch}',
           kind: LearningHistoryKind.courseCompleted,
           title: 'Course completed',
           subtitle: course.title.resolve(state.locale),
+          scoreLabel: '$percent%',
           createdAt: timestamp,
           refId: courseId,
         ),
@@ -458,7 +486,7 @@ class DemoAppController extends Notifier<DemoAppState> {
           id: 'history-certificate-${timestamp.microsecondsSinceEpoch}',
           kind: LearningHistoryKind.certificateEarned,
           title: 'Certificate earned',
-          subtitle: course.title.resolve(state.locale),
+          subtitle: '${course.title.resolve(state.locale)} • $percent%',
           createdAt: timestamp,
           refId: 'certificate_$courseId',
         ),
@@ -808,6 +836,25 @@ class DemoAppController extends Notifier<DemoAppState> {
             'course_dart_first_widget_player_lesson_2',
             'course_dart_first_widget_player_lesson_3',
           },
+          attemptedExerciseIds: <String>{
+            'course_dart_first_widget_exercise_1',
+            'course_dart_first_widget_exercise_2',
+            'course_dart_first_widget_exercise_3',
+            'course_dart_first_widget_exercise_4',
+            'course_dart_first_widget_exercise_5',
+            'course_dart_first_widget_exercise_6',
+          },
+          correctExerciseIds: <String>{
+            'course_dart_first_widget_exercise_1',
+            'course_dart_first_widget_exercise_2',
+            'course_dart_first_widget_exercise_3',
+            'course_dart_first_widget_exercise_5',
+          },
+          incorrectExerciseIds: <String>{
+            'course_dart_first_widget_exercise_4',
+            'course_dart_first_widget_exercise_6',
+          },
+          earnedPoints: 44,
           enrolledAt: DateTime(2026, 3, 14, 9, 0),
           lastOpenedAt: DateTime(2026, 3, 15, 10, 10),
           completedAt: DateTime(2026, 3, 15, 10, 10),
@@ -817,6 +864,17 @@ class DemoAppController extends Notifier<DemoAppState> {
           completedLessonIds: <String>{
             'course_portfolio_engineering_player_lesson_1',
           },
+          attemptedExerciseIds: <String>{
+            'course_portfolio_engineering_exercise_1',
+            'course_portfolio_engineering_exercise_2',
+          },
+          correctExerciseIds: <String>{
+            'course_portfolio_engineering_exercise_1',
+          },
+          incorrectExerciseIds: <String>{
+            'course_portfolio_engineering_exercise_2',
+          },
+          earnedPoints: 10,
           enrolledAt: DateTime(2026, 3, 18, 16, 0),
           currentLessonId: 'course_portfolio_engineering_player_lesson_2',
           lastOpenedAt: DateTime(2026, 3, 18, 16, 20),

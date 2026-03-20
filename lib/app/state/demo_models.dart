@@ -734,14 +734,97 @@ enum CourseDurationBucket {
   }
 }
 
+enum CourseExerciseKind {
+  singleChoice,
+  multipleChoice,
+  matching,
+  dragDrop,
+  fillBlank,
+  codeInput,
+}
+
+enum CourseCertificateTier {
+  standard,
+  premium,
+}
+
+class CoursePlayerComment {
+  const CoursePlayerComment({
+    required this.id,
+    required this.authorName,
+    required this.role,
+    required this.message,
+  });
+
+  final String id;
+  final String authorName;
+  final String role;
+  final String message;
+}
+
+class CourseExerciseChoice {
+  const CourseExerciseChoice({
+    required this.id,
+    required this.label,
+  });
+
+  final String id;
+  final String label;
+}
+
+class CoursePlayerExercise {
+  const CoursePlayerExercise({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.prompt,
+    required this.points,
+    this.description = '',
+    this.choices = const <CourseExerciseChoice>[],
+    this.correctChoiceIds = const <String>[],
+    this.leftItems = const <String>[],
+    this.rightItems = const <String>[],
+    this.correctMatches = const <String, String>{},
+    this.draggableItems = const <String>[],
+    this.correctOrder = const <String>[],
+    this.blankTemplate,
+    this.correctText = '',
+    this.codeTemplate,
+    this.correctCodeToken = '',
+  });
+
+  final String id;
+  final CourseExerciseKind kind;
+  final LocalizedText title;
+  final LocalizedText prompt;
+  final int points;
+  final String description;
+  final List<CourseExerciseChoice> choices;
+  final List<String> correctChoiceIds;
+  final List<String> leftItems;
+  final List<String> rightItems;
+  final Map<String, String> correctMatches;
+  final List<String> draggableItems;
+  final List<String> correctOrder;
+  final String? blankTemplate;
+  final String correctText;
+  final String? codeTemplate;
+  final String correctCodeToken;
+}
+
 class CoursePlayerLesson {
   const CoursePlayerLesson({
     required this.id,
     required this.title,
     required this.annotation,
     required this.explanation,
+    required this.objective,
+    required this.videoLabel,
+    required this.imageCaption,
     required this.codeSnippet,
     required this.exampleOutput,
+    required this.comments,
+    required this.exercises,
     required this.nextActionLabel,
   });
 
@@ -749,8 +832,13 @@ class CoursePlayerLesson {
   final LocalizedText title;
   final LocalizedText annotation;
   final LocalizedText explanation;
+  final LocalizedText objective;
+  final String videoLabel;
+  final String imageCaption;
   final String codeSnippet;
   final String exampleOutput;
+  final List<CoursePlayerComment> comments;
+  final List<CoursePlayerExercise> exercises;
   final LocalizedText nextActionLabel;
 }
 
@@ -772,6 +860,10 @@ class CoursePlayerProgress {
   const CoursePlayerProgress({
     required this.courseId,
     required this.completedLessonIds,
+    required this.attemptedExerciseIds,
+    required this.correctExerciseIds,
+    required this.incorrectExerciseIds,
+    required this.earnedPoints,
     required this.enrolledAt,
     this.currentLessonId,
     this.lastOpenedAt,
@@ -780,6 +872,10 @@ class CoursePlayerProgress {
 
   final String courseId;
   final Set<String> completedLessonIds;
+  final Set<String> attemptedExerciseIds;
+  final Set<String> correctExerciseIds;
+  final Set<String> incorrectExerciseIds;
+  final int earnedPoints;
   final DateTime enrolledAt;
   final String? currentLessonId;
   final DateTime? lastOpenedAt;
@@ -789,6 +885,10 @@ class CoursePlayerProgress {
 
   CoursePlayerProgress copyWith({
     Set<String>? completedLessonIds,
+    Set<String>? attemptedExerciseIds,
+    Set<String>? correctExerciseIds,
+    Set<String>? incorrectExerciseIds,
+    int? earnedPoints,
     Object? currentLessonId = _coursePlayerProgressSentinel,
     DateTime? enrolledAt,
     Object? lastOpenedAt = _coursePlayerProgressSentinel,
@@ -798,6 +898,13 @@ class CoursePlayerProgress {
       courseId: courseId,
       completedLessonIds:
           completedLessonIds ?? Set<String>.from(this.completedLessonIds),
+      attemptedExerciseIds:
+          attemptedExerciseIds ?? Set<String>.from(this.attemptedExerciseIds),
+      correctExerciseIds:
+          correctExerciseIds ?? Set<String>.from(this.correctExerciseIds),
+      incorrectExerciseIds:
+          incorrectExerciseIds ?? Set<String>.from(this.incorrectExerciseIds),
+      earnedPoints: earnedPoints ?? this.earnedPoints,
       enrolledAt: enrolledAt ?? this.enrolledAt,
       currentLessonId: identical(currentLessonId, _coursePlayerProgressSentinel)
           ? this.currentLessonId
@@ -815,6 +922,10 @@ class CoursePlayerProgress {
     return <String, dynamic>{
       'courseId': courseId,
       'completedLessonIds': completedLessonIds.toList(),
+      'attemptedExerciseIds': attemptedExerciseIds.toList(),
+      'correctExerciseIds': correctExerciseIds.toList(),
+      'incorrectExerciseIds': incorrectExerciseIds.toList(),
+      'earnedPoints': earnedPoints,
       'enrolledAt': enrolledAt.toIso8601String(),
       'currentLessonId': currentLessonId,
       'lastOpenedAt': lastOpenedAt?.toIso8601String(),
@@ -829,6 +940,19 @@ class CoursePlayerProgress {
         (json['completedLessonIds'] as List<dynamic>? ?? const <dynamic>[])
             .cast<String>(),
       ),
+      attemptedExerciseIds: Set<String>.from(
+        (json['attemptedExerciseIds'] as List<dynamic>? ?? const <dynamic>[])
+            .cast<String>(),
+      ),
+      correctExerciseIds: Set<String>.from(
+        (json['correctExerciseIds'] as List<dynamic>? ?? const <dynamic>[])
+            .cast<String>(),
+      ),
+      incorrectExerciseIds: Set<String>.from(
+        (json['incorrectExerciseIds'] as List<dynamic>? ?? const <dynamic>[])
+            .cast<String>(),
+      ),
+      earnedPoints: json['earnedPoints'] as int? ?? 0,
       enrolledAt:
           DateTime.tryParse(json['enrolledAt'] as String? ?? '') ?? DateTime.now(),
       currentLessonId: json['currentLessonId'] as String?,
@@ -848,6 +972,8 @@ class CourseCertificate {
     required this.recipientName,
     required this.issuedAt,
     required this.accent,
+    required this.tier,
+    required this.completionPercent,
   });
 
   final String id;
@@ -856,6 +982,8 @@ class CourseCertificate {
   final String recipientName;
   final DateTime issuedAt;
   final Color accent;
+  final CourseCertificateTier tier;
+  final int completionPercent;
 }
 
 class CommunityCourseAuthor {

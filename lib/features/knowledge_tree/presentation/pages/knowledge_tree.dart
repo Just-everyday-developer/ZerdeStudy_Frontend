@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
@@ -147,6 +149,7 @@ class _KnowledgeTreeViewport extends ConsumerStatefulWidget {
 class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> {
   final TransformationController _controller = TransformationController();
   Size? _lastViewportSize;
+  double _fitScale = 1;
 
   @override
   void dispose() {
@@ -165,6 +168,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
       availableWidth / knowledgeTreeCanvasSize.width,
       availableHeight / knowledgeTreeCanvasSize.height,
     );
+    _fitScale = scale;
     final offsetX =
         (viewport.width - (knowledgeTreeCanvasSize.width * scale)) / 2;
     final offsetY =
@@ -175,6 +179,42 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
     matrix.setTranslationRaw(offsetX, offsetY, 0);
     _controller.value = matrix;
     _lastViewportSize = viewport;
+  }
+
+  double get _currentScale => _controller.value.getMaxScaleOnAxis();
+
+  double _minScale(bool compact) => compact ? _fitScale * 0.96 : _fitScale;
+
+  double _maxScale(bool compact) =>
+      compact ? math.max(_fitScale * 2.35, 1.7) : math.max(_fitScale * 1.65, 1.2);
+
+  void _setScale(
+    double targetScale, {
+    Offset? focalPoint,
+    required bool compact,
+  }) {
+    final viewport = _lastViewportSize;
+    if (viewport == null || viewport.isEmpty) {
+      return;
+    }
+    final clampedScale = targetScale.clamp(_minScale(compact), _maxScale(compact));
+    final viewportFocalPoint =
+        focalPoint ?? Offset(viewport.width / 2, viewport.height / 2);
+    final scenePoint = _controller.toScene(viewportFocalPoint);
+    final nextMatrix = Matrix4.identity()
+      ..setEntry(0, 0, clampedScale)
+      ..setEntry(1, 1, clampedScale);
+    nextMatrix.setTranslationRaw(
+      viewportFocalPoint.dx - (scenePoint.dx * clampedScale),
+      viewportFocalPoint.dy - (scenePoint.dy * clampedScale),
+      0,
+    );
+    _controller.value = nextMatrix;
+  }
+
+  void _zoomBy(double delta, {required bool compact}) {
+    final currentScale = _currentScale;
+    _setScale(currentScale + delta, compact: compact);
   }
 
   @override
@@ -195,7 +235,9 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
           math.max(0.1, (viewportSize.width - 24) / knowledgeTreeCanvasSize.width),
           math.max(0.1, (viewportSize.height - 24) / knowledgeTreeCanvasSize.height),
         );
-        final desktopLike = !context.isCompactLayout;
+        final compact = context.isCompactLayout;
+        final desktopLike = !compact;
+        _fitScale = fitScale;
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(28),
@@ -221,48 +263,72 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                   ),
                 ),
                 Positioned.fill(
-                  child: InteractiveViewer(
-                    transformationController: _controller,
-                    constrained: false,
-                    minScale: fitScale * 0.95,
-                    maxScale: desktopLike
-                        ? fitScale * 1.02
-                        : math.max(fitScale * 2.8, 1.8),
-                    scaleEnabled: !desktopLike,
-                    trackpadScrollCausesScale: false,
-                    boundaryMargin: EdgeInsets.symmetric(
-                      horizontal: desktopLike ? 18 : 72,
-                      vertical: desktopLike ? 32 : 72,
-                    ),
-                    child: SizedBox(
-                      width: knowledgeTreeCanvasSize.width,
-                      height: knowledgeTreeCanvasSize.height,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned.fill(
-                            child: IgnorePointer(
-                              child: CustomPaint(
-                                painter: _KnowledgeTreePainter(
-                                  nodes: knowledgeTreeNodes,
-                                  edges: knowledgeTreeEdges,
-                                  colors: colors,
+                  child: Listener(
+                    onPointerSignal: (event) {
+                      if (event is! PointerScrollEvent || compact) {
+                        return;
+                      }
+                      final ctrlPressed = HardwareKeyboard.instance.isControlPressed;
+                      if (!ctrlPressed) {
+                        return;
+                      }
+                      final delta = event.scrollDelta.dy > 0 ? -0.08 : 0.08;
+                      _setScale(
+                        _currentScale + delta,
+                        focalPoint: event.localPosition,
+                        compact: compact,
+                      );
+                    },
+                    child: InteractiveViewer(
+                      transformationController: _controller,
+                      constrained: false,
+                      minScale: _minScale(compact),
+                      maxScale: _maxScale(compact),
+                      scaleEnabled: compact,
+                      trackpadScrollCausesScale: false,
+                      boundaryMargin: EdgeInsets.symmetric(
+                        horizontal: desktopLike ? 8 : 54,
+                        vertical: desktopLike ? 24 : 64,
+                      ),
+                      child: SizedBox(
+                        width: knowledgeTreeCanvasSize.width,
+                        height: knowledgeTreeCanvasSize.height,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                child: CustomPaint(
+                                  painter: _KnowledgeTreePainter(
+                                    nodes: knowledgeTreeNodes,
+                                    edges: knowledgeTreeEdges,
+                                    colors: colors,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          ...knowledgeTreeNodes.map(
-                            (node) => _buildPositionedNode(
-                              context,
-                              node,
-                              catalog,
-                              state,
-                              colors,
+                            ...knowledgeTreeNodes.map(
+                              (node) => _buildPositionedNode(
+                                context,
+                                node,
+                                catalog,
+                                state,
+                                colors,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
+                  ),
+                ),
+                Positioned(
+                  right: 16,
+                  top: 16,
+                  child: _TreeZoomControls(
+                    onZoomIn: () => _zoomBy(0.12, compact: compact),
+                    onZoomOut: () => _zoomBy(-0.12, compact: compact),
+                    onReset: () => _fitToViewport(viewportSize),
                   ),
                 ),
               ],
@@ -297,6 +363,87 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
         onTap: node.trackId == null
             ? null
             : () => context.push(AppRoutes.trackById(node.trackId!)),
+      ),
+    );
+  }
+}
+
+class _TreeZoomControls extends StatelessWidget {
+  const _TreeZoomControls({
+    required this.onZoomIn,
+    required this.onZoomOut,
+    required this.onReset,
+  });
+
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: colors.surface.withValues(alpha: 0.94),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _TreeZoomButton(
+            icon: Icons.add_rounded,
+            tooltip: context.l10n.text('tree_zoom_in'),
+            onTap: onZoomIn,
+          ),
+          const SizedBox(height: 6),
+          _TreeZoomButton(
+            icon: Icons.remove_rounded,
+            tooltip: context.l10n.text('tree_zoom_out'),
+            onTap: onZoomOut,
+          ),
+          const SizedBox(height: 6),
+          _TreeZoomButton(
+            icon: Icons.center_focus_strong_rounded,
+            tooltip: context.l10n.text('tree_zoom_reset'),
+            onTap: onReset,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TreeZoomButton extends StatelessWidget {
+  const _TreeZoomButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: colors.surfaceSoft,
+          ),
+          child: Icon(icon, color: colors.textPrimary),
+        ),
       ),
     );
   }
