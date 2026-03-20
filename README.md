@@ -1041,3 +1041,37 @@ flutter build windows
 4. `demo_app_controller.dart`
 5. `app_localizations.dart`
 
+## 16. Debug Notes: 2026-03-20
+
+Recent UI/debugging updates:
+
+- `lib/features/learning/presentation/widgets/course_discovery_widgets.dart`
+  Fixed the `Search courses` field so the text caret stays inside the border.
+- `lib/core/window/app_window_io.dart`
+  Reworked the Windows window-frame buttons. The center button now toggles
+  maximize and restore based on the real current window state.
+- `lib/features/learning/presentation/pages/learn_page.dart`
+  Filters are now rendered inside a scrollable panel to avoid bottom overflow
+  on compact screens.
+- `lib/features/home/presentation/pages/community_courses_page.dart`
+  Catalog filters use the same scrollable panel approach as `Learn`.
+- `lib/features/knowledge_tree/presentation/pages/knowledge_tree.dart`
+  Reset zoom now forces a real fit-to-viewport refresh. Desktop `Ctrl + wheel`
+  handling and the tree zoom controls were also stabilized.
+- `lib/core/common_widgets/app_settings_panel.dart`
+  FAQ entry moved inside Settings.
+- `lib/core/common_widgets/app_shell_scaffold.dart`
+  Profile action is now the last topbar action, and avatar navigation uses a
+  dedicated profile preview route for hero-style transition flow.
+- `lib/app/routing/app_routes.dart`
+  Added `profilePreview`.
+- `lib/app/routing/router.dart`
+  Registered the root-level profile preview route.
+- `lib/main.dart`
+  Added global mouse-drag scrolling support through a custom scroll behavior.
+
+Debugging tip:
+
+- If a horizontal rail stops dragging with the mouse, first check
+  `lib/core/common_widgets/app_scroll_behavior.dart` and then the target
+  `ListView` in `Learn` or `Profile`.

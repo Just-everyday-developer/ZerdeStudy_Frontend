@@ -30,7 +30,7 @@ class CourseDiscoverySearchBar extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       padding: EdgeInsets.symmetric(
         horizontal: 16,
-        vertical: tall ? 12 : 10,
+        vertical: tall ? 10 : 8,
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -51,35 +51,32 @@ class CourseDiscoverySearchBar extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: SizedBox(
-              height: tall ? 26 : 24,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  onChanged: onChanged,
-                  scrollPadding: EdgeInsets.zero,
-                  textAlignVertical: TextAlignVertical.center,
-                  maxLines: 1,
-                  minLines: 1,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    height: 1,
+              height: tall ? 42 : 40,
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                onChanged: onChanged,
+                scrollPadding: EdgeInsets.zero,
+                textAlignVertical: TextAlignVertical.center,
+                maxLines: 1,
+                minLines: 1,
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  height: 1.25,
+                  fontSize: tall ? 17 : 16,
+                ),
+                cursorWidth: 1.5,
+                cursorRadius: const Radius.circular(1.2),
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: tall ? 11 : 10,
+                  ),
+                  hintText: hintText,
+                  hintStyle: TextStyle(
+                    color: colors.textSecondary,
                     fontSize: tall ? 17 : 16,
-                  ),
-                  cursorHeight: tall ? 19 : 18,
-                  cursorWidth: 1.6,
-                  cursorRadius: const Radius.circular(1.2),
-                  strutStyle: const StrutStyle(
-                    height: 1,
-                    forceStrutHeight: true,
-                  ),
-                  decoration: InputDecoration.collapsed(
-                    hintText: hintText,
-                    hintStyle: TextStyle(
-                      color: colors.textSecondary,
-                      fontSize: tall ? 17 : 16,
-                    ),
                   ),
                 ),
               ),

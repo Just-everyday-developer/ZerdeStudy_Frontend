@@ -220,62 +220,54 @@ class _CompactCourseDetailLayout extends StatelessWidget {
 
     return DefaultTabController(
       length: 4,
-      child: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: _MobileHeroCard(
-                  course: course,
-                  saved: saved,
-                  enrolled: enrolled,
-                  reviewSummary: reviewSummary,
-                  userRating: userRating,
-                  onSave: onSave,
-                  onRate: onRate,
-                  onPrimaryTap: onPrimaryTap,
-                ),
-              ),
-            ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _PinnedTabBarDelegate(
-                backgroundColor: colors.surface.withValues(alpha: 0.94),
-                child: Container(
-                  color: colors.surface.withValues(alpha: 0.94),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TabBar(
-                    isScrollable: true,
-                    indicatorColor: colors.primary,
-                    labelColor: colors.textPrimary,
-                    unselectedLabelColor: colors.textSecondary,
-                    tabs: [
-                      Tab(text: l10n.text('course_tab_info')),
-                      Tab(text: l10n.text('course_tab_reviews')),
-                      Tab(text: l10n.text('course_tab_news')),
-                      Tab(text: l10n.text('course_tab_modules')),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ];
-        },
-        body: TabBarView(
-          children: [
-            _CompactInfoTab(course: course),
-            _CourseReviewsSection(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: _MobileHeroCard(
               course: course,
-              compact: true,
-              summary: reviewSummary,
+              saved: saved,
+              enrolled: enrolled,
+              reviewSummary: reviewSummary,
               userRating: userRating,
+              onSave: onSave,
               onRate: onRate,
+              onPrimaryTap: onPrimaryTap,
             ),
-            _CourseUpdatesSection(course: course, compact: true),
-            _CourseProgramSection(course: course, compact: true),
-          ],
-        ),
+          ),
+          Container(
+            color: colors.surface.withValues(alpha: 0.94),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TabBar(
+              isScrollable: true,
+              indicatorColor: colors.primary,
+              labelColor: colors.textPrimary,
+              unselectedLabelColor: colors.textSecondary,
+              tabs: [
+                Tab(text: l10n.text('course_tab_info')),
+                Tab(text: l10n.text('course_tab_reviews')),
+                Tab(text: l10n.text('course_tab_news')),
+                Tab(text: l10n.text('course_tab_modules')),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _CompactInfoTab(course: course),
+                _CourseReviewsSection(
+                  course: course,
+                  compact: true,
+                  summary: reviewSummary,
+                  userRating: userRating,
+                  onRate: onRate,
+                ),
+                _CourseUpdatesSection(course: course, compact: true),
+                _CourseProgramSection(course: course, compact: true),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1778,40 +1770,6 @@ class _HeroStatChip extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
-  const _PinnedTabBarDelegate({
-    required this.child,
-    required this.backgroundColor,
-  });
-
-  final Widget child;
-  final Color backgroundColor;
-
-  @override
-  double get minExtent => 58;
-
-  @override
-  double get maxExtent => 58;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return ColoredBox(
-      color: backgroundColor,
-      child: child,
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) {
-    return oldDelegate.child != child ||
-        oldDelegate.backgroundColor != backgroundColor;
   }
 }
 

@@ -133,8 +133,7 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                         _onDestinationSelected(2);
                         _requestSearchFocus();
                       },
-                      onFaqTap: () => context.push(AppRoutes.faq),
-                      onProfileTap: () => _onDestinationSelected(4),
+                      onProfileTap: () => context.push(AppRoutes.profilePreview),
                       onSettingsTap: () => showAppSettingsPanel(context),
                       onLocaleSelected: ref
                           .read(demoAppControllerProvider.notifier)
@@ -231,7 +230,6 @@ class _DesktopShellBar extends StatelessWidget {
     required this.onDestinationSelected,
     required this.onBackTap,
     required this.onSearchTap,
-    required this.onFaqTap,
     required this.onProfileTap,
     required this.onSettingsTap,
     required this.onLocaleSelected,
@@ -245,7 +243,6 @@ class _DesktopShellBar extends StatelessWidget {
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onBackTap;
   final VoidCallback onSearchTap;
-  final VoidCallback onFaqTap;
   final VoidCallback onProfileTap;
   final VoidCallback onSettingsTap;
   final ValueChanged<AppLocale> onLocaleSelected;
@@ -294,12 +291,6 @@ class _DesktopShellBar extends StatelessWidget {
               tooltip: context.l10n.text('search_courses'),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              onPressed: onFaqTap,
-              icon: Icon(Icons.quiz_rounded, color: colors.textPrimary),
-              tooltip: context.l10n.text('faq_title'),
-            ),
-            const SizedBox(width: 8),
             PopupMenuButton<AppLocale>(
               tooltip: context.l10n.text('locale'),
               initialValue: currentLocale,
@@ -314,71 +305,46 @@ class _DesktopShellBar extends StatelessWidget {
                     )
                     .toList(growable: false);
               },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: colors.surfaceSoft,
-                  border: Border.all(color: colors.divider),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.language_rounded, color: colors.primary, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      currentLocale.label,
-                      style: TextStyle(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            InkWell(
-              onTap: onProfileTap,
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: colors.surfaceSoft,
-                  border: Border.all(color: colors.divider),
-                ),
-                child: Hero(
-                  tag: 'shell-profile-avatar',
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: colors.primary.withValues(alpha: 0.18),
-                    child: Text(
-                      currentUserName.isEmpty
-                          ? 'Z'
-                          : currentUserName.substring(0, 1).toUpperCase(),
-                      style: TextStyle(
-                        color: colors.primary,
-                        fontWeight: FontWeight.w800,
-                      ),
+              child: Row(
+                children: [
+                  Icon(Icons.language_rounded, color: colors.primary, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    currentLocale.label,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ),
+                ],
               ),
             ),
             const SizedBox(width: 10),
             IconButton(
               onPressed: onSettingsTap,
               tooltip: context.l10n.text('settings'),
-              style: IconButton.styleFrom(
-                backgroundColor: colors.surfaceSoft,
-                side: BorderSide(color: colors.divider),
-                padding: const EdgeInsets.all(12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+              icon: Icon(Icons.settings_rounded, color: colors.textPrimary),
+            ),
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: onProfileTap,
+              borderRadius: BorderRadius.circular(18),
+              child: Hero(
+                tag: 'shell-profile-avatar',
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: colors.primary.withValues(alpha: 0.18),
+                  child: Text(
+                    currentUserName.isEmpty
+                        ? 'Z'
+                        : currentUserName.substring(0, 1).toUpperCase(),
+                    style: TextStyle(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
-              icon: Icon(Icons.settings_rounded, color: colors.textPrimary),
             ),
           ],
         ),

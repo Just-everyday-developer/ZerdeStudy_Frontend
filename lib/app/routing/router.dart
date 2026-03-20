@@ -146,6 +146,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: AppRoutes.profilePreview,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const ProfilePage(),
+        ),
+      ),
+      GoRoute(
         path: '${AppRoutes.track}/:trackId',
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(

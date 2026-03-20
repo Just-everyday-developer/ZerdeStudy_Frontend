@@ -150,6 +150,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
   final TransformationController _controller = TransformationController();
   Size? _lastViewportSize;
   double _fitScale = 1;
+  bool _didInitialFit = false;
 
   @override
   void dispose() {
@@ -157,8 +158,11 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
     super.dispose();
   }
 
-  void _fitToViewport(Size viewport) {
-    if (_lastViewportSize == viewport || viewport.isEmpty) {
+  void _fitToViewport(Size viewport, {bool force = false}) {
+    if (viewport.isEmpty) {
+      return;
+    }
+    if (!force && _didInitialFit && _lastViewportSize == viewport) {
       return;
     }
 
@@ -179,6 +183,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
     matrix.setTranslationRaw(offsetX, offsetY, 0);
     _controller.value = matrix;
     _lastViewportSize = viewport;
+    _didInitialFit = true;
   }
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
@@ -210,6 +215,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
       0,
     );
     _controller.value = nextMatrix;
+    _didInitialFit = true;
   }
 
   void _zoomBy(double delta, {required bool compact}) {
@@ -264,6 +270,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                 ),
                 Positioned.fill(
                   child: Listener(
+                    behavior: HitTestBehavior.opaque,
                     onPointerSignal: (event) {
                       if (event is! PointerScrollEvent || compact) {
                         return;
@@ -326,9 +333,9 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                   right: 16,
                   top: 16,
                   child: _TreeZoomControls(
-                    onZoomIn: () => _zoomBy(0.12, compact: compact),
-                    onZoomOut: () => _zoomBy(-0.12, compact: compact),
-                    onReset: () => _fitToViewport(viewportSize),
+                    onZoomIn: () => _zoomBy(0.14, compact: compact),
+                    onZoomOut: () => _zoomBy(-0.14, compact: compact),
+                    onReset: () => _fitToViewport(viewportSize, force: true),
                   ),
                 ),
               ],

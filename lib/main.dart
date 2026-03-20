@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app/routing/router.dart';
 import 'app/state/app_locale.dart';
 import 'app/state/demo_app_controller.dart';
+import 'core/common_widgets/app_scroll_behavior.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/providers/background_controller.dart';
 import 'core/theme/app_theme.dart';
@@ -70,6 +71,7 @@ class _MyAppState extends ConsumerState<MyApp>
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode.materialMode,
+      scrollBehavior: const AppScrollBehavior(),
       locale: locale.locale,
       supportedLocales: AppLocale.values
           .map((appLocale) => appLocale.locale)

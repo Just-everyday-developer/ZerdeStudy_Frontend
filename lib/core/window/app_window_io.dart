@@ -38,12 +38,59 @@ Widget buildAppWindowFrame({
   return _DesktopWindowFrame(child: child);
 }
 
-class _DesktopWindowFrame extends StatelessWidget {
+class _DesktopWindowFrame extends StatefulWidget {
   const _DesktopWindowFrame({
     required this.child,
   });
 
   final Widget child;
+
+  @override
+  State<_DesktopWindowFrame> createState() => _DesktopWindowFrameState();
+}
+
+class _DesktopWindowFrameState extends State<_DesktopWindowFrame>
+    with WindowListener {
+  bool _isMaximized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    windowManager.addListener(this);
+    _refreshWindowState();
+  }
+
+  @override
+  void dispose() {
+    windowManager.removeListener(this);
+    super.dispose();
+  }
+
+  @override
+  void onWindowMaximize() => _refreshWindowState();
+
+  @override
+  void onWindowUnmaximize() => _refreshWindowState();
+
+  @override
+  void onWindowRestore() => _refreshWindowState();
+
+  Future<void> _refreshWindowState() async {
+    final maximized = await windowManager.isMaximized();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isMaximized = maximized);
+  }
+
+  Future<void> _toggleWindowSize() async {
+    if (_isMaximized) {
+      await windowManager.unmaximize();
+    } else {
+      await windowManager.maximize();
+    }
+    await _refreshWindowState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,22 +127,11 @@ class _DesktopWindowFrame extends StatelessWidget {
                       }
                     },
                   ),
-                  FutureBuilder<bool>(
-                    future: windowManager.isMaximized(),
-                    builder: (context, snapshot) {
-                      if (snapshot.data == true) {
-                        return WindowCaptionButton.unmaximize(
-                          brightness:
-                              isDark ? Brightness.dark : Brightness.light,
-                          onPressed: () => windowManager.unmaximize(),
-                        );
-                      }
-                      return WindowCaptionButton.maximize(
-                        brightness:
-                            isDark ? Brightness.dark : Brightness.light,
-                        onPressed: () => windowManager.maximize(),
-                      );
-                    },
+                  (_isMaximized
+                          ? WindowCaptionButton.unmaximize
+                          : WindowCaptionButton.maximize)(
+                    brightness: isDark ? Brightness.dark : Brightness.light,
+                    onPressed: _toggleWindowSize,
                   ),
                   WindowCaptionButton.close(
                     brightness: isDark ? Brightness.dark : Brightness.light,
@@ -104,7 +140,7 @@ class _DesktopWindowFrame extends StatelessWidget {
                 ],
               ),
             ),
-            Expanded(child: child),
+            Expanded(child: widget.child),
           ],
         ),
       ),
