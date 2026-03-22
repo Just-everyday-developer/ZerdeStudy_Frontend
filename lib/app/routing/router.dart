@@ -7,6 +7,8 @@ import '../../core/utils/cyber_transition.dart';
 import '../../features/ai/presentation/pages/ai_mentor_page.dart';
 import '../../features/analytics/presentation/pages/leaderboard_page.dart';
 import '../../features/analytics/presentation/pages/stats_page.dart';
+import '../../features/auth/presentation/pages/forgot_password_code_page.dart';
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
@@ -52,6 +54,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         AppRoutes.welcome,
         AppRoutes.login,
         AppRoutes.signup,
+        AppRoutes.forgotPassword,
+        AppRoutes.forgotPasswordCode,
       }.contains(path);
 
       if (!isAuthenticated && !isAuthRoute) {
@@ -82,6 +86,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const SignUpPage(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const ForgotPasswordPage(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPasswordCode,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: ForgotPasswordCodePage(
+            email: state.uri.queryParameters['email'],
+          ),
         ),
       ),
       StatefulShellRoute.indexedStack(
@@ -150,7 +170,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const ProfilePage(),
+          child: const ProfilePage(enableShellAvatarHero: true),
         ),
       ),
       GoRoute(

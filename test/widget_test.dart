@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -91,6 +92,72 @@ void main() {
     expect(find.text('Recommended tracks'), findsOneWidget);
   });
 
+  testWidgets('ctrl+k opens learn and reveals search', (tester) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MyApp(),
+      ),
+    );
+    await pumpScene(tester);
+
+    await tester.tap(find.text('Google'));
+    await pumpScene(tester);
+    expect(find.text('Recommended tracks'), findsOneWidget);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyK);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyK);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await pumpScene(tester);
+
+    expect(find.text('Search courses'), findsOneWidget);
+    expect(find.text('Programming languages'), findsOneWidget);
+  });
+
+  testWidgets('forgot password flow opens code screen and enters app',
+      (tester) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MyApp(),
+      ),
+    );
+    await pumpScene(tester);
+
+    await tester.tap(find.text('Forgot password?'));
+    await pumpScene(tester);
+
+    expect(find.text('Reset your password'), findsOneWidget);
+    await tester.enterText(
+      find.byType(TextField).first,
+      'demo@zerdestudy.app',
+    );
+    await tester.tap(find.text('Send code'));
+    await pumpScene(tester);
+
+    expect(find.text('Enter verification code'), findsOneWidget);
+
+    final fields = find.byType(TextField);
+    for (var i = 0; i < 6; i++) {
+      await tester.enterText(fields.at(i), '${i + 1}');
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    await tester.tap(find.text('Verify and continue'));
+    await pumpScene(tester);
+
+    expect(find.text('Recommended tracks'), findsOneWidget);
+  });
+
   testWidgets('knowledge tree renders and opens track overview',
       (tester) async {
     await configureSurface(tester);
@@ -110,7 +177,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.account_tree_outlined));
     await pumpScene(tester);
 
-    expect(find.byIcon(Icons.legend_toggle_rounded), findsOneWidget);
+    expect(find.text('Legend'), findsOneWidget);
     expect(find.byIcon(Icons.add_rounded), findsNothing);
     expect(find.text('Operating Systems'), findsWidgets);
     expect(find.text('Frontend'), findsWidgets);

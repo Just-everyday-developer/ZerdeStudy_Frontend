@@ -397,44 +397,44 @@ class AppLocalizations {
           AppLocale.kk: 'Баптаулар',
         },
         'help': {
-          AppLocale.ru: 'РџРѕРјРѕС‰СЊ',
+          AppLocale.ru: 'Помощь',
           AppLocale.en: 'Help',
-          AppLocale.kk: 'РљУ©РјРµРє',
+          AppLocale.kk: 'Көмек',
         },
         'hotkeys': {
-          AppLocale.ru: 'Р“РѕСЂСЏС‡РёРµ РєР»Р°РІРёС€Рё',
+          AppLocale.ru: 'Горячие клавиши',
           AppLocale.en: 'Hotkeys',
-          AppLocale.kk: 'Р«СЃС‚С‹Т› РїРµСЂРЅРµР»РµСЂ',
+          AppLocale.kk: 'Ыстық пернелер',
         },
         'hotkey_tabs_direct': {
-          AppLocale.ru: 'Р‘С‹СЃС‚СЂС‹Р№ РїРµСЂРµС…РѕРґ РЅР° РЅСѓР¶РЅСѓСЋ РІРєР»Р°РґРєСѓ shell.',
+          AppLocale.ru: 'Быстрый переход на нужную вкладку shell.',
           AppLocale.en: 'Jump directly to a specific shell tab.',
-          AppLocale.kk: 'Shell-С‚РµРіС– Т›Р°Р¶РµС‚ Т›РѕСЃС‹РјС€Р°Т“Р° С‚С–РєРµР»РµР№ У©С‚Сѓ.',
+          AppLocale.kk: 'Shell-тегі қажет қосымшаға тікелей өту.',
         },
         'hotkey_tabs_arrows': {
-          AppLocale.ru: 'РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РјРµР¶РґСѓ РІРєР»Р°РґРєР°РјРё РІРїРµСЂС‘Рґ Рё РЅР°Р·Р°Рґ.',
+          AppLocale.ru: 'Переключение между вкладками вперёд и назад.',
           AppLocale.en: 'Move between shell tabs forward and backward.',
-          AppLocale.kk: 'Shell РІРєР»Р°РґРєР°Р»Р°СЂС‹РЅС‹ТЈ Р°СЂР°СЃС‹РЅРґР° Р°Р»Т“Р° Р¶У™РЅРµ РєРµСЂС– Р°СѓС‹СЃСѓ.',
+          AppLocale.kk: 'Shell вкладкаларының арасында алға және кері ауысу.',
         },
         'hotkey_next_screen': {
-          AppLocale.ru: 'РџРµСЂРµР№С‚Рё РЅР° СЃР»РµРґСѓСЋС‰РёР№ СЌРєСЂР°РЅ shell.',
+          AppLocale.ru: 'Перейти на следующий экран shell.',
           AppLocale.en: 'Open the next shell screen.',
-          AppLocale.kk: 'Shell-С‚РµРіС– РєРµР»РµСЃС– СЌРєСЂР°РЅРЅС‹ Р°С€Сѓ.',
+          AppLocale.kk: 'Shell-тегі келесі экранды ашу.',
         },
         'hotkey_prev_screen': {
-          AppLocale.ru: 'Р’РµСЂРЅСѓС‚СЊСЃСЏ Рє РїСЂРµРґС‹РґСѓС‰РµРјСѓ СЌРєСЂР°РЅСѓ shell.',
+          AppLocale.ru: 'Вернуться к предыдущему экрану shell.',
           AppLocale.en: 'Return to the previous shell screen.',
-          AppLocale.kk: 'Shell-С‚РµРіС– Р°Р»РґС‹РЅТ“С‹ СЌРєСЂР°РЅТ“Р° Т›Р°Р№С‚Сѓ.',
+          AppLocale.kk: 'Shell-тегі алдыңғы экранға қайту.',
         },
         'hotkey_back': {
-          AppLocale.ru: 'Р’РµСЂРЅСѓС‚СЊСЃСЏ РЅР° РїСЂРµРґС‹РґСѓС‰СѓСЋ СЃС‚СЂР°РЅРёС†Сѓ РёР»Рё РїРѕ history.',
+          AppLocale.ru: 'Вернуться на предыдущую страницу или по history.',
           AppLocale.en: 'Go back to the previous page or tab history.',
-          AppLocale.kk: 'РђР»РґС‹РЅТ“С‹ Р±РµС‚РєРµ РЅРµРјРµСЃРµ history Р±РѕР№С‹РЅС€Р° Т›Р°Р№С‚Сѓ.',
+          AppLocale.kk: 'Алдыңғы бетке немесе history бойынша қайту.',
         },
         'hotkey_focus_search': {
-          AppLocale.ru: 'РЎС„РѕРєСѓСЃРёСЂРѕРІР°С‚СЊ РїРѕРёСЃРє РєСѓСЂСЃРѕРІ РІ Learn.',
+          AppLocale.ru: 'Сфокусировать поиск курсов в Learn.',
           AppLocale.en: 'Focus the course search field in Learn.',
-          AppLocale.kk: 'Learn-С‚РµРіС– РєСѓСЂСЃС‚Р°СЂРґС‹ С–Р·РґРµСѓ ӨСЂС–СЃС–РЅРµ С„РѕРєСѓСЃ Р±РµСЂСѓ.',
+          AppLocale.kk: 'Learn-тегі курстарды іздеу өрісіне фокус беру.',
         },
         'theme': {
           AppLocale.ru: 'Тема',
@@ -729,6 +729,11 @@ class AppLocalizations {
           AppLocale.ru: 'Доступно',
           AppLocale.en: 'Available',
           AppLocale.kk: 'Қолжетімді',
+        },
+        'tree_legend': {
+          AppLocale.ru: 'Р›РµРіРµРЅРґР°',
+          AppLocale.en: 'Legend',
+          AppLocale.kk: 'РђТЈС‹Р·',
         },
         'tree_in_progress': {
           AppLocale.ru: 'В процессе',
@@ -1259,6 +1264,66 @@ class AppLocalizations {
           AppLocale.ru: 'Премиальный сертификат',
           AppLocale.en: 'Premium certificate',
           AppLocale.kk: 'Премиум сертификат',
+        },
+        'forgot_password': {
+          AppLocale.ru: 'Забыли пароль?',
+          AppLocale.en: 'Forgot password?',
+          AppLocale.kk: 'Құпиясөзді ұмыттыңыз ба?',
+        },
+        'forgot_password_title': {
+          AppLocale.ru: 'Восстановление пароля',
+          AppLocale.en: 'Reset your password',
+          AppLocale.kk: 'Құпиясөзді қалпына келтіру',
+        },
+        'forgot_password_subtitle': {
+          AppLocale.ru: 'Введите email, и мы откроем мок-экран с кодом для демонстрации.',
+          AppLocale.en: 'Enter your email and we will open a mock verification flow for the demo.',
+          AppLocale.kk: 'Email енгізіңіз, содан кейін демо үшін коды бар mock verification flow ашылады.',
+        },
+        'send_code': {
+          AppLocale.ru: 'Отправить код',
+          AppLocale.en: 'Send code',
+          AppLocale.kk: 'Кодты жіберу',
+        },
+        'back_to_login': {
+          AppLocale.ru: 'Вернуться ко входу',
+          AppLocale.en: 'Back',
+          AppLocale.kk: 'Кіруге қайту',
+        },
+        'reset_code_sent': {
+          AppLocale.ru: 'Код отправлен в демо-сценарий.',
+          AppLocale.en: 'The code has been sent in the demo flow.',
+          AppLocale.kk: 'Код демо flow аясында жіберілді.',
+        },
+        'verification_code_title': {
+          AppLocale.ru: 'Подтвердите код',
+          AppLocale.en: 'Enter verification code',
+          AppLocale.kk: 'Растау кодын енгізіңіз',
+        },
+        'verification_code_subtitle': {
+          AppLocale.ru: 'Введите 6-символьный код, отправленный на {email}. Для демо подойдёт любой код.',
+          AppLocale.en: 'Enter the 6-digit code sent to {email}. For this demo, any code will work.',
+          AppLocale.kk: '{email} мекенжайына жіберілген 6 таңбалы кодты енгізіңіз. Демо үшін кез келген код жарайды.',
+        },
+        'enter_six_digit_code': {
+          AppLocale.ru: 'Введите все 6 цифр.',
+          AppLocale.en: 'Enter all 6 digits.',
+          AppLocale.kk: '6 цифрдың барлығын енгізіңіз.',
+        },
+        'verify_and_continue': {
+          AppLocale.ru: 'Проверить и продолжить',
+          AppLocale.en: 'Verify and continue',
+          AppLocale.kk: 'Тексеріп, жалғастыру',
+        },
+        'change_email': {
+          AppLocale.ru: 'Изменить email',
+          AppLocale.en: 'Change email',
+          AppLocale.kk: 'Email-ді ауыстыру',
+        },
+        'code_verified': {
+          AppLocale.ru: 'Код принят. Переходим в приложение.',
+          AppLocale.en: 'Code accepted. Opening the app.',
+          AppLocale.kk: 'Код қабылданды. Приложение ашылады.',
         },
       };
 }

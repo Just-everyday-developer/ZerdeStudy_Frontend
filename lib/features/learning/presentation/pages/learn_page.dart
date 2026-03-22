@@ -26,6 +26,7 @@ class LearnPage extends ConsumerStatefulWidget {
 class _LearnPageState extends ConsumerState<LearnPage> {
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
+  late final ScrollController _scrollController;
 
   String _query = '';
   String? _selectedTopicKey;
@@ -39,13 +40,28 @@ class _LearnPageState extends ConsumerState<LearnPage> {
     super.initState();
     _searchController = TextEditingController();
     _searchFocusNode = FocusNode();
+    _scrollController = ScrollController();
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _focusSearchAndReveal() async {
+    if (_scrollController.hasClients) {
+      await _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+    if (mounted) {
+      _searchFocusNode.requestFocus();
+    }
   }
 
   Future<void> _openFilters(
@@ -254,7 +270,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _searchFocusNode.requestFocus();
+          _focusSearchAndReveal();
         }
       });
     });
@@ -321,6 +337,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 700;
           return ListView(
+            controller: _scrollController,
             padding: EdgeInsets.fromLTRB(20, 8, 20, compact ? 120 : 48),
             children: [
               CourseDiscoverySearchBar(

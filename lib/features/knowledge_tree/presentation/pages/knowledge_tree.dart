@@ -65,7 +65,6 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
   Size? _lastViewportSize;
   double _fitScale = 1;
   bool _didInitialFit = false;
-  bool _legendOpen = false;
 
   @override
   void dispose() {
@@ -297,14 +296,8 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                               Positioned(
                                 right: 16,
                                 top: 16,
-                                child: _TreeLegendMenu(
+                                child: _PinnedTreeLegend(
                                   compact: compact,
-                                  isOpen: _legendOpen,
-                                  onToggle: () {
-                                    setState(() {
-                                      _legendOpen = !_legendOpen;
-                                    });
-                                  },
                                 ),
                               ),
                             ],
@@ -364,15 +357,32 @@ class _TreeLegendCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         color: colors.surface.withValues(alpha: 0.94),
         border: Border.all(color: colors.divider),
+        boxShadow: [
+          BoxShadow(
+            color: colors.primary.withValues(alpha: 0.08),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
+            child: Text(
+              context.l10n.text('tree_legend'),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ),
           _LegendChip(
             label: context.l10n.text('tree_available'),
             color: colors.primary,
@@ -402,56 +412,18 @@ class _TreeLegendCard extends StatelessWidget {
   }
 }
 
-class _TreeLegendMenu extends StatelessWidget {
-  const _TreeLegendMenu({
+class _PinnedTreeLegend extends StatelessWidget {
+  const _PinnedTreeLegend({
     required this.compact,
-    required this.isOpen,
-    required this.onToggle,
   });
 
   final bool compact;
-  final bool isOpen;
-  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Material(
-            color: colors.surface.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(18),
-            child: InkWell(
-              onTap: onToggle,
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: colors.divider),
-                ),
-                child: Icon(
-                  isOpen ? Icons.close_rounded : Icons.legend_toggle_rounded,
-                  color: colors.textPrimary,
-                ),
-              ),
-            ),
-          ),
-          if (isOpen) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: compact ? 232 : 182,
-              child: _TreeLegendCard(compact: compact),
-            ),
-          ],
-        ],
-      ),
+    return SizedBox(
+      width: compact ? 220 : 188,
+      child: _TreeLegendCard(compact: compact),
     );
   }
 }

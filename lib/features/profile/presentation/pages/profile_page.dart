@@ -16,7 +16,12 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
 class ProfilePage extends ConsumerWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({
+    super.key,
+    this.enableShellAvatarHero = false,
+  });
+
+  final bool enableShellAvatarHero;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,21 +69,9 @@ class ProfilePage extends ConsumerWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Hero(
-                            tag: 'shell-profile-avatar',
-                            child: Container(
-                              width: 96,
-                              height: 96,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: colors.primary.withValues(alpha: 0.14),
-                              ),
-                              child: Icon(
-                                Icons.person_rounded,
-                                color: colors.primary,
-                                size: 46,
-                              ),
-                            ),
+                          _ProfileAvatar(
+                            enableHero: enableShellAvatarHero,
+                            size: 96,
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -134,21 +127,9 @@ class ProfilePage extends ConsumerWidget {
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Hero(
-                        tag: 'shell-profile-avatar',
-                        child: Container(
-                          width: 108,
-                          height: 108,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: colors.primary.withValues(alpha: 0.14),
-                          ),
-                          child: Icon(
-                            Icons.person_rounded,
-                            color: colors.primary,
-                            size: 52,
-                          ),
-                        ),
+                      _ProfileAvatar(
+                        enableHero: enableShellAvatarHero,
+                        size: 108,
                       ),
                       const SizedBox(width: 18),
                       Expanded(
@@ -872,6 +853,43 @@ class _AchievementGridItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({
+    required this.enableHero,
+    required this.size,
+  });
+
+  final bool enableHero;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final avatar = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: colors.primary.withValues(alpha: 0.14),
+      ),
+      child: Icon(
+        Icons.person_rounded,
+        color: colors.primary,
+        size: size * 0.48,
+      ),
+    );
+
+    if (!enableHero) {
+      return avatar;
+    }
+
+    return Hero(
+      tag: 'shell-profile-avatar',
+      child: avatar,
     );
   }
 }

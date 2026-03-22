@@ -30,7 +30,14 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
   final FocusNode _shellFocusNode = FocusNode(debugLabel: 'app-shell-shortcuts');
 
   @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleHardwareShortcut);
+  }
+
+  @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleHardwareShortcut);
     _shellFocusNode.dispose();
     super.dispose();
   }
@@ -151,6 +158,13 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
     return KeyEventResult.ignored;
   }
 
+  bool _handleHardwareShortcut(KeyEvent event) {
+    if (!mounted) {
+      return false;
+    }
+    return _handleShellKeyEvent(event) == KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -242,7 +256,6 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
           return Focus(
             focusNode: _shellFocusNode,
             autofocus: true,
-            onKeyEvent: (_, event) => _handleShellKeyEvent(event),
             child: Scaffold(
               backgroundColor: colors.background,
               body: shellBody,
@@ -341,13 +354,38 @@ class _DesktopShellBar extends StatelessWidget {
             PopupMenuButton<AppLocale>(
               tooltip: context.l10n.text('locale'),
               initialValue: currentLocale,
+              offset: const Offset(0, 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              color: colors.surface,
               onSelected: onLocaleSelected,
               itemBuilder: (context) {
                 return AppLocale.values
                     .map(
                       (locale) => PopupMenuItem<AppLocale>(
                         value: locale,
-                        child: Text(locale.label),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.language_rounded,
+                              size: 18,
+                              color: locale == currentLocale
+                                  ? colors.primary
+                                  : colors.textSecondary,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              locale.label,
+                              style: TextStyle(
+                                color: colors.textPrimary,
+                                fontWeight: locale == currentLocale
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     )
                     .toList(growable: false);
@@ -362,6 +400,12 @@ class _DesktopShellBar extends StatelessWidget {
                       color: colors.textPrimary,
                       fontWeight: FontWeight.w700,
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: colors.textSecondary,
+                    size: 18,
                   ),
                 ],
               ),

@@ -584,9 +584,11 @@ Stub-реализация для платформ, где custom frame не ну
 
 #### `presentation/pages`
 
-- `welcome_page.dart` — стартовый экран, social login, вход/регистрация.
-- `login_page.dart` — вход по email.
+- `welcome_page.dart` — стартовый экран, social login, вход/регистрация, ссылка `Forgot password?`.
+- `login_page.dart` — вход по email и быстрый переход в mock reset-password flow.
 - `sign_up_page.dart` — регистрация.
+- `forgot_password_page.dart` — экран запроса сброса пароля по email.
+- `forgot_password_code_page.dart` — экран ввода 6-значного кода подтверждения. Сейчас для демо принимает любой полностью заполненный 6-значный код и пускает пользователя в `Home`.
 
 #### `presentation/widgets`
 
@@ -1091,10 +1093,11 @@ Latest compact/mobile UI repairs:
   without the visible border line.
 - `lib/features/knowledge_tree/presentation/pages/knowledge_tree.dart`
   The tree now renders as the only viewport on the page. The outer card wrapper
-  and zoom buttons were removed, the legend moved into a toggle menu in the
-  top-right corner, pinch zoom remains enabled, and mouse-wheel zoom is handled
-  directly inside the tree listener. Compact mode uses tighter bounds and no
-  page-level scrolling.
+  and zoom buttons were removed, and the legend is now pinned as a permanent
+  panel on the top-right side of the tree viewport instead of a toggle button.
+  Pinch zoom remains enabled, and mouse-wheel zoom is handled directly inside
+  the tree listener. Compact mode uses tighter bounds and no page-level
+  scrolling.
   Native Windows now uses a fixed tree scale and disables zoom interaction:
   the map starts in one stable desktop resolution and can only be moved by
   dragging with the mouse cursor.
@@ -1110,6 +1113,11 @@ Latest compact/mobile UI repairs:
   Reworked the compact profile header into a true mobile layout: larger avatar,
   name/email to the right, and the XP/Level/Streak metrics in an even row below
   instead of a narrow centered stack.
+  The shell avatar hero transition is now enabled only for the dedicated
+  `profile-preview` route. The profile page that lives inside the persistent
+  shell keeps the same visual avatar but does not register the shared hero tag,
+  which prevents duplicate-hero conflicts and restores the animated transition
+  from the desktop shell avatar into the profile header.
 - `lib/features/analytics/presentation/pages/leaderboard_page.dart`
   Added a dedicated compact podium layout to remove the phone overflow. Names,
   XP labels, and bar content are now clamped and sized specifically for small
@@ -1140,18 +1148,34 @@ Latest compact/mobile UI repairs:
   Desktop shell now supports richer keyboard navigation: `Alt + 1..5`,
   `Left / Right`, `Ctrl + Tab`, `Ctrl + Shift + Tab`, `Alt + Z`, plus the
   existing focused-search shortcut flow. Shortcut handling now runs through a
-  direct shell-level `onKeyEvent` path instead of the previous `Shortcuts`
-  mapping so Windows no longer needs duplicate presses and no longer falls back
-  to the system beep for handled combinations.
+  direct shell-level `HardwareKeyboard` handler instead of depending only on a
+  focused widget subtree, so combinations like `Ctrl + K` still work even after
+  the user clicks through different desktop controls. The shell locale selector
+  was also restyled into a bordered pill control with a clearer dropdown
+  affordance.
+- `lib/features/learning/presentation/pages/learn_page.dart`
+  `Ctrl + K` and the shell search action now animate the `Learn` page back to
+  the top before focusing the search field, so the cursor lands directly in the
+  visible search bar instead of focusing an off-screen input.
 - `lib/core/common_widgets/app_settings_panel.dart`
   Settings now includes a `Help` section with FAQ access and a hotkeys list so
   desktop navigation shortcuts are discoverable from the UI.
 - `lib/core/localization/app_localizations.dart`
   Added localized labels and descriptions for the new `Help` and `Hotkeys`
-  settings content.
+  settings content. The auth layer now also includes localized strings for the
+  mock `Forgot password` email step and the 6-digit verification-code screen.
+- `lib/features/auth/presentation/pages/forgot_password_page.dart`
+  Added a dedicated mock reset-password step with email validation before the
+  verification-code screen.
+- `lib/features/auth/presentation/pages/forgot_password_code_page.dart`
+  Added the 6-box confirmation code UI. For the current demo build, any fully
+  filled 6-digit code is accepted and immediately routes the user into `Home`.
 - `test/widget_test.dart`
-  Updated widget expectations for the new mobile dashboard flow, legend toggle,
-  and AI send action.
+  Added coverage for the forgot-password flow from `Welcome` through email
+  submission, 6-digit code entry, and the redirect into `Home`, along with the
+  earlier widget expectations for the dashboard, legend, AI composer, and the
+  desktop `Ctrl + K` shortcut that should jump into `Learn` and reveal the
+  search bar.
 
 Debugging tips for this pass:
 
