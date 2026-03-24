@@ -901,7 +901,7 @@ List<LeaderboardEntry> _buildLeaderboardSeed() {
     LeaderboardEntry(id: 'l2', name: 'Mira', xp: 1280, level: 8, role: 'Frontend Builder', focus: 'Frontend', isCurrentUser: false),
     LeaderboardEntry(id: 'l3', name: 'Dias', xp: 1210, level: 7, role: 'Systems Learner', focus: 'Operating Systems', isCurrentUser: false),
     LeaderboardEntry(id: 'l4', name: 'Aruzhan', xp: 1170, level: 7, role: 'ML Apprentice', focus: 'Machine Learning', isCurrentUser: false),
-    LeaderboardEntry(id: 'l5', name: 'Talgat', xp: 1115, level: 7, role: 'Reliability Learner', focus: 'SRE / DevOps', isCurrentUser: false),
+    LeaderboardEntry(id: 'l5', name: 'Timur', xp: 1115, level: 7, role: 'Reliability Learner', focus: 'SRE / DevOps', isCurrentUser: false),
     LeaderboardEntry(id: 'l6', name: 'Sofia', xp: 1090, level: 7, role: 'Security Watcher', focus: 'Cybersecurity', isCurrentUser: false),
     LeaderboardEntry(id: 'l7', name: 'Adilet', xp: 1035, level: 6, role: 'Math Track Learner', focus: 'Discrete Math', isCurrentUser: false),
     LeaderboardEntry(id: 'l8', name: 'Zarina', xp: 980, level: 6, role: 'Data Storyteller', focus: 'Probability & Analytics', isCurrentUser: false),

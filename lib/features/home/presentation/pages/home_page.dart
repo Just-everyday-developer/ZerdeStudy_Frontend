@@ -31,8 +31,14 @@ class HomePage extends ConsumerWidget {
     final compact = context.isCompactLayout;
 
     return AppPageScaffold(
+      horizontalPadding: compact ? 0 : null,
       child: ListView(
-        padding: EdgeInsets.fromLTRB(0, compact ? 6 : 8, 0, compact ? 104 : 120),
+        padding: EdgeInsets.fromLTRB(
+          compact ? 16 : 0,
+          compact ? 6 : 8,
+          compact ? 16 : 0,
+          compact ? 104 : 120,
+        ),
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,8 +60,8 @@ class HomePage extends ConsumerWidget {
               ),
               const SizedBox(height: 18),
               Wrap(
-                spacing: 10,
-                runSpacing: 10,
+                spacing: 12,
+                runSpacing: 12,
                 children: [
                   _MetricBadge(label: 'XP', value: '${state.xp}'),
                   _MetricBadge(label: 'Level', value: '${state.level}'),
@@ -77,34 +83,41 @@ class HomePage extends ConsumerWidget {
                 style: TextStyle(color: colors.textSecondary),
               ),
               const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: currentProgress.fraction,
-                  minHeight: 10,
-                  backgroundColor: colors.backgroundElevated,
-                  color: currentTrack.color,
-                ),
-              ),
-              const SizedBox(height: 16),
-              AppButton.primary(
-                label: currentProgress.nextTarget == null
-                    ? l10n.text('start_track')
-                    : l10n.text('continue_learning'),
-                icon: Icons.play_circle_fill_rounded,
-                maxWidth: compact ? null : 360,
-                onPressed: () {
-                  final target = currentProgress.nextTarget;
-                  if (target == null) {
-                    context.push(AppRoutes.trackById(currentTrack.id));
-                    return;
-                  }
-                  context.push(
-                    target.isPractice
-                        ? AppRoutes.practiceById(target.id)
-                        : AppRoutes.lessonById(target.id),
-                  );
-                },
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: currentProgress.fraction,
+                        minHeight: 10,
+                        backgroundColor: colors.backgroundElevated,
+                        color: currentTrack.color,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  IntrinsicWidth(
+                    child: AppButton.primary(
+                      label: currentProgress.nextTarget == null
+                          ? l10n.text('start_track')
+                          : l10n.text('continue_learning'),
+                      icon: Icons.play_circle_fill_rounded,
+                      onPressed: () {
+                        final target = currentProgress.nextTarget;
+                        if (target == null) {
+                          context.push(AppRoutes.trackById(currentTrack.id));
+                          return;
+                        }
+                        context.push(
+                          target.isPractice
+                              ? AppRoutes.practiceById(target.id)
+                              : AppRoutes.lessonById(target.id),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
               if (incorrectExercises.isNotEmpty || incorrectQuizzes.isNotEmpty) ...[
                 const SizedBox(height: 14),
@@ -131,7 +144,8 @@ class HomePage extends ConsumerWidget {
                         l10n.format(
                           'repeat_wrong_answers_hint',
                           <String, Object>{
-                            'count': incorrectExercises.length + incorrectQuizzes.length,
+                            'count':
+                                incorrectExercises.length + incorrectQuizzes.length,
                           },
                         ),
                         style: TextStyle(
@@ -144,7 +158,7 @@ class HomePage extends ConsumerWidget {
                             (exercise) => Padding(
                               padding: const EdgeInsets.only(bottom: 6),
                               child: Text(
-                                '• ${exercise.title.resolve(state.locale)}',
+                                '- ${exercise.title.resolve(state.locale)}',
                                 style: TextStyle(color: colors.textPrimary),
                               ),
                             ),
@@ -153,7 +167,7 @@ class HomePage extends ConsumerWidget {
                             (quiz) => Padding(
                               padding: const EdgeInsets.only(bottom: 6),
                               child: Text(
-                                '• ${quiz.title.resolve(state.locale)}',
+                                '- ${quiz.title.resolve(state.locale)}',
                                 style: TextStyle(color: colors.textPrimary),
                               ),
                             ),
@@ -251,7 +265,7 @@ class HomePage extends ConsumerWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${entry.role} | ${entry.focus}',
+                              'Level ${entry.level}',
                               style: TextStyle(color: colors.textSecondary),
                             ),
                           ],
@@ -267,7 +281,7 @@ class HomePage extends ConsumerWidget {
                     ],
                   ),
                 );
-              }).toList(),
+              }).toList(growable: false),
             ),
           ),
         ],

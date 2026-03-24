@@ -99,11 +99,12 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
             availableHeight / knowledgeTreeCanvasSize.height,
           );
     _fitScale = scale;
-    final offsetX =
-        (viewport.width - (knowledgeTreeCanvasSize.width * scale)) / 2;
+    final offsetX = windowsFixedViewport
+        ? 24.0
+        : math.max(0.0, (viewport.width - (knowledgeTreeCanvasSize.width * scale)) / 2);
     final offsetY = windowsFixedViewport
         ? 24.0
-        : (viewport.height - (knowledgeTreeCanvasSize.height * scale)) / 2;
+        : 12.0;
     final matrix = Matrix4.identity()
       ..setEntry(0, 0, scale)
       ..setEntry(1, 1, scale);
@@ -336,7 +337,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
         node: node,
         state: state,
         catalog: catalog,
-        onTap: node.trackId == null
+        onTap: node.trackId == null || node.id == 'mathematics'
             ? null
             : () => context.push(AppRoutes.trackById(node.trackId!)),
       ),
@@ -534,10 +535,10 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                                 fontWeight: FontWeight.w800,
                                 height: 1.12,
                                 fontSize: node.isHub
-                                    ? 15
-                                    : node.radius < 56
-                                        ? 11
-                                        : 12,
+                                    ? 16
+                                    : node.radius < 68
+                                        ? 12
+                                        : 13,
                               ),
                             ),
                             if (node.subtitle != null) ...[

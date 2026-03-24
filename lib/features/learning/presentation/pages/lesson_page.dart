@@ -116,6 +116,38 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               ],
             ),
           ),
+          if (lesson.theoryContent.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            GlowCard(
+              accent: const Color(0xFFFFA726),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.auto_stories_rounded,
+                        color: colors.primary,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        l10n.text('lesson_theory'),
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  ...lesson.theoryContent
+                      .split('\n\n')
+                      .map((paragraph) => _TheoryParagraph(
+                            text: paragraph,
+                            colors: colors,
+                          )),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           GlowCard(
             accent: colors.accent,
@@ -249,6 +281,17 @@ class _LessonPageState extends ConsumerState<LessonPage> {
     if (trainer.kind == CodeTrainerKind.reorderLines) {
       final selected = _trainerSequences[trainer.id] ?? <String>[];
       return selected.join('|') == trainer.correctSequence.join('|');
+    }
+    if (trainer.kind == CodeTrainerKind.matching) {
+      final selected = _trainerSequences[trainer.id] ?? <String>[];
+      if (selected.length != trainer.options.length) return false;
+      for (var i = 0; i < trainer.options.length; i++) {
+        if (i >= selected.length ||
+            selected[i] != trainer.correctSequence[i]) {
+          return false;
+        }
+      }
+      return true;
     }
     return _selectedTrainerAnswers[trainer.id] == trainer.correctOptionId;
   }
@@ -388,6 +431,13 @@ class _TrainerCard extends StatelessWidget {
               selectedSequence: selectedSequence,
               onSequenceChanged: onSequenceChanged,
             )
+          else if (trainer.kind == CodeTrainerKind.matching)
+            _MatchingTrainerView(
+              trainer: trainer,
+              locale: locale,
+              selectedPairs: selectedSequence,
+              onPairsChanged: onSequenceChanged,
+            )
           else
             ...trainer.options.map(
               (option) => _OptionTile(
@@ -403,7 +453,8 @@ class _TrainerCard extends StatelessWidget {
                 : context.l10n.text('lesson_complete_lab'),
             icon: completed ? Icons.check_circle_rounded : Icons.memory_rounded,
             onPressed: completed ||
-                    (trainer.kind == CodeTrainerKind.reorderLines
+                    (trainer.kind == CodeTrainerKind.reorderLines ||
+                            trainer.kind == CodeTrainerKind.matching
                         ? selectedSequence.length !=
                             trainer.correctSequence.length
                         : selectedOptionId == null)
@@ -484,6 +535,131 @@ class _ReorderTrainerView extends StatelessWidget {
   }
 }
 
+class _MatchingTrainerView extends StatelessWidget {
+  const _MatchingTrainerView({
+    required this.trainer,
+    required this.locale,
+    required this.selectedPairs,
+    required this.onPairsChanged,
+  });
+
+  final CodeTrainer trainer;
+  final AppLocale locale;
+  final List<String> selectedPairs;
+  final ValueChanged<List<String>> onPairsChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final definitions = List<String>.from(trainer.correctSequence);
+    final currentIndex = selectedPairs.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...List.generate(trainer.options.length, (index) {
+          final term = trainer.options[index].label.resolve(locale);
+          final matched = index < selectedPairs.length;
+          final matchedDef = matched ? selectedPairs[index] : null;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: matched
+                    ? colors.success.withValues(alpha: 0.10)
+                    : index == currentIndex
+                        ? colors.primary.withValues(alpha: 0.10)
+                        : colors.surfaceSoft,
+                border: Border.all(
+                  color: matched
+                      ? colors.success.withValues(alpha: 0.5)
+                      : index == currentIndex
+                          ? colors.primary
+                          : colors.divider,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      term,
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: colors.textSecondary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      matchedDef ?? '...',
+                      style: TextStyle(
+                        color: matched
+                            ? colors.success
+                            : colors.textSecondary,
+                        fontStyle:
+                            matched ? FontStyle.normal : FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                  if (matched)
+                    IconButton(
+                      onPressed: () {
+                        final updated = List<String>.from(selectedPairs);
+                        updated.removeRange(index, updated.length);
+                        onPairsChanged(updated);
+                      },
+                      icon: Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: colors.textSecondary,
+                      ),
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(4),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (currentIndex < trainer.options.length) ...[
+          const SizedBox(height: 8),
+          Text(
+            context.l10n.text('lesson_match_definition'),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: colors.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: definitions
+                .where((def) => !selectedPairs.contains(def))
+                .map(
+                  (def) => ActionChip(
+                    label: Text(def),
+                    onPressed: () =>
+                        onPairsChanged(<String>[...selectedPairs, def]),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+}
+
 class _OptionTile extends StatelessWidget {
   const _OptionTile({
     required this.label,
@@ -545,6 +721,57 @@ class _Pill extends StatelessWidget {
         style: TextStyle(
           color: colors.textPrimary,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _TheoryParagraph extends StatelessWidget {
+  const _TheoryParagraph({required this.text, required this.colors});
+
+  final String text;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final isHighlight = text.startsWith('►');
+    final content = isHighlight ? text.substring(1).trimLeft() : text;
+
+    if (isHighlight) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: colors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colors.primary.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Text(
+            content,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontFamily: 'monospace',
+              fontSize: 13,
+              height: 1.55,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        content,
+        style: TextStyle(
+          color: colors.textSecondary,
+          height: 1.55,
+          fontSize: 14,
         ),
       ),
     );

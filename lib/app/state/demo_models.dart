@@ -247,7 +247,7 @@ class LessonQuiz {
   final LocalizedText explanation;
 }
 
-enum CodeTrainerKind { fillBlank, reorderLines, matchOutput }
+enum CodeTrainerKind { fillBlank, reorderLines, matchOutput, matching }
 
 class CodeTrainer {
   const CodeTrainer({
@@ -290,6 +290,7 @@ class LessonItem {
     required this.completionRequirements,
     required this.promptSuggestion,
     required this.xpReward,
+    this.theoryContent = '',
   });
 
   final String id;
@@ -307,6 +308,7 @@ class LessonItem {
   final List<String> completionRequirements;
   final LocalizedText promptSuggestion;
   final int xpReward;
+  final String theoryContent;
 }
 
 class PracticeTask {

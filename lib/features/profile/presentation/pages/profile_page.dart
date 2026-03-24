@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
+import '../../../../app/state/demo_app_state.dart';
+import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
-import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
+import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
@@ -32,7 +34,7 @@ class ProfilePage extends ConsumerWidget {
     final achievements = catalog.achievementsFor(state);
     final unlocked =
         achievements.where((item) => item.unlocked).toList(growable: false);
-    final preview = achievements.take(6).toList(growable: false);
+    final previewAchievements = achievements.take(6).toList(growable: false);
     final certificates = catalog.certificatesFor(state);
     final favorites = catalog.savedCoursesFor(state);
     final completedTracks = catalog.completedTracksFor(state);
@@ -46,8 +48,14 @@ class ProfilePage extends ConsumerWidget {
     final compact = context.isCompactLayout;
 
     return AppPageScaffold(
+      horizontalPadding: compact ? 0 : null,
       child: ListView(
-        padding: EdgeInsets.fromLTRB(0, compact ? 6 : 8, 0, compact ? 104 : 120),
+        padding: EdgeInsets.fromLTRB(
+          compact ? 16 : 0,
+          compact ? 6 : 8,
+          compact ? 16 : 0,
+          compact ? 104 : 120,
+        ),
         children: [
           Container(
             padding: EdgeInsets.all(compact ? 18 : 22),
@@ -71,7 +79,7 @@ class ProfilePage extends ConsumerWidget {
                         children: [
                           _ProfileAvatar(
                             enableHero: enableShellAvatarHero,
-                            size: 96,
+                            size: 108,
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -173,57 +181,31 @@ class ProfilePage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.text('achievements'),
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${unlocked.length}/${achievements.length} ${l10n.text('unlocked').toLowerCase()}',
-                            style: TextStyle(color: colors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () =>
-                          _showAchievementsSheet(context, achievements, state.locale),
-                      icon: Icon(
-                        Icons.workspace_premium_rounded,
-                        color: colors.success,
-                      ),
-                      label: Text(
-                        l10n.text('show_all'),
-                        style: TextStyle(
-                          color: colors.success,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
+                _SectionPanelHeader(
+                  title: l10n.text('achievements'),
+                  subtitle:
+                      '${unlocked.length}/${achievements.length} ${l10n.text('unlocked').toLowerCase()}',
+                  icon: Icons.workspace_premium_rounded,
+                  accent: colors.success,
+                  onOpen: () =>
+                      _showAchievementsSheet(context, achievements, state.locale),
                 ),
                 const SizedBox(height: 14),
                 SizedBox(
-                  height: compact ? 168 : context.isWideLayout ? 164 : 186,
+                  height: compact ? 198 : context.isWideLayout ? 168 : 190,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: preview.length,
+                    itemCount: previewAchievements.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 12),
                     itemBuilder: (context, index) {
                       return SizedBox(
                         width: compact
-                            ? 176
+                            ? 184
                             : context.isWideLayout
                                 ? 220
                                 : 206,
                         child: _AchievementPreviewCard(
-                          achievement: preview[index],
+                          achievement: previewAchievements[index],
                           locale: state.locale,
                           onOpen: () => _showAchievementsSheet(
                             context,
@@ -244,14 +226,14 @@ class ProfilePage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.text('certificates'),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.text('certificates_hint'),
-                  style: TextStyle(color: colors.textSecondary),
+                _SectionPanelHeader(
+                  title: l10n.text('certificates'),
+                  subtitle: l10n.text('certificates_hint'),
+                  icon: Icons.workspace_premium_rounded,
+                  accent: colors.primary,
+                  onOpen: certificates.isEmpty
+                      ? null
+                      : () => _showCertificatesSheet(context, certificates),
                 ),
                 const SizedBox(height: 14),
                 if (certificates.isEmpty)
@@ -261,7 +243,7 @@ class ProfilePage extends ConsumerWidget {
                   )
                 else
                   SizedBox(
-                    height: compact ? 174 : context.isWideLayout ? 176 : 188,
+                    height: compact ? 196 : context.isWideLayout ? 178 : 188,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: certificates.length,
@@ -270,7 +252,7 @@ class ProfilePage extends ConsumerWidget {
                         final certificate = certificates[index];
                         return SizedBox(
                           width: compact
-                              ? 204
+                              ? 212
                               : context.isWideLayout
                                   ? 260
                                   : 228,
@@ -293,21 +275,22 @@ class ProfilePage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.text('favorites'),
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    Text(
+                _SectionPanelHeader(
+                  title: l10n.text('favorites'),
+                  subtitle:
                       '${favorites.length} ${l10n.text('saved').toLowerCase()}',
-                      style: TextStyle(color: colors.textSecondary),
-                    ),
-                  ],
+                  icon: Icons.bookmark_rounded,
+                  accent: colors.primary,
+                  onOpen: favorites.isEmpty
+                      ? null
+                      : () => _showFavoritesSheet(
+                            context,
+                            favorites,
+                            state,
+                            catalog,
+                          ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 if (favorites.isEmpty)
                   Text(
                     l10n.text('favorites_empty'),
@@ -317,21 +300,28 @@ class ProfilePage extends ConsumerWidget {
                     ),
                   )
                 else
-                  ...favorites.take(4).map(
-                        (course) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _ProfileLinkTile(
-                            title: course.title.en,
+                  SizedBox(
+                    height: compact ? 196 : context.isWideLayout ? 176 : 188,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: favorites.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final course = favorites[index];
+                        return SizedBox(
+                          width: compact ? 224 : 248,
+                          child: _FavoritePreviewCard(
+                            course: course,
                             subtitle:
-                                '${course.author.name} • ${l10n.courseLevelLabel(course.level)} • ${catalog.displayCourseRatingFor(state, course.id).toStringAsFixed(1)}',
-                            accent: course.color,
-                            icon: Icons.bookmark_rounded,
+                                '${course.author.name} / ${l10n.courseLevelLabel(course.level)} / ${catalog.displayCourseRatingFor(state, course.id).toStringAsFixed(1)}',
                             onTap: () => context.push(
                               AppRoutes.courseById(course.id),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
@@ -346,27 +336,31 @@ class ProfilePage extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _Pill(
-                      label: l10n.text('tracks'),
-                      value: '${completedTracks.length}',
-                    ),
-                    _Pill(
-                      label: l10n.text('modules'),
-                      value: '${completedModules.length}',
-                    ),
-                    _Pill(
-                      label: l10n.text('lessons'),
-                      value: '${completedLessons.length}',
-                    ),
-                    _Pill(
-                      label: l10n.text('practices'),
-                      value: '${completedPractices.length}',
-                    ),
-                  ],
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _Pill(
+                        label: l10n.text('tracks'),
+                        value: '${completedTracks.length}',
+                      ),
+                      const SizedBox(width: 10),
+                      _Pill(
+                        label: l10n.text('modules'),
+                        value: '${completedModules.length}',
+                      ),
+                      const SizedBox(width: 10),
+                      _Pill(
+                        label: l10n.text('lessons'),
+                        value: '${completedLessons.length}',
+                      ),
+                      const SizedBox(width: 10),
+                      _Pill(
+                        label: l10n.text('practices'),
+                        value: '${completedPractices.length}',
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
                 if (completedTracks.isNotEmpty)
@@ -376,7 +370,7 @@ class ProfilePage extends ConsumerWidget {
                           child: _ProfileLinkTile(
                             title: track.title.resolve(state.locale),
                             subtitle:
-                                '${l10n.text('tree_assessments')} ${catalog.bestAssessmentPercentFor(state, track.id)}% • ${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} ${l10n.text('tree_units')}',
+                                '${l10n.text('tree_assessments')} ${catalog.bestAssessmentPercentFor(state, track.id)}% - ${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} ${l10n.text('tree_units')}',
                             accent: track.color,
                             icon: Icons.check_circle_rounded,
                             onTap: () => context.push(
@@ -402,26 +396,23 @@ class ProfilePage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.text('result_history'),
-                  style: Theme.of(context).textTheme.titleLarge,
+                _SectionPanelHeader(
+                  title: l10n.text('result_history'),
+                  subtitle: history.isEmpty
+                      ? l10n.text('result_history_empty')
+                      : '${history.length} ${l10n.text('result_history').toLowerCase()}',
+                  icon: Icons.history_rounded,
+                  accent: colors.success,
+                  onOpen:
+                      history.isEmpty ? null : () => _showHistorySheet(context, history),
                 ),
-                const SizedBox(height: 12),
-                if (history.isEmpty)
-                  Text(
-                    l10n.text('result_history_empty'),
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      height: 1.4,
-                    ),
-                  )
-                else
-                  ...history.take(8).map(
-                        (entry) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _HistoryTile(entry: entry),
-                        ),
-                      ),
+                const SizedBox(height: 14),
+                AppButton.secondary(
+                  label: l10n.text('open_history'),
+                  icon: Icons.receipt_long_rounded,
+                  onPressed:
+                      history.isEmpty ? null : () => _showHistorySheet(context, history),
+                ),
               ],
             ),
           ),
@@ -482,14 +473,14 @@ class ProfilePage extends ConsumerWidget {
       builder: (context) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.78,
-            child: Column(
-              children: [
-                const AdaptivePanelHandle(),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView(
+          child: Column(
+            children: [
+              const AdaptivePanelHandle(),
+              const SizedBox(height: 18),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         l10n.text('achievements'),
@@ -497,7 +488,7 @@ class ProfilePage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '${unlocked.length} ${l10n.text('unlocked').toLowerCase()} • ${locked.length} ${l10n.text('locked').toLowerCase()}',
+                        '${unlocked.length} ${l10n.text('unlocked').toLowerCase()} - ${locked.length} ${l10n.text('locked').toLowerCase()}',
                         style: TextStyle(color: colors.textSecondary),
                       ),
                       const SizedBox(height: 18),
@@ -517,14 +508,185 @@ class ProfilePage extends ConsumerWidget {
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
     );
   }
 
+  void _showCertificatesSheet(
+    BuildContext context,
+    List<CourseCertificate> certificates,
+  ) {
+    showAdaptivePanel<void>(
+      context: context,
+      wideMaxWidth: 720,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            children: [
+              const AdaptivePanelHandle(),
+              const SizedBox(height: 18),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: certificates.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final certificate = certificates[index];
+                    return _ProfileLinkTile(
+                      title: certificate.title,
+                      subtitle:
+                          '${certificate.recipientName} - ${_formatDate(certificate.issuedAt)}',
+                      accent: certificate.accent,
+                      icon: Icons.workspace_premium_rounded,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push(AppRoutes.courseById(certificate.courseId));
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFavoritesSheet(
+    BuildContext context,
+    List<CommunityCourse> favorites,
+    DemoAppState state,
+    DemoCatalog catalog,
+  ) {
+    showAdaptivePanel<void>(
+      context: context,
+      wideMaxWidth: 760,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            children: [
+              const AdaptivePanelHandle(),
+              const SizedBox(height: 18),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: favorites.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final course = favorites[index];
+                    return _ProfileLinkTile(
+                      title: course.title.en,
+                      subtitle:
+                          '${course.author.name} - ${context.l10n.courseLevelLabel(course.level)} - ${catalog.displayCourseRatingFor(state, course.id).toStringAsFixed(1)}',
+                      accent: course.color,
+                      icon: Icons.bookmark_rounded,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push(AppRoutes.courseById(course.id));
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showHistorySheet(
+    BuildContext context,
+    List<LearningHistoryEntry> history,
+  ) {
+    showAdaptivePanel<void>(
+      context: context,
+      wideMaxWidth: 760,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            children: [
+              const AdaptivePanelHandle(),
+              const SizedBox(height: 18),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: history.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) =>
+                      _HistoryTile(entry: history[index]),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatDate(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '${value.year}-$month-$day';
+  }
+}
+
+class _SectionPanelHeader extends StatelessWidget {
+  const _SectionPanelHeader({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accent,
+    required this.onOpen,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accent;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.appColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        TextButton.icon(
+          onPressed: onOpen,
+          icon: Icon(icon, color: accent),
+          label: Text(
+            context.l10n.text('show_all'),
+            style: TextStyle(
+              color: accent,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _AchievementSection extends StatelessWidget {
@@ -545,7 +707,7 @@ class _AchievementSection extends StatelessWidget {
     final colors = context.appColors;
     final l10n = context.l10n;
     final gridColumns = context.isWideLayout ? 4 : 2;
-    final gridAspectRatio = context.isWideLayout ? 0.92 : 0.72;
+    final gridAspectRatio = context.isWideLayout ? 0.96 : 0.8;
 
     return GlowCard(
       accent: accent,
@@ -652,19 +814,19 @@ class _AchievementPreviewCard extends StatelessWidget {
           SizedBox(height: isWide ? 6 : 8),
           Text(
             achievement.title.resolve(locale),
-            maxLines: isWide ? 1 : 2,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: colors.textPrimary,
               fontWeight: FontWeight.w800,
-              fontSize: isWide ? 15 : 16,
               height: 1.15,
+              fontSize: isWide ? 15 : 16,
             ),
           ),
           SizedBox(height: isWide ? 4 : 6),
           Text(
             achievement.description.resolve(locale),
-            maxLines: isWide ? 1 : 2,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: colors.textSecondary,
@@ -672,7 +834,6 @@ class _AchievementPreviewCard extends StatelessWidget {
               height: 1.25,
             ),
           ),
-          SizedBox(height: isWide ? 8 : 10),
           const Spacer(),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
@@ -713,8 +874,8 @@ class _CertificatePreviewCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: EdgeInsets.all(isWide ? 14 : 15),
+        child: Container(
+          padding: EdgeInsets.all(isWide ? 14 : 15),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           gradient: LinearGradient(
@@ -728,14 +889,23 @@ class _CertificatePreviewCard extends StatelessWidget {
           ),
           border: Border.all(color: certificate.accent.withValues(alpha: 0.3)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              Icons.workspace_premium_rounded,
-              color: certificate.accent,
-              size: isWide ? 22 : 20,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.workspace_premium_rounded,
+                    color: certificate.accent,
+                    size: isWide ? 22 : 20,
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: colors.textSecondary,
+                  ),
+                ],
+              ),
             SizedBox(height: isWide ? 10 : 12),
             Text(
               certificate.title,
@@ -759,7 +929,7 @@ class _CertificatePreviewCard extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              '${context.l10n.text('course_certificate')} • ${_formatDate(certificate.issuedAt)}',
+              '${context.l10n.text('course_certificate')} - ${_formatDate(certificate.issuedAt)}',
               style: TextStyle(
                 color: colors.textSecondary,
                 height: 1.35,
@@ -775,6 +945,75 @@ class _CertificatePreviewCard extends StatelessWidget {
     final month = value.month.toString().padLeft(2, '0');
     final day = value.day.toString().padLeft(2, '0');
     return '${value.year}-$month-$day';
+  }
+}
+
+class _FavoritePreviewCard extends StatelessWidget {
+  const _FavoritePreviewCard({
+    required this.course,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final CommunityCourse course;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          color: colors.surfaceSoft,
+          border: Border.all(color: course.color.withValues(alpha: 0.24)),
+        ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: course.color.withValues(alpha: 0.16),
+                    child: Icon(
+                      Icons.bookmark_rounded,
+                      color: course.color,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: colors.textSecondary,
+                  ),
+                ],
+              ),
+            const SizedBox(height: 12),
+            Text(
+              course.title.en,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1084,7 +1323,7 @@ class _HistoryTile extends StatelessWidget {
                   [
                     if (entry.scoreLabel != null) entry.scoreLabel!,
                     _formatHistoryTimestamp(entry.createdAt),
-                  ].join('  •  '),
+                  ].join('  -  '),
                   style: TextStyle(
                     color: accent,
                     fontWeight: FontWeight.w700,

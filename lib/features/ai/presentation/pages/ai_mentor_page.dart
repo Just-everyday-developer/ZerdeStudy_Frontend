@@ -44,78 +44,22 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
-    final catalog = ref.watch(demoCatalogProvider);
-    final l10n = context.l10n;
-    final prompts = catalog.suggestedPrompts(state);
     final colors = context.appColors;
     final compact = context.isCompactLayout;
-    final focusedTitle = state.focusedLessonId == null
-        ? state.focusedPracticeId == null
-            ? catalog.trackById(state.currentTrackId).title.resolve(state.locale)
-            : catalog
-                .practiceById(state.focusedPracticeId!)
-                .title
-                .resolve(state.locale)
-        : catalog.lessonById(state.focusedLessonId!).title.resolve(state.locale);
 
     return AppPageScaffold(
+      horizontalPadding: compact ? 0 : null,
       child: Column(
         children: [
           Expanded(
             child: ListView(
-              padding: EdgeInsets.fromLTRB(0, compact ? 6 : 8, 0, 18),
+              padding: EdgeInsets.fromLTRB(
+                compact ? 16 : 0,
+                compact ? 6 : 8,
+                compact ? 16 : 0,
+                18,
+              ),
               children: [
-                GlowCard(
-                  accent: colors.primary,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.text('current_focus'),
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        focusedTitle,
-                        style: TextStyle(
-                          color: colors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GlowCard(
-                  accent: colors.accent,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.text('suggested_prompts'),
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: prompts.map((prompt) {
-                          return ActionChip(
-                            label: Text(prompt),
-                            onPressed: () {
-                              ref
-                                  .read(demoAppControllerProvider.notifier)
-                                  .sendAiMessage(prompt);
-                            },
-                            side: BorderSide(color: colors.divider),
-                            backgroundColor: colors.surfaceSoft,
-                          );
-                        }).toList(growable: false),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
                 _FaqSection(
                   locale: state.locale,
                   onAsk: (question) {
@@ -129,7 +73,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                   GlowCard(
                     accent: colors.success,
                     child: Text(
-                      l10n.text('empty_chat'),
+                      context.l10n.text('empty_chat'),
                       style: TextStyle(
                         color: colors.textSecondary,
                         height: 1.45,
@@ -140,72 +84,88 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                   ...state.aiMessages.map(
                     (message) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: _MessageBubble(
-                        message: message,
-                        locale: state.locale,
-                      ),
+                      child: _MessageBubble(message: message),
                     ),
                   ),
               ],
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 0, 0, compact ? 16 : 20),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
-              decoration: BoxDecoration(
-                color: colors.surface.withValues(alpha: 0.94),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: colors.divider),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.primary.withValues(alpha: 0.08),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+            padding: EdgeInsets.fromLTRB(
+              compact ? 16 : 0,
+              0,
+              compact ? 16 : 0,
+              compact ? 16 : 20,
+            ),
+            child: _AiComposer(
+              controller: _controller,
+              onSubmitted: (_) => _send(),
+              onSend: _send,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AiComposer extends StatelessWidget {
+  const _AiComposer({
+    required this.controller,
+    required this.onSubmitted,
+    required this.onSend,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: colors.backgroundElevated.withValues(alpha: 0.98),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              minLines: 1,
+              maxLines: 3,
+              textInputAction: TextInputAction.send,
+              onSubmitted: onSubmitted,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: _askQuestionLabel(context.l10n.locale),
+                hintStyle: TextStyle(color: colors.textSecondary),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      minLines: 1,
-                      maxLines: 3,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _send(),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        border: InputBorder.none,
-                        hintText: l10n.text('message_hint'),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      InkWell(
-                        onTap: _send,
-                        borderRadius: BorderRadius.circular(999),
-                        child: Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: colors.textPrimary.withValues(alpha: 0.92),
-                          ),
-                          child: Icon(
-                            Icons.arrow_forward_rounded,
-                            color: colors.background,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              style: TextStyle(
+                color: colors.textPrimary,
+                height: 1.25,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: onSend,
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.surfaceSoft,
+              ),
+              child: Icon(
+                Icons.arrow_upward_rounded,
+                color: colors.textPrimary,
               ),
             ),
           ),
@@ -218,11 +178,9 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
     required this.message,
-    required this.locale,
   });
 
   final AiMessage message;
-  final AppLocale locale;
 
   @override
   Widget build(BuildContext context) {
@@ -283,16 +241,8 @@ class _FaqSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.l10n.text('prepared_questions'),
+            _questionsLabel(context.l10n.locale),
             style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            context.l10n.text('prepared_questions_hint'),
-            style: TextStyle(
-              color: colors.textSecondary,
-              height: 1.4,
-            ),
           ),
           const SizedBox(height: 14),
           ...items.map(
@@ -311,74 +261,106 @@ class _FaqSection extends StatelessWidget {
   }
 
   List<_FaqItem> _faqItemsFor(AppLocale locale) {
-    if (locale == AppLocale.ru) {
-      return const <_FaqItem>[
-        _FaqItem(
-          question: 'С чего лучше начать в этом дереве знаний?',
-          answer:
-              'Начните с core-тем: математика, алгоритмы, базы данных, сети и операционные системы дают основу почти для всех инженерных направлений.',
-        ),
-        _FaqItem(
-          question: 'Как Operating Systems помогает понять backend и mobile?',
-          answer:
-              'ОС объясняют процессы, память, файлы, потоки и работу с ресурсами, а это напрямую влияет на серверные приложения и мобильный runtime.',
-        ),
-        _FaqItem(
-          question: 'Какие core-темы особенно важны для ML Engineer?',
-          answer:
-              'Линейная алгебра, теория вероятностей и статистика особенно важны: они помогают понимать представление данных, обучение моделей и оценку качества.',
-        ),
-        _FaqItem(
-          question: 'Зачем в уроках есть Output Quiz и Code Memory Lab?',
-          answer:
-              'Output Quiz тренирует понимание выполнения кода, а Code Memory Lab закрепляет синтаксис и типичные шаблоны через короткие упражнения.',
-        ),
-        _FaqItem(
-          question: 'Как выбрать следующую ветку после текущей?',
-          answer:
-              'Идите по соседним ветвям: после core-тем логично переходить в специализацию, которая использует этот фундамент на практике.',
-        ),
-        _FaqItem(
-          question: 'Что можно коротко сказать про базы данных на защите?',
-          answer:
-              'Базы данных отвечают за хранение, поиск, целостность и структуру информации, поэтому они лежат в основе backend, аналитики и многих продуктовых систем.',
-        ),
-      ];
-    }
-
-    return const <_FaqItem>[
-      _FaqItem(
-        question: 'Where should I start in this tree?',
-        answer:
-            'Start with the CS core branches because they explain the foundation behind most engineering roles.',
-      ),
-      _FaqItem(
-        question: 'How do Operating Systems support backend and mobile?',
-        answer:
-            'Operating Systems explain processes, memory, files, threads, and resource access, which shape both server and mobile runtime behavior.',
-      ),
-      _FaqItem(
-        question: 'Which core topics matter most for ML Engineer?',
-        answer:
-            'Linear algebra, probability, and statistics are especially important because they support model training, data representation, and evaluation.',
-      ),
-      _FaqItem(
-        question: 'Why do lessons include Output Quiz and Code Memory Lab?',
-        answer:
-            'The quiz checks code execution reasoning, while the memory lab reinforces syntax and structure through short active practice.',
-      ),
-      _FaqItem(
-        question: 'How should I choose the next branch?',
-        answer:
-            'Move into the specialization that naturally builds on the core topic you just studied.',
-      ),
-      _FaqItem(
-        question: 'What is the short defense-ready explanation of databases?',
-        answer:
-            'Databases are responsible for structured storage, fast access, and data integrity, which makes them a foundation for backend and analytics systems.',
-      ),
-    ];
+    return switch (locale) {
+      AppLocale.ru => const <_FaqItem>[
+          _FaqItem(
+            question: 'С чего лучше начать в этом дереве знаний?',
+            answer:
+                'Начните с core-тем: математика, алгоритмы, базы данных, сети и операционные системы дают основу почти для всех инженерных направлений.',
+          ),
+          _FaqItem(
+            question: 'Как Operating Systems помогает понять backend и mobile?',
+            answer:
+                'ОС объясняют процессы, память, файлы, потоки и работу с ресурсами, а это напрямую влияет на серверные приложения и мобильный runtime.',
+          ),
+          _FaqItem(
+            question: 'Какие core-темы особенно важны для ML Engineer?',
+            answer:
+                'Линейная алгебра, теория вероятностей и статистика особенно важны: они помогают понимать представление данных, обучение моделей и оценку качества.',
+          ),
+          _FaqItem(
+            question: 'Зачем в уроках есть Output Quiz и Code Memory Lab?',
+            answer:
+                'Output Quiz тренирует понимание выполнения кода, а Code Memory Lab закрепляет синтаксис и типичные шаблоны через короткие упражнения.',
+          ),
+          _FaqItem(
+            question: 'Как выбрать следующую ветку после текущей?',
+            answer:
+                'Идите по соседним ветвям: после core-тем логично переходить в специализацию, которая использует этот фундамент на практике.',
+          ),
+        ],
+      AppLocale.kk => const <_FaqItem>[
+          _FaqItem(
+            question: 'Осы білім ағашында неден бастаған дұрыс?',
+            answer:
+                'Алдымен core-тақырыптардан бастаған дұрыс: математика, алгоритмдер, деректер базасы, желілер мен операциялық жүйелер кейінгі бағыттарға негіз болады.',
+          ),
+          _FaqItem(
+            question: 'Operating Systems backend пен mobile бағытына қалай көмектеседі?',
+            answer:
+                'ОЖ процестерді, жадты, файлдарды, ағындарды және ресурстармен жұмысты түсіндіреді. Бұл серверлік және мобильді қосымшалардың жұмысына тікелей әсер етеді.',
+          ),
+          _FaqItem(
+            question: 'ML Engineer үшін қай core-тақырыптар маңызды?',
+            answer:
+                'Сызықтық алгебра, ықтималдық теориясы және статистика модельдерді, деректерді және бағалау метрикаларын түсінуге көмектеседі.',
+          ),
+          _FaqItem(
+            question: 'Неліктен сабақтарда Output Quiz пен Code Memory Lab бар?',
+            answer:
+                'Output Quiz кодтың орындалуын түсінуді дамытады, ал Code Memory Lab синтаксис пен үлгілерді қысқа тапсырмалар арқылы бекітеді.',
+          ),
+          _FaqItem(
+            question: 'Келесі тармақты қалай таңдаған дұрыс?',
+            answer:
+                'Алдыңғы core-тақырыппен логикалық байланысы бар келесі бағытқа өткен дұрыс.',
+          ),
+        ],
+      AppLocale.en => const <_FaqItem>[
+          _FaqItem(
+            question: 'Where should I start in this tree?',
+            answer:
+                'Start with the core branches because they explain the foundation behind most engineering roles.',
+          ),
+          _FaqItem(
+            question: 'How do Operating Systems support backend and mobile?',
+            answer:
+                'Operating Systems explain processes, memory, files, threads, and resource access, which shape both server and mobile runtime behavior.',
+          ),
+          _FaqItem(
+            question: 'Which core topics matter most for ML Engineer?',
+            answer:
+                'Linear algebra, probability, and statistics are especially important because they support model training, data representation, and evaluation.',
+          ),
+          _FaqItem(
+            question: 'Why do lessons include Output Quiz and Code Memory Lab?',
+            answer:
+                'The quiz checks code execution reasoning, while the memory lab reinforces syntax and structure through short active practice.',
+          ),
+          _FaqItem(
+            question: 'How should I choose the next branch?',
+            answer:
+                'Move into the specialization that naturally builds on the core topic you just studied.',
+          ),
+        ],
+    };
   }
+}
+
+String _questionsLabel(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Вопросы',
+    AppLocale.en => 'Questions',
+    AppLocale.kk => 'Сұрақтар',
+  };
+}
+
+String _askQuestionLabel(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Задать вопрос',
+    AppLocale.en => 'Ask a question',
+    AppLocale.kk => 'Сұрақ қою',
+  };
 }
 
 class _FaqCard extends StatelessWidget {

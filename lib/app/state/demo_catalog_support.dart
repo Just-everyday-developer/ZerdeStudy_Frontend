@@ -33,6 +33,16 @@ class DemoTrainerSeed {
         options = const <String>[],
         correctIndex = 0;
 
+  const DemoTrainerSeed.matching({
+    required this.title,
+    required this.instruction,
+    required this.prompt,
+    required this.options,
+    required this.orderedLines,
+  })  : kind = CodeTrainerKind.matching,
+        template = null,
+        correctIndex = 0;
+
   final String title;
   final String instruction;
   final String prompt;
@@ -60,6 +70,8 @@ class DemoLessonSeed {
     required this.promptSuggestion,
     this.durationMinutes = 12,
     this.xpReward = 55,
+    this.theoryContent,
+    this.extraTrainers = const <DemoTrainerSeed>[],
   });
 
   final String id;
@@ -77,6 +89,8 @@ class DemoLessonSeed {
   final String promptSuggestion;
   final int durationMinutes;
   final int xpReward;
+  final String? theoryContent;
+  final List<DemoTrainerSeed> extraTrainers;
 }
 
 class DemoPracticeSeed {
@@ -196,6 +210,15 @@ LessonItem buildLessonFromSeed({
     lessonId: seed.id,
     seed: seed.trainer,
   );
+  final allTrainers = <CodeTrainer>[trainer];
+  for (var i = 0; i < seed.extraTrainers.length; i++) {
+    allTrainers.add(buildTrainerFromSeed(
+      lessonId: seed.id,
+      seed: seed.extraTrainers[i],
+      index: i + 2,
+    ));
+  }
+
   final quiz = LessonQuiz(
     id: '${seed.id}_quiz_1',
     title: sameText('Output quiz'),
@@ -224,10 +247,14 @@ LessonItem buildLessonFromSeed({
     exampleOutput: seed.exampleOutput,
     keyPoints: seed.keyPoints.map(sameText).toList(growable: false),
     quizzes: <LessonQuiz>[quiz],
-    codeTrainers: <CodeTrainer>[trainer],
-    completionRequirements: <String>[quiz.id, trainer.id],
+    codeTrainers: allTrainers,
+    completionRequirements: <String>[
+      quiz.id,
+      ...allTrainers.map((t) => t.id),
+    ],
     promptSuggestion: sameText(seed.promptSuggestion),
     xpReward: seed.xpReward,
+    theoryContent: seed.theoryContent ?? '',
   );
 }
 
@@ -254,11 +281,12 @@ PracticeTask buildPracticeFromSeed({
 CodeTrainer buildTrainerFromSeed({
   required String lessonId,
   required DemoTrainerSeed seed,
+  int index = 1,
 }) {
   switch (seed.kind) {
     case CodeTrainerKind.fillBlank:
       return CodeTrainer(
-        id: '${lessonId}_trainer_1',
+        id: '${lessonId}_trainer_$index',
         title: sameText(seed.title),
         instruction: sameText(seed.instruction),
         kind: seed.kind,
@@ -275,7 +303,7 @@ CodeTrainer buildTrainerFromSeed({
       );
     case CodeTrainerKind.matchOutput:
       return CodeTrainer(
-        id: '${lessonId}_trainer_1',
+        id: '${lessonId}_trainer_$index',
         title: sameText(seed.title),
         instruction: sameText(seed.instruction),
         kind: seed.kind,
@@ -292,7 +320,7 @@ CodeTrainer buildTrainerFromSeed({
     case CodeTrainerKind.reorderLines:
       final shuffled = List<String>.from(seed.orderedLines.reversed);
       return CodeTrainer(
-        id: '${lessonId}_trainer_1',
+        id: '${lessonId}_trainer_$index',
         title: sameText(seed.title),
         instruction: sameText(seed.instruction),
         kind: seed.kind,
@@ -308,6 +336,22 @@ CodeTrainer buildTrainerFromSeed({
           seed.orderedLines.length,
           (index) => shuffled.indexOf(seed.orderedLines[index]).toString(),
         ),
+      );
+    case CodeTrainerKind.matching:
+      return CodeTrainer(
+        id: '${lessonId}_trainer_$index',
+        title: sameText(seed.title),
+        instruction: sameText(seed.instruction),
+        kind: seed.kind,
+        prompt: seed.prompt,
+        options: List<QuizOption>.generate(
+          seed.options.length,
+          (index) => QuizOption(
+            id: 'term_$index',
+            label: sameText(seed.options[index]),
+          ),
+        ),
+        correctSequence: seed.orderedLines,
       );
   }
 }

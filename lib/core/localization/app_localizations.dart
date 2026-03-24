@@ -24,11 +24,51 @@ class AppLocalizations {
   }
 
   String text(String key) {
+    final override = _runtimeOverrides(key);
+    if (override != null) {
+      return override;
+    }
     final localized = _localizedValues[key];
     if (localized == null) {
       return key;
     }
     return localized[locale] ?? localized[AppLocale.en] ?? key;
+  }
+
+  String? _runtimeOverrides(String key) {
+    switch (key) {
+      case 'prepared_questions':
+        return switch (locale) {
+          AppLocale.ru => 'Вопросы',
+          AppLocale.en => 'Questions',
+          AppLocale.kk => 'Сұрақтар',
+        };
+      case 'message_hint':
+        return switch (locale) {
+          AppLocale.ru => 'Задать вопрос',
+          AppLocale.en => 'Ask a question',
+          AppLocale.kk => 'Сұрақ қою',
+        };
+      case 'apply_filters':
+        return switch (locale) {
+          AppLocale.ru => 'Установить',
+          AppLocale.en => 'Set',
+          AppLocale.kk => 'Қолдану',
+        };
+      case 'review_comment_prompt':
+        return switch (locale) {
+          AppLocale.ru => 'Расскажите почему',
+          AppLocale.en => 'Tell us why',
+          AppLocale.kk => 'Неліктен екенін жазыңыз',
+        };
+      case 'review_comment_hint':
+        return switch (locale) {
+          AppLocale.ru => 'Напишите комментарий',
+          AppLocale.en => 'Write a comment',
+          AppLocale.kk => 'Пікір жазыңыз',
+        };
+    }
+    return null;
   }
 
   String format(String key, Map<String, Object> values) {
@@ -189,19 +229,19 @@ class AppLocalizations {
           AppLocale.kk: 'Басты бет',
         },
         'tab_tree': {
-          AppLocale.ru: 'Tree',
+          AppLocale.ru: 'Дерево',
           AppLocale.en: 'Tree',
-          AppLocale.kk: 'Tree',
+          AppLocale.kk: 'Ағаш',
         },
         'tab_learn': {
-          AppLocale.ru: 'Learn',
+          AppLocale.ru: 'Обучение',
           AppLocale.en: 'Learn',
-          AppLocale.kk: 'Learn',
+          AppLocale.kk: 'Оқыту',
         },
         'tab_ai': {
-          AppLocale.ru: 'AI',
+          AppLocale.ru: 'ИИ',
           AppLocale.en: 'AI',
-          AppLocale.kk: 'AI',
+          AppLocale.kk: 'ЖИ',
         },
         'tab_profile': {
           AppLocale.ru: 'Профиль',
@@ -596,9 +636,9 @@ class AppLocalizations {
           AppLocale.kk: 'Деңгей',
         },
         'clear_filters': {
-          AppLocale.ru: 'Сбросить фильтры',
-          AppLocale.en: 'Clear filters',
-          AppLocale.kk: 'Сүзгілерді тазалау',
+          AppLocale.ru: 'Сбросить',
+          AppLocale.en: 'Clear',
+          AppLocale.kk: 'Тазалау',
         },
         'all_topics': {
           AppLocale.ru: 'Все темы',
@@ -731,9 +771,9 @@ class AppLocalizations {
           AppLocale.kk: 'Қолжетімді',
         },
         'tree_legend': {
-          AppLocale.ru: 'Р›РµРіРµРЅРґР°',
+          AppLocale.ru: 'Легенда',
           AppLocale.en: 'Legend',
-          AppLocale.kk: 'РђТЈС‹Р·',
+          AppLocale.kk: 'Аңыз',
         },
         'tree_in_progress': {
           AppLocale.ru: 'В процессе',
@@ -815,6 +855,11 @@ class AppLocalizations {
           AppLocale.en: 'Curated picks',
           AppLocale.kk: 'Іріктемелер',
         },
+        'lesson_theory': {
+          AppLocale.ru: 'Теория',
+          AppLocale.en: 'Theory',
+          AppLocale.kk: 'Теория',
+        },
         'lesson_code_example': {
           AppLocale.ru: 'Пример кода',
           AppLocale.en: 'Code Example',
@@ -839,6 +884,11 @@ class AppLocalizations {
           AppLocale.ru: 'Проверить ответ',
           AppLocale.en: 'Check answer',
           AppLocale.kk: 'Жауапты тексеру',
+        },
+        'lesson_match_definition': {
+          AppLocale.ru: 'Выберите соответствие:',
+          AppLocale.en: 'Choose the matching definition:',
+          AppLocale.kk: 'Сәйкестікті таңдаңыз:',
         },
         'lesson_complete_lab': {
           AppLocale.ru: 'Завершить тренажер',
@@ -1198,7 +1248,7 @@ class AppLocalizations {
         'faq_q_profile': {
           AppLocale.ru: 'Что хранится в профиле?',
           AppLocale.en: 'What is stored in the profile?',
-          AppLocale.kk: 'Профильде не сақталады?',
+          AppLocale.kk: 'Профильде не сақталған?',
         },
         'faq_a_profile': {
           AppLocale.ru: 'В профиле собраны прогресс, достижения, сертификаты, избранное, завершённые материалы и история результатов.',
@@ -1324,6 +1374,36 @@ class AppLocalizations {
           AppLocale.ru: 'Код принят. Переходим в приложение.',
           AppLocale.en: 'Code accepted. Opening the app.',
           AppLocale.kk: 'Код қабылданды. Приложение ашылады.',
+        },
+        'apply_filters': {
+          AppLocale.ru: 'Установить',
+          AppLocale.en: 'Set',
+          AppLocale.kk: 'Қолдану',
+        },
+        'review_reason': {
+          AppLocale.ru: 'Расскажите почему',
+          AppLocale.en: 'Tell us why',
+          AppLocale.kk: 'Неге екенін жазыңыз',
+        },
+        'review_comment_hint': {
+          AppLocale.ru: 'Напишите комментарий',
+          AppLocale.en: 'Write a comment',
+          AppLocale.kk: 'Пікір жазыңыз',
+        },
+        'send_review': {
+          AppLocale.ru: 'Отправить',
+          AppLocale.en: 'Send',
+          AppLocale.kk: 'Жіберу',
+        },
+        'open_history': {
+          AppLocale.ru: 'История результатов',
+          AppLocale.en: 'Result history',
+          AppLocale.kk: 'Нәтижелер тарихы',
+        },
+        'message_hint_compact': {
+          AppLocale.ru: 'Задать вопрос',
+          AppLocale.en: 'Ask a question',
+          AppLocale.kk: 'Сұрақ қою',
         },
       };
 }

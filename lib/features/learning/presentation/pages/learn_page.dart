@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_app_state.dart';
 import '../../../../app/state/demo_catalog.dart';
@@ -80,143 +81,135 @@ class _LearnPageState extends ConsumerState<LearnPage> {
       wideMaxWidth: 680,
       builder: (context) {
         final panelHeight = MediaQuery.of(context).size.height *
-            (context.isCompactLayout ? 0.8 : 0.78);
+            (context.isCompactLayout ? 0.9 : 0.78);
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return SizedBox(
-              height: panelHeight,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const AdaptivePanelHandle(),
-                    const SizedBox(height: 18),
-                    Text(
-                      l10n.text('filters'),
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 18),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            DiscoveryFilterPanelCard(
-                              icon: Icons.grid_view_rounded,
-                              title: l10n.text('filter_topic'),
-                              subtitle: l10n.text('filter_topic_hint'),
-                              highlighted: draftTopicKey != null,
-                              child: DiscoveryFilterChoiceWrap<String>(
-                                options: <String>[
-                                  '',
-                                  ...catalog.courseTopicKeys(),
-                                ],
-                                selectedValue: draftTopicKey ?? '',
-                                labelBuilder: (value) => value.isEmpty
-                                    ? l10n.text('all_topics')
-                                    : l10n.courseTopicLabel(value),
-                                onSelected: (value) {
-                                  setModalState(() {
-                                    draftTopicKey = value.isEmpty ? null : value;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            DiscoveryFilterPanelCard(
-                              icon: Icons.signal_cellular_alt_rounded,
-                              title: l10n.text('filter_level'),
-                              subtitle: l10n.text('filter_level_hint'),
-                              highlighted: draftLevel != 'All',
-                              child: DiscoveryFilterChoiceWrap<String>(
-                                options: catalog.courseLevels(),
-                                selectedValue: draftLevel,
-                                labelBuilder: l10n.courseLevelLabel,
-                                onSelected: (value) {
-                                  setModalState(() => draftLevel = value);
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            DiscoveryFilterPanelCard(
-                              icon: Icons.star_outline_rounded,
-                              title: l10n.text('filter_min_rating'),
-                              subtitle: l10n.text('filter_rating_hint'),
-                              highlighted: draftMinRating != null,
-                              child: DiscoveryFilterChoiceWrap<double>(
-                                options: const <double>[0, 3, 4, 4.5],
-                                selectedValue: draftMinRating ?? 0,
-                                labelBuilder: (value) {
-                                  if (value == 0) {
-                                    return l10n.text('any_rating');
-                                  }
-                                  return '${value.toStringAsFixed(value % 1 == 0 ? 0 : 1)}+';
-                                },
-                                onSelected: (value) {
-                                  setModalState(() {
-                                    draftMinRating = value == 0 ? null : value;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            DiscoveryFilterPanelCard(
-                              icon: Icons.schedule_rounded,
-                              title: l10n.text('filter_duration'),
-                              subtitle: l10n.text('filter_duration_hint'),
-                              highlighted: draftDurationBucket != null,
-                              child: DiscoveryFilterChoiceWrap<String>(
-                                options: <String>[
-                                  '',
-                                  ...catalog
-                                      .courseDurationBuckets()
-                                      .map((bucket) => bucket.code),
-                                ],
-                                selectedValue: draftDurationBucket?.code ?? '',
-                                labelBuilder: (value) {
-                                  if (value.isEmpty) {
-                                    return l10n.text('any_duration');
-                                  }
-                                  return _durationLabel(
-                                    l10n,
-                                    CourseDurationBucket.fromCode(value),
-                                  );
-                                },
-                                onSelected: (value) {
-                                  setModalState(() {
-                                    draftDurationBucket = value.isEmpty
-                                        ? null
-                                        : CourseDurationBucket.fromCode(value);
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            DiscoveryFilterPanelCard(
-                              icon: Icons.workspace_premium_outlined,
-                              title: l10n.text('filter_certificate'),
-                              subtitle: l10n.text('filter_certificate_hint'),
-                              highlighted: draftCertificateOnly,
-                              child: DiscoveryFilterToggleTile(
-                                label: l10n.text('filter_certificate'),
-                                value: draftCertificateOnly,
-                                onChanged: (value) {
-                                  setModalState(
-                                    () => draftCertificateOnly = value,
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
+            return AnimatedPadding(
+              duration: const Duration(milliseconds: 180),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: SizedBox(
+                height: panelHeight,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const AdaptivePanelHandle(),
+                      const SizedBox(height: 18),
+                      Text(
+                        l10n.text('filters'),
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 18),
+                      DiscoveryFilterPanelCard(
+                        icon: Icons.grid_view_rounded,
+                        title: l10n.text('filter_topic'),
+                        subtitle: l10n.text('filter_topic_hint'),
+                        highlighted: draftTopicKey != null,
+                        child: DiscoveryFilterChoiceWrap<String>(
+                          options: <String>['', ...catalog.courseTopicKeys()],
+                          selectedValue: draftTopicKey ?? '',
+                          labelBuilder: (value) => value.isEmpty
+                              ? l10n.text('all_topics')
+                              : l10n.courseTopicLabel(value),
+                          onSelected: (value) {
+                            setModalState(() {
+                              draftTopicKey = value.isEmpty ? null : value;
+                            });
+                          },
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
+                      const SizedBox(height: 14),
+                      DiscoveryFilterPanelCard(
+                        icon: Icons.signal_cellular_alt_rounded,
+                        title: l10n.text('filter_level'),
+                        subtitle: l10n.text('filter_level_hint'),
+                        highlighted: draftLevel != 'All',
+                        child: DiscoveryFilterChoiceWrap<String>(
+                          options: catalog.courseLevels(),
+                          selectedValue: draftLevel,
+                          labelBuilder: l10n.courseLevelLabel,
+                          onSelected: (value) {
+                            setModalState(() => draftLevel = value);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      DiscoveryFilterPanelCard(
+                        icon: Icons.star_outline_rounded,
+                        title: l10n.text('filter_min_rating'),
+                        subtitle: l10n.text('filter_rating_hint'),
+                        highlighted: draftMinRating != null,
+                        child: DiscoveryFilterChoiceWrap<double>(
+                          options: const <double>[0, 3, 4, 4.5],
+                          selectedValue: draftMinRating ?? 0,
+                          labelBuilder: (value) {
+                            if (value == 0) {
+                              return l10n.text('any_rating');
+                            }
+                            return '${value.toStringAsFixed(value % 1 == 0 ? 0 : 1)}+';
+                          },
+                          onSelected: (value) {
+                            setModalState(() {
+                              draftMinRating = value == 0 ? null : value;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      DiscoveryFilterPanelCard(
+                        icon: Icons.schedule_rounded,
+                        title: l10n.text('filter_duration'),
+                        subtitle: l10n.text('filter_duration_hint'),
+                        highlighted: draftDurationBucket != null,
+                        child: DiscoveryFilterChoiceWrap<String>(
+                          options: <String>[
+                            '',
+                            ...catalog
+                                .courseDurationBuckets()
+                                .map((bucket) => bucket.code),
+                          ],
+                          selectedValue: draftDurationBucket?.code ?? '',
+                          labelBuilder: (value) {
+                            if (value.isEmpty) {
+                              return l10n.text('any_duration');
+                            }
+                            return _durationLabel(
+                              l10n,
+                              CourseDurationBucket.fromCode(value),
+                            );
+                          },
+                          onSelected: (value) {
+                            setModalState(() {
+                              draftDurationBucket = value.isEmpty
+                                  ? null
+                                  : CourseDurationBucket.fromCode(value);
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      DiscoveryFilterPanelCard(
+                        icon: Icons.workspace_premium_outlined,
+                        title: l10n.text('filter_certificate'),
+                        subtitle: l10n.text('filter_certificate_hint'),
+                        highlighted: draftCertificateOnly,
+                        child: DiscoveryFilterToggleTile(
+                          label: l10n.text('filter_certificate'),
+                          value: draftCertificateOnly,
+                          onChanged: (value) {
+                            setModalState(() => draftCertificateOnly = value);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          TextButton(
                             onPressed: () {
                               setState(() {
                                 _selectedTopicKey = null;
@@ -224,15 +217,20 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                                 _selectedMinRating = null;
                                 _selectedDurationBucket = null;
                                 _certificateOnly = false;
+                                _query = _searchController.text.trim();
                               });
                               Navigator.of(context).pop();
                             },
-                            child: Text(l10n.text('clear_filters')),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 14,
+                              ),
+                              foregroundColor: context.appColors.textSecondary,
+                            ),
+                            child: Text(_clearFiltersLabel(l10n)),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton(
+                          FilledButton(
                             onPressed: () {
                               setState(() {
                                 _selectedTopicKey = draftTopicKey;
@@ -240,15 +238,16 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                                 _selectedMinRating = draftMinRating;
                                 _selectedDurationBucket = draftDurationBucket;
                                 _certificateOnly = draftCertificateOnly;
+                                _query = _searchController.text.trim();
                               });
                               Navigator.of(context).pop();
                             },
-                            child: Text(l10n.text('show_all')),
+                            child: Text(_applyFiltersLabel(l10n)),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -274,6 +273,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
         }
       });
     });
+    final compact = context.isCompactLayout;
     final authors = _filterAuthors(catalog.courseAuthors());
 
     final sections = <_CourseRailSection>[
@@ -333,21 +333,30 @@ class _LearnPageState extends ConsumerState<LearnPage> {
     ].where((section) => section.courses.isNotEmpty).toList(growable: false);
 
     return AppPageScaffold(
+      horizontalPadding: compact ? 0 : (context.isNativeWindowsApp ? 12 : 16),
+      expandContent: true,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxWidth < 700;
           return ListView(
             controller: _scrollController,
-            padding: EdgeInsets.fromLTRB(20, 8, 20, compact ? 120 : 48),
+            padding: EdgeInsets.fromLTRB(
+              compact ? 16 : 0,
+              8,
+              compact ? 16 : 0,
+              compact ? 120 : 48,
+            ),
             children: [
               CourseDiscoverySearchBar(
                 controller: _searchController,
                 focusNode: _searchFocusNode,
                 hintText: l10n.text('search_courses'),
-                onChanged: (value) => setState(() => _query = value),
+                onChanged: (_) {},
+                onSubmitted: (value) {
+                  setState(() => _query = value.trim());
+                },
                 onFilterTap: () => _openFilters(context, catalog, l10n),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 36),
               if (sections.isEmpty)
                 GlowCard(
                   accent: colors.accent,
@@ -386,7 +395,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                   }
 
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 64),
+                    padding: const EdgeInsets.only(bottom: 88),
                     child: _CompactCourseRail(
                       section: section,
                       state: state,
@@ -422,7 +431,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                   },
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 64),
               GlowCard(
                 accent: colors.accent,
                 child: Column(
@@ -540,6 +549,22 @@ class _LearnPageState extends ConsumerState<LearnPage> {
   }
 }
 
+String _applyFiltersLabel(AppLocalizations l10n) {
+  return switch (l10n.locale) {
+    AppLocale.ru => 'Установить',
+    AppLocale.en => 'Set',
+    AppLocale.kk => 'Қолдану',
+  };
+}
+
+String _clearFiltersLabel(AppLocalizations l10n) {
+  return switch (l10n.locale) {
+    AppLocale.ru => 'Очистить',
+    AppLocale.en => 'Clear',
+    AppLocale.kk => 'Тазалау',
+  };
+}
+
 class _CompactCourseRail extends ConsumerWidget {
   const _CompactCourseRail({
     required this.section,
@@ -569,13 +594,13 @@ class _CompactCourseRail extends ConsumerWidget {
           actionLabel: viewAllLabel,
           onActionTap: onViewAllTap,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         SizedBox(
           height: context.isWideLayout ? 364 : 352,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: section.visibleCourses.length + 1,
-            separatorBuilder: (_, __) => const SizedBox(width: 22),
+            separatorBuilder: (_, __) => const SizedBox(width: 34),
             itemBuilder: (context, index) {
               if (index == section.visibleCourses.length) {
                 return DiscoveryViewAllCard(

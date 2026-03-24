@@ -30,7 +30,7 @@ class LeaderboardPage extends ConsumerWidget {
             GlowCard(
               accent: colors.primary,
               child: SizedBox(
-                height: compact ? 210 : 300,
+                height: compact ? 188 : 300,
                 child: compact
                     ? _CompactPodium(entries: podium)
                     : Row(
@@ -107,7 +107,7 @@ class LeaderboardPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Level ${entry.level} | ${entry.role}',
+                            'Level ${entry.level}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: colors.textSecondary),
@@ -213,45 +213,46 @@ class _CompactPodiumColumn extends StatelessWidget {
             child: Center(
               child: Text(
                 entry.name,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: colors.textPrimary,
                   fontWeight: FontWeight.w700,
-                  fontSize: 14,
+                  fontSize: 11,
+                  height: 1.05,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           SizedBox(
-            height: 18,
+            height: 12,
             child: Center(
               child: Text(
-                '${entry.xp} XP',
+                'Level ${entry.level}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: colors.textSecondary,
                   fontWeight: FontWeight.w600,
-                  fontSize: 11,
+                  fontSize: 9,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Expanded(
             child: Align(
               alignment: Alignment.bottomCenter,
               child: FractionallySizedBox(
                 heightFactor: heightFactor,
-                widthFactor: 0.92,
+                widthFactor: 0.86,
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
                   decoration: BoxDecoration(
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(18),
+                      top: Radius.circular(16),
                     ),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -271,7 +272,19 @@ class _CompactPodiumColumn extends StatelessWidget {
                         style: TextStyle(
                           color: colors.textPrimary,
                           fontWeight: FontWeight.w900,
-                          fontSize: 18,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${entry.xp} XP',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: colors.textPrimary.withValues(alpha: 0.94),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 9,
                         ),
                       ),
                     ],
@@ -322,7 +335,7 @@ class _PodiumColumn extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${entry.xp} XP',
+            'Level ${entry.level}',
             style: TextStyle(
               color: colors.textSecondary,
               fontWeight: FontWeight.w700,
@@ -361,6 +374,14 @@ class _PodiumColumn extends StatelessWidget {
                             color: colors.textPrimary,
                             fontWeight: FontWeight.w900,
                             fontSize: 26,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${entry.xp} XP',
+                          style: TextStyle(
+                            color: colors.textPrimary.withValues(alpha: 0.94),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],

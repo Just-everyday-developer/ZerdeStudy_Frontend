@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
@@ -28,6 +29,9 @@ class CommunityCourseDetailPage extends ConsumerStatefulWidget {
 
 class _CommunityCourseDetailPageState
     extends ConsumerState<CommunityCourseDetailPage> {
+  final TextEditingController _reviewController = TextEditingController();
+  final List<CommunityCourseReview> _localReviews = <CommunityCourseReview>[];
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +40,12 @@ class _CommunityCourseDetailPageState
           .read(demoAppControllerProvider.notifier)
           .viewCommunityCourse(widget.courseId);
     });
+  }
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
   }
 
   @override
@@ -48,6 +58,10 @@ class _CommunityCourseDetailPageState
     final enrolled = state.enrolledCommunityCourseIds.contains(widget.courseId);
     final userRating = state.courseRatingsByCourseId[widget.courseId];
     final reviewSummary = catalog.displayCourseReviewSummaryFor(state, widget.courseId);
+    final reviews = <CommunityCourseReview>[
+      ..._localReviews,
+      ...course.reviews,
+    ];
     final colors = context.appColors;
 
     return Scaffold(
@@ -63,9 +77,14 @@ class _CommunityCourseDetailPageState
                     enrolled: enrolled,
                     reviewSummary: reviewSummary,
                     userRating: userRating,
-                    onSave: () => controller.saveCommunityCourse(widget.courseId),
+                    reviews: reviews,
+                    commentController: _reviewController,
+                    onSave: () =>
+                        controller.toggleSavedCommunityCourse(widget.courseId),
                     onRate: (stars) =>
                         controller.rateCommunityCourse(widget.courseId, stars),
+                    onSubmitComment: () =>
+                        _submitReview(state.user?.name ?? 'Talgat', userRating),
                     onPrimaryTap: () => _handlePrimaryTap(context, course, controller),
                   )
                 : _WideCourseDetailLayout(
@@ -74,15 +93,41 @@ class _CommunityCourseDetailPageState
                     enrolled: enrolled,
                     reviewSummary: reviewSummary,
                     userRating: userRating,
-                    onSave: () => controller.saveCommunityCourse(widget.courseId),
+                    reviews: reviews,
+                    commentController: _reviewController,
+                    onSave: () =>
+                        controller.toggleSavedCommunityCourse(widget.courseId),
                     onRate: (stars) =>
                         controller.rateCommunityCourse(widget.courseId, stars),
+                    onSubmitComment: () =>
+                        _submitReview(state.user?.name ?? 'Talgat', userRating),
                     onPrimaryTap: () => _handlePrimaryTap(context, course, controller),
                   ),
           ),
         ],
       ),
     );
+  }
+
+  void _submitReview(String authorName, int? userRating) {
+    final text = _reviewController.text.trim();
+    if (text.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _localReviews.insert(
+        0,
+        CommunityCourseReview(
+          id: 'local_review_${DateTime.now().microsecondsSinceEpoch}',
+          authorName: authorName,
+          timeLabel: 'now',
+          rating: userRating ?? 5,
+          text: text,
+        ),
+      );
+      _reviewController.clear();
+    });
   }
 
   Future<void> _handlePrimaryTap(
@@ -198,9 +243,12 @@ class _CompactCourseDetailLayout extends StatelessWidget {
     required this.saved,
     required this.enrolled,
     required this.reviewSummary,
+    required this.reviews,
     required this.userRating,
+    required this.commentController,
     required this.onSave,
     required this.onRate,
+    required this.onSubmitComment,
     required this.onPrimaryTap,
   });
 
@@ -208,9 +256,12 @@ class _CompactCourseDetailLayout extends StatelessWidget {
   final bool saved;
   final bool enrolled;
   final CommunityCourseReviewSummary reviewSummary;
+  final List<CommunityCourseReview> reviews;
   final int? userRating;
+  final TextEditingController commentController;
   final VoidCallback onSave;
   final ValueChanged<int> onRate;
+  final VoidCallback onSubmitComment;
   final VoidCallback onPrimaryTap;
 
   @override
@@ -219,55 +270,78 @@ class _CompactCourseDetailLayout extends StatelessWidget {
     final l10n = context.l10n;
 
     return DefaultTabController(
-      length: 4,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: _MobileHeroCard(
-              course: course,
-              saved: saved,
-              enrolled: enrolled,
-              reviewSummary: reviewSummary,
-              userRating: userRating,
-              onSave: onSave,
-              onRate: onRate,
-              onPrimaryTap: onPrimaryTap,
-            ),
-          ),
-          Container(
-            color: colors.surface.withValues(alpha: 0.94),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TabBar(
-              isScrollable: true,
-              indicatorColor: colors.primary,
-              labelColor: colors.textPrimary,
-              unselectedLabelColor: colors.textSecondary,
-              tabs: [
-                Tab(text: l10n.text('course_tab_info')),
-                Tab(text: l10n.text('course_tab_reviews')),
-                Tab(text: l10n.text('course_tab_news')),
-                Tab(text: l10n.text('course_tab_modules')),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _CompactInfoTab(course: course),
-                _CourseReviewsSection(
-                  course: course,
-                  compact: true,
-                  summary: reviewSummary,
-                  userRating: userRating,
-                  onRate: onRate,
+      length: 3,
+      child: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Column(
+                  children: [
+                    _MobileHeroCard(
+                      course: course,
+                      saved: saved,
+                      enrolled: enrolled,
+                      reviewSummary: reviewSummary,
+                      userRating: userRating,
+                      onSave: onSave,
+                      onRate: onRate,
+                      onPrimaryTap: onPrimaryTap,
+                    ),
+                    const SizedBox(height: 16),
+                    _CompactInfoContent(course: course),
+                  ],
                 ),
-                _CourseUpdatesSection(course: course, compact: true),
-                _CourseProgramSection(course: course, compact: true),
-              ],
+              ),
             ),
-          ),
-        ],
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _CompactTabHeaderDelegate(
+                minExtentValue: 56,
+                maxExtentValue: 56,
+                child: Container(
+                  color: colors.surface.withValues(alpha: 0.98),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  alignment: Alignment.center,
+                  child: TabBar(
+                    isScrollable: false,
+                    indicatorColor: colors.primary,
+                    labelColor: colors.textPrimary,
+                    unselectedLabelColor: colors.textSecondary,
+                    labelStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    padding: EdgeInsets.zero,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    tabs: [
+                      Tab(text: l10n.text('course_tab_reviews')),
+                      Tab(text: l10n.text('course_tab_news')),
+                      Tab(text: l10n.text('course_tab_modules')),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ];
+        },
+        body: TabBarView(
+          children: [
+            _CourseReviewsSection(
+              course: course,
+              compact: true,
+              summary: reviewSummary,
+              reviews: reviews,
+              userRating: userRating,
+              commentController: commentController,
+              onRate: onRate,
+              onSubmitComment: onSubmitComment,
+            ),
+            _CourseUpdatesSection(course: course, compact: true),
+            _CourseProgramSection(course: course, compact: true),
+          ],
+        ),
       ),
     );
   }
@@ -279,9 +353,12 @@ class _WideCourseDetailLayout extends StatelessWidget {
     required this.saved,
     required this.enrolled,
     required this.reviewSummary,
+    required this.reviews,
     required this.userRating,
+    required this.commentController,
     required this.onSave,
     required this.onRate,
+    required this.onSubmitComment,
     required this.onPrimaryTap,
   });
 
@@ -289,9 +366,12 @@ class _WideCourseDetailLayout extends StatelessWidget {
   final bool saved;
   final bool enrolled;
   final CommunityCourseReviewSummary reviewSummary;
+  final List<CommunityCourseReview> reviews;
   final int? userRating;
+  final TextEditingController commentController;
   final VoidCallback onSave;
   final ValueChanged<int> onRate;
+  final VoidCallback onSubmitComment;
   final VoidCallback onPrimaryTap;
 
   @override
@@ -358,8 +438,11 @@ class _WideCourseDetailLayout extends StatelessWidget {
                         course: course,
                         compact: false,
                         summary: reviewSummary,
+                        reviews: reviews,
                         userRating: userRating,
+                        commentController: commentController,
                         onRate: onRate,
+                        onSubmitComment: onSubmitComment,
                       ),
                     ],
                   ),
@@ -583,6 +666,10 @@ class _MobileHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
+          fontSize: 28,
+          height: 1.1,
+        );
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -603,22 +690,31 @@ class _MobileHeroCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: Icon(Icons.arrow_back_rounded, color: colors.textPrimary),
+              InkWell(
+                onTap: () => Navigator.of(context).maybePop(),
+                borderRadius: BorderRadius.circular(999),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4, right: 10),
+                  child: Icon(
+                    Icons.arrow_back_rounded,
+                    color: colors.textPrimary,
+                    size: 24,
+                  ),
+                ),
               ),
               Expanded(
                 child: Text(
                   course.title.en,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: titleStyle,
                 ),
               ),
               const SizedBox(width: 8),
               IconButton(
-                onPressed: saved ? null : onSave,
+                onPressed: onSave,
                 icon: Icon(
                   saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                   color: saved ? course.color : colors.textPrimary,
@@ -627,19 +723,24 @@ class _MobileHeroCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          Center(
-            child: AppButton.primary(
-              label: enrolled
-                  ? context.l10n.text('course_open_cta')
-                  : context.l10n.text('course_primary_cta'),
-              icon: Icons.play_circle_fill_rounded,
-              maxWidth: 320,
-              onPressed: onPrimaryTap,
+          AppButton.primary(
+            label: enrolled
+                ? context.l10n.text('course_open_cta')
+                : context.l10n.text('course_primary_cta'),
+            icon: Icons.play_circle_fill_rounded,
+            maxWidth: null,
+            onPressed: onPrimaryTap,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            course.subtitle.en,
+            style: TextStyle(
+              color: colors.textSecondary,
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.star_rounded, color: course.color, size: 18),
               const SizedBox(width: 6),
@@ -662,28 +763,14 @@ class _MobileHeroCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          Text(
-            course.subtitle.en,
-            style: TextStyle(
-              color: colors.textSecondary,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _CourseRatingEditor(
-            rating: userRating,
-            accent: course.color,
-            onRate: onRate,
-          ),
         ],
       ),
     );
   }
 }
 
-class _CompactInfoTab extends StatelessWidget {
-  const _CompactInfoTab({
+class _CompactInfoContent extends StatelessWidget {
+  const _CompactInfoContent({
     required this.course,
   });
 
@@ -691,8 +778,8 @@ class _CompactInfoTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _CourseTextSection(
           title: context.l10n.text('course_about'),
@@ -715,8 +802,43 @@ class _CompactInfoTab extends StatelessWidget {
         _CourseTeachersSection(course: course),
         const SizedBox(height: 16),
         _CourseCertificateSection(course: course),
+        const SizedBox(height: 16),
       ],
     );
+  }
+}
+
+class _CompactTabHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _CompactTabHeaderDelegate({
+    required this.minExtentValue,
+    required this.maxExtentValue,
+    required this.child,
+  });
+
+  final double minExtentValue;
+  final double maxExtentValue;
+  final Widget child;
+
+  @override
+  double get minExtent => minExtentValue;
+
+  @override
+  double get maxExtent => maxExtentValue;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _CompactTabHeaderDelegate oldDelegate) {
+    return oldDelegate.minExtentValue != minExtentValue ||
+        oldDelegate.maxExtentValue != maxExtentValue ||
+        oldDelegate.child != child;
   }
 }
 
@@ -807,13 +929,7 @@ class _CourseSidebar extends StatelessWidget {
                 : l10n.text('course_save_cta'),
             icon: saved ? Icons.check_circle_rounded : Icons.favorite_border_rounded,
             maxWidth: 260,
-            onPressed: saved ? null : onSave,
-          ),
-          const SizedBox(height: 16),
-          _CourseRatingEditor(
-            rating: userRating,
-            accent: course.color,
-            onRate: onRate,
+            onPressed: onSave,
           ),
           const SizedBox(height: 18),
           Text(
@@ -895,21 +1011,31 @@ class _CourseTextSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-
-    return GlowCard(
-      accent: colors.primary,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        child,
+      ],
     );
+
+    if (context.isCompactLayout) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: colors.surface.withValues(alpha: 0.96),
+        ),
+        child: content,
+      );
+    }
+
+    return GlowCard(accent: colors.primary, child: content);
   }
 }
 
@@ -925,41 +1051,51 @@ class _CourseBulletSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-
-    return GlowCard(
-      accent: colors.success,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 12),
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.check_rounded, color: colors.success),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        height: 1.45,
-                      ),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        ...items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.check_rounded, color: colors.success),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      height: 1.45,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
+
+    if (context.isCompactLayout) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: colors.surface.withValues(alpha: 0.96),
+        ),
+        child: content,
+      );
+    }
+
+    return GlowCard(accent: colors.success, child: content);
   }
 }
 
@@ -974,7 +1110,40 @@ class _CourseProgramSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = GlowCard(
+    if (compact) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: context.appColors.surface.withValues(alpha: 0.96),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.text('course_program'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 14),
+                ...course.moduleSections.map(
+                  (section) => Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: _ProgramSectionCard(
+                      section: section,
+                      compact: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+    return GlowCard(
       accent: course.color,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -989,21 +1158,13 @@ class _CourseProgramSection extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 14),
               child: _ProgramSectionCard(
                 section: section,
-                compact: compact,
+                compact: false,
               ),
             ),
           ),
         ],
       ),
     );
-
-    if (compact) {
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-        children: [content],
-      );
-    }
-    return content;
   }
 }
 
@@ -1188,19 +1349,30 @@ class _CourseReviewsSection extends StatelessWidget {
     required this.course,
     required this.compact,
     required this.summary,
+    required this.reviews,
     required this.userRating,
+    required this.commentController,
     required this.onRate,
+    required this.onSubmitComment,
   });
 
   final CommunityCourse course;
   final bool compact;
   final CommunityCourseReviewSummary summary;
+  final List<CommunityCourseReview> reviews;
   final int? userRating;
+  final TextEditingController commentController;
   final ValueChanged<int> onRate;
+  final VoidCallback onSubmitComment;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final distribution = [5, 4, 3, 2, 1];
+    final maxCount = summary.ratingDistribution.values.fold<int>(
+      1,
+      (a, b) => a > b ? a : b,
+    );
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1209,70 +1381,70 @@ class _CourseReviewsSection extends StatelessWidget {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 14),
-        Row(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  summary.averageRating.toStringAsFixed(1),
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: List<Widget>.generate(
-                    5,
-                    (index) => Icon(
-                      Icons.star_rounded,
-                      size: 18,
-                      color: index < summary.averageRating.round()
-                          ? course.color
-                          : colors.divider,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${summary.reviewCount} ${context.l10n.text('course_reviews_count')}',
-                  style: TextStyle(color: colors.textSecondary),
-                ),
-              ],
+            Text(
+              summary.averageRating.toStringAsFixed(1),
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
-            const SizedBox(width: 18),
-            Expanded(
-              child: Column(
-                children: [5, 4, 3, 2, 1].map((rating) {
-                  final count = summary.ratingDistribution[rating] ?? 0;
-                  final maxCount = summary.ratingDistribution.values.fold<int>(
-                    1,
-                    (a, b) => a > b ? a : b,
-                  );
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Text('$rating'),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: LinearProgressIndicator(
-                              value: count / maxCount,
-                              minHeight: 10,
-                              backgroundColor: colors.backgroundElevated,
-                              color: course.color,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text('$count'),
-                      ],
-                    ),
-                  );
-                }).toList(growable: false),
+            const SizedBox(height: 4),
+            Row(
+              children: List<Widget>.generate(
+                5,
+                (index) => Icon(
+                  Icons.star_rounded,
+                  size: 18,
+                  color: index < summary.averageRating.round()
+                      ? course.color
+                      : colors.divider,
+                ),
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              '${summary.reviewCount} ${context.l10n.text('course_reviews_count')}',
+              style: TextStyle(color: colors.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            ...distribution.map((rating) {
+              final count = summary.ratingDistribution[rating] ?? 0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      child: Text(
+                        '$rating',
+                        style: TextStyle(color: colors.textSecondary),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: count / maxCount,
+                          minHeight: 9,
+                          backgroundColor: colors.backgroundElevated,
+                          color: course.color,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 28,
+                      child: Text(
+                        '$count',
+                        textAlign: TextAlign.end,
+                        style: TextStyle(color: colors.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
         const SizedBox(height: 18),
@@ -1281,8 +1453,14 @@ class _CourseReviewsSection extends StatelessWidget {
           accent: course.color,
           onRate: onRate,
         ),
+        const SizedBox(height: 12),
+        _ReviewFeedbackComposer(
+          accent: course.color,
+          controller: commentController,
+          onSubmit: onSubmitComment,
+        ),
         const SizedBox(height: 18),
-        ...course.reviews.map(
+        ...reviews.map(
           (review) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Container(
@@ -1369,7 +1547,16 @@ class _CourseReviewsSection extends StatelessWidget {
     if (compact) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-        children: [content],
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: colors.surface.withValues(alpha: 0.96),
+            ),
+            child: content,
+          ),
+        ],
       );
     }
     return GlowCard(
@@ -1392,6 +1579,8 @@ class _CourseRatingEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = context.isCompactLayout;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1399,41 +1588,162 @@ class _CourseRatingEditor extends StatelessWidget {
         color: context.appColors.surfaceSoft,
         border: Border.all(color: context.appColors.divider),
       ),
-      child: Row(
+      child: compact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.text('course_rate_prompt'),
+                  style: TextStyle(
+                    color: context.appColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 4,
+                  children: List<Widget>.generate(
+                    5,
+                    (index) => IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                      tooltip: '${index + 1}',
+                      onPressed: () => onRate(index + 1),
+                      icon: Icon(
+                        Icons.star_rounded,
+                        color: (rating ?? 0) >= index + 1
+                            ? accent
+                            : context.appColors.divider,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.text('course_rate_prompt'),
+                    style: TextStyle(
+                      color: context.appColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Wrap(
+                  spacing: 4,
+                  children: List<Widget>.generate(
+                    5,
+                    (index) => IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                      tooltip: '${index + 1}',
+                      onPressed: () => onRate(index + 1),
+                      icon: Icon(
+                        Icons.star_rounded,
+                        color: (rating ?? 0) >= index + 1
+                            ? accent
+                            : context.appColors.divider,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _ReviewFeedbackComposer extends StatelessWidget {
+  const _ReviewFeedbackComposer({
+    required this.accent,
+    required this.controller,
+    required this.onSubmit,
+  });
+
+  final Color accent;
+  final TextEditingController controller;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: colors.surfaceSoft,
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              context.l10n.text('course_rate_prompt'),
-              style: TextStyle(
-                color: context.appColors.textPrimary,
-                fontWeight: FontWeight.w700,
+          Text(
+            _reviewCommentPrompt(context.l10n.locale),
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: controller,
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: _reviewCommentHint(context.l10n.locale),
+              filled: true,
+              fillColor: colors.backgroundElevated,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: colors.divider),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: colors.divider),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: accent),
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Wrap(
-            spacing: 4,
-            children: List<Widget>.generate(
-              5,
-              (index) => IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-                tooltip: '${index + 1}',
-                onPressed: () => onRate(index + 1),
-                icon: Icon(
-                  Icons.star_rounded,
-                  color: (rating ?? 0) >= index + 1
-                      ? accent
-                      : context.appColors.divider,
-                ),
-              ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton(
+              onPressed: () {
+                FocusScope.of(context).unfocus();
+                onSubmit();
+              },
+              child: Text(context.l10n.text('send_review')),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+String _reviewCommentPrompt(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Расскажите почему',
+    AppLocale.en => 'Tell us why',
+    AppLocale.kk => 'Неге екенін жазыңыз',
+  };
+}
+
+String _reviewCommentHint(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Напишите комментарий',
+    AppLocale.en => 'Write a comment',
+    AppLocale.kk => 'Пікір жазыңыз',
+  };
 }
 
 class _CourseUpdatesSection extends StatelessWidget {
@@ -1448,8 +1758,12 @@ class _CourseUpdatesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final content = GlowCard(
-      accent: colors.accent,
+    final content = Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        color: colors.surface.withValues(alpha: 0.96),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1551,43 +1865,60 @@ class _ProgramSectionCard extends StatelessWidget {
           ...section.items.asMap().entries.map(
             (entry) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${entry.key + 1}',
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      fontWeight: FontWeight.w700,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: colors.backgroundElevated,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: colors.surface,
+                      ),
+                      child: Text(
+                        '${entry.key + 1}',
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          entry.value.title,
-                          style: TextStyle(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w700,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.value.title,
+                            style: TextStyle(
+                              color: colors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                              height: 1.25,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 8,
-                          children: [
-                            _TeacherPill(label: entry.value.durationLabel),
-                            _TeacherPill(label: '${entry.value.viewerCount}'),
-                            if (!compact)
-                              _TeacherPill(label: '${entry.value.helpfulCount}'),
-                          ],
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 8,
+                            children: [
+                              _TeacherPill(label: entry.value.durationLabel),
+                              _TeacherPill(label: '${entry.value.viewerCount}'),
+                              if (!compact)
+                                _TeacherPill(label: '${entry.value.helpfulCount}'),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

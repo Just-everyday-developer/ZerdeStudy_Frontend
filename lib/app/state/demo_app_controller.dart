@@ -326,6 +326,23 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
+  void toggleSavedCommunityCourse(String courseId) {
+    if (!state.savedCommunityCourseIds.contains(courseId)) {
+      saveCommunityCourse(courseId);
+      return;
+    }
+
+    final updatedSavedIds = Set<String>.from(state.savedCommunityCourseIds)
+      ..remove(courseId);
+
+    state = _withDerived(
+      state.copyWith(
+        savedCommunityCourseIds: updatedSavedIds,
+      ),
+    );
+    _persist();
+  }
+
   void rateCommunityCourse(String courseId, int stars) {
     final normalized = stars.clamp(1, 5);
     final updatedRatings = Map<String, int>.from(state.courseRatingsByCourseId)

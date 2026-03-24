@@ -111,7 +111,7 @@ List<CommunityCourse> buildDiscoveryCourses() {
     ),
   };
 
-  const seeds = <_DiscoveryCourseSeed>[
+  final seeds = <_DiscoveryCourseSeed>[
     _DiscoveryCourseSeed(
       id: 'course_portfolio_engineering',
       title: 'Portfolio Engineering for Students',
@@ -134,19 +134,321 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_sql_for_analysts',
       title: 'SQL for Product Analysts',
       subtitle: 'Queries, cohorts, funnels, and experiment reads',
-      description: 'Use practical SQL patterns for product questions, funnels, and metric reviews.',
+      description:
+          'SQL for Product Analysts teaches you to extract real insight from product databases — not just run queries. '
+          'Starting from SELECT and WHERE, the course builds through GROUP BY, JOINs, and CTEs toward window functions, '
+          'funnel analysis, cohort retention, and A/B test readouts. Every module uses product scenarios: DAU drops, '
+          'signup funnels, feature experiment results, and weekly retention curves. By the end you will write '
+          'production-quality analytical queries and present your findings with confidence.',
       level: 'Intermediate',
       rating: 4.7,
-      enrollmentCount: 980,
-      estimatedHours: 7,
+      enrollmentCount: 1820,
+      estimatedHours: 10,
       color: Color(0xFFFFD166),
       authorId: 'maksat_y',
       categoryKey: _topicSqlDatabases,
       topicKeys: <String>[_topicSqlDatabases, _topicDataAnalytics],
-      searchKeywords: <String>['sql', 'analytics', 'funnels'],
+      searchKeywords: <String>[
+        'sql',
+        'analytics',
+        'funnels',
+        'cohorts',
+        'product metrics',
+        'a/b test',
+      ],
       isPopular: true,
       isRecommended: true,
-      tags: <String>['sql', 'analytics', 'experiments'],
+      tags: <String>['sql', 'analytics', 'product', 'cohorts', 'funnels'],
+      customAudience: <String>[
+        'Product managers and analysts who make data-backed decisions but still rely on BI tools or colleagues to pull numbers.',
+        'Junior analysts transitioning from Excel and Looker dashboards to writing their own SQL.',
+        'Backend developers and data engineers who want to understand how product teams frame analytical questions.',
+      ],
+      customRequirements: <String>[
+        'Familiarity with spreadsheet concepts — rows, columns, filters, and basic aggregations.',
+        'A working SQL environment: any of DBeaver, BigQuery sandbox, Mode, or a local PostgreSQL install.',
+        'Understanding of core product metrics: DAU/MAU, retention, conversion funnels, and experiment basics.',
+      ],
+      customLearningOutcomes: <String>[
+        'Write clean SELECT queries for standard product metrics — DAU, WAU, and retention — without assistance.',
+        'Build funnel and cohort analyses from raw event tables using GROUP BY and window functions.',
+        'Read and verify A/B experiment results with SQL, including lift calculation and segment breakdowns.',
+        'Structure complex analytical logic with CTEs so queries stay readable and reviewable.',
+        'Identify and avoid the most common SQL mistakes that cause misleading product metrics.',
+        'Leave with a personal query library of reusable patterns for reporting and analysis reviews.',
+      ],
+      customLessons: <CommunityCourseLessonPreview>[
+        buildCourseLesson(
+          'SQL for Product Analysts: environment setup',
+          'Install a SQL client, connect to a sample product database, and run your first SELECT.',
+          durationMinutes: 10,
+        ),
+        buildCourseLesson(
+          'SQL for Product Analysts: funnel and cohort patterns',
+          'Walk through the core query patterns for conversion funnels and weekly cohort retention.',
+          durationMinutes: 14,
+        ),
+        buildCourseLesson(
+          'SQL for Product Analysts: A/B test readouts',
+          'Read experiment results with SQL — compute lift, check sample sizes, and segment by user attributes.',
+          durationMinutes: 13,
+        ),
+      ],
+      customModuleSections: <CommunityCourseModuleSection>[
+        CommunityCourseModuleSection(
+          title: 'Getting Started: SQL and Your Data Environment',
+          description: 'Set up your SQL client, understand the product database schema, and write your first queries.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'Why product teams use SQL — and what analysts actually query',
+              durationLabel: '8 min',
+              viewerCount: 2140,
+              helpfulCount: 81,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Setting up DBeaver, BigQuery sandbox, or a local PostgreSQL instance',
+              durationLabel: '10 min',
+              viewerCount: 1980,
+              helpfulCount: 74,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'Basic SELECT — Reading and Filtering Data',
+          description: 'Master SELECT, FROM, WHERE, and comparison operators on real product tables.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'SELECT and FROM: choosing columns and tables',
+              durationLabel: '12 min',
+              viewerCount: 1890,
+              helpfulCount: 71,
+            ),
+            CommunityCourseModuleItem(
+              title: 'WHERE and comparison operators: filtering rows',
+              durationLabel: '13 min',
+              viewerCount: 1760,
+              helpfulCount: 66,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Data types, NULL, and LIKE in product tables',
+              durationLabel: '11 min',
+              viewerCount: 1640,
+              helpfulCount: 60,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'Sorting and Limiting Results',
+          description: 'Control query output with ORDER BY and LIMIT to surface the most relevant rows.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'ORDER BY: sorting by metrics and dates',
+              durationLabel: '9 min',
+              viewerCount: 1580,
+              helpfulCount: 57,
+            ),
+            CommunityCourseModuleItem(
+              title: 'LIMIT and OFFSET: paginating large result sets',
+              durationLabel: '8 min',
+              viewerCount: 1490,
+              helpfulCount: 52,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'Aggregations — COUNT, SUM, AVG',
+          description: 'Compute product metrics with aggregate functions and handle NULL values correctly.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'COUNT, SUM, AVG, MIN, MAX on event and user tables',
+              durationLabel: '13 min',
+              viewerCount: 1720,
+              helpfulCount: 64,
+            ),
+            CommunityCourseModuleItem(
+              title: 'NULL handling: why COUNT(*) and COUNT(column) differ',
+              durationLabel: '10 min',
+              viewerCount: 1560,
+              helpfulCount: 58,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Computing DAU, WAU, and MAU with aggregate queries',
+              durationLabel: '14 min',
+              viewerCount: 1680,
+              helpfulCount: 63,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'GROUP BY and HAVING',
+          description: 'Segment metrics by user properties, dates, and event types using GROUP BY and HAVING.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'GROUP BY: aggregating per user, per day, per feature',
+              durationLabel: '14 min',
+              viewerCount: 1610,
+              helpfulCount: 61,
+            ),
+            CommunityCourseModuleItem(
+              title: 'HAVING vs WHERE: filtering before and after grouping',
+              durationLabel: '11 min',
+              viewerCount: 1490,
+              helpfulCount: 55,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Daily and weekly product metrics with GROUP BY date',
+              durationLabel: '13 min',
+              viewerCount: 1540,
+              helpfulCount: 58,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'Joining Tables — INNER, LEFT, and FULL',
+          description: 'Combine users, events, and properties tables with the right join type for each question.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'INNER JOIN and LEFT JOIN: when each one is correct',
+              durationLabel: '15 min',
+              viewerCount: 1680,
+              helpfulCount: 65,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Joining users to events: the most common product query pattern',
+              durationLabel: '13 min',
+              viewerCount: 1570,
+              helpfulCount: 60,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Multi-table queries and avoiding fan-out duplicates',
+              durationLabel: '12 min',
+              viewerCount: 1430,
+              helpfulCount: 54,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'Subqueries and CTEs',
+          description: 'Break complex analytical logic into readable, reusable steps with CTEs and subqueries.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'Scalar subqueries and IN/EXISTS for filtering',
+              durationLabel: '12 min',
+              viewerCount: 1390,
+              helpfulCount: 51,
+            ),
+            CommunityCourseModuleItem(
+              title: 'WITH (CTE): naming intermediate steps for clarity',
+              durationLabel: '14 min',
+              viewerCount: 1460,
+              helpfulCount: 56,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Chaining CTEs for multi-step product analysis',
+              durationLabel: '13 min',
+              viewerCount: 1340,
+              helpfulCount: 49,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'Window Functions — ROW_NUMBER, LAG, RANK',
+          description: 'Apply window functions for rankings, time-series comparisons, and running totals.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'OVER and PARTITION BY: understanding the window concept',
+              durationLabel: '13 min',
+              viewerCount: 1480,
+              helpfulCount: 58,
+            ),
+            CommunityCourseModuleItem(
+              title: 'ROW_NUMBER and RANK: deduplication and top-N queries',
+              durationLabel: '12 min',
+              viewerCount: 1370,
+              helpfulCount: 53,
+            ),
+            CommunityCourseModuleItem(
+              title: 'LAG and LEAD: week-over-week and day-over-day changes',
+              durationLabel: '14 min',
+              viewerCount: 1410,
+              helpfulCount: 55,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'Funnel Analysis with SQL',
+          description: 'Build step-by-step conversion funnels and compute drop-off rates from raw event logs.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'Modeling a signup or onboarding funnel in SQL',
+              durationLabel: '15 min',
+              viewerCount: 1540,
+              helpfulCount: 60,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Computing step conversion and drop-off per segment',
+              durationLabel: '13 min',
+              viewerCount: 1420,
+              helpfulCount: 55,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Session-based funnels and time-window constraints',
+              durationLabel: '12 min',
+              viewerCount: 1310,
+              helpfulCount: 50,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'Cohort Retention Analysis',
+          description: 'Define user cohorts, build retention matrices, and identify where users drop off over time.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'What is a cohort — signup week, first action, first purchase',
+              durationLabel: '11 min',
+              viewerCount: 1390,
+              helpfulCount: 53,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Building a retention matrix with date arithmetic and GROUP BY',
+              durationLabel: '16 min',
+              viewerCount: 1460,
+              helpfulCount: 57,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Plotting retention curves and identifying inflection points',
+              durationLabel: '13 min',
+              viewerCount: 1320,
+              helpfulCount: 50,
+            ),
+          ],
+        ),
+        CommunityCourseModuleSection(
+          title: 'A/B Tests and the Capstone',
+          description:
+              'Read experiment results with SQL, compute lift and confidence, and present a complete product analysis.',
+          items: <CommunityCourseModuleItem>[
+            CommunityCourseModuleItem(
+              title: 'Querying experiment assignment and event tables for A/B reads',
+              durationLabel: '14 min',
+              viewerCount: 1480,
+              helpfulCount: 57,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Lift calculation, sample-size checks, and segment breakdowns',
+              durationLabel: '15 min',
+              viewerCount: 1370,
+              helpfulCount: 53,
+            ),
+            CommunityCourseModuleItem(
+              title: 'Capstone: end-to-end product analysis from raw tables to insight',
+              durationLabel: '20 min',
+              viewerCount: 1560,
+              helpfulCount: 62,
+            ),
+          ],
+        ),
+      ],
     ),
     _DiscoveryCourseSeed(
       id: 'course_ml_journal_club',
@@ -925,8 +1227,12 @@ List<CommunityCourse> buildDiscoveryCourses() {
           isPopular: seed.isPopular,
           isRecommended: seed.isRecommended,
           tags: seed.tags,
-          lessons: _defaultCourseLessons(seed.title),
+          lessons: seed.customLessons ?? _defaultCourseLessons(seed.title),
           supportsCoursePlayer: _flagshipCourseIds.contains(seed.id),
+          audience: seed.customAudience,
+          requirements: seed.customRequirements,
+          learningOutcomes: seed.customLearningOutcomes,
+          moduleSections: seed.customModuleSections,
         ),
       )
       .toList(growable: false);
@@ -967,6 +1273,11 @@ class _DiscoveryCourseSeed {
     required this.isPopular,
     required this.isRecommended,
     required this.tags,
+    this.customAudience,
+    this.customRequirements,
+    this.customLearningOutcomes,
+    this.customModuleSections,
+    this.customLessons,
   });
 
   final String id;
@@ -985,4 +1296,9 @@ class _DiscoveryCourseSeed {
   final bool isPopular;
   final bool isRecommended;
   final List<String> tags;
+  final List<String>? customAudience;
+  final List<String>? customRequirements;
+  final List<String>? customLearningOutcomes;
+  final List<CommunityCourseModuleSection>? customModuleSections;
+  final List<CommunityCourseLessonPreview>? customLessons;
 }

@@ -11,6 +11,7 @@ class CourseDiscoverySearchBar extends StatelessWidget {
     required this.controller,
     required this.hintText,
     required this.onChanged,
+    this.onSubmitted,
     required this.onFilterTap,
     this.focusNode,
   });
@@ -18,19 +19,19 @@ class CourseDiscoverySearchBar extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onSubmitted;
   final VoidCallback onFilterTap;
   final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final tall = !context.isCompactLayout;
 
     return Container(
       clipBehavior: Clip.hardEdge,
       padding: EdgeInsets.symmetric(
         horizontal: 16,
-        vertical: tall ? 10 : 8,
+        vertical: context.isCompactLayout ? 8 : 10,
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -51,32 +52,33 @@ class CourseDiscoverySearchBar extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: SizedBox(
-              height: tall ? 42 : 40,
+              height: context.isCompactLayout ? 24 : 26,
               child: TextField(
                 controller: controller,
                 focusNode: focusNode,
                 onChanged: onChanged,
+                onSubmitted: onSubmitted,
                 scrollPadding: EdgeInsets.zero,
                 textAlignVertical: TextAlignVertical.center,
                 maxLines: 1,
                 minLines: 1,
+                textInputAction: TextInputAction.search,
                 style: TextStyle(
                   color: colors.textPrimary,
-                  height: 1.25,
-                  fontSize: tall ? 17 : 16,
+                  height: 1.15,
+                  fontSize: context.isCompactLayout ? 16 : 17,
                 ),
-                cursorWidth: 1.5,
+                cursorWidth: 1.4,
+                cursorHeight: context.isCompactLayout ? 18 : 20,
                 cursorRadius: const Radius.circular(1.2),
                 decoration: InputDecoration(
                   isDense: true,
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: tall ? 11 : 10,
-                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 2),
                   hintText: hintText,
                   hintStyle: TextStyle(
                     color: colors.textSecondary,
-                    fontSize: tall ? 17 : 16,
+                    fontSize: context.isCompactLayout ? 16 : 17,
                   ),
                 ),
               ),
@@ -144,15 +146,6 @@ class DiscoveryFilterPanelCard extends StatelessWidget {
         border: Border.all(
           color: highlighted ? colors.primary : colors.divider,
         ),
-        boxShadow: highlighted
-            ? [
-                BoxShadow(
-                  color: colors.primary.withValues(alpha: 0.12),
-                  blurRadius: 22,
-                  offset: const Offset(0, 10),
-                ),
-              ]
-            : const <BoxShadow>[],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

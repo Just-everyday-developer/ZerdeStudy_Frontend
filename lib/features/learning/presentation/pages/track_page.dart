@@ -7,6 +7,7 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
@@ -26,14 +27,21 @@ class TrackPage extends ConsumerWidget {
     final track = catalog.trackById(trackId);
     final progress = catalog.progressForTrack(state, trackId);
     final assessmentResult = catalog.assessmentResultFor(state, trackId);
-    final colors = context.appColors;
+    final compact = context.isCompactLayout;
 
     return AppPageScaffold(
       title: context.l10n.text('track_overview'),
+      horizontalPadding: compact ? 0 : null,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        padding: EdgeInsets.fromLTRB(
+          compact ? 16 : 20,
+          8,
+          compact ? 16 : 20,
+          40,
+        ),
         children: [
-          GlowCard(
+          _TrackSurface(
+            compact: compact,
             accent: track.color,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,7 +56,7 @@ class TrackPage extends ConsumerWidget {
                 Text(
                   track.subtitle.resolve(state.locale),
                   style: TextStyle(
-                    color: colors.textSecondary,
+                    color: context.appColors.textSecondary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -56,7 +64,7 @@ class TrackPage extends ConsumerWidget {
                 Text(
                   track.description.resolve(state.locale),
                   style: TextStyle(
-                    color: colors.textSecondary,
+                    color: context.appColors.textSecondary,
                     height: 1.45,
                   ),
                 ),
@@ -74,22 +82,25 @@ class TrackPage extends ConsumerWidget {
                   child: LinearProgressIndicator(
                     value: progress.fraction,
                     minHeight: 10,
-                    backgroundColor: colors.backgroundElevated,
+                    backgroundColor: context.appColors.backgroundElevated,
                     color: track.color,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   '${progress.completedUnits}/${progress.totalUnits} units | ${progress.completedQuizzes}/${progress.totalQuizzes} quizzes | ${progress.completedTrainers}/${progress.totalTrainers} labs',
-                  style: TextStyle(color: colors.textSecondary),
+                  style: TextStyle(color: context.appColors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
-                    color: colors.surfaceSoft,
-                    border: Border.all(color: colors.divider),
+                    color: context.appColors.surfaceSoft,
+                    border: compact
+                        ? null
+                        : Border.all(color: context.appColors.divider),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,7 +111,7 @@ class TrackPage extends ConsumerWidget {
                             child: Text(
                               'Track assessment',
                               style: TextStyle(
-                                color: colors.textPrimary,
+                                color: context.appColors.textPrimary,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -111,7 +122,7 @@ class TrackPage extends ConsumerWidget {
                                 : '${assessmentResult.bestPercent}% best',
                             style: TextStyle(
                               color: assessmentResult == null
-                                  ? colors.textSecondary
+                                  ? context.appColors.textSecondary
                                   : track.color,
                               fontWeight: FontWeight.w700,
                             ),
@@ -122,9 +133,9 @@ class TrackPage extends ConsumerWidget {
                       Text(
                         assessmentResult == null
                             ? 'Complete the 10-question branch assessment to store your result in the tree, profile, and statistics.'
-                            : 'Last result: ${assessmentResult.lastPercent}%  •  Attempts: ${assessmentResult.attemptCount}',
+                            : 'Last result: ${assessmentResult.lastPercent}% - Attempts: ${assessmentResult.attemptCount}',
                         style: TextStyle(
-                          color: colors.textSecondary,
+                          color: context.appColors.textSecondary,
                           height: 1.4,
                         ),
                       ),
@@ -134,9 +145,8 @@ class TrackPage extends ConsumerWidget {
                             ? 'Start assessment'
                             : 'Retake assessment',
                         icon: Icons.assignment_turned_in_rounded,
-                        onPressed: () => context.push(
-                          AppRoutes.assessmentByTrackId(track.id),
-                        ),
+                        onPressed: () =>
+                            context.push(AppRoutes.assessmentByTrackId(track.id)),
                       ),
                     ],
                   ),
@@ -170,7 +180,8 @@ class TrackPage extends ConsumerWidget {
           ...track.modules.map(
             (module) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
-              child: GlowCard(
+              child: _TrackSurface(
+                compact: compact,
                 accent: track.color,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,7 +189,7 @@ class TrackPage extends ConsumerWidget {
                     Text(
                       module.title.resolve(state.locale),
                       style: TextStyle(
-                        color: colors.textPrimary,
+                        color: context.appColors.textPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -186,7 +197,7 @@ class TrackPage extends ConsumerWidget {
                     Text(
                       module.summary.resolve(state.locale),
                       style: TextStyle(
-                        color: colors.textSecondary,
+                        color: context.appColors.textSecondary,
                         height: 1.4,
                       ),
                     ),
@@ -201,20 +212,20 @@ class TrackPage extends ConsumerWidget {
                         title: Text(
                           lesson.title.resolve(state.locale),
                           style: TextStyle(
-                            color: colors.textPrimary,
+                            color: context.appColors.textPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         subtitle: Text(
                           lesson.summary.resolve(state.locale),
                           style: TextStyle(
-                            color: colors.textSecondary,
+                            color: context.appColors.textSecondary,
                             height: 1.35,
                           ),
                         ),
                         trailing: Icon(
                           Icons.chevron_right_rounded,
-                          color: colors.textSecondary,
+                          color: context.appColors.textSecondary,
                         ),
                       ),
                     ),
@@ -230,20 +241,20 @@ class TrackPage extends ConsumerWidget {
                         title: Text(
                           module.practice!.title.resolve(state.locale),
                           style: TextStyle(
-                            color: colors.textPrimary,
+                            color: context.appColors.textPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         subtitle: Text(
                           module.practice!.summary.resolve(state.locale),
                           style: TextStyle(
-                            color: colors.textSecondary,
+                            color: context.appColors.textSecondary,
                             height: 1.35,
                           ),
                         ),
                         trailing: Icon(
                           Icons.chevron_right_rounded,
-                          color: colors.textSecondary,
+                          color: context.appColors.textSecondary,
                         ),
                       ),
                   ],
@@ -253,6 +264,38 @@ class TrackPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TrackSurface extends StatelessWidget {
+  const _TrackSurface({
+    required this.compact,
+    required this.accent,
+    required this.child,
+  });
+
+  final bool compact;
+  final Color accent;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!compact) {
+      return GlowCard(
+        accent: accent,
+        child: child,
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: context.appColors.surface.withValues(alpha: 0.96),
+      ),
+      child: child,
     );
   }
 }

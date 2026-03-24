@@ -7,6 +7,7 @@ import '../../app/routing/app_routes.dart';
 import '../../app/state/app_locale.dart';
 import '../../app/state/demo_app_controller.dart';
 import 'app_settings_panel.dart';
+import '../layout/app_breakpoints.dart';
 import '../localization/app_localizations.dart';
 import '../providers/course_search_focus_provider.dart';
 import '../theme/app_theme_colors.dart';
@@ -87,10 +88,14 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
   }
 
   void _selectAdjacentBranch(int delta) {
-    final destinationsCount = 5;
+    final cycle = context.isCompactLayout
+        ? const <int>[0, 1, 2, 3, 4]
+        : const <int>[0, 1, 2, 3];
     final currentIndex = widget.navigationShell.currentIndex;
-    final nextIndex = (currentIndex + delta + destinationsCount) % destinationsCount;
-    _onDestinationSelected(nextIndex);
+    final currentPosition = cycle.indexOf(currentIndex);
+    final safePosition = currentPosition == -1 ? 0 : currentPosition;
+    final nextPosition = (safePosition + delta + cycle.length) % cycle.length;
+    _onDestinationSelected(cycle[nextPosition]);
   }
 
   KeyEventResult _handleShellKeyEvent(KeyEvent event) {
@@ -217,15 +222,13 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
           final currentNavigator =
               widget.navigatorKeys[widget.navigationShell.currentIndex]
                   .currentState;
-          final canGoBack = (currentNavigator?.canPop() ?? false) ||
-              _branchHistory.isNotEmpty ||
-              widget.navigationShell.currentIndex != 0;
+          final canGoBack = currentNavigator?.canPop() ?? false;
           final shellBody = compact
               ? widget.navigationShell
               : Column(
                   children: [
                     _DesktopShellBar(
-                      destinations: destinations,
+                      destinations: destinations.take(4).toList(growable: false),
                       currentIndex: widget.navigationShell.currentIndex,
                       currentUserName: state.user?.name ?? 'Talgat',
                       onDestinationSelected: _onDestinationSelected,
@@ -328,7 +331,7 @@ class _DesktopShellBar extends StatelessWidget {
                 ),
                 tooltip: MaterialLocalizations.of(context).backButtonTooltip,
               ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
             ],
             Expanded(
               child: Wrap(
