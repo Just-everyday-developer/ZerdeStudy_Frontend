@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,12 +14,10 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../ai/presentation/providers/ai_chat_controller.dart';
 
 class LessonPage extends ConsumerStatefulWidget {
-  const LessonPage({
-    super.key,
-    required this.lessonId,
-  });
+  const LessonPage({super.key, required this.lessonId});
 
   final String lessonId;
 
@@ -37,7 +37,10 @@ class _LessonPageState extends ConsumerState<LessonPage> {
     final catalog = ref.watch(demoCatalogProvider);
     final lesson = catalog.lessonById(widget.lessonId);
     final completed = state.completedLessonIds.contains(widget.lessonId);
-    final requirementsMet = catalog.lessonRequirementsMet(state, widget.lessonId);
+    final requirementsMet = catalog.lessonRequirementsMet(
+      state,
+      widget.lessonId,
+    );
     final colors = context.appColors;
     final l10n = context.l10n;
     final locale = state.locale;
@@ -54,16 +57,16 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               children: [
                 Text(
                   lesson.summary.resolve(state.locale),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.45,
-                  ),
+                  style: TextStyle(color: colors.textSecondary, height: 1.45),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 10,
                   children: [
-                    _Pill(label: '${lesson.durationMinutes} ${l10n.text('minutes')}'),
+                    _Pill(
+                      label:
+                          '${lesson.durationMinutes} ${l10n.text('minutes')}',
+                    ),
                     _Pill(label: '${lesson.xpReward} XP'),
                   ],
                 ),
@@ -137,10 +140,10 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                   ...lesson.theoryContent
                       .resolve(locale)
                       .split('\n\n')
-                      .map((paragraph) => _TheoryParagraph(
-                            text: paragraph,
-                            colors: colors,
-                          )),
+                      .map(
+                        (paragraph) =>
+                            _TheoryParagraph(text: paragraph, colors: colors),
+                      ),
                 ],
               ),
             ),
@@ -203,8 +206,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                     message: correct
                         ? l10n.text('lesson_quiz_correct')
                         : l10n.text('lesson_quiz_retry'),
-                    type:
-                        correct ? AppNoticeType.success : AppNoticeType.error,
+                    type: correct ? AppNoticeType.success : AppNoticeType.error,
                   );
                 },
               ),
@@ -234,8 +236,9 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                     message: isCorrect
                         ? l10n.text('lesson_memory_completed')
                         : l10n.text('lesson_memory_retry'),
-                    type:
-                        isCorrect ? AppNoticeType.success : AppNoticeType.error,
+                    type: isCorrect
+                        ? AppNoticeType.success
+                        : AppNoticeType.error,
                   );
                 },
               ),
@@ -263,10 +266,12 @@ class _LessonPageState extends ConsumerState<LessonPage> {
             icon: Icons.smart_toy_rounded,
             onPressed: () {
               controller.focusLesson(widget.lessonId);
-              controller.sendAiMessage(
-                lesson.promptSuggestion.resolve(state.locale),
-              );
               context.go(AppRoutes.ai);
+              unawaited(
+                ref
+                    .read(aiChatControllerProvider.notifier)
+                    .sendMessage(lesson.promptSuggestion.resolve(state.locale)),
+              );
             },
           ),
         ],
@@ -283,8 +288,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
       final selected = _trainerSequences[trainer.id] ?? <String>[];
       if (selected.length != trainer.options.length) return false;
       for (var i = 0; i < trainer.options.length; i++) {
-        if (i >= selected.length ||
-            selected[i] != trainer.correctSequence[i]) {
+        if (i >= selected.length || selected[i] != trainer.correctSequence[i]) {
           return false;
         }
       }
@@ -389,10 +393,7 @@ class _TrainerCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             trainer.instruction.resolve(locale),
-            style: TextStyle(
-              color: colors.textSecondary,
-              height: 1.35,
-            ),
+            style: TextStyle(color: colors.textSecondary, height: 1.35),
           ),
           const SizedBox(height: 12),
           if (trainer.template != null)
@@ -415,10 +416,7 @@ class _TrainerCard extends StatelessWidget {
             if (trainer.template != null) const SizedBox(height: 10),
             Text(
               trainer.prompt,
-              style: TextStyle(
-                color: colors.textSecondary,
-                height: 1.35,
-              ),
+              style: TextStyle(color: colors.textSecondary, height: 1.35),
             ),
           ],
           const SizedBox(height: 12),
@@ -450,11 +448,12 @@ class _TrainerCard extends StatelessWidget {
                 ? context.l10n.text('lesson_solved')
                 : context.l10n.text('lesson_complete_lab'),
             icon: completed ? Icons.check_circle_rounded : Icons.memory_rounded,
-            onPressed: completed ||
+            onPressed:
+                completed ||
                     (trainer.kind == CodeTrainerKind.reorderLines ||
                             trainer.kind == CodeTrainerKind.matching
                         ? selectedSequence.length !=
-                            trainer.correctSequence.length
+                              trainer.correctSequence.length
                         : selectedOptionId == null)
                 ? null
                 : onSubmit,
@@ -491,19 +490,20 @@ class _ReorderTrainerView extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: remaining.map((option) {
-            return ActionChip(
-              label: Text(option.label.resolve(locale)),
-              onPressed: () =>
-                  onSequenceChanged(<String>[...selectedSequence, option.id]),
-            );
-          }).toList(growable: false),
+          children: remaining
+              .map((option) {
+                return ActionChip(
+                  label: Text(option.label.resolve(locale)),
+                  onPressed: () => onSequenceChanged(<String>[
+                    ...selectedSequence,
+                    option.id,
+                  ]),
+                );
+              })
+              .toList(growable: false),
         ),
         const SizedBox(height: 12),
-        Text(
-          'Your sequence',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Your sequence', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         ...selectedSequence.map((id) {
           final option = trainer.options.firstWhere((item) => item.id == id);
@@ -571,14 +571,14 @@ class _MatchingTrainerView extends StatelessWidget {
                 color: matched
                     ? colors.success.withValues(alpha: 0.10)
                     : index == currentIndex
-                        ? colors.primary.withValues(alpha: 0.10)
-                        : colors.surfaceSoft,
+                    ? colors.primary.withValues(alpha: 0.10)
+                    : colors.surfaceSoft,
                 border: Border.all(
                   color: matched
                       ? colors.success.withValues(alpha: 0.5)
                       : index == currentIndex
-                          ? colors.primary
-                          : colors.divider,
+                      ? colors.primary
+                      : colors.divider,
                 ),
               ),
               child: Row(
@@ -602,11 +602,10 @@ class _MatchingTrainerView extends StatelessWidget {
                     child: Text(
                       matchedDef ?? '...',
                       style: TextStyle(
-                        color: matched
-                            ? colors.success
-                            : colors.textSecondary,
-                        fontStyle:
-                            matched ? FontStyle.normal : FontStyle.italic,
+                        color: matched ? colors.success : colors.textSecondary,
+                        fontStyle: matched
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
                     ),
                   ),
@@ -634,9 +633,9 @@ class _MatchingTrainerView extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             context.l10n.text('lesson_match_definition'),
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: colors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -747,9 +746,7 @@ class _TheoryParagraph extends StatelessWidget {
           decoration: BoxDecoration(
             color: colors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: colors.primary.withValues(alpha: 0.25),
-            ),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.25)),
           ),
           child: Text(
             content,

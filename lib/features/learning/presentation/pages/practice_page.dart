@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,12 +12,10 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../ai/presentation/providers/ai_chat_controller.dart';
 
 class PracticePage extends ConsumerStatefulWidget {
-  const PracticePage({
-    super.key,
-    required this.practiceId,
-  });
+  const PracticePage({super.key, required this.practiceId});
 
   final String practiceId;
 
@@ -54,10 +54,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                 const SizedBox(height: 8),
                 Text(
                   practice.brief.resolve(state.locale),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.45,
-                  ),
+                  style: TextStyle(color: colors.textSecondary, height: 1.45),
                 ),
               ],
             ),
@@ -196,10 +193,14 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             icon: Icons.smart_toy_rounded,
             onPressed: () {
               controller.focusPractice(widget.practiceId);
-              controller.sendAiMessage(
-                practice.promptSuggestion.resolve(state.locale),
-              );
               context.go(AppRoutes.ai);
+              unawaited(
+                ref
+                    .read(aiChatControllerProvider.notifier)
+                    .sendMessage(
+                      practice.promptSuggestion.resolve(state.locale),
+                    ),
+              );
             },
           ),
         ],

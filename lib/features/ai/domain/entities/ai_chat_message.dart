@@ -30,4 +30,29 @@ class AiChatMessage {
       isPending: isPending ?? this.isPending,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'author': author.name,
+      'text': text,
+      'createdAt': createdAt.toIso8601String(),
+      'isPending': isPending,
+    };
+  }
+
+  factory AiChatMessage.fromJson(Map<String, dynamic> json) {
+    return AiChatMessage(
+      id: json['id'] as String? ?? '',
+      author: AiChatAuthor.values.firstWhere(
+        (value) => value.name == json['author'],
+        orElse: () => AiChatAuthor.user,
+      ),
+      text: json['text'] as String? ?? '',
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      isPending: json['isPending'] as bool? ?? false,
+    );
+  }
 }

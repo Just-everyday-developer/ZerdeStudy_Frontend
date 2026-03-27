@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -245,39 +248,54 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final compact = context.isCompactLayout;
     final isMentor = message.author == AiChatAuthor.mentor;
     final accent = isMentor ? colors.primary : colors.accent;
     final label = isMentor
         ? context.l10n.text('mentor_label')
         : context.l10n.text('you_label');
-    final text = message.isPending
-        ? _thinkingLabel(context.l10n.locale)
-        : message.text;
 
-    return Align(
-      alignment: isMentor ? Alignment.centerLeft : Alignment.centerRight,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: GlowCard(
-          accent: accent,
-          child: Column(
-            crossAxisAlignment: isMentor
-                ? CrossAxisAlignment.start
-                : CrossAxisAlignment.end,
-            children: [
-              Text(
-                label,
-                style: TextStyle(color: accent, fontWeight: FontWeight.w700),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final bubbleMaxWidth = compact
+            ? availableWidth
+            : isMentor
+            ? availableWidth
+            : math.min(availableWidth * 0.62, 680.0);
+
+        return Align(
+          alignment: isMentor ? Alignment.centerLeft : Alignment.centerRight,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
+            child: GlowCard(
+              accent: accent,
+              child: Column(
+                crossAxisAlignment: isMentor
+                    ? CrossAxisAlignment.start
+                    : CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (message.isPending)
+                    _ThinkingText(locale: context.l10n.locale)
+                  else
+                    Text(
+                      message.text,
+                      style: TextStyle(color: colors.textPrimary, height: 1.45),
+                    ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                text,
-                style: TextStyle(color: colors.textPrimary, height: 1.45),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -322,84 +340,86 @@ class _FaqSection extends StatelessWidget {
     return switch (locale) {
       AppLocale.ru => const <_FaqItem>[
         _FaqItem(
-          question: 'С чего лучше начать в этом дереве знаний?',
+          question: 'В чем разница между stack и heap?',
           answer:
-              'Начните с core-тем: математика, алгоритмы, базы данных, сети и операционные системы дают основу почти для всех инженерных направлений.',
+              'Stack хранит короткоживущие данные вызовов и локальные переменные, а heap используется для объектов с более гибким временем жизни и обычно управляется сборщиком мусора.',
         ),
         _FaqItem(
-          question: 'Как Operating Systems помогает понять backend и mobile?',
+          question: 'Когда использовать List, Set и Map?',
           answer:
-              'ОС объясняют процессы, память, файлы, потоки и работу с ресурсами, а это напрямую влияет на серверные приложения и мобильный runtime.',
+              'List подходит для упорядоченной последовательности, Set — для уникальных значений, а Map — когда нужно быстро получать значение по ключу.',
         ),
         _FaqItem(
-          question: 'Какие core-темы особенно важны для ML Engineer?',
+          question: 'Чем synchronous код отличается от asynchronous?',
           answer:
-              'Линейная алгебра, теория вероятностей и статистика особенно важны: они помогают понимать представление данных, обучение моделей и оценку качества.',
+              'Синхронный код выполняется шаг за шагом и блокирует текущий поток, а асинхронный позволяет ждать сеть, файл или таймер без остановки остальной работы.',
         ),
         _FaqItem(
-          question: 'Зачем в уроках есть Output Quiz и Code Memory Lab?',
+          question: 'Когда лучше использовать рекурсию, а когда цикл?',
           answer:
-              'Output Quiz тренирует понимание выполнения кода, а Code Memory Lab закрепляет синтаксис и типичные шаблоны через короткие упражнения.',
+              'Рекурсия удобна для деревьев, графов и задач с естественным разбиением на подзадачи, а цикл обычно проще и экономнее по памяти для линейных проходов.',
         ),
         _FaqItem(
-          question: 'Как выбрать следующую ветку после текущей?',
+          question:
+              'Как подойти к отладке, если код работает не так, как ожидалось?',
           answer:
-              'Идите по соседним ветвям: после core-тем логично переходить в специализацию, которая использует этот фундамент на практике.',
+              'Сначала воспроизведите проблему стабильно, затем проверьте входные данные, промежуточные значения и граничные случаи, чтобы сузить место ошибки перед исправлением.',
         ),
       ],
       AppLocale.kk => const <_FaqItem>[
         _FaqItem(
-          question: 'Осы білім ағашында неден бастаған дұрыс?',
+          question: 'Stack пен heap арасындағы айырмашылық қандай?',
           answer:
-              'Алдымен core-тақырыптардан бастаған дұрыс: математика, алгоритмдер, деректер базасы, желілер мен операциялық жүйелер кейінгі бағыттарға негіз болады.',
+              'Stack-та функция шақырулары мен жергілікті айнымалылар сияқты қысқа өмір сүретін деректер сақталады, ал heap-та өмір сүру уақыты икемдірек объектілер орналасады және оны көбіне garbage collector басқарады.',
+        ),
+        _FaqItem(
+          question: 'List, Set және Map-ты қашан қолданған дұрыс?',
+          answer:
+              'List реті маңызды тізбекке ыңғайлы, Set қайталанбайтын мәндер үшін қолайлы, ал Map кілт арқылы мәнді тез табу керек болғанда пайдаланылады.',
         ),
         _FaqItem(
           question:
-              'Operating Systems backend пен mobile бағытына қалай көмектеседі?',
+              'Synchronous код пен asynchronous кодтың айырмашылығы неде?',
           answer:
-              'ОЖ процестерді, жадты, файлдарды, ағындарды және ресурстармен жұмысты түсіндіреді. Бұл серверлік және мобильді қосымшалардың жұмысына тікелей әсер етеді.',
+              'Синхронды код қадам-қадаммен орындалып, ағымдағы ағынды бөгейді, ал асинхронды код желі, файл не таймерді күткенде қалған жұмысты тоқтатпайды.',
         ),
         _FaqItem(
-          question: 'ML Engineer үшін қай core-тақырыптар маңызды?',
+          question: 'Рекурсияны қашан, циклды қашан қолданған дұрыс?',
           answer:
-              'Сызықтық алгебра, ықтималдық теориясы және статистика модельдерді, деректерді және бағалау метрикаларын түсінуге көмектеседі.',
+              'Рекурсия ағаштар, графтар және ішкі есептерге табиғи бөлінетін міндеттер үшін ыңғайлы, ал цикл сызықтық өту кезінде әдетте қарапайым әрі жадты азырақ қолданады.',
         ),
         _FaqItem(
-          question: 'Неліктен сабақтарда Output Quiz пен Code Memory Lab бар?',
+          question:
+              'Код күткендей жұмыс істемесе, оны қалай жөндеп тексерген дұрыс?',
           answer:
-              'Output Quiz кодтың орындалуын түсінуді дамытады, ал Code Memory Lab синтаксис пен үлгілерді қысқа тапсырмалар арқылы бекітеді.',
-        ),
-        _FaqItem(
-          question: 'Келесі тармақты қалай таңдаған дұрыс?',
-          answer:
-              'Алдыңғы core-тақырыппен логикалық байланысы бар келесі бағытқа өткен дұрыс.',
+              'Алдымен қатені тұрақты түрде қайталаңыз, содан кейін кіріс деректерін, аралық мәндерді және шеткі жағдайларды тексеріп, мәселенің нақты орнын тарылтыңыз.',
         ),
       ],
       AppLocale.en => const <_FaqItem>[
         _FaqItem(
-          question: 'Where should I start in this tree?',
+          question: 'What is the difference between stack and heap?',
           answer:
-              'Start with the core branches because they explain the foundation behind most engineering roles.',
+              'The stack stores short-lived call data and local variables, while the heap is used for objects with a more flexible lifetime and is usually managed by the garbage collector.',
         ),
         _FaqItem(
-          question: 'How do Operating Systems support backend and mobile?',
+          question: 'When should I use List, Set, and Map?',
           answer:
-              'Operating Systems explain processes, memory, files, threads, and resource access, which shape both server and mobile runtime behavior.',
+              'Use a List for ordered sequences, a Set for unique values, and a Map when you need to look up values quickly by key.',
         ),
         _FaqItem(
-          question: 'Which core topics matter most for ML Engineer?',
+          question: 'How is synchronous code different from asynchronous code?',
           answer:
-              'Linear algebra, probability, and statistics are especially important because they support model training, data representation, and evaluation.',
+              'Synchronous code runs step by step and blocks the current thread, while asynchronous code can wait for network, file, or timer operations without stopping the rest of the work.',
         ),
         _FaqItem(
-          question: 'Why do lessons include Output Quiz and Code Memory Lab?',
+          question: 'When is recursion better than a loop?',
           answer:
-              'The quiz checks code execution reasoning, while the memory lab reinforces syntax and structure through short active practice.',
+              'Recursion works well for trees, graphs, and problems that naturally split into smaller subproblems, while loops are usually simpler and more memory-efficient for linear passes.',
         ),
         _FaqItem(
-          question: 'How should I choose the next branch?',
+          question: 'How should I debug code that behaves unexpectedly?',
           answer:
-              'Move into the specialization that naturally builds on the core topic you just studied.',
+              'First reproduce the problem reliably, then inspect inputs, intermediate values, and edge cases so you can narrow down the exact source of the bug before fixing it.',
         ),
       ],
     };
@@ -422,12 +442,79 @@ String _askQuestionLabel(AppLocale locale) {
   };
 }
 
-String _thinkingLabel(AppLocale locale) {
+List<String> _thinkingFrames(AppLocale locale) {
   return switch (locale) {
-    AppLocale.ru => 'AI думает...',
-    AppLocale.en => 'AI is thinking...',
-    AppLocale.kk => 'AI ойланып жатыр...',
+    AppLocale.ru => <String>[
+      'AI думает',
+      'AI думает.',
+      'AI думает..',
+      'AI думает...',
+    ],
+    AppLocale.en => <String>[
+      'AI is thinking',
+      'AI is thinking.',
+      'AI is thinking..',
+      'AI is thinking...',
+    ],
+    AppLocale.kk => <String>[
+      'AI ойланып жатыр',
+      'AI ойланып жатыр.',
+      'AI ойланып жатыр..',
+      'AI ойланып жатыр...',
+    ],
   };
+}
+
+class _ThinkingText extends StatelessWidget {
+  const _ThinkingText({required this.locale});
+
+  final AppLocale locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final frames = _thinkingFrames(locale);
+
+    return DefaultTextStyle(
+      style: TextStyle(color: colors.textPrimary, height: 1.45),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: colors.primary,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: 0.32),
+                  blurRadius: 12,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AnimatedTextKit(
+              repeatForever: true,
+              pause: const Duration(milliseconds: 120),
+              isRepeatingAnimation: true,
+              displayFullTextOnTap: false,
+              stopPauseOnTap: false,
+              animatedTexts: [
+                for (final frame in frames)
+                  FadeAnimatedText(
+                    frame,
+                    duration: const Duration(milliseconds: 420),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _FaqCard extends StatelessWidget {
