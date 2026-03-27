@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
@@ -61,6 +62,7 @@ class _ForgotPasswordCodePageState
 
   void _submitCode() {
     final l10n = context.l10n;
+    final locale = ref.read(demoAppControllerProvider).locale;
     if (!_isCodeComplete) {
       AppNotice.show(
         context,
@@ -70,15 +72,12 @@ class _ForgotPasswordCodePageState
       return;
     }
 
-    ref.read(demoAppControllerProvider.notifier).loginWithEmail(
-          email: widget.email ?? 'reset@zerdestudy.app',
-        );
     AppNotice.show(
       context,
-      message: l10n.text('code_verified'),
-      type: AppNoticeType.success,
+      message: _pendingResetMessage(locale),
+      type: AppNoticeType.info,
+      duration: const Duration(seconds: 3),
     );
-    context.go(AppRoutes.home);
   }
 
   void _onDigitChanged(int index, String value) {
@@ -127,11 +126,9 @@ class _ForgotPasswordCodePageState
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    l10n.format(
-                      'verification_code_subtitle',
-                      <String, Object>{
-                        'email': widget.email ?? l10n.text('email'),
-                      },
+                    _verificationCodeSubtitle(
+                      state.locale,
+                      widget.email ?? l10n.text('email'),
                     ),
                     style: Theme.of(context)
                         .textTheme
@@ -183,6 +180,28 @@ class _ForgotPasswordCodePageState
         ),
       ),
     );
+  }
+}
+
+String _verificationCodeSubtitle(AppLocale locale, String email) {
+  switch (locale) {
+    case AppLocale.ru:
+      return 'Экран ввода кода пока оставлен как заглушка для будущей backend-задачи. Для адреса $email реальная проверка пока не подключена.';
+    case AppLocale.en:
+      return 'This code entry screen is kept as a placeholder for a future backend task. Real verification for $email is not connected yet.';
+    case AppLocale.kk:
+      return '$email адресы үшін кодты тексеру әзірше қосылған жоқ. Бұл экран келесі backend тапсырмасына арналған уақытша орын.';
+  }
+}
+
+String _pendingResetMessage(AppLocale locale) {
+  switch (locale) {
+    case AppLocale.ru:
+      return 'Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РїР°СЂРѕР»СЏ РІС‹РЅРµСЃРµРј РІ СЃР»РµРґСѓСЋС‰СѓСЋ backend-Р·Р°РґР°С‡Сѓ.';
+    case AppLocale.en:
+      return 'Password reset will be connected in the next backend task.';
+    case AppLocale.kk:
+      return 'ТљТ±РїРёСЏСЃУ©Р·РґС– Т›Р°Р»РїС‹РЅР° РєРµР»С‚С–СЂСѓ РєРµР»РµСЃС– backend С‚Р°РїСЃС‹СЂРјР°СЃС‹РЅРґР° Т›РѕСЃС‹Р»Р°РґС‹.';
   }
 }
 

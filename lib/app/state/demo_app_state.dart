@@ -7,6 +7,7 @@ class DemoAppState {
     required this.locale,
     required this.themeMode,
     required this.isAuthenticated,
+    required this.isModerator,
     required this.user,
     required this.currentTrackId,
     required this.focusedLessonId,
@@ -38,6 +39,7 @@ class DemoAppState {
   final AppLocale locale;
   final AppThemeMode themeMode;
   final bool isAuthenticated;
+  final bool isModerator;
   final DemoUser? user;
   final String currentTrackId;
   final String? focusedLessonId;
@@ -91,6 +93,7 @@ class DemoAppState {
     AppLocale? locale,
     AppThemeMode? themeMode,
     bool? isAuthenticated,
+    bool? isModerator,
     Object? user = _sentinel,
     String? currentTrackId,
     Object? focusedLessonId = _sentinel,
@@ -119,6 +122,7 @@ class DemoAppState {
       locale: locale ?? this.locale,
       themeMode: themeMode ?? this.themeMode,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      isModerator: isModerator ?? this.isModerator,
       user: identical(user, _sentinel) ? this.user : user as DemoUser?,
       currentTrackId: currentTrackId ?? this.currentTrackId,
       focusedLessonId: identical(focusedLessonId, _sentinel)
@@ -167,6 +171,7 @@ class DemoAppState {
       'locale': locale.code,
       'themeMode': themeMode.code,
       'isAuthenticated': isAuthenticated,
+      'isModerator': isModerator,
       'user': user?.toJson(),
       'currentTrackId': currentTrackId,
       'focusedLessonId': focusedLessonId,
@@ -206,6 +211,7 @@ class DemoAppState {
       locale: AppLocale.fromCode(json['locale'] as String?),
       themeMode: AppThemeMode.fromCode(json['themeMode'] as String?),
       isAuthenticated: json['isAuthenticated'] as bool? ?? false,
+      isModerator: (json['isModerator'] as bool?) ?? false,
       user: json['user'] is Map<String, dynamic>
           ? DemoUser.fromJson(json['user'] as Map<String, dynamic>)
           : null,

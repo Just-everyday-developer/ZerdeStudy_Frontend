@@ -4,18 +4,21 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
+import '../../../../app/state/app_theme_mode.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_app_state.dart';
 import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
 import '../../../../core/common_widgets/app_button.dart';
+import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({
@@ -171,6 +174,53 @@ class ProfilePage extends ConsumerWidget {
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(width: 24),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            l10n.text('locale'),
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          LocaleSelector(
+                            currentLocale: state.locale,
+                            onChanged: controller.changeLocale,
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            l10n.text('theme'),
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: AppThemeMode.values.map((mode) {
+                              final selected = mode == state.themeMode;
+                              return ChoiceChip(
+                                label: Text(_themeModeLabel(l10n, mode)),
+                                selected: selected,
+                                onSelected: (_) => controller.changeThemeMode(mode),
+                                selectedColor: colors.primary.withValues(alpha: 0.16),
+                                backgroundColor: colors.surfaceSoft,
+                                side: BorderSide(
+                                  color: selected ? colors.primary : colors.divider,
+                                ),
+                                labelStyle: TextStyle(
+                                  color: selected ? colors.primary : colors.textSecondary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              );
+                            }).toList(growable: false),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -416,7 +466,7 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
-          SizedBox(height: compact ? 14 : 16),
+          const SizedBox(height: 12),
           AppButton.secondary(
             label: l10n.text('view_stats'),
             icon: Icons.insights_rounded,
@@ -445,8 +495,19 @@ class ProfilePage extends ConsumerWidget {
           AppButton.secondary(
             label: l10n.text('logout'),
             icon: Icons.logout_rounded,
-            onPressed: () {
-              controller.logout();
+            onPressed: () async {
+              final error = await ref.read(authControllerProvider.notifier).logout();
+              if (!context.mounted) {
+                return;
+              }
+              if (error != null) {
+                AppNotice.show(
+                  context,
+                  message: error,
+                  type: AppNoticeType.error,
+                );
+                return;
+              }
               context.go(AppRoutes.welcome);
             },
           ),
@@ -1368,4 +1429,11 @@ class _HistoryTile extends StatelessWidget {
     final minute = timestamp.minute.toString().padLeft(2, '0');
     return '$day.$month.${timestamp.year}  $hour:$minute';
   }
+}
+
+String _themeModeLabel(AppLocalizations l10n, AppThemeMode mode) {
+  return switch (mode) {
+    AppThemeMode.dark => l10n.text('theme_dark'),
+    AppThemeMode.light => l10n.text('theme_light'),
+  };
 }

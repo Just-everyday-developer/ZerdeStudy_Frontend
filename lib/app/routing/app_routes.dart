@@ -19,6 +19,10 @@ class AppRoutes {
   static const String faq = '/faq';
   static const String courses = '/courses';
   static const String coursePlayer = '/course-player';
+  static const String moderator = '/moderator';
+  static const String moderatorCourses = '/moderator/courses';
+  static const String moderatorReports = '/moderator/reports';
+  static const String moderatorFaq = '/moderator/faq';
 
   static String trackById(String trackId) => '$track/$trackId';
 

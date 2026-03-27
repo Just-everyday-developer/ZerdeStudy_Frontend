@@ -72,6 +72,15 @@ class DemoLessonSeed {
     this.xpReward = 55,
     this.theoryContent,
     this.extraTrainers = const <DemoTrainerSeed>[],
+    this.titleL,
+    this.summaryL,
+    this.outcomeL,
+    this.theoryContentL,
+    this.keyPointsL,
+    this.quizPromptL,
+    this.quizOptionsL,
+    this.quizExplanationL,
+    this.promptSuggestionL,
   });
 
   final String id;
@@ -91,6 +100,16 @@ class DemoLessonSeed {
   final int xpReward;
   final String? theoryContent;
   final List<DemoTrainerSeed> extraTrainers;
+  // Optional localized overrides (ru/en/kk)
+  final LocalizedText? titleL;
+  final LocalizedText? summaryL;
+  final LocalizedText? outcomeL;
+  final LocalizedText? theoryContentL;
+  final List<LocalizedText>? keyPointsL;
+  final LocalizedText? quizPromptL;
+  final List<LocalizedText>? quizOptionsL;
+  final LocalizedText? quizExplanationL;
+  final LocalizedText? promptSuggestionL;
 }
 
 class DemoPracticeSeed {
@@ -124,6 +143,8 @@ class DemoModuleSeed {
     required this.summary,
     required this.lessons,
     required this.practice,
+    this.titleL,
+    this.summaryL,
   });
 
   final String id;
@@ -131,6 +152,8 @@ class DemoModuleSeed {
   final String summary;
   final List<DemoLessonSeed> lessons;
   final DemoPracticeSeed practice;
+  final LocalizedText? titleL;
+  final LocalizedText? summaryL;
 }
 
 LearningTrack buildTrackFromSeed({
@@ -182,8 +205,8 @@ LearningModule buildModuleFromSeed({
   return LearningModule(
     id: seed.id,
     trackId: trackId,
-    title: sameText(seed.title),
-    summary: sameText(seed.summary),
+    title: seed.titleL ?? sameText(seed.title),
+    summary: seed.summaryL ?? sameText(seed.summary),
     lessons: seed.lessons
         .map(
           (lessonSeed) => buildLessonFromSeed(
@@ -222,39 +245,47 @@ LessonItem buildLessonFromSeed({
   final quiz = LessonQuiz(
     id: '${seed.id}_quiz_1',
     title: sameText('Output quiz'),
-    prompt: sameText(seed.quizPrompt),
-    kind: QuizKind.outputPrediction,
-    options: List<QuizOption>.generate(
-      seed.quizOptions.length,
-      (index) => QuizOption(
-        id: 'option_$index',
-        label: sameText(seed.quizOptions[index]),
-      ),
-    ),
+    prompt: seed.quizPromptL ?? sameText(seed.quizPrompt),
+
+    options: seed.quizOptionsL != null
+        ? List<QuizOption>.generate(
+            seed.quizOptionsL!.length,
+            (index) => QuizOption(
+              id: 'option_$index',
+              label: seed.quizOptionsL![index],
+            ),
+          )
+        : List<QuizOption>.generate(
+            seed.quizOptions.length,
+            (index) => QuizOption(
+              id: 'option_$index',
+              label: sameText(seed.quizOptions[index]),
+            ),
+          ),
     correctOptionId: 'option_${seed.correctQuizIndex}',
-    explanation: sameText(seed.quizExplanation),
+    explanation: seed.quizExplanationL ?? sameText(seed.quizExplanation),
   );
 
   return LessonItem(
     id: seed.id,
     trackId: trackId,
     moduleId: moduleId,
-    title: sameText(seed.title),
-    summary: sameText(seed.summary),
+    title: seed.titleL ?? sameText(seed.title),
+    summary: seed.summaryL ?? sameText(seed.summary),
     durationMinutes: seed.durationMinutes,
-    outcome: sameText(seed.outcome),
+    outcome: seed.outcomeL ?? sameText(seed.outcome),
     codeSnippet: seed.codeSnippet,
     exampleOutput: seed.exampleOutput,
-    keyPoints: seed.keyPoints.map(sameText).toList(growable: false),
+    keyPoints: seed.keyPointsL ?? seed.keyPoints.map(sameText).toList(growable: false),
     quizzes: <LessonQuiz>[quiz],
     codeTrainers: allTrainers,
     completionRequirements: <String>[
       quiz.id,
       ...allTrainers.map((t) => t.id),
     ],
-    promptSuggestion: sameText(seed.promptSuggestion),
+    promptSuggestion: seed.promptSuggestionL ?? sameText(seed.promptSuggestion),
     xpReward: seed.xpReward,
-    theoryContent: seed.theoryContent ?? '',
+    theoryContent: seed.theoryContentL ?? sameText(seed.theoryContent ?? ''),
   );
 }
 
@@ -852,13 +883,13 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
             ),
             CoursePlayerExercise(
               id: '${id}_exercise_2',
-              kind: CourseExerciseKind.fillBlank,
+              kind: CourseExerciseKind.textInput,
               title: sameText('Fill the blank'),
               prompt: sameText('Complete the output label used in the code example.'),
               description: 'Type the missing word exactly as it should appear.',
               points: 8,
-              blankTemplate: 'print("$topicTag -> ____");',
-              correctText: 'foundation',
+              inputTemplate: 'print("$topicTag -> ____");',
+              correctAnswer: 'foundation',
             ),
           ],
         ),
@@ -935,14 +966,14 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
           exercises: <CoursePlayerExercise>[
             CoursePlayerExercise(
               id: '${id}_exercise_5',
-              kind: CourseExerciseKind.codeInput,
+              kind: CourseExerciseKind.textInput,
               title: sameText('Complete the code'),
               prompt: sameText('Type the missing method name so the code prints the expected output.'),
               description: 'Enter only the missing token.',
               points: 14,
-              codeTemplate:
+              inputTemplate:
                   'String explainPattern(String domain) {\n  return "Use a small loop: learn, test, and refine in \$domain.";\n}\n\nprint(________("$title"));',
-              correctCodeToken: 'explainPattern',
+              correctAnswer: 'explainPattern',
             ),
             CoursePlayerExercise(
               id: '${id}_exercise_6',
@@ -1004,14 +1035,14 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
               ),
               CoursePlayerExercise(
                 id: '${id}_bridge_exercise_${index + 1}_b',
-                kind: CourseExerciseKind.fillBlank,
+                kind: CourseExerciseKind.textInput,
                 title: sameText('Output phrase'),
                 prompt: sameText('Fill the final number used in the output.'),
                 description: 'Type the checkpoint number from the code block.',
                 points: 6,
-                blankTemplate:
+                inputTemplate:
                     'print("Ready for ${preview.title.en} #__");',
-                correctText: '${index + 1}',
+                correctAnswer: '${index + 1}',
               ),
             ],
           );

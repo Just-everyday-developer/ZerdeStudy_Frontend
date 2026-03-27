@@ -7,6 +7,7 @@ import '../../core/utils/cyber_transition.dart';
 import '../../features/ai/presentation/pages/ai_mentor_page.dart';
 import '../../features/analytics/presentation/pages/leaderboard_page.dart';
 import '../../features/analytics/presentation/pages/stats_page.dart';
+import '../../features/auth/presentation/providers/auth_controller.dart';
 import '../../features/auth/presentation/pages/forgot_password_code_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -23,8 +24,8 @@ import '../../features/learning/presentation/pages/track_assessment_page.dart';
 import '../../features/learning/presentation/pages/lesson_page.dart';
 import '../../features/learning/presentation/pages/practice_page.dart';
 import '../../features/learning/presentation/pages/track_page.dart';
+import '../../features/moderator/presentation/pages/moderator_shell_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
-import '../state/demo_app_controller.dart';
 import 'app_routes.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey =
@@ -41,9 +42,10 @@ final GlobalKey<NavigatorState> _profileNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'profile');
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final isAuthenticated = ref.watch(
-    demoAppControllerProvider.select((state) => state.isAuthenticated),
-  );
+  final authState = ref.watch(authControllerProvider);
+  final isReady = authState.isReady;
+  final isAuthenticated = authState.isAuthenticated;
+  final isModerator = authState.isModerator;
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -57,12 +59,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         AppRoutes.forgotPassword,
         AppRoutes.forgotPasswordCode,
       }.contains(path);
+      final isModeratorRoute = path.startsWith(AppRoutes.moderator);
 
-      if (!isAuthenticated && !isAuthRoute) {
+      if (!isReady) {
+        return isAuthRoute ? null : AppRoutes.welcome;
+      }
+      if (isModerator && isAuthRoute) return AppRoutes.moderator;
+      if (isModeratorRoute && !isModerator) {
+        return isAuthenticated ? AppRoutes.home : AppRoutes.welcome;
+      }
+      if (!isAuthenticated && !isAuthRoute && !isModeratorRoute) {
         return AppRoutes.welcome;
       }
       if (isAuthenticated && isAuthRoute) {
-        return AppRoutes.home;
+        return isModerator ? AppRoutes.moderator : AppRoutes.home;
       }
       return null;
     },
@@ -273,6 +283,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             courseId: state.pathParameters['courseId'] ?? '',
             skipIntro: state.uri.queryParameters['skipIntro'] == '1',
           ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.moderator,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const ModeratorShellPage(initialTab: 0),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.moderatorCourses,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const ModeratorShellPage(initialTab: 1),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.moderatorReports,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const ModeratorShellPage(initialTab: 2),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.moderatorFaq,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const ModeratorShellPage(initialTab: 3),
         ),
       ),
     ],

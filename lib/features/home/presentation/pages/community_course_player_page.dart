@@ -744,8 +744,7 @@ class _CommunityCoursePlayerPageState
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (exercise.blankTemplate != null ||
-                        exercise.codeTemplate != null)
+                    if (exercise.inputTemplate != null)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
@@ -755,7 +754,7 @@ class _CommunityCoursePlayerPageState
                           border: Border.all(color: context.appColors.divider),
                         ),
                         child: SelectableText(
-                          exercise.blankTemplate ?? exercise.codeTemplate ?? '',
+                          exercise.inputTemplate ?? '',
                           style: TextStyle(
                             color: context.appColors.textPrimary,
                             fontFamily: 'monospace',
@@ -910,12 +909,9 @@ class _CommunityCoursePlayerPageState
           _drag[exercise.id] ?? exercise.draggableItems,
           exercise.correctOrder,
         ),
-      CourseExerciseKind.fillBlank =>
+      CourseExerciseKind.textInput =>
         _normalized(_inputs[exercise.id]?.text ?? '') ==
-            _normalized(exercise.correctText),
-      CourseExerciseKind.codeInput =>
-        _normalized(_inputs[exercise.id]?.text ?? '') ==
-            _normalized(exercise.correctCodeToken),
+            _normalized(exercise.correctAnswer),
     };
 
     setState(() {

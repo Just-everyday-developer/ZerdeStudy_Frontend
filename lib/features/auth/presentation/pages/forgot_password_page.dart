@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
@@ -36,6 +37,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
   void _sendCode() {
     final l10n = context.l10n;
+    final locale = ref.read(demoAppControllerProvider).locale;
     final email = _emailCtrl.text.trim();
     if (!ref.read(validateEmailProvider)(email)) {
       AppNotice.show(
@@ -48,10 +50,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
     AppNotice.show(
       context,
-      message: l10n.text('reset_code_sent'),
-      type: AppNoticeType.success,
+      message: _pendingResetMessage(locale),
+      type: AppNoticeType.info,
+      duration: const Duration(seconds: 3),
     );
-    context.go(AppRoutes.forgotPasswordCodeWithEmail(email));
   }
 
   @override
@@ -85,7 +87,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    l10n.text('forgot_password_subtitle'),
+                    _forgotPasswordSubtitle(state.locale),
                     style: Theme.of(context)
                         .textTheme
                         .bodyLarge
@@ -120,5 +122,27 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         ),
       ),
     );
+  }
+}
+
+String _forgotPasswordSubtitle(AppLocale locale) {
+  switch (locale) {
+    case AppLocale.ru:
+      return 'Экран восстановления пароля пока не подключен к реальному backend-потоку. На этой задаче мы подключили только register, login, me, refresh и logout.';
+    case AppLocale.en:
+      return 'Password reset is not wired to the real backend flow yet. This task only connects register, login, me, refresh, and logout.';
+    case AppLocale.kk:
+      return 'Құпиясөзді қалпына келтіру әзірше нақты backend ағынына қосылған жоқ. Бұл тапсырмада тек register, login, me, refresh және logout қосылды.';
+  }
+}
+
+String _pendingResetMessage(AppLocale locale) {
+  switch (locale) {
+    case AppLocale.ru:
+      return 'Восстановление пароля вынесем в следующую backend-задачу.';
+    case AppLocale.en:
+      return 'Password reset will be connected in the next backend task.';
+    case AppLocale.kk:
+      return 'Құпиясөзді қалпына келтіру келесі backend тапсырмасында қосылады.';
   }
 }

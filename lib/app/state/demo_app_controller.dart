@@ -105,6 +105,42 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
+  void loginAsModerator() {
+    state = _withDerived(state.copyWith(
+      isAuthenticated: true,
+      isModerator: true,
+    ));
+  }
+
+  void logoutModerator() {
+    state = _withDerived(state.copyWith(
+      isAuthenticated: false,
+      isModerator: false,
+    ));
+  }
+
+  void syncExternalAuth({
+    required bool isAuthenticated,
+    required bool isModerator,
+    DemoUser? user,
+  }) {
+    final sameUser = _sameUser(state.user, user);
+    if (state.isAuthenticated == isAuthenticated &&
+        state.isModerator == isModerator &&
+        sameUser) {
+      return;
+    }
+
+    state = _withDerived(
+      state.copyWith(
+        isAuthenticated: isAuthenticated,
+        isModerator: isModerator,
+        user: user,
+      ),
+    );
+    _persist();
+  }
+
   void changeLocale(AppLocale locale) {
     state = _withDerived(state.copyWith(locale: locale));
     _persist();
@@ -705,6 +741,7 @@ class DemoAppController extends Notifier<DemoAppState> {
       locale: AppLocale.ru,
       themeMode: AppThemeMode.dark,
       isAuthenticated: false,
+      isModerator: false,
       user: null,
       currentTrackId: 'fundamentals',
       focusedLessonId: 'fundamentals_lesson_1_2',
@@ -1065,6 +1102,20 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void _persist() {
     _preferences.setString(_storageKey, jsonEncode(state.toJson()));
+  }
+
+  bool _sameUser(DemoUser? left, DemoUser? right) {
+    if (identical(left, right)) {
+      return true;
+    }
+    if (left == null || right == null) {
+      return left == right;
+    }
+
+    return left.name == right.name &&
+        left.email == right.email &&
+        left.role == right.role &&
+        left.goal == right.goal;
   }
 
   String _courseAiReply({

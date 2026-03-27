@@ -8,6 +8,7 @@ import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/common_widgets/tech_text_field.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../providers/auth_controller.dart';
 import '../providers/email_providers.dart';
 import '../providers/password_providers.dart';
 import '../widgets/auth_background_wrapper.dart';
@@ -38,7 +39,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final l10n = context.l10n;
     final email = _emailCtrl.text.trim();
     final password = _passCtrl.text.trim();
@@ -62,14 +63,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       return;
     }
 
-    ref.read(demoAppControllerProvider.notifier).loginWithEmail(email: email);
-    context.go(AppRoutes.home);
+    final error = await ref.read(authControllerProvider.notifier).login(
+          email: email,
+          password: password,
+        );
+    if (!mounted || error == null) {
+      return;
+    }
+
+    AppNotice.show(
+      context,
+      message: error,
+      type: AppNoticeType.error,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final state = ref.watch(demoAppControllerProvider);
+    final demoState = ref.watch(demoAppControllerProvider);
+    final authState = ref.watch(authControllerProvider);
 
     return AuthBackgroundWrapper(
       child: SafeArea(
@@ -84,8 +97,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: LocaleSelector(
-                      currentLocale: state.locale,
-                      onChanged: ref.read(demoAppControllerProvider.notifier).changeLocale,
+                      currentLocale: demoState.locale,
+                      onChanged:
+                          ref.read(demoAppControllerProvider.notifier).changeLocale,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -113,10 +127,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   const SizedBox(height: 20),
                   TechActionButton(
-                    title: l10n.text('login'),
+                    title: authState.isBusy ? '...' : l10n.text('login'),
                     isPrimary: true,
                     icon: Icons.login_rounded,
-                    onTap: _submit,
+                    onTap: authState.isBusy ? () {} : _submit,
                   ),
                   const SizedBox(height: 8),
                   Align(
@@ -127,32 +141,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TechActionButton(
-                          title: l10n.text('google'),
-                          isPrimary: false,
-                          icon: Icons.language_rounded,
-                          onTap: () {
-                            ref.read(demoAppControllerProvider.notifier).loginWithProvider('google');
-                            context.go(AppRoutes.home);
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TechActionButton(
-                          title: l10n.text('github'),
-                          isPrimary: false,
-                          icon: Icons.code_rounded,
-                          onTap: () {
-                            ref.read(demoAppControllerProvider.notifier).loginWithProvider('github');
-                            context.go(AppRoutes.home);
-                          },
-                        ),
-                      ),
-                    ],
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => context.go(AppRoutes.signup),
+                      icon: const Icon(Icons.person_add_alt_1_rounded),
+                      label: Text(l10n.text('signup')),
+                    ),
                   ),
                 ],
               ),

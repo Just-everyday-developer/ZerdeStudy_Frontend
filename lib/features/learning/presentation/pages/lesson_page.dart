@@ -65,10 +65,6 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                   children: [
                     _Pill(label: '${lesson.durationMinutes} ${l10n.text('minutes')}'),
                     _Pill(label: '${lesson.xpReward} XP'),
-                    _Pill(
-                      label: '${lesson.quizzes.length} ${l10n.text('lesson_quizzes_count')} | '
-                          '${lesson.codeTrainers.length} ${l10n.text('lesson_labs_count')}',
-                    ),
                   ],
                 ),
               ],
@@ -116,7 +112,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               ],
             ),
           ),
-          if (lesson.theoryContent.isNotEmpty) ...[
+          if (lesson.theoryContent.resolve(locale).isNotEmpty) ...[
             const SizedBox(height: 16),
             GlowCard(
               accent: const Color(0xFFFFA726),
@@ -139,6 +135,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                   ),
                   const SizedBox(height: 14),
                   ...lesson.theoryContent
+                      .resolve(locale)
                       .split('\n\n')
                       .map((paragraph) => _TheoryParagraph(
                             text: paragraph,
@@ -428,6 +425,7 @@ class _TrainerCard extends StatelessWidget {
           if (trainer.kind == CodeTrainerKind.reorderLines)
             _ReorderTrainerView(
               trainer: trainer,
+              locale: locale,
               selectedSequence: selectedSequence,
               onSequenceChanged: onSequenceChanged,
             )
@@ -470,11 +468,13 @@ class _TrainerCard extends StatelessWidget {
 class _ReorderTrainerView extends StatelessWidget {
   const _ReorderTrainerView({
     required this.trainer,
+    required this.locale,
     required this.selectedSequence,
     required this.onSequenceChanged,
   });
 
   final CodeTrainer trainer;
+  final AppLocale locale;
   final List<String> selectedSequence;
   final ValueChanged<List<String>> onSequenceChanged;
 
@@ -493,7 +493,7 @@ class _ReorderTrainerView extends StatelessWidget {
           runSpacing: 8,
           children: remaining.map((option) {
             return ActionChip(
-              label: Text(option.label.ru),
+              label: Text(option.label.resolve(locale)),
               onPressed: () =>
                   onSequenceChanged(<String>[...selectedSequence, option.id]),
             );
@@ -514,7 +514,7 @@ class _ReorderTrainerView extends StatelessWidget {
               color: colors.textSecondary,
             ),
             title: Text(
-              option.label.ru,
+              option.label.resolve(locale),
               style: TextStyle(
                 color: colors.textPrimary,
                 fontFamily: 'monospace',

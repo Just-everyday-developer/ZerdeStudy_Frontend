@@ -1,0 +1,213 @@
+{
+  "id": "discrete_math_module_1",
+  "title": {
+    "en": "Logic & Proof Techniques",
+    "ru": "Логика и методы доказательства",
+    "kk": "Логика және дәлелдеу әдістері"
+  },
+  "summary": {
+    "en": "Propositional and predicate logic, truth tables, and classical proof methods including direct proof, contrapositive, contradiction, and mathematical induction.",
+    "ru": "Пропозициональная и предикатная логика, таблицы истинности и классические методы доказательства: прямое, контрапозитив, от противоречия, математическая индукция.",
+    "kk": "Пропозициялық және предикаттық логика, шындық кестелері және классикалық дәлелдеу әдістері."
+  },
+  "lessons": [
+    {
+      "id": "discrete_math_lesson_1_1",
+
+      "title": {
+        "en": "Propositional logic and truth tables",
+        "ru": "Пропозициональная логика и таблицы истинности",
+        "kk": "Пропозициялық логика және шындық кестелері"
+      },
+
+      "summary": {
+        "en": "Propositions, logical connectives, truth tables, tautologies, contradictions, and De Morgan's laws.",
+        "ru": "Высказывания, логические связки, таблицы истинности, тавтологии, противоречия и законы Де Моргана.",
+        "kk": "Ұсыныстар, логикалық байланыстырғыштар, шындық кестелері, тавтологиялар, қарама-қайшылықтар және Де Морган заңдары."
+      },
+
+      "outcome": {
+        "en": "Construct truth tables for compound propositions and apply De Morgan's laws to simplify logical expressions.",
+        "ru": "Составлять таблицы истинности для составных высказываний и применять законы Де Моргана.",
+        "kk": "Күрделі ұсыныстар үшін шындық кестелерін құру және Де Морган заңдарын қолдану."
+      },
+
+      "durationMinutes": 12,
+      "xpReward": 55,
+      
+      подразделы outcome
+      "keyPoints": [
+        {
+          "en": "The five logical connectives are ¬, ∧, ∨, →, and ↔.",
+          "ru": "Пять логических связок: ¬, ∧, ∨, →, и ↔.",
+          "kk": "Бес логикалық байланыстырғыш: ¬, ∧, ∨, →, және ↔."
+        },
+        {
+          "en": "De Morgan's laws: ¬(P ∧ Q) ≡ ¬P ∨ ¬Q and ¬(P ∨ Q) ≡ ¬P ∧ ¬Q.",
+          "ru": "Законы Де Моргана: ¬(P ∧ Q) ≡ ¬P ∨ ¬Q и ¬(P ∨ Q) ≡ ¬P ∧ ¬Q.",
+          "kk": "Де Морган заңдары: ¬(P ∧ Q) ≡ ¬P ∨ ¬Q және ¬(P ∨ Q) ≡ ¬P ∧ ¬Q."
+        },
+        {
+          "en": "A tautology is always true; a contradiction is always false.",
+          "ru": "Тавтология всегда истинна; противоречие всегда ложно.",
+          "kk": "Тавтология әрқашан шын; қарама-қайшылық әрқашан жалған."
+        }
+      ],
+
+      Раздел Теория
+      "theoryContent": {
+        "en": "A proposition is a declarative statement that is either true (T) or false (F), but not both.\n\n► Logical Connectives\nGiven propositions P and Q, we build compound propositions:\n  • Negation: ¬P — true when P is false.\n  • Conjunction: P ∧ Q — true only when both are true.\n  • Disjunction: P ∨ Q — true when at least one is true.\n  • Implication: P → Q — false only when P is true and Q is false.\n  • Biconditional: P ↔ Q — true when P and Q have the same value.\n\n► Truth Tables\nFor n atomic propositions there are 2^n rows.\n\n► De Morgan's Laws\n  1. ¬(P ∧ Q) ≡ ¬P ∨ ¬Q\n  2. ¬(P ∨ Q) ≡ ¬P ∧ ¬Q",
+        "ru": "Высказывание — это утверждение, которое может быть только истинным (И) или ложным (Л).\n\n► Логические связки\nИмея высказывания P и Q, строим составные высказывания:\n  • Отрицание: ¬P — истинно, когда P ложно.\n  • Конъюнкция: P ∧ Q — истинна только когда оба истинны.\n  • Дизъюнкция: P ∨ Q — истинна когда хотя бы одно истинно.\n  • Импликация: P → Q — ложна только когда P истинно, Q ложно.\n  • Биусловие: P ↔ Q — истинно когда P и Q имеют одинаковое значение.\n\n► Таблицы истинности\nДля n атомарных высказываний — 2^n строк.\n\n► Законы Де Моргана\n  1. ¬(P ∧ Q) ≡ ¬P ∨ ¬Q\n  2. ¬(P ∨ Q) ≡ ¬P ∧ ¬Q",
+        "kk": "Ұсыныс — тек шын (Ш) немесе жалған (Ж) болатын мәлімдеме.\n\n► Логикалық байланыстырғыштар\nP және Q ұсыныстары бойынша күрделі ұсыныстар:\n  • Терістеу: ¬P — P жалған кезде шын.\n  • Конъюнкция: P ∧ Q — екеуі де шын болғанда ғана шын.\n  • Дизъюнкция: P ∨ Q — кем дегенде біреуі шын болса шын.\n  • Импликация: P → Q — тек P шын, Q жалған болғанда жалған.\n  • Бикошарт: P ↔ Q — мәндер бірдей болса шын."
+      },
+
+      Код сниппет означает что будет после теории примеры кода 
+      "codeSnippet": "final values = [true, false];\nfor (final p in values) {\n  for (final q in values) {\n    final lhs = !(p && q);\n    final rhs = !p || !q;\n    print('p=$p q=$q  ¬(p∧q)=$lhs  ¬p∨¬q=$rhs  equal=${lhs == rhs}');\n  }\n}",
+
+      Внизу пишет что ожидается от кода
+      "exampleOutput": "p=true q=true  ¬(p∧q)=false  ¬p∨¬q=false  equal=true\np=true q=false  ¬(p∧q)=true  ¬p∨¬q=true  equal=true\np=false q=true  ¬(p∧q)=true  ¬p∨¬q=true  equal=true\np=false q=false  ¬(p∧q)=true  ¬p∨¬q=true  equal=true",
+
+      А это сами квизы
+       [
+          {
+            "id": "discrete_math_lesson_1_1_quiz_1",
+            "type": "quiz",
+            "title": { "ru": "...", "en": "...", "kk": "..." },
+
+            это сам вопрос
+            "prompt": {
+              "en": "According to De Morgan's law, ¬(P ∨ Q) is equivalent to:",
+              "ru": "По второму закону Де Моргана, ¬(P ∨ Q) эквивалентно:",
+              "kk": "Де Морган заңы бойынша, ¬(P ∨ Q) эквивалентті:"
+          }
+
+            сами 
+            "options": [
+            {
+              "id": "opt_a",
+              "label": { "en": "¬P ∨ ¬Q", "ru": "¬P ∨ ¬Q", "kk": "¬P ∨ ¬Q" }
+            },
+            {
+              "id": "opt_b",
+              "label": { "en": "¬P ∧ ¬Q", "ru": "¬P ∧ ¬Q", "kk": "¬P ∧ ¬Q" }
+            },
+            {
+              "id": "opt_c",
+              "label": { "en": "P ∧ Q", "ru": "P ∧ Q", "kk": "P ∧ Q" }
+            }
+          ]
+        }
+      ],
+            
+            правильный ответ
+            "correctOptionId": "opt_b",
+
+            объяснение
+            "explanation": { "ru": "...", "en": "...", "kk": "..." }
+          },
+
+          {
+            "id": "discrete_math_lesson_1_1_trainer_2",
+            это для не-викторин, для заполнения текстом и других заданий разделитель
+            "type": "trainer",
+
+            тип задания, я позже отправлю какие вообще есть виды
+            "kind": "matching",
+
+            
+             "text": {
+                "en": "Connect each logical symbol to its meaning. Match the connective to its operation.",
+                "ru": "Соедини каждый логический символ с его значением. Сопоставь связку с её значением.",
+                "kk": "Әр логикалық символды оның мағынасымен байланыстыр. Байланыстырғышты мағынасымен сәйкестендір."
+             },
+
+             на левой стороне отображаются
+            "leftItems": [
+              { "id": "and", "label": { "en": "∧", "ru": "∧", "kk": "∧" } },
+              { "id": "or", "label": { "en": "∨", "ru": "∨", "kk": "∨" } },
+              { "id": "not", "label": { "en": "¬", "ru": "¬", "kk": "¬" } },
+              { "id": "if_then", "label": { "en": "→", "ru": "→", "kk": "→" } },
+              { "id": "iff", "label": { "en": "↔", "ru": "↔", "kk": "↔" } }
+            ],
+
+            на правой стороне
+            "rightItems": [
+              {
+                "id": "def_and",
+                "label": {
+                  "en": "AND — true when both are true",
+                  "ru": "И — истина, когда истинны оба",
+                  "kk": "ЖӘНЕ — екеуі де шын болса шын"
+                }
+              },
+              {
+                "id": "def_or",
+                "label": {
+                  "en": "OR — true when at least one is true",
+                  "ru": "ИЛИ — истина, если истинно хотя бы одно",
+                  "kk": "НЕМЕСЕ — кемінде біреуі шын болса шын"
+                }
+              }
+            ],
+            "correctMatches": {
+              "and": "def_and",
+              "or": "def_or",
+              "not": "def_not",
+              "if_then": "def_if_then",
+              "iff": "def_iff"
+            }
+          },
+
+
+  ],
+
+  "practice": {
+    "id": "discrete_math_practice_1",
+    "title": {
+      "en": "Logic & proof challenge",
+      "ru": "Задание: логика и доказательства",
+      "kk": "Тапсырма: логика және дәлелдемелер"
+    },
+    "summary": {
+      "en": "Apply truth tables and induction in code.",
+      "ru": "Примени таблицы истинности и индукцию в коде.",
+      "kk": "Шындық кестелері мен индукцияны кодта қолдан."
+    },
+    "brief": {
+      "en": "1. Build a truth table for (P → Q) ↔ (¬P ∨ Q) — verify it's a tautology.\n2. Prove by induction: 1² + 2² + ... + n² = n(n+1)(2n+1)/6 — verify for n=1..10.",
+      "ru": "1. Построй таблицу истинности для (P → Q) ↔ (¬P ∨ Q) — убедись что это тавтология.\n2. Докажи по индукции: 1² + 2² + ... + n² = n(n+1)(2n+1)/6 — проверь для n=1..10.",
+      "kk": "1. (P → Q) ↔ (¬P ∨ Q) үшін шындық кестесін құр — бұл тавтология екенін тексер.\n2. Индукция бойынша дәлелде: 1²+2²+...+n² = n(n+1)(2n+1)/6 — n=1..10 үшін тексер."
+    },
+    "starterCode": "// 1. Build a truth table for (P → Q) ↔ (¬P ∨ Q)\n//    Verify it is a tautology (always true)\n// 2. Prove by induction: 1² + 2² + ... + n² = n(n+1)(2n+1)/6\n//    Verify for n = 1..10 programmatically",
+    "xpReward": 100,
+    "successCriteria": [
+      {
+        "en": "Truth table has 4 rows and all values in final column are true",
+        "ru": "Таблица истинности содержит 4 строки и все значения в последнем столбце истинны",
+        "kk": "Шындық кестесінде 4 жол бар және соңғы бағандағы барлық мәндер шын"
+      },
+      {
+        "en": "Formula matches loop sum for all n from 1 to 10",
+        "ru": "Формула совпадает с суммой через цикл для всех n от 1 до 10",
+        "kk": "Формула 1-ден 10-ға дейінгі барлық n үшін цикл сомасымен сәйкес келеді"
+      }
+    ],
+    "knowledgeChecks": [
+      {
+        "en": "What does it mean for a formula to be a tautology?",
+        "ru": "Что значит, что формула является тавтологией?",
+        "kk": "Формуланың тавтология болуы нені білдіреді?"
+      },
+      {
+        "en": "What are the two required steps in a proof by induction?",
+        "ru": "Каковы два обязательных шага в доказательстве по индукции?",
+        "kk": "Индукция бойынша дәлелдеудің екі міндетті қадамы қандай?"
+      }
+    ],
+    "promptSuggestion": {
+      "en": "Help me verify the tautology (P → Q) ↔ (¬P ∨ Q) and explain mathematical induction",
+      "ru": "Помоги проверить тавтологию (P → Q) ↔ (¬P ∨ Q) и объясни математическую индукцию",
+      "kk": "Тавтологияны тексеруге және математикалық индукцияны түсіндіруге көмектес"
+    }
+  }
+}

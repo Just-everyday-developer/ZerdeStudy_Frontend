@@ -171,8 +171,6 @@ class LeaderboardEntry {
   final bool isCurrentUser;
 }
 
-enum QuizKind { outputPrediction, conceptCheck }
-
 class QuizOption {
   const QuizOption({
     required this.id,
@@ -232,7 +230,6 @@ class LessonQuiz {
     required this.id,
     required this.title,
     required this.prompt,
-    required this.kind,
     required this.options,
     required this.correctOptionId,
     required this.explanation,
@@ -241,7 +238,7 @@ class LessonQuiz {
   final String id;
   final LocalizedText title;
   final LocalizedText prompt;
-  final QuizKind kind;
+
   final List<QuizOption> options;
   final String correctOptionId;
   final LocalizedText explanation;
@@ -290,7 +287,7 @@ class LessonItem {
     required this.completionRequirements,
     required this.promptSuggestion,
     required this.xpReward,
-    this.theoryContent = '',
+    required this.theoryContent,
   });
 
   final String id;
@@ -308,7 +305,7 @@ class LessonItem {
   final List<String> completionRequirements;
   final LocalizedText promptSuggestion;
   final int xpReward;
-  final String theoryContent;
+  final LocalizedText theoryContent;
 }
 
 class PracticeTask {
@@ -741,8 +738,7 @@ enum CourseExerciseKind {
   multipleChoice,
   matching,
   dragDrop,
-  fillBlank,
-  codeInput,
+  textInput,
 }
 
 enum CourseCertificateTier {
@@ -789,10 +785,8 @@ class CoursePlayerExercise {
     this.correctMatches = const <String, String>{},
     this.draggableItems = const <String>[],
     this.correctOrder = const <String>[],
-    this.blankTemplate,
-    this.correctText = '',
-    this.codeTemplate,
-    this.correctCodeToken = '',
+    this.inputTemplate,
+    this.correctAnswer = '',
   });
 
   final String id;
@@ -808,10 +802,8 @@ class CoursePlayerExercise {
   final Map<String, String> correctMatches;
   final List<String> draggableItems;
   final List<String> correctOrder;
-  final String? blankTemplate;
-  final String correctText;
-  final String? codeTemplate;
-  final String correctCodeToken;
+  final String? inputTemplate;
+  final String correctAnswer;
 }
 
 class CoursePlayerLesson {
@@ -1254,4 +1246,66 @@ class QuizAnswerStat {
       correctAnswers: json['correctAnswers'] as int? ?? 0,
     );
   }
+}
+
+enum AppNotificationType {
+  lesson,
+  practice,
+  achievement,
+  level,
+  mission,
+  course,
+  assessment,
+  moderator,
+}
+
+class AppNotification {
+  const AppNotification({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.type,
+    required this.createdAt,
+    this.isRead = false,
+  });
+
+  final String id;
+  final String title;
+  final String body;
+  final AppNotificationType type;
+  final DateTime createdAt;
+  final bool isRead;
+
+  AppNotification copyWith({bool? isRead}) => AppNotification(
+        id: id,
+        title: title,
+        body: body,
+        type: type,
+        createdAt: createdAt,
+        isRead: isRead ?? this.isRead,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'title': title,
+        'body': body,
+        'type': type.name,
+        'createdAt': createdAt.toIso8601String(),
+        'isRead': isRead,
+      };
+
+  factory AppNotification.fromJson(Map<String, dynamic> json) =>
+      AppNotification(
+        id: json['id'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        body: json['body'] as String? ?? '',
+        type: AppNotificationType.values.firstWhere(
+          (t) => t.name == json['type'],
+          orElse: () => AppNotificationType.lesson,
+        ),
+        createdAt:
+            DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+                DateTime.now(),
+        isRead: json['isRead'] as bool? ?? false,
+      );
 }

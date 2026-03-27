@@ -97,7 +97,8 @@ class HomePage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  IntrinsicWidth(
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 280),
                     child: AppButton.primary(
                       label: currentProgress.nextTarget == null
                           ? l10n.text('start_track')

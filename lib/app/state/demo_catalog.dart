@@ -15,9 +15,9 @@ const String courseTopicSoftSkills = 'soft_skills';
 
 class DemoCatalog {
   DemoCatalog()
-      : tracks = _buildTracksWithAssessments(),
-        communityCourses = _buildCommunityCourses(),
-        _leaderboardSeed = _buildLeaderboardSeed();
+    : tracks = _buildTracksWithAssessments(),
+      communityCourses = _buildCommunityCourses(),
+      _leaderboardSeed = _buildLeaderboardSeed();
 
   final List<LearningTrack> tracks;
   final List<CommunityCourse> communityCourses;
@@ -42,21 +42,22 @@ class DemoCatalog {
   };
   late final Map<String, CommunityCourse> _coursesById =
       <String, CommunityCourse>{
-    for (final course in communityCourses) course.id: course,
-  };
+        for (final course in communityCourses) course.id: course,
+      };
   late final Map<String, CoursePlayerLesson> _courseLessonsById =
       <String, CoursePlayerLesson>{
-    for (final course in communityCourses)
-      for (final module in course.coursePlayerModules)
-        for (final lesson in module.lessons) lesson.id: lesson,
-  };
+        for (final course in communityCourses)
+          for (final module in course.coursePlayerModules)
+            for (final lesson in module.lessons) lesson.id: lesson,
+      };
   late final Map<String, CoursePlayerExercise> _courseExercisesById =
       <String, CoursePlayerExercise>{
-    for (final lesson in _courseLessonsById.values)
-      for (final exercise in lesson.exercises) exercise.id: exercise,
-  };
+        for (final lesson in _courseLessonsById.values)
+          for (final exercise in lesson.exercises) exercise.id: exercise,
+      };
 
-  LearningTrack trackById(String trackId) => _tracksById[trackId] ?? tracks.first;
+  LearningTrack trackById(String trackId) =>
+      _tracksById[trackId] ?? tracks.first;
 
   LessonItem lessonById(String lessonId) =>
       _lessonsById[lessonId] ?? _lessonsById.values.first;
@@ -69,21 +70,26 @@ class DemoCatalog {
   CommunityCourse courseById(String courseId) =>
       _coursesById[courseId] ?? communityCourses.first;
 
-  CoursePlayerLesson? courseLessonById(String lessonId) => _courseLessonsById[lessonId];
+  CoursePlayerLesson? courseLessonById(String lessonId) =>
+      _courseLessonsById[lessonId];
 
   CoursePlayerExercise? courseExerciseById(String exerciseId) =>
       _courseExercisesById[exerciseId];
 
   List<String> courseTopicKeys() => const <String>[
-        courseTopicProgrammingLanguages,
-        courseTopicDataAnalytics,
-        courseTopicAi,
-        courseTopicSqlDatabases,
-        courseTopicSoftSkills,
-      ];
+    courseTopicProgrammingLanguages,
+    courseTopicDataAnalytics,
+    courseTopicAi,
+    courseTopicSqlDatabases,
+    courseTopicSoftSkills,
+  ];
 
-  List<String> courseLevels() =>
-      const <String>['All', 'Beginner', 'Intermediate', 'Advanced'];
+  List<String> courseLevels() => const <String>[
+    'All',
+    'Beginner',
+    'Intermediate',
+    'Advanced',
+  ];
 
   List<CommunityCourseAuthor> courseAuthors() {
     final authors = popularAuthors().toList();
@@ -96,12 +102,12 @@ class DemoCatalog {
   }
 
   List<String> frequentSearchTerms() => const <String>[
-        'linux',
-        'qa_testing',
-        'statistics',
-        'cybersecurity',
-        'postgresql',
-      ];
+    'linux',
+    'qa_testing',
+    'statistics',
+    'cybersecurity',
+    'postgresql',
+  ];
 
   List<CommunityCourse> coursesForTopic(String topicKey) {
     return communityCourses
@@ -117,17 +123,20 @@ class DemoCatalog {
 
   List<CommunityCourse> recommendedCourses(DemoAppState state) {
     final focusedTrack = trackById(state.currentTrackId);
-    final related = communityCourses.where((course) {
-      return course.isRecommended &&
-          (course.searchKeywords.any(
-                (keyword) => focusedTrack.title.en.toLowerCase().contains(keyword),
-              ) ||
-              course.topicKeys.any(
-                (topic) => focusedTrack.title.en.toLowerCase().contains(
+    final related = communityCourses
+        .where((course) {
+          return course.isRecommended &&
+              (course.searchKeywords.any(
+                    (keyword) =>
+                        focusedTrack.title.en.toLowerCase().contains(keyword),
+                  ) ||
+                  course.topicKeys.any(
+                    (topic) => focusedTrack.title.en.toLowerCase().contains(
                       topic.split('_').first,
                     ),
-              ));
-    }).toList(growable: false);
+                  ));
+        })
+        .toList(growable: false);
     if (related.length >= 13) {
       return related;
     }
@@ -145,7 +154,9 @@ class DemoCatalog {
       authorsById[course.author.id] = course.author;
     }
     final authors = authorsById.values.toList(growable: false);
-    authors.sort((left, right) => right.followersCount.compareTo(left.followersCount));
+    authors.sort(
+      (left, right) => right.followersCount.compareTo(left.followersCount),
+    );
     return authors;
   }
 
@@ -159,55 +170,64 @@ class DemoCatalog {
     bool? certificateOnly,
   }) {
     final normalizedQuery = query.trim().toLowerCase();
-    return communityCourses.where((course) {
-      final topicMatch = topicKey == null ||
-          topicKey.isEmpty ||
-          course.topicKeys.contains(topicKey);
-      final levelMatch = level == null ||
-          level.isEmpty ||
-          level == 'All' ||
-          course.level == level;
-      final ratingMatch = minRating == null ||
-          displayCourseRatingFor(state, course.id) >= minRating;
-      final durationMatch = durationBucket == null ||
-          courseDurationBucketFor(course) == durationBucket;
-      final certificateMatch = certificateOnly != true || course.facts.hasCertificate;
-      final queryMatch = normalizedQuery.isEmpty ||
-          course.title.en.toLowerCase().contains(normalizedQuery) ||
-          course.subtitle.en.toLowerCase().contains(normalizedQuery) ||
-          course.description.en.toLowerCase().contains(normalizedQuery) ||
-          course.heroBadge.toLowerCase().contains(normalizedQuery) ||
-          course.heroHeadline.toLowerCase().contains(normalizedQuery) ||
-          course.learningOutcomes.any(
-            (item) => item.toLowerCase().contains(normalizedQuery),
-          ) ||
-          course.moduleSections.any(
-            (section) =>
-                section.title.toLowerCase().contains(normalizedQuery) ||
-                section.items.any(
-                  (item) => item.title.toLowerCase().contains(normalizedQuery),
-                ),
-          ) ||
-          course.searchKeywords.any(
-            (keyword) => keyword.toLowerCase().contains(normalizedQuery),
-          ) ||
-          course.tags.any(
-            (tag) => tag.toLowerCase().contains(normalizedQuery),
-          ) ||
-          course.author.name.toLowerCase().contains(normalizedQuery) ||
-          course.author.role.toLowerCase().contains(normalizedQuery) ||
-          course.instructors.any(
-            (instructor) =>
-                instructor.name.toLowerCase().contains(normalizedQuery) ||
-                instructor.role.toLowerCase().contains(normalizedQuery),
-          );
-      return topicMatch &&
-          levelMatch &&
-          ratingMatch &&
-          durationMatch &&
-          certificateMatch &&
-          queryMatch;
-    }).toList(growable: false);
+    return communityCourses
+        .where((course) {
+          final topicMatch =
+              topicKey == null ||
+              topicKey.isEmpty ||
+              course.topicKeys.contains(topicKey);
+          final levelMatch =
+              level == null ||
+              level.isEmpty ||
+              level == 'All' ||
+              course.level == level;
+          final ratingMatch =
+              minRating == null ||
+              displayCourseRatingFor(state, course.id) >= minRating;
+          final durationMatch =
+              durationBucket == null ||
+              courseDurationBucketFor(course) == durationBucket;
+          final certificateMatch =
+              certificateOnly != true || course.facts.hasCertificate;
+          final queryMatch =
+              normalizedQuery.isEmpty ||
+              course.title.en.toLowerCase().contains(normalizedQuery) ||
+              course.subtitle.en.toLowerCase().contains(normalizedQuery) ||
+              course.description.en.toLowerCase().contains(normalizedQuery) ||
+              course.heroBadge.toLowerCase().contains(normalizedQuery) ||
+              course.heroHeadline.toLowerCase().contains(normalizedQuery) ||
+              course.learningOutcomes.any(
+                (item) => item.toLowerCase().contains(normalizedQuery),
+              ) ||
+              course.moduleSections.any(
+                (section) =>
+                    section.title.toLowerCase().contains(normalizedQuery) ||
+                    section.items.any(
+                      (item) =>
+                          item.title.toLowerCase().contains(normalizedQuery),
+                    ),
+              ) ||
+              course.searchKeywords.any(
+                (keyword) => keyword.toLowerCase().contains(normalizedQuery),
+              ) ||
+              course.tags.any(
+                (tag) => tag.toLowerCase().contains(normalizedQuery),
+              ) ||
+              course.author.name.toLowerCase().contains(normalizedQuery) ||
+              course.author.role.toLowerCase().contains(normalizedQuery) ||
+              course.instructors.any(
+                (instructor) =>
+                    instructor.name.toLowerCase().contains(normalizedQuery) ||
+                    instructor.role.toLowerCase().contains(normalizedQuery),
+              );
+          return topicMatch &&
+              levelMatch &&
+              ratingMatch &&
+              durationMatch &&
+              certificateMatch &&
+              queryMatch;
+        })
+        .toList(growable: false);
   }
 
   CourseDurationBucket courseDurationBucketFor(CommunityCourse course) {
@@ -223,7 +243,7 @@ class DemoCatalog {
     final baseCount = course.reviewSummary.reviewCount;
     final updatedAverage =
         ((course.reviewSummary.averageRating * baseCount) + userRating) /
-            (baseCount + 1);
+        (baseCount + 1);
     return updatedAverage;
   }
 
@@ -242,7 +262,9 @@ class DemoCatalog {
     if (userRating == null) {
       return course.reviewSummary;
     }
-    final distribution = Map<int, int>.from(course.reviewSummary.ratingDistribution);
+    final distribution = Map<int, int>.from(
+      course.reviewSummary.ratingDistribution,
+    );
     distribution[userRating] = (distribution[userRating] ?? 0) + 1;
     return CommunityCourseReviewSummary(
       averageRating: displayCourseRatingFor(state, courseId),
@@ -285,16 +307,14 @@ class DemoCatalog {
     final course = courseById(courseId);
     return <CoursePlayerExercise>[
       for (final module in course.coursePlayerModules)
-        for (final lesson in module.lessons)
-          ...lesson.exercises,
+        for (final lesson in module.lessons) ...lesson.exercises,
     ];
   }
 
   int totalCoursePlayerPoints(String courseId) {
-    return courseExercisesFor(courseId).fold<int>(
-      0,
-      (sum, exercise) => sum + exercise.points,
-    );
+    return courseExercisesFor(
+      courseId,
+    ).fold<int>(0, (sum, exercise) => sum + exercise.points);
   }
 
   int earnedCoursePlayerPoints(DemoAppState state, String courseId) {
@@ -332,23 +352,22 @@ class DemoCatalog {
           return progress?.completedAt != null &&
               coursePlayerCompletionPercent(state, course.id) >= 70;
         })
-        .map(
-          (course) {
-            final percent = coursePlayerCompletionPercent(state, course.id);
-            return CourseCertificate(
-              id: 'certificate_${course.id}',
-              courseId: course.id,
-              title: course.title.resolve(state.locale),
-              recipientName: state.user?.name ?? 'Talgat',
-              issuedAt: state.coursePlayerProgressByCourseId[course.id]!.completedAt!,
-              accent: course.color,
-              tier: percent >= 100
-                  ? CourseCertificateTier.premium
-                  : CourseCertificateTier.standard,
-              completionPercent: percent,
-            );
-          },
-        )
+        .map((course) {
+          final percent = coursePlayerCompletionPercent(state, course.id);
+          return CourseCertificate(
+            id: 'certificate_${course.id}',
+            courseId: course.id,
+            title: course.title.resolve(state.locale),
+            recipientName: state.user?.name ?? 'Talgat',
+            issuedAt:
+                state.coursePlayerProgressByCourseId[course.id]!.completedAt!,
+            accent: course.color,
+            tier: percent >= 100
+                ? CourseCertificateTier.premium
+                : CourseCertificateTier.standard,
+            completionPercent: percent,
+          );
+        })
         .toList()
       ..sort((left, right) => right.issuedAt.compareTo(left.issuedAt));
   }
@@ -363,8 +382,10 @@ class DemoCatalog {
       trackById(trackId).assessment ??
       _buildAssessmentForTrack(trackById(trackId), tracks);
 
-  TrackAssessmentResult? assessmentResultFor(DemoAppState state, String trackId) =>
-      state.assessmentResultsByTrackId[trackId];
+  TrackAssessmentResult? assessmentResultFor(
+    DemoAppState state,
+    String trackId,
+  ) => state.assessmentResultsByTrackId[trackId];
 
   int bestAssessmentPercentFor(DemoAppState state, String trackId) =>
       assessmentResultFor(state, trackId)?.bestPercent ?? 0;
@@ -379,11 +400,16 @@ class DemoCatalog {
   }
 
   int averageBestAssessmentPercent(DemoAppState state) {
-    final results = state.assessmentResultsByTrackId.values.toList(growable: false);
+    final results = state.assessmentResultsByTrackId.values.toList(
+      growable: false,
+    );
     if (results.isEmpty) {
       return 0;
     }
-    final total = results.fold<int>(0, (sum, result) => sum + result.bestPercent);
+    final total = results.fold<int>(
+      0,
+      (sum, result) => sum + result.bestPercent,
+    );
     return (total / results.length).round();
   }
 
@@ -448,12 +474,15 @@ class DemoCatalog {
   }
 
   int completedUnitsForZone(DemoAppState state, TrackZone zone) {
-    return tracksForZone(zone)
-        .fold<int>(0, (sum, track) => sum + _completedUnitsForTrack(state, track));
+    return tracksForZone(
+      zone,
+    ).fold<int>(0, (sum, track) => sum + _completedUnitsForTrack(state, track));
   }
 
   int totalUnitsForZone(TrackZone zone) {
-    return tracksForZone(zone).fold<int>(0, (sum, track) => sum + track.totalUnits);
+    return tracksForZone(
+      zone,
+    ).fold<int>(0, (sum, track) => sum + track.totalUnits);
   }
 
   bool lessonRequirementsMet(DemoAppState state, String lessonId) {
@@ -505,7 +534,9 @@ class DemoCatalog {
       totalUnits: track.totalUnits,
       completedQuizzes: quizIds.where(state.completedQuizIds.contains).length,
       totalQuizzes: quizIds.length,
-      completedTrainers: trainerIds.where(state.completedTrainerIds.contains).length,
+      completedTrainers: trainerIds
+          .where(state.completedTrainerIds.contains)
+          .length,
       totalTrainers: trainerIds.length,
       nextTarget: nextTarget,
     );
@@ -525,7 +556,8 @@ class DemoCatalog {
         : TrackAvailability.completed;
   }
 
-  int totalUnits() => tracks.fold<int>(0, (sum, track) => sum + track.totalUnits);
+  int totalUnits() =>
+      tracks.fold<int>(0, (sum, track) => sum + track.totalUnits);
 
   int totalCompletedUnits(DemoAppState state) =>
       state.completedLessonIds.length + state.completedPracticeIds.length;
@@ -537,23 +569,25 @@ class DemoCatalog {
       tracks.fold<int>(0, (sum, track) => sum + track.totalTrainers);
 
   int totalAssessmentQuestions() => tracks.fold<int>(
-        0,
-        (sum, track) => sum + (track.assessment?.questions.length ?? 0),
-      );
+    0,
+    (sum, track) => sum + (track.assessment?.questions.length ?? 0),
+  );
 
   int completedTracks(DemoAppState state) {
-    return tracks
-        .where((track) {
-          final availability = trackAvailabilityFor(state, track.id);
-          return availability == TrackAvailability.completed ||
-              availability == TrackAvailability.mastered;
-        })
-        .length;
+    return tracks.where((track) {
+      final availability = trackAvailabilityFor(state, track.id);
+      return availability == TrackAvailability.completed ||
+          availability == TrackAvailability.mastered;
+    }).length;
   }
 
   int masteredTracks(DemoAppState state) {
     return tracks
-        .where((track) => trackAvailabilityFor(state, track.id) == TrackAvailability.mastered)
+        .where(
+          (track) =>
+              trackAvailabilityFor(state, track.id) ==
+              TrackAvailability.mastered,
+        )
         .length;
   }
 
@@ -562,8 +596,9 @@ class DemoCatalog {
     final completedPractices = state.completedPracticeIds.length;
     final completedQuizzes = state.completedQuizIds.length;
     final completedTrainers = state.completedTrainerIds.length;
-    final userMessages =
-        state.aiMessages.where((message) => message.author == AiAuthor.user).length;
+    final userMessages = state.aiMessages
+        .where((message) => message.author == AiAuthor.user)
+        .length;
     final assessmentPassed = passedAssessments(state);
     final strongAssessmentScores = state.assessmentResultsByTrackId.values
         .where((result) => result.bestPercent >= 80)
@@ -581,8 +616,7 @@ class DemoCatalog {
       'computer_architecture',
       'information_security_foundations',
       'operating_systems',
-    ]
-        .where((id) => _isTrackFinished(state, id)).length;
+    ].where((id) => _isTrackFinished(state, id)).length;
     final itDone = [
       'fundamentals',
       'frontend',
@@ -596,30 +630,30 @@ class DemoCatalog {
       'system_administration',
       'machine_learning',
       'qa_engineering',
-    ]
-        .where((id) => _isTrackFinished(state, id)).length;
+    ].where((id) => _isTrackFinished(state, id)).length;
     final courseSignals =
-        state.viewedCommunityCourseIds.length + state.savedCommunityCourseIds.length;
+        state.viewedCommunityCourseIds.length +
+        state.savedCommunityCourseIds.length;
     final frontendDone = _isTrackFinished(state, 'frontend') ? 1 : 0;
     final systemsDone = _isTrackFinished(state, 'operating_systems') ? 1 : 0;
     final dataDone =
         (_isTrackFinished(state, 'databases') ? 1 : 0) +
-            (_isTrackFinished(state, 'probability_statistics_analytics') ? 1 : 0);
+        (_isTrackFinished(state, 'probability_statistics_analytics') ? 1 : 0);
     final mathRootsDone =
         (_isTrackFinished(state, 'mathematics') ? 1 : 0) +
-            (_isTrackFinished(state, 'mathematical_analysis') ? 1 : 0) +
-            (_isTrackFinished(state, 'discrete_math') ? 1 : 0) +
-            (_isTrackFinished(state, 'linear_algebra_calculus') ? 1 : 0) +
-            (_isTrackFinished(state, 'probability_statistics_analytics') ? 1 : 0);
-    final algorithmDone =
-        _isTrackFinished(state, 'algorithms_data_structures') ? 1 : 0;
-    final networkDone =
-        _isTrackFinished(state, 'networking_protocols') ? 1 : 0;
-    final mlEngineerDone =
-        _isTrackFinished(state, 'machine_learning') ? 1 : 0;
+        (_isTrackFinished(state, 'mathematical_analysis') ? 1 : 0) +
+        (_isTrackFinished(state, 'discrete_math') ? 1 : 0) +
+        (_isTrackFinished(state, 'linear_algebra_calculus') ? 1 : 0) +
+        (_isTrackFinished(state, 'probability_statistics_analytics') ? 1 : 0);
+    final algorithmDone = _isTrackFinished(state, 'algorithms_data_structures')
+        ? 1
+        : 0;
+    final networkDone = _isTrackFinished(state, 'networking_protocols') ? 1 : 0;
+    final mlEngineerDone = _isTrackFinished(state, 'machine_learning') ? 1 : 0;
     final qaDone = _isTrackFinished(state, 'qa_engineering') ? 1 : 0;
-    final systemAdminDone =
-        _isTrackFinished(state, 'system_administration') ? 1 : 0;
+    final systemAdminDone = _isTrackFinished(state, 'system_administration')
+        ? 1
+        : 0;
     final mobileBranchesDone = [
       'mobile',
       'android_development',
@@ -628,34 +662,209 @@ class DemoCatalog {
     ].where((id) => _isTrackFinished(state, id)).length;
     final securityStackDone =
         (_isTrackFinished(state, 'information_security_foundations') ? 1 : 0) +
-            (_isTrackFinished(state, 'cybersecurity') ? 1 : 0);
+        (_isTrackFinished(state, 'cybersecurity') ? 1 : 0);
 
     return <Achievement>[
-      _achievement('first_step', 'First step', 'Complete the first lesson in any branch.', Icons.flag_rounded, 1, completedLessons),
-      _achievement('lesson_runner', 'Lesson runner', 'Finish 6 lessons across the tree.', Icons.play_lesson_rounded, 6, completedLessons),
-      _achievement('practice_engineer', 'Practice engineer', 'Close 4 hands-on tasks.', Icons.code_rounded, 4, completedPractices),
-      _achievement('quiz_scout', 'Quiz scout', 'Solve 10 output quizzes.', Icons.quiz_rounded, 10, completedQuizzes),
-      _achievement('memory_builder', 'Memory builder', 'Finish 10 code memory labs.', Icons.memory_rounded, 10, completedTrainers),
-      _achievement('streak_7', 'Seven day pulse', 'Reach a 7-day streak.', Icons.local_fire_department_rounded, 7, state.streak),
-      _achievement('xp_900', 'XP 900', 'Cross 900 XP in the demo.', Icons.bolt_rounded, 900, state.xp),
-      _achievement('ai_partner', 'AI partner', 'Send 6 questions to the mentor.', Icons.smart_toy_rounded, 6, userMessages),
-      _achievement('cs_core_explorer', 'CS core explorer', 'Finish 2 Computer Science Core tracks.', Icons.hub_rounded, 2, csDone),
-      _achievement('sphere_builder', 'Sphere builder', 'Finish 2 IT sphere tracks.', Icons.auto_awesome_mosaic_rounded, 2, itDone),
-      _achievement('frontend_ready', 'Frontend ready', 'Close the Frontend track.', Icons.web_rounded, 1, frontendDone),
-      _achievement('systems_foundation', 'Systems foundation', 'Close the Operating Systems track.', Icons.developer_board_rounded, 1, systemsDone),
-      _achievement('data_confidence', 'Data confidence', 'Finish Databases and Probability/Statistics.', Icons.insights_rounded, 2, dataDone),
-      _achievement('math_canopy', 'Math canopy', 'Finish 3 mathematical foundation branches.', Icons.calculate_rounded, 3, mathRootsDone),
-      _achievement('algorithmic_mindset', 'Algorithmic mindset', 'Close Algorithms & Data Structures.', Icons.account_tree_rounded, 1, algorithmDone),
-      _achievement('network_mapper', 'Network mapper', 'Close Information Networks.', Icons.hub_rounded, 1, networkDone),
-      _achievement('mobile_forest', 'Mobile forest', 'Finish 3 mobile-related branches.', Icons.devices_rounded, 3, mobileBranchesDone),
-      _achievement('qa_guardian', 'QA guardian', 'Close the QA Engineer branch.', Icons.fact_check_rounded, 1, qaDone),
-      _achievement('ops_keeper', 'Ops keeper', 'Close the System Administration branch.', Icons.admin_panel_settings_rounded, 1, systemAdminDone),
-      _achievement('ml_pathfinder', 'ML pathfinder', 'Close the ML Engineer branch.', Icons.psychology_alt_rounded, 1, mlEngineerDone),
-      _achievement('security_stack', 'Security stack', 'Finish Information Security and Cybersecurity.', Icons.shield_rounded, 2, securityStackDone),
-      _achievement('community_curator', 'Community curator', 'View or save 4 community courses.', Icons.groups_rounded, 4, courseSignals),
-      _achievement('assessment_starter', 'Assessment starter', 'Pass 3 branch assessments.', Icons.assignment_turned_in_rounded, 3, assessmentPassed),
-      _achievement('assessment_sharp', 'Assessment sharp', 'Reach 80% or more on 4 assessments.', Icons.rule_rounded, 4, strongAssessmentScores),
-      _achievement('mastery_badges', 'Mastery badges', 'Master 2 tracks with perfect quiz accuracy.', Icons.workspace_premium_rounded, 2, masteredTracks(state)),
+      _achievement(
+        'first_step',
+        'First step',
+        'Complete the first lesson in any branch.',
+        Icons.flag_rounded,
+        1,
+        completedLessons,
+      ),
+      _achievement(
+        'lesson_runner',
+        'Lesson runner',
+        'Finish 6 lessons across the tree.',
+        Icons.play_lesson_rounded,
+        6,
+        completedLessons,
+      ),
+      _achievement(
+        'practice_engineer',
+        'Practice engineer',
+        'Close 4 hands-on tasks.',
+        Icons.code_rounded,
+        4,
+        completedPractices,
+      ),
+      _achievement(
+        'quiz_scout',
+        'Quiz scout',
+        'Solve 10 output quizzes.',
+        Icons.quiz_rounded,
+        10,
+        completedQuizzes,
+      ),
+      _achievement(
+        'memory_builder',
+        'Memory builder',
+        'Finish 10 code memory labs.',
+        Icons.memory_rounded,
+        10,
+        completedTrainers,
+      ),
+      _achievement(
+        'streak_7',
+        'Seven day pulse',
+        'Reach a 7-day streak.',
+        Icons.local_fire_department_rounded,
+        7,
+        state.streak,
+      ),
+      _achievement(
+        'xp_900',
+        'XP 900',
+        'Cross 900 XP in the demo.',
+        Icons.bolt_rounded,
+        900,
+        state.xp,
+      ),
+      _achievement(
+        'ai_partner',
+        'AI partner',
+        'Send 6 questions to the mentor.',
+        Icons.smart_toy_rounded,
+        6,
+        userMessages,
+      ),
+      _achievement(
+        'cs_core_explorer',
+        'CS core explorer',
+        'Finish 2 Computer Science Core tracks.',
+        Icons.hub_rounded,
+        2,
+        csDone,
+      ),
+      _achievement(
+        'sphere_builder',
+        'Sphere builder',
+        'Finish 2 IT sphere tracks.',
+        Icons.auto_awesome_mosaic_rounded,
+        2,
+        itDone,
+      ),
+      _achievement(
+        'frontend_ready',
+        'Frontend ready',
+        'Close the Frontend track.',
+        Icons.web_rounded,
+        1,
+        frontendDone,
+      ),
+      _achievement(
+        'systems_foundation',
+        'Systems foundation',
+        'Close the Operating Systems track.',
+        Icons.developer_board_rounded,
+        1,
+        systemsDone,
+      ),
+      _achievement(
+        'data_confidence',
+        'Data confidence',
+        'Finish Databases and Probability/Statistics.',
+        Icons.insights_rounded,
+        2,
+        dataDone,
+      ),
+      _achievement(
+        'math_canopy',
+        'Math canopy',
+        'Finish 3 mathematical foundation branches.',
+        Icons.calculate_rounded,
+        3,
+        mathRootsDone,
+      ),
+      _achievement(
+        'algorithmic_mindset',
+        'Algorithmic mindset',
+        'Close Algorithms & Data Structures.',
+        Icons.account_tree_rounded,
+        1,
+        algorithmDone,
+      ),
+      _achievement(
+        'network_mapper',
+        'Network mapper',
+        'Close Information Networks.',
+        Icons.hub_rounded,
+        1,
+        networkDone,
+      ),
+      _achievement(
+        'mobile_forest',
+        'Mobile forest',
+        'Finish 3 mobile-related branches.',
+        Icons.devices_rounded,
+        3,
+        mobileBranchesDone,
+      ),
+      _achievement(
+        'qa_guardian',
+        'QA guardian',
+        'Close the QA Engineer branch.',
+        Icons.fact_check_rounded,
+        1,
+        qaDone,
+      ),
+      _achievement(
+        'ops_keeper',
+        'Ops keeper',
+        'Close the System Administration branch.',
+        Icons.admin_panel_settings_rounded,
+        1,
+        systemAdminDone,
+      ),
+      _achievement(
+        'ml_pathfinder',
+        'ML pathfinder',
+        'Close the ML Engineer branch.',
+        Icons.psychology_alt_rounded,
+        1,
+        mlEngineerDone,
+      ),
+      _achievement(
+        'security_stack',
+        'Security stack',
+        'Finish Information Security and Cybersecurity.',
+        Icons.shield_rounded,
+        2,
+        securityStackDone,
+      ),
+      _achievement(
+        'community_curator',
+        'Community curator',
+        'View or save 4 community courses.',
+        Icons.groups_rounded,
+        4,
+        courseSignals,
+      ),
+      _achievement(
+        'assessment_starter',
+        'Assessment starter',
+        'Pass 3 branch assessments.',
+        Icons.assignment_turned_in_rounded,
+        3,
+        assessmentPassed,
+      ),
+      _achievement(
+        'assessment_sharp',
+        'Assessment sharp',
+        'Reach 80% or more on 4 assessments.',
+        Icons.rule_rounded,
+        4,
+        strongAssessmentScores,
+      ),
+      _achievement(
+        'mastery_badges',
+        'Mastery badges',
+        'Master 2 tracks with perfect quiz accuracy.',
+        Icons.workspace_premium_rounded,
+        2,
+        masteredTracks(state),
+      ),
     ];
   }
 
@@ -712,8 +921,8 @@ class DemoCatalog {
     final focus = state.focusedLessonId != null
         ? lessonById(state.focusedLessonId!).title.resolve(state.locale)
         : state.focusedPracticeId != null
-            ? practiceById(state.focusedPracticeId!).title.resolve(state.locale)
-            : trackById(state.currentTrackId).title.resolve(state.locale);
+        ? practiceById(state.focusedPracticeId!).title.resolve(state.locale)
+        : trackById(state.currentTrackId).title.resolve(state.locale);
     final track = trackById(state.currentTrackId);
     final prompts = <String>[
       'Explain $focus in one minute.',
@@ -745,11 +954,12 @@ class DemoCatalog {
     final focus = state.focusedLessonId != null
         ? lessonById(state.focusedLessonId!).title.resolve(state.locale)
         : state.focusedPracticeId != null
-            ? practiceById(state.focusedPracticeId!).title.resolve(state.locale)
-            : trackById(state.currentTrackId).title.resolve(state.locale);
+        ? practiceById(state.focusedPracticeId!).title.resolve(state.locale)
+        : trackById(state.currentTrackId).title.resolve(state.locale);
 
     final pool = _replyPool(normalized, focus, state);
-    return pool[_stableHash('${state.currentTrackId}|$focus|$normalized') % pool.length];
+    return pool[_stableHash('${state.currentTrackId}|$focus|$normalized') %
+        pool.length];
   }
 
   List<String> _replyPool(String normalized, String focus, DemoAppState state) {
@@ -767,7 +977,12 @@ class DemoCatalog {
         'Try verbal anchors: name the role of each line before trying to remember exact syntax.',
       ];
     }
-    if (_containsAny(normalized, <String>['tree', 'branch', 'ветк', 'дерево'])) {
+    if (_containsAny(normalized, <String>[
+      'tree',
+      'branch',
+      'ветк',
+      'дерево',
+    ])) {
       return <String>[
         'The tree is one shared route: Computer Science Core sets the foundation, Fundamentals bridges theory into practice, and the lower layer opens the specialized IT spheres.',
         'A strong demo order is Operating Systems -> Databases -> Fundamentals -> Backend. It shows how the product flows from foundation into applied work.',
@@ -781,7 +996,12 @@ class DemoCatalog {
         'When you narrate the stats screen, highlight progression from available to mastered. That ladder makes the journey easy to grasp.',
       ];
     }
-    if (_containsAny(normalized, <String>['course', 'community', 'курс', 'user'])) {
+    if (_containsAny(normalized, <String>[
+      'course',
+      'community',
+      'курс',
+      'user',
+    ])) {
       return <String>[
         'Community courses are read-only mock data in this MVP, but they demonstrate how expert content can complement the main tree.',
         'A strong presentation line is that user-created courses add discovery without changing the core progression logic.',
@@ -808,12 +1028,14 @@ class DemoCatalog {
 
   int _completedUnitsForTrack(DemoAppState state, LearningTrack track) {
     return track.modules.fold<int>(0, (sum, module) {
-      final lessonsDone =
-          module.lessons.where((lesson) => state.completedLessonIds.contains(lesson.id)).length;
+      final lessonsDone = module.lessons
+          .where((lesson) => state.completedLessonIds.contains(lesson.id))
+          .length;
       final practiceDone =
-          module.practice != null && state.completedPracticeIds.contains(module.practice!.id)
-              ? 1
-              : 0;
+          module.practice != null &&
+              state.completedPracticeIds.contains(module.practice!.id)
+          ? 1
+          : 0;
       return sum + lessonsDone + practiceDone;
     });
   }
@@ -897,24 +1119,168 @@ List<CommunityCourse> _buildCommunityCourses() {
 
 List<LeaderboardEntry> _buildLeaderboardSeed() {
   return const <LeaderboardEntry>[
-    LeaderboardEntry(id: 'l1', name: 'Nursultan', xp: 1320, level: 8, role: 'Backend Explorer', focus: 'Databases', isCurrentUser: false),
-    LeaderboardEntry(id: 'l2', name: 'Mira', xp: 1280, level: 8, role: 'Frontend Builder', focus: 'Frontend', isCurrentUser: false),
-    LeaderboardEntry(id: 'l3', name: 'Dias', xp: 1210, level: 7, role: 'Systems Learner', focus: 'Operating Systems', isCurrentUser: false),
-    LeaderboardEntry(id: 'l4', name: 'Aruzhan', xp: 1170, level: 7, role: 'ML Apprentice', focus: 'Machine Learning', isCurrentUser: false),
-    LeaderboardEntry(id: 'l5', name: 'Timur', xp: 1115, level: 7, role: 'Reliability Learner', focus: 'SRE / DevOps', isCurrentUser: false),
-    LeaderboardEntry(id: 'l6', name: 'Sofia', xp: 1090, level: 7, role: 'Security Watcher', focus: 'Cybersecurity', isCurrentUser: false),
-    LeaderboardEntry(id: 'l7', name: 'Adilet', xp: 1035, level: 6, role: 'Math Track Learner', focus: 'Discrete Math', isCurrentUser: false),
-    LeaderboardEntry(id: 'l8', name: 'Zarina', xp: 980, level: 6, role: 'Data Storyteller', focus: 'Probability & Analytics', isCurrentUser: false),
-    LeaderboardEntry(id: 'l9', name: 'Bekzat', xp: 950, level: 6, role: 'Protocol Mapper', focus: 'Networks', isCurrentUser: false),
-    LeaderboardEntry(id: 'l10', name: 'Madina', xp: 910, level: 6, role: 'Mobile Builder', focus: 'Mobile', isCurrentUser: false),
-    LeaderboardEntry(id: 'l11', name: 'Ayan', xp: 860, level: 5, role: 'Product Analyst', focus: 'Databases', isCurrentUser: false),
-    LeaderboardEntry(id: 'l12', name: 'Alina', xp: 830, level: 5, role: 'App Generalist', focus: 'Fundamentals', isCurrentUser: false),
-    LeaderboardEntry(id: 'l13', name: 'Yernar', xp: 790, level: 5, role: 'UI Explorer', focus: 'Frontend', isCurrentUser: false),
-    LeaderboardEntry(id: 'l14', name: 'Tomiris', xp: 760, level: 5, role: 'Research Reader', focus: 'Machine Learning', isCurrentUser: false),
-    LeaderboardEntry(id: 'l15', name: 'Ainur', xp: 730, level: 5, role: 'Systems Generalist', focus: 'Computer Architecture', isCurrentUser: false),
-    LeaderboardEntry(id: 'l16', name: 'Nikita', xp: 690, level: 4, role: 'API Learner', focus: 'Backend', isCurrentUser: false),
-    LeaderboardEntry(id: 'l17', name: 'Asel', xp: 650, level: 4, role: 'Security Apprentice', focus: 'Cybersecurity', isCurrentUser: false),
-    LeaderboardEntry(id: 'l18', name: 'Ilia', xp: 620, level: 4, role: 'Cloud Curious', focus: 'SRE / DevOps', isCurrentUser: false),
+    LeaderboardEntry(
+      id: 'l1',
+      name: 'Nursultan',
+      xp: 1320,
+      level: 8,
+      role: 'Backend Explorer',
+      focus: 'Databases',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l2',
+      name: 'Mira',
+      xp: 1280,
+      level: 8,
+      role: 'Frontend Builder',
+      focus: 'Frontend',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l3',
+      name: 'Dias',
+      xp: 1210,
+      level: 7,
+      role: 'Systems Learner',
+      focus: 'Operating Systems',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l4',
+      name: 'Aruzhan',
+      xp: 1170,
+      level: 7,
+      role: 'ML Apprentice',
+      focus: 'Machine Learning',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l5',
+      name: 'Timur',
+      xp: 1115,
+      level: 7,
+      role: 'Reliability Learner',
+      focus: 'SRE / DevOps',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l6',
+      name: 'Sofia',
+      xp: 1090,
+      level: 7,
+      role: 'Security Watcher',
+      focus: 'Cybersecurity',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l7',
+      name: 'Adilet',
+      xp: 1035,
+      level: 6,
+      role: 'Math Track Learner',
+      focus: 'Discrete Math',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l8',
+      name: 'Zarina',
+      xp: 980,
+      level: 6,
+      role: 'Data Storyteller',
+      focus: 'Probability & Analytics',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l9',
+      name: 'Bekzat',
+      xp: 950,
+      level: 6,
+      role: 'Protocol Mapper',
+      focus: 'Networks',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l10',
+      name: 'Madina',
+      xp: 910,
+      level: 6,
+      role: 'Mobile Builder',
+      focus: 'Mobile',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l11',
+      name: 'Ayan',
+      xp: 860,
+      level: 5,
+      role: 'Product Analyst',
+      focus: 'Databases',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l12',
+      name: 'Alina',
+      xp: 830,
+      level: 5,
+      role: 'App Generalist',
+      focus: 'Fundamentals',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l13',
+      name: 'Yernar',
+      xp: 790,
+      level: 5,
+      role: 'UI Explorer',
+      focus: 'Frontend',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l14',
+      name: 'Tomiris',
+      xp: 760,
+      level: 5,
+      role: 'Research Reader',
+      focus: 'Machine Learning',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l15',
+      name: 'Ainur',
+      xp: 730,
+      level: 5,
+      role: 'Systems Generalist',
+      focus: 'Computer Architecture',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l16',
+      name: 'Nikita',
+      xp: 690,
+      level: 4,
+      role: 'API Learner',
+      focus: 'Backend',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l17',
+      name: 'Asel',
+      xp: 650,
+      level: 4,
+      role: 'Security Apprentice',
+      focus: 'Cybersecurity',
+      isCurrentUser: false,
+    ),
+    LeaderboardEntry(
+      id: 'l18',
+      name: 'Ilia',
+      xp: 620,
+      level: 4,
+      role: 'Cloud Curious',
+      focus: 'SRE / DevOps',
+      isCurrentUser: false,
+    ),
   ];
 }
 
@@ -950,7 +1316,8 @@ TrackAssessment _buildAssessmentForTrack(
   final outsidePool = allTracks
       .where(
         (candidate) =>
-            candidate.id != track.id && !track.connections.contains(candidate.id),
+            candidate.id != track.id &&
+            !track.connections.contains(candidate.id),
       )
       .toList(growable: false);
 
@@ -1008,7 +1375,9 @@ TrackAssessment _buildAssessmentForTrack(
     _connectedTrackQuestion(
       id: '${track.id}_assessment_question_9',
       track: track,
-      correctTrack: connectionPool.isNotEmpty ? connectionPool.first : outsidePool.first,
+      correctTrack: connectionPool.isNotEmpty
+          ? connectionPool.first
+          : outsidePool.first,
       distractorTracks: outsidePool.take(3).toList(growable: false),
       seed: '${track.id}-connections',
     ),
@@ -1044,10 +1413,8 @@ TrackAssessmentQuestion _lessonAssessmentQuestion(
     options: _rotateAssessmentOptions(
       quiz.options
           .map(
-            (option) => TrackAssessmentOption(
-              id: option.id,
-              label: option.label,
-            ),
+            (option) =>
+                TrackAssessmentOption(id: option.id, label: option.label),
           )
           .toList(growable: false),
       lesson.id,
@@ -1153,26 +1520,45 @@ TrackAssessmentQuestion _zoneQuestion({
   final correctLabel = track.zone == TrackZone.computerScienceCore
       ? 'Computer Science Core'
       : 'Applied IT Spheres';
-  final options = _rotateAssessmentOptions(
-    const <TrackAssessmentOption>[
-      TrackAssessmentOption(id: 'core', label: LocalizedText(ru: 'Computer Science Core', en: 'Computer Science Core', kk: 'Computer Science Core')),
-      TrackAssessmentOption(id: 'spheres', label: LocalizedText(ru: 'Applied IT Spheres', en: 'Applied IT Spheres', kk: 'Applied IT Spheres')),
-      TrackAssessmentOption(id: 'community', label: LocalizedText(ru: 'Community Courses', en: 'Community Courses', kk: 'Community Courses')),
-      TrackAssessmentOption(id: 'mentor', label: LocalizedText(ru: 'AI Mentor', en: 'AI Mentor', kk: 'AI Mentor')),
-    ],
-    seed,
-  );
+  final options = _rotateAssessmentOptions(const <TrackAssessmentOption>[
+    TrackAssessmentOption(
+      id: 'core',
+      label: LocalizedText(
+        ru: 'Computer Science Core',
+        en: 'Computer Science Core',
+        kk: 'Computer Science Core',
+      ),
+    ),
+    TrackAssessmentOption(
+      id: 'spheres',
+      label: LocalizedText(
+        ru: 'Applied IT Spheres',
+        en: 'Applied IT Spheres',
+        kk: 'Applied IT Spheres',
+      ),
+    ),
+    TrackAssessmentOption(
+      id: 'community',
+      label: LocalizedText(
+        ru: 'Community Courses',
+        en: 'Community Courses',
+        kk: 'Community Courses',
+      ),
+    ),
+    TrackAssessmentOption(
+      id: 'mentor',
+      label: LocalizedText(ru: 'AI Mentor', en: 'AI Mentor', kk: 'AI Mentor'),
+    ),
+  ], seed);
 
   return TrackAssessmentQuestion(
     id: id,
-    prompt: sameText(
-      'Which zone contains the track ${track.title.en}?',
-    ),
+    prompt: sameText('Which zone contains the track ${track.title.en}?'),
     options: options,
-    correctOptionId: correctLabel == 'Computer Science Core' ? 'core' : 'spheres',
-    explanation: sameText(
-      '${track.title.en} belongs to $correctLabel.',
-    ),
+    correctOptionId: correctLabel == 'Computer Science Core'
+        ? 'core'
+        : 'spheres',
+    explanation: sameText('${track.title.en} belongs to $correctLabel.'),
   );
 }
 
@@ -1209,10 +1595,7 @@ List<TrackAssessmentOption> _buildStringOptions({
   }
 
   return <TrackAssessmentOption>[
-    TrackAssessmentOption(
-      id: correctId,
-      label: sameText(correctLabel),
-    ),
+    TrackAssessmentOption(id: correctId, label: sameText(correctLabel)),
     for (var index = 1; index < labels.length; index++)
       TrackAssessmentOption(
         id: 'option_$index',
@@ -1248,7 +1631,8 @@ bool _isModuleCompleted(DemoAppState state, LearningModule module) {
   final lessonsDone = module.lessons.every(
     (lesson) => state.completedLessonIds.contains(lesson.id),
   );
-  final practiceDone = module.practice == null ||
+  final practiceDone =
+      module.practice == null ||
       state.completedPracticeIds.contains(module.practice!.id);
   return lessonsDone && practiceDone;
 }
