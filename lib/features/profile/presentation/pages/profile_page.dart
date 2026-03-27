@@ -90,7 +90,7 @@ class ProfilePage extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  user?.name ?? 'Dana S.',
+                                  user?.name ?? 'Talgat O.',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context)
@@ -100,7 +100,7 @@ class ProfilePage extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  user?.email ?? 'demo@zerdestudy.app',
+                                  user?.email ?? 'tomyrkanov@gmail.com',
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -148,12 +148,12 @@ class ProfilePage extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              user?.name ?? 'Dana S.',
+                              user?.name ?? 'Talgat O.',
                               style: Theme.of(context).textTheme.headlineSmall,
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              user?.email ?? 'demo@zerdestudy.app',
+                              user?.email ?? 'tomyrkanov@gmail.com',
                               style: TextStyle(color: colors.textSecondary),
                             ),
                             const SizedBox(height: 16),

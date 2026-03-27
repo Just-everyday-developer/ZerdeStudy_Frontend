@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import time
 from pathlib import Path
 
@@ -15,30 +14,36 @@ ROOT = Path(__file__).resolve().parents[2]
 RAW_DIR = ROOT / "output" / "raw"
 BASE_URL = "http://127.0.0.1:8123"
 
-SESSION = {
-    "access_token": "demo-access-token",
-    "refresh_token": "demo-refresh-token",
-    "user": {
-        "id": "ux-mockup-user",
-        "email": "talgat.student@zerdestudy.app",
-        "roles": [
-            {
-                "id": "student-role",
-                "code": "student",
-                "name": "Student",
-            }
-        ],
-        "is_active": True,
-        "created_at": "2026-03-17T09:00:00.000Z",
-    },
-}
-
 ROUTES = [
-    ("home", "/home"),
-    ("tree", "/tree"),
-    ("learn", "/learn"),
-    ("ai", "/ai"),
-    ("profile", "/profile"),
+    {"slug": "home", "path": "/home"},
+    {"slug": "tree", "path": "/tree"},
+    {"slug": "learn", "path": "/learn"},
+    {"slug": "ai", "path": "/ai"},
+    {"slug": "profile", "path": "/profile"},
+    {"slug": "stats", "path": "/stats"},
+    {"slug": "leaderboard", "path": "/leaderboard"},
+    {"slug": "faq", "path": "/faq"},
+    {"slug": "lesson", "path": "/lesson/fundamentals_lesson_1_2"},
+    {"slug": "practice", "path": "/practice/frontend_practice_1"},
+    {"slug": "courses", "path": "/courses"},
+    {"slug": "sql-course-detail", "path": "/courses/course_sql_for_analysts"},
+    {"slug": "moderator", "path": "/moderator"},
+    {
+        "slug": "discrete-math-modules",
+        "path": "/track/discrete_math",
+        "scroll": {
+            "desktop": 720,
+            "mobile": 980,
+        },
+    },
+    {
+        "slug": "discrete-math-first-lesson",
+        "path": "/lesson/discrete_math_lesson_1_1",
+        "scroll": {
+            "desktop": 220,
+            "mobile": 260,
+        },
+    },
 ]
 
 
@@ -91,27 +96,29 @@ def wait_for_flutter(driver: webdriver.Chrome) -> None:
         time.sleep(2.5)
 
 
-def prime_local_storage(driver: webdriver.Chrome) -> None:
+def reset_demo_storage(driver: webdriver.Chrome) -> None:
     driver.get(BASE_URL)
     wait_for_flutter(driver)
-    raw_session = json.dumps(SESSION, ensure_ascii=False)
     driver.execute_script(
         """
         const authKey = 'flutter.zerdestudy_auth_session_v1';
         const demoStateKey = 'flutter.zerdestudy_demo_state_v4';
+        window.localStorage.removeItem(authKey);
         window.localStorage.removeItem(demoStateKey);
-        window.localStorage.setItem(authKey, JSON.stringify(arguments[0]));
-        """,
-        raw_session,
+        """
     )
 
 
 def capture_routes(driver: webdriver.Chrome, viewport_slug: str) -> None:
-    prime_local_storage(driver)
-    for slug, route in ROUTES:
-        driver.get(f"{BASE_URL}/#{route}")
+    reset_demo_storage(driver)
+    for route in ROUTES:
+        driver.get(f"{BASE_URL}/#{route['path']}")
         wait_for_flutter(driver)
-        destination = RAW_DIR / f"{viewport_slug}-{slug}.png"
+        scroll_y = route.get("scroll", {}).get(viewport_slug, 0)
+        if scroll_y > 0:
+            driver.execute_script("window.scrollTo(0, arguments[0]);", scroll_y)
+            time.sleep(1.2)
+        destination = RAW_DIR / f"{viewport_slug}-{route['slug']}.png"
         driver.save_screenshot(str(destination))
 
 

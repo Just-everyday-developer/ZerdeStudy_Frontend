@@ -723,7 +723,7 @@ class DemoAppController extends Notifier<DemoAppState> {
     final themeMode = state.themeMode;
     final currentUser = state.user ??
         _createUser(
-          email: 'demo@zerdestudy.app',
+          email: 'tomyrkanov@gmail.com',
         );
     final seeded = _seedState().copyWith(
       locale: locale,
@@ -742,7 +742,12 @@ class DemoAppController extends Notifier<DemoAppState> {
       themeMode: AppThemeMode.dark,
       isAuthenticated: false,
       isModerator: false,
-      user: null,
+      user: const DemoUser(
+        name: 'Talgat O.',
+        email: 'tomyrkanov@gmail.com',
+        role: 'Student Explorer',
+        goal: 'Cover the full demo without dead ends',
+      ),
       currentTrackId: 'fundamentals',
       focusedLessonId: 'fundamentals_lesson_1_2',
       focusedPracticeId: null,
@@ -964,7 +969,7 @@ class DemoAppController extends Notifier<DemoAppState> {
     String? role,
   }) {
     return DemoUser(
-      name: (name == null || name.trim().isEmpty) ? 'Talgat' : name.trim(),
+      name: (name == null || name.trim().isEmpty) ? 'Talgat O.' : name.trim(),
       email: email.trim(),
       role: role ?? 'Student Explorer',
       goal: goal ?? 'Cover the full demo without dead ends',

@@ -43,14 +43,14 @@ final GlobalKey<NavigatorState> _profileNavigatorKey =
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);
-  final isReady = authState.isReady;
-  final isAuthenticated = authState.isAuthenticated;
-  final isModerator = authState.isModerator;
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoutes.welcome,
     redirect: (context, state) {
+      final isReady = authState.isReady;
+      final isAuthenticated = authState.isAuthenticated;
+      final isModerator = authState.isModerator;
       final path = state.matchedLocation;
       final isAuthRoute = <String>{
         AppRoutes.welcome,

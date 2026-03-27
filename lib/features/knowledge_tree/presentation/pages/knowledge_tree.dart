@@ -294,13 +294,14 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                                   ),
                                 ),
                               ),
-                              Positioned(
-                                right: 16,
-                                top: 16,
-                                child: _PinnedTreeLegend(
-                                  compact: compact,
+                              if (!compact)
+                                Positioned(
+                                  right: 16,
+                                  top: 16,
+                                  child: _PinnedTreeLegend(
+                                    compact: compact,
+                                  ),
                                 ),
-                              ),
                             ],
                           );
                         },

@@ -8,42 +8,60 @@ final appEnvironmentProvider = Provider<AppEnvironment>((ref) {
 class AppEnvironment {
   const AppEnvironment({
     required this.gatewayBaseUrl,
+    required this.aiServiceBaseUrl,
+    this.aiServiceAuthToken = '',
   });
 
   static const String _defaultGatewayPort = '8090';
+  static const String _defaultAiServicePort = '8088';
 
   final String gatewayBaseUrl;
+  final String aiServiceBaseUrl;
+  final String aiServiceAuthToken;
 
   factory AppEnvironment.fromPlatform() {
-    const override = String.fromEnvironment('GATEWAY_BASE_URL');
-    if (override.isNotEmpty) {
-      return AppEnvironment(gatewayBaseUrl: _normalizeBaseUrl(override));
-    }
+    const gatewayOverride = String.fromEnvironment('GATEWAY_BASE_URL');
+    const aiServiceOverride = String.fromEnvironment('AI_SERVICE_BASE_URL');
+    const aiServiceAuthToken = String.fromEnvironment('AI_SERVICE_AUTH_TOKEN');
 
+    return AppEnvironment(
+      gatewayBaseUrl: _normalizeBaseUrl(
+        gatewayOverride.isNotEmpty
+            ? gatewayOverride
+            : _defaultBaseUrlForPort(_defaultGatewayPort),
+      ),
+      aiServiceBaseUrl: _normalizeBaseUrl(
+        aiServiceOverride.isNotEmpty
+            ? aiServiceOverride
+            : _defaultBaseUrlForPort(_defaultAiServicePort),
+      ),
+      aiServiceAuthToken: aiServiceAuthToken.trim(),
+    );
+  }
+
+  Uri resolve(String path) {
+    return Uri.parse(gatewayBaseUrl).resolve(path);
+  }
+
+  Uri resolveAiService(String path) {
+    return Uri.parse(aiServiceBaseUrl).resolve(path);
+  }
+
+  static String _defaultBaseUrlForPort(String port) {
     if (kIsWeb) {
-      return const AppEnvironment(
-        gatewayBaseUrl: 'http://localhost:$_defaultGatewayPort',
-      );
+      return 'http://localhost:$port';
     }
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return const AppEnvironment(
-          gatewayBaseUrl: 'http://10.0.2.2:$_defaultGatewayPort',
-        );
+        return 'http://10.0.2.2:$port';
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
       case TargetPlatform.linux:
       case TargetPlatform.fuchsia:
-        return const AppEnvironment(
-          gatewayBaseUrl: 'http://localhost:$_defaultGatewayPort',
-        );
+        return 'http://localhost:$port';
     }
-  }
-
-  Uri resolve(String path) {
-    return Uri.parse(gatewayBaseUrl).resolve(path);
   }
 
   static String _normalizeBaseUrl(String raw) {
