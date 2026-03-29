@@ -72,6 +72,106 @@ class ModActivityEntry {
   final String type;
 }
 
+enum ModCommentStatus { needsReview, hidden, approved, escalated }
+
+class ModCommentItem {
+  const ModCommentItem({
+    required this.id,
+    required this.author,
+    required this.surface,
+    required this.location,
+    required this.content,
+    required this.reportCount,
+    required this.reportedAt,
+    required this.reasons,
+    required this.status,
+    required this.riskSignals,
+  });
+
+  final String id;
+  final String author;
+  final String surface;
+  final String location;
+  final String content;
+  final int reportCount;
+  final String reportedAt;
+  final List<String> reasons;
+  final ModCommentStatus status;
+  final List<String> riskSignals;
+
+  ModCommentItem copyWith({ModCommentStatus? status}) {
+    return ModCommentItem(
+      id: id,
+      author: author,
+      surface: surface,
+      location: location,
+      content: content,
+      reportCount: reportCount,
+      reportedAt: reportedAt,
+      reasons: reasons,
+      status: status ?? this.status,
+      riskSignals: riskSignals,
+    );
+  }
+}
+
+enum ModCommunityContentType { group, media, links }
+
+enum ModCommunityContentStatus { needsReview, limited, approved, archived }
+
+class ModCommunityContentItem {
+  const ModCommunityContentItem({
+    required this.id,
+    required this.title,
+    required this.owner,
+    required this.type,
+    required this.status,
+    required this.visibility,
+    required this.reportCount,
+    required this.lastActivityAt,
+    required this.summary,
+    required this.tags,
+    required this.riskSignals,
+    required this.memberCount,
+    required this.mediaCount,
+    required this.linkCount,
+  });
+
+  final String id;
+  final String title;
+  final String owner;
+  final ModCommunityContentType type;
+  final ModCommunityContentStatus status;
+  final String visibility;
+  final int reportCount;
+  final String lastActivityAt;
+  final String summary;
+  final List<String> tags;
+  final List<String> riskSignals;
+  final int memberCount;
+  final int mediaCount;
+  final int linkCount;
+
+  ModCommunityContentItem copyWith({ModCommunityContentStatus? status}) {
+    return ModCommunityContentItem(
+      id: id,
+      title: title,
+      owner: owner,
+      type: type,
+      status: status ?? this.status,
+      visibility: visibility,
+      reportCount: reportCount,
+      lastActivityAt: lastActivityAt,
+      summary: summary,
+      tags: tags,
+      riskSignals: riskSignals,
+      memberCount: memberCount,
+      mediaCount: mediaCount,
+      linkCount: linkCount,
+    );
+  }
+}
+
 const List<ModPendingCourse> kModPendingCourses = [
   ModPendingCourse(
     id: 'mc1',
@@ -138,7 +238,8 @@ const List<ModReport> kModReports = [
     initiator: 'user_alex92',
     target: 'user_spammer123',
     reason: 'Спам',
-    content: 'Купите курс со скидкой 90%! Только сегодня! Ссылка: http://spam-link.ru',
+    content:
+        'Купите курс со скидкой 90%! Только сегодня! Ссылка: http://spam-link.ru',
     createdAt: '24 марта, 08:15',
   ),
   ModReport(
@@ -148,7 +249,8 @@ const List<ModReport> kModReports = [
     initiator: 'user_dana',
     target: 'user_hate99',
     reason: 'Оскорбление',
-    content: 'Пользователь систематически оскорбляет других студентов в комментариях.',
+    content:
+        'Пользователь систематически оскорбляет других студентов в комментариях.',
     createdAt: '24 марта, 07:45',
   ),
   ModReport(
@@ -158,7 +260,8 @@ const List<ModReport> kModReports = [
     initiator: 'system',
     target: 'Курс "Взлом за 5 минут"',
     reason: 'Нарушение правил платформы',
-    content: 'Курс обучает незаконному доступу к системам без разрешения владельца.',
+    content:
+        'Курс обучает незаконному доступу к системам без разрешения владельца.',
     createdAt: '23 марта, 22:10',
   ),
   ModReport(
@@ -206,7 +309,8 @@ const List<ModFaqQuestion> kModFaqQuestions = [
     question: 'Почему мой сертификат не отображается в профиле?',
     askedBy: 'user_timur',
     askedAt: '23 марта, 18:30',
-    answer: 'Сертификаты появляются в профиле в течение 24 часов после завершения курса. Если прошло больше — обратитесь в поддержку.',
+    answer:
+        'Сертификаты появляются в профиле в течение 24 часов после завершения курса. Если прошло больше — обратитесь в поддержку.',
     isPublic: true,
   ),
   ModFaqQuestion(
@@ -221,7 +325,8 @@ const List<ModFaqQuestion> kModFaqQuestions = [
     question: 'Как добавить курс в избранное?',
     askedBy: 'user_zarina',
     askedAt: '22 марта, 20:45',
-    answer: 'Нажмите на иконку закладки на карточке курса или внутри курса в правом верхнем углу.',
+    answer:
+        'Нажмите на иконку закладки на карточке курса или внутри курса в правом верхнем углу.',
     isPublic: true,
   ),
   ModFaqQuestion(
@@ -263,5 +368,148 @@ const List<ModActivityEntry> kModRecentActivity = [
     text: 'Курс "Python для аналитиков" одобрен и опубликован',
     time: 'Вчера',
     type: 'approve',
+  ),
+];
+
+const List<ModCommentItem> kModCommentItems = [
+  ModCommentItem(
+    id: 'comment_1',
+    author: 'user_hate99',
+    surface: 'Course comments',
+    location: 'Flutter from zero to production',
+    content:
+        'This lesson is useless, the author clearly does not understand the topic at all.',
+    reportCount: 6,
+    reportedAt: '24 Mar, 09:40',
+    reasons: <String>['Insult', 'Trolling'],
+    status: ModCommentStatus.needsReview,
+    riskSignals: <String>[
+      'Repeated negativity across 3 threads',
+      'Two prior warnings in the last 14 days',
+    ],
+  ),
+  ModCommentItem(
+    id: 'comment_2',
+    author: 'user_spammer123',
+    surface: 'Community group',
+    location: 'Flutter Builders Hub',
+    content:
+        'Join my private channel and get all paid courses for 90% off today only: spam-link.example',
+    reportCount: 9,
+    reportedAt: '24 Mar, 08:05',
+    reasons: <String>['Spam', 'Suspicious links'],
+    status: ModCommentStatus.hidden,
+    riskSignals: <String>[
+      'External link shared 12 times',
+      'Triggered auto-spam pattern',
+    ],
+  ),
+  ModCommentItem(
+    id: 'comment_3',
+    author: 'user_recruiter77',
+    surface: 'Group media thread',
+    location: 'Career Lift for Juniors',
+    content: 'DM me for guaranteed placement if you send a payment first.',
+    reportCount: 4,
+    reportedAt: '23 Mar, 18:20',
+    reasons: <String>['Fraud risk'],
+    status: ModCommentStatus.escalated,
+    riskSignals: <String>[
+      'Payment request detected',
+      'Escalated by automated fraud rule',
+    ],
+  ),
+  ModCommentItem(
+    id: 'comment_4',
+    author: 'user_productive',
+    surface: 'Course comments',
+    location: 'SQL Interview Circle',
+    content:
+        'The last query explanation is still confusing, can we get one more worked example?',
+    reportCount: 1,
+    reportedAt: '23 Mar, 12:10',
+    reasons: <String>['Needs context'],
+    status: ModCommentStatus.approved,
+    riskSignals: <String>['Low severity review'],
+  ),
+];
+
+const List<ModCommunityContentItem> kModCommunityContentItems = [
+  ModCommunityContentItem(
+    id: 'community_1',
+    title: 'Career Lift for Juniors',
+    owner: 'Dana P.',
+    type: ModCommunityContentType.group,
+    status: ModCommunityContentStatus.needsReview,
+    visibility: 'Open group',
+    reportCount: 5,
+    lastActivityAt: '24 Mar, 10:05',
+    summary:
+        'Career support group with CV reviews, group calls, and job-hunt resources.',
+    tags: <String>['career', 'cv', 'interview'],
+    riskSignals: <String>[
+      'Off-platform payment promises mentioned in a linked thread',
+      'Two reports mention misleading guarantees',
+    ],
+    memberCount: 31,
+    mediaCount: 11,
+    linkCount: 7,
+  ),
+  ModCommunityContentItem(
+    id: 'community_2',
+    title: 'Flutter Builders resource dump',
+    owner: 'Ruslan K.',
+    type: ModCommunityContentType.links,
+    status: ModCommunityContentStatus.limited,
+    visibility: 'Members only',
+    reportCount: 3,
+    lastActivityAt: '24 Mar, 07:55',
+    summary:
+        'Shared links bundle for UI references, repos, and workshop recordings.',
+    tags: <String>['flutter', 'resources', 'links'],
+    riskSignals: <String>[
+      'One copyright claim on an external video link',
+      'Needs link-by-link validation',
+    ],
+    memberCount: 24,
+    mediaCount: 18,
+    linkCount: 6,
+  ),
+  ModCommunityContentItem(
+    id: 'community_3',
+    title: 'SQL Circle whiteboard clips',
+    owner: 'Madina S.',
+    type: ModCommunityContentType.media,
+    status: ModCommunityContentStatus.needsReview,
+    visibility: 'Private group',
+    reportCount: 2,
+    lastActivityAt: '23 Mar, 20:10',
+    summary:
+        'Recorded walkthroughs and whiteboard clips from the weekend mock interview session.',
+    tags: <String>['sql', 'media', 'mock'],
+    riskSignals: <String>[
+      'Audio quality issue in one clip',
+      'One report flags off-topic language',
+    ],
+    memberCount: 16,
+    mediaCount: 9,
+    linkCount: 5,
+  ),
+  ModCommunityContentItem(
+    id: 'community_4',
+    title: 'AI Start study lounge',
+    owner: 'Aruzhan B.',
+    type: ModCommunityContentType.group,
+    status: ModCommunityContentStatus.approved,
+    visibility: 'Open group',
+    reportCount: 0,
+    lastActivityAt: '23 Mar, 16:45',
+    summary:
+        'Beginner-friendly study lounge for AI fundamentals, weekly check-ins, and practice prompts.',
+    tags: <String>['ai', 'study', 'beginners'],
+    riskSignals: <String>['No current alerts'],
+    memberCount: 19,
+    mediaCount: 4,
+    linkCount: 3,
   ),
 ];

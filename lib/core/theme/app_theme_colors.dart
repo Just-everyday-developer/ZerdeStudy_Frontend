@@ -133,11 +133,8 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 
     return AppThemeColors(
       background: Color.lerp(background, other.background, t) ?? background,
-      backgroundElevated: Color.lerp(
-            backgroundElevated,
-            other.backgroundElevated,
-            t,
-          ) ??
+      backgroundElevated:
+          Color.lerp(backgroundElevated, other.backgroundElevated, t) ??
           backgroundElevated,
       surface: Color.lerp(surface, other.surface, t) ?? surface,
       surfaceSoft: Color.lerp(surfaceSoft, other.surfaceSoft, t) ?? surfaceSoft,

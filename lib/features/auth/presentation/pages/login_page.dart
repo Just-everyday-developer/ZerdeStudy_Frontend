@@ -3,15 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/app_experience.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/common_widgets/tech_text_field.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/app_theme_colors.dart';
 import '../providers/auth_controller.dart';
 import '../providers/email_providers.dart';
 import '../providers/password_providers.dart';
-import '../widgets/auth_background_wrapper.dart';
+import '../widgets/auth_experience_selector.dart';
+import '../widgets/auth_panel.dart';
+import '../widgets/social_auth_button.dart';
 import '../widgets/tech_action_button.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -39,8 +43,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(AppExperience experience) async {
     final l10n = context.l10n;
+    if (experience == AppExperience.admin) {
+      _showAdminUnavailable();
+      return;
+    }
+
     final email = _emailCtrl.text.trim();
     final password = _passCtrl.text.trim();
     final validateEmail = ref.read(validateEmailProvider);
@@ -63,18 +72,54 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       return;
     }
 
-    final error = await ref.read(authControllerProvider.notifier).login(
-          email: email,
-          password: password,
-        );
+    final error = await ref
+        .read(authControllerProvider.notifier)
+        .login(email: email, password: password);
     if (!mounted || error == null) {
+      return;
+    }
+
+    AppNotice.show(context, message: error, type: AppNoticeType.error);
+  }
+
+  Future<void> _signInWithProvider({
+    required String provider,
+    required AppExperience experience,
+  }) async {
+    if (experience == AppExperience.admin) {
+      _showAdminUnavailable();
+      return;
+    }
+
+    await ref
+        .read(authControllerProvider.notifier)
+        .signInWithMockProvider(
+          provider: provider,
+          roleCode: switch (experience) {
+            AppExperience.student => 'student',
+            AppExperience.teacher => 'teacher',
+            AppExperience.moderator => 'manager',
+            AppExperience.admin => 'admin',
+          },
+        );
+
+    if (!mounted) {
       return;
     }
 
     AppNotice.show(
       context,
-      message: error,
-      type: AppNoticeType.error,
+      message: context.l10n.text('social_login_mock_notice'),
+      type: AppNoticeType.info,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
+  void _showAdminUnavailable() {
+    AppNotice.show(
+      context,
+      message: context.l10n.text('admin_portal_unavailable'),
+      type: AppNoticeType.info,
     );
   }
 
@@ -82,37 +127,48 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final demoState = ref.watch(demoAppControllerProvider);
+    final demoController = ref.read(demoAppControllerProvider.notifier);
     final authState = ref.watch(authControllerProvider);
+    final colors = context.appColors;
+    final selectedExperience = demoState.activeExperience;
 
-    return AuthBackgroundWrapper(
-      child: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+    return AuthPanel(
+      title: l10n.text('login_title'),
+      subtitle: l10n.text('tagline'),
+      topBar: Row(
+        children: [
+          IconButton(
+            onPressed: () => context.go(AppRoutes.welcome),
+            icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          ),
+          const Spacer(),
+          LocaleSelector(
+            currentLocale: demoState.locale,
+            onChanged: demoController.changeLocale,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeader(
+            title: l10n.text('login_as'),
+            subtitle: l10n.text('login_as_hint'),
+          ),
+          const SizedBox(height: 14),
+          AuthExperienceSelector(
+            locale: demoState.locale,
+            selectedExperience: selectedExperience,
+            onChanged: demoController.setActiveExperience,
+          ),
+          const SizedBox(height: 26),
+          Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
+              constraints: const BoxConstraints(maxWidth: 980),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: LocaleSelector(
-                      currentLocale: demoState.locale,
-                      onChanged:
-                          ref.read(demoAppControllerProvider.notifier).changeLocale,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    l10n.text('login_title'),
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    l10n.text('tagline'),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45),
-                  ),
-                  const SizedBox(height: 28),
                   TechTextField(
                     hint: l10n.text('email'),
                     icon: Icons.alternate_email_rounded,
@@ -130,31 +186,127 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     title: authState.isBusy ? '...' : l10n.text('login'),
                     isPrimary: true,
                     icon: Icons.login_rounded,
-                    onTap: authState.isBusy ? () {} : _submit,
+                    onTap: authState.isBusy
+                        ? () {}
+                        : () => _submit(selectedExperience),
                   ),
                   const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => context.go(AppRoutes.forgotPassword),
-                      child: Text(l10n.text('forgot_password')),
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () => context.push(AppRoutes.forgotPassword),
+                        child: Text(l10n.text('forgot_password')),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => context.push(AppRoutes.signup),
+                        icon: const Icon(Icons.person_add_alt_1_rounded),
+                        label: Text(l10n.text('signup')),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => context.go(AppRoutes.signup),
-                      icon: const Icon(Icons.person_add_alt_1_rounded),
-                      label: Text(l10n.text('signup')),
+                  const SizedBox(height: 8),
+                  _DividerLabel(label: l10n.text('login_with')),
+                  const SizedBox(height: 14),
+                  Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        SocialAuthButton(
+                          label: l10n.text('google'),
+                          badgeText: 'G',
+                          accent: const Color(0xFF4285F4),
+                          onTap: authState.isBusy
+                              ? null
+                              : () => _signInWithProvider(
+                                  provider: 'google',
+                                  experience: selectedExperience,
+                                ),
+                        ),
+                        SocialAuthButton(
+                          label: l10n.text('github'),
+                          badgeText: 'GH',
+                          accent: colors.textPrimary,
+                          onTap: authState.isBusy
+                              ? null
+                              : () => _signInWithProvider(
+                                  provider: 'github',
+                                  experience: selectedExperience,
+                                ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
+        ],
       ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: colors.textSecondary,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DividerLabel extends StatelessWidget {
+  const _DividerLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Row(
+      children: [
+        Expanded(child: Divider(color: colors.divider)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: colors.divider)),
+      ],
     );
   }
 }

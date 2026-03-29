@@ -36,6 +36,13 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
     radius: 96,
   ),
   KnowledgeTreeNodeSpec(
+    id: 'oop',
+    trackId: 'oop',
+    title: LocalizedText(ru: 'OOP', en: 'OOP', kk: 'OOP'),
+    position: Offset(690, 470),
+    radius: 84,
+  ),
+  KnowledgeTreeNodeSpec(
     id: 'databases',
     trackId: 'databases',
     title: LocalizedText(ru: 'Databases', en: 'Databases', kk: 'Databases'),
@@ -286,45 +293,61 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
 const List<KnowledgeTreeEdgeSpec> knowledgeTreeEdges = <KnowledgeTreeEdgeSpec>[
   // Root → main branches
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'mathematics'),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'oop'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'databases'),
-  KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'algorithms_data_structures'),
+  KnowledgeTreeEdgeSpec(
+    fromNodeId: 'root',
+    toNodeId: 'algorithms_data_structures',
+  ),
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'networking_protocols'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'ai_theory'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'computer_architecture'),
   KnowledgeTreeEdgeSpec(
-      fromNodeId: 'root', toNodeId: 'information_security_foundations'),
+    fromNodeId: 'root',
+    toNodeId: 'information_security_foundations',
+  ),
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'operating_systems'),
 
   // Mathematics → sub-branches
   KnowledgeTreeEdgeSpec(
-      fromNodeId: 'mathematics', toNodeId: 'mathematical_analysis'),
+    fromNodeId: 'mathematics',
+    toNodeId: 'mathematical_analysis',
+  ),
   KnowledgeTreeEdgeSpec(
-      fromNodeId: 'mathematics', toNodeId: 'linear_algebra_calculus'),
+    fromNodeId: 'mathematics',
+    toNodeId: 'linear_algebra_calculus',
+  ),
   KnowledgeTreeEdgeSpec(fromNodeId: 'mathematics', toNodeId: 'discrete_math'),
   KnowledgeTreeEdgeSpec(
-      fromNodeId: 'mathematics',
-      toNodeId: 'probability_statistics_analytics'),
+    fromNodeId: 'mathematics',
+    toNodeId: 'probability_statistics_analytics',
+  ),
 
   // OS → Applied Hub → specializations
   KnowledgeTreeEdgeSpec(
-      fromNodeId: 'operating_systems', toNodeId: 'applied_hub'),
+    fromNodeId: 'operating_systems',
+    toNodeId: 'applied_hub',
+  ),
   KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'frontend'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'backend'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'mobile'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'sre_devops'),
   KnowledgeTreeEdgeSpec(
-      fromNodeId: 'applied_hub', toNodeId: 'machine_learning'),
+    fromNodeId: 'applied_hub',
+    toNodeId: 'machine_learning',
+  ),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'qa_engineering'),
   KnowledgeTreeEdgeSpec(
-      fromNodeId: 'applied_hub', toNodeId: 'qa_engineering'),
-  KnowledgeTreeEdgeSpec(
-      fromNodeId: 'applied_hub', toNodeId: 'system_administration'),
-  KnowledgeTreeEdgeSpec(
-      fromNodeId: 'applied_hub', toNodeId: 'cybersecurity'),
+    fromNodeId: 'applied_hub',
+    toNodeId: 'system_administration',
+  ),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'cybersecurity'),
 
   // Mobile → sub-platforms
-  KnowledgeTreeEdgeSpec(
-      fromNodeId: 'mobile', toNodeId: 'android_development'),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'mobile', toNodeId: 'android_development'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'mobile', toNodeId: 'ios_development'),
   KnowledgeTreeEdgeSpec(
-      fromNodeId: 'mobile', toNodeId: 'crossplatform_development'),
+    fromNodeId: 'mobile',
+    toNodeId: 'crossplatform_development',
+  ),
 ];

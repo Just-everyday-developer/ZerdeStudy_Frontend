@@ -29,9 +29,7 @@ Future<void> configureAppWindow() async {
   });
 }
 
-Widget buildAppWindowFrame({
-  required Widget child,
-}) {
+Widget buildAppWindowFrame({required Widget child}) {
   if (!Platform.isWindows) {
     return child;
   }
@@ -39,9 +37,7 @@ Widget buildAppWindowFrame({
 }
 
 class _DesktopWindowFrame extends StatefulWidget {
-  const _DesktopWindowFrame({
-    required this.child,
-  });
+  const _DesktopWindowFrame({required this.child});
 
   final Widget child;
 
@@ -99,9 +95,7 @@ class _DesktopWindowFrameState extends State<_DesktopWindowFrame>
 
     return VirtualWindowFrame(
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.background,
-        ),
+        decoration: BoxDecoration(color: colors.background),
         child: Column(
           children: [
             Container(
@@ -111,9 +105,7 @@ class _DesktopWindowFrameState extends State<_DesktopWindowFrame>
                 children: [
                   Expanded(
                     child: DragToMoveArea(
-                      child: Container(
-                        color: Colors.transparent,
-                      ),
+                      child: Container(color: Colors.transparent),
                     ),
                   ),
                   WindowCaptionButton.minimize(
@@ -128,8 +120,8 @@ class _DesktopWindowFrameState extends State<_DesktopWindowFrame>
                     },
                   ),
                   (_isMaximized
-                          ? WindowCaptionButton.unmaximize
-                          : WindowCaptionButton.maximize)(
+                      ? WindowCaptionButton.unmaximize
+                      : WindowCaptionButton.maximize)(
                     brightness: isDark ? Brightness.dark : Brightness.light,
                     onPressed: _toggleWindowSize,
                   ),

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app_experience.dart';
 import 'app_locale.dart';
 import 'app_theme_mode.dart';
 import 'demo_app_state.dart';
@@ -77,18 +78,16 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void loginWithProvider(String providerLabel) {
     final normalized = providerLabel.toLowerCase().trim();
-    final providerName = providerLabel.isEmpty
-        ? 'Guest'
-        : providerLabel[0].toUpperCase() + providerLabel.substring(1);
-
     state = _withDerived(
       state.copyWith(
+        activeExperience: state.activeExperience,
         isAuthenticated: true,
+        isModerator: state.activeExperience == AppExperience.moderator,
         user: _createUser(
           name: 'Talgat',
           email: '${normalized.isEmpty ? 'guest' : normalized}@zerdestudy.app',
-          goal: 'Build steady progress across CS Core and IT Spheres',
-          role: '$providerName learner',
+          goal: _goalForExperience(state.activeExperience),
+          role: _roleForExperience(state.activeExperience),
         ),
       ),
     );
@@ -96,36 +95,70 @@ class DemoAppController extends Notifier<DemoAppState> {
   }
 
   void logout() {
-    state = _withDerived(state.copyWith(isAuthenticated: false, user: null));
+    state = _withDerived(
+      state.copyWith(
+        activeExperience: AppExperience.student,
+        isAuthenticated: false,
+        isModerator: false,
+        user: null,
+      ),
+    );
     _persist();
   }
 
   void loginAsModerator() {
     state = _withDerived(
-      state.copyWith(isAuthenticated: true, isModerator: true),
+      state.copyWith(
+        activeExperience: AppExperience.moderator,
+        isAuthenticated: true,
+        isModerator: true,
+      ),
     );
   }
 
   void logoutModerator() {
     state = _withDerived(
-      state.copyWith(isAuthenticated: false, isModerator: false),
+      state.copyWith(
+        activeExperience: AppExperience.student,
+        isAuthenticated: false,
+        isModerator: false,
+      ),
     );
+  }
+
+  void setActiveExperience(AppExperience experience) {
+    final moderatorMode = experience == AppExperience.moderator;
+    final currentUser = state.user;
+    state = _withDerived(
+      state.copyWith(
+        activeExperience: experience,
+        isModerator: moderatorMode,
+        user: currentUser?.copyWith(
+          role: _roleForExperience(experience),
+          goal: _goalForExperience(experience),
+        ),
+      ),
+    );
+    _persist();
   }
 
   void syncExternalAuth({
     required bool isAuthenticated,
     required bool isModerator,
+    required AppExperience activeExperience,
     DemoUser? user,
   }) {
     final sameUser = _sameUser(state.user, user);
     if (state.isAuthenticated == isAuthenticated &&
         state.isModerator == isModerator &&
+        state.activeExperience == activeExperience &&
         sameUser) {
       return;
     }
 
     state = _withDerived(
       state.copyWith(
+        activeExperience: activeExperience,
         isAuthenticated: isAuthenticated,
         isModerator: isModerator,
         user: user,
@@ -746,6 +779,7 @@ class DemoAppController extends Notifier<DemoAppState> {
     return DemoAppState(
       locale: AppLocale.ru,
       themeMode: AppThemeMode.dark,
+      activeExperience: AppExperience.student,
       isAuthenticated: false,
       isModerator: false,
       user: const DemoUser(
@@ -1193,6 +1227,28 @@ class DemoAppController extends Notifier<DemoAppState> {
         left.email == right.email &&
         left.role == right.role &&
         left.goal == right.goal;
+  }
+
+  String _goalForExperience(AppExperience experience) {
+    return switch (experience) {
+      AppExperience.student =>
+        'Build steady progress across CS Core and IT Spheres',
+      AppExperience.teacher =>
+        'Design practical courses, guide cohorts, and improve learning outcomes',
+      AppExperience.moderator =>
+        'Keep course flows safe, clean, and well moderated',
+      AppExperience.admin =>
+        'Coordinate platform quality, settings, and operational health',
+    };
+  }
+
+  String _roleForExperience(AppExperience experience) {
+    return switch (experience) {
+      AppExperience.student => 'Student',
+      AppExperience.teacher => 'Teacher',
+      AppExperience.moderator => 'Moderator',
+      AppExperience.admin => 'Administrator',
+    };
   }
 
   String _courseAiReply({

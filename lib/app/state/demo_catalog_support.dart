@@ -123,6 +123,8 @@ class DemoPracticeSeed {
     required this.knowledgeChecks,
     required this.promptSuggestion,
     this.xpReward = 75,
+    this.codeChallenge,
+    this.comments = const <DemoPracticeCommentSeed>[],
   });
 
   final String id;
@@ -134,6 +136,40 @@ class DemoPracticeSeed {
   final List<String> knowledgeChecks;
   final String promptSuggestion;
   final int xpReward;
+  final DemoPracticeCodeChallengeSeed? codeChallenge;
+  final List<DemoPracticeCommentSeed> comments;
+}
+
+class DemoPracticeCodeChallengeSeed {
+  const DemoPracticeCodeChallengeSeed({
+    required this.title,
+    required this.instructions,
+    required this.expectedOutput,
+    required this.requiredSnippets,
+    required this.successMessage,
+    required this.retryMessage,
+  });
+
+  final String title;
+  final String instructions;
+  final String expectedOutput;
+  final List<String> requiredSnippets;
+  final String successMessage;
+  final String retryMessage;
+}
+
+class DemoPracticeCommentSeed {
+  const DemoPracticeCommentSeed({
+    required this.id,
+    required this.authorName,
+    required this.role,
+    required this.message,
+  });
+
+  final String id;
+  final String authorName;
+  final String role;
+  final String message;
 }
 
 class DemoModuleSeed {
@@ -298,6 +334,28 @@ PracticeTask buildPracticeFromSeed({
     knowledgeChecks: seed.knowledgeChecks.map(sameText).toList(growable: false),
     promptSuggestion: sameText(seed.promptSuggestion),
     xpReward: seed.xpReward,
+    codeChallenge: seed.codeChallenge == null
+        ? null
+        : PracticeCodeChallenge(
+            title: sameText(seed.codeChallenge!.title),
+            instructions: sameText(seed.codeChallenge!.instructions),
+            expectedOutput: seed.codeChallenge!.expectedOutput,
+            requiredSnippets: List<String>.from(
+              seed.codeChallenge!.requiredSnippets,
+            ),
+            successMessage: sameText(seed.codeChallenge!.successMessage),
+            retryMessage: sameText(seed.codeChallenge!.retryMessage),
+          ),
+    comments: seed.comments
+        .map(
+          (comment) => PracticeComment(
+            id: comment.id,
+            authorName: comment.authorName,
+            role: sameText(comment.role),
+            message: sameText(comment.message),
+          ),
+        )
+        .toList(growable: false),
   );
 }
 

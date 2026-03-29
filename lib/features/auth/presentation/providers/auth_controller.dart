@@ -17,7 +17,9 @@ import '../../application/usecases/restore_auth_session.dart';
 import '../../data/datasources/auth_local_data_source.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../domain/entities/auth_role.dart';
 import '../../domain/entities/auth_session.dart';
+import '../../domain/entities/auth_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_state.dart';
 
@@ -118,6 +120,39 @@ class AuthController extends Notifier<AuthState> {
       operation: () =>
           ref.read(loginWithEmailProvider)(email: email, password: password),
     );
+  }
+
+  Future<void> signInWithMockProvider({
+    required String provider,
+    required String roleCode,
+  }) async {
+    final normalizedProvider = provider.trim().toLowerCase();
+    final providerId = normalizedProvider.isEmpty ? 'mock' : normalizedProvider;
+    final timestamp = DateTime.now();
+    final session = AuthSession(
+      accessToken: 'mock-$providerId-access',
+      refreshToken: 'mock-$providerId-refresh',
+      user: AuthUser(
+        id: 'mock-$providerId-user',
+        email: '$providerId@zerdestudy.app',
+        roles: <AuthRole>[
+          AuthRole(
+            id: 'mock-$roleCode-role',
+            code: roleCode,
+            name: roleCode,
+            description: 'Mock social login role',
+            isDefault: roleCode == 'student',
+            isPrivileged: roleCode == 'admin',
+            isSupport: roleCode == 'manager',
+            createdAt: timestamp,
+          ),
+        ],
+        isActive: true,
+        createdAt: timestamp,
+      ),
+    );
+
+    state = AuthState.authenticated(session);
   }
 
   Future<String?> refreshSession() {

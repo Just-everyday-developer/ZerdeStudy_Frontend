@@ -39,7 +39,10 @@ class SkillNode extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.surface,
-                border: Border.all(color: color.withValues(alpha: 0.8), width: 2),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.8),
+                  width: 2,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: color.withValues(alpha: 0.18),
@@ -65,7 +68,10 @@ class SkillNode extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(999),
                       color: color.withValues(alpha: 0.14),

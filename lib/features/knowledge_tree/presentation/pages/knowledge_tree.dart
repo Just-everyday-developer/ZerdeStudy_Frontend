@@ -38,18 +38,14 @@ class KnowledgeTreePage extends ConsumerWidget {
       child: SizedBox(
         width: screenSize.width,
         height: treeHeight,
-        child: _KnowledgeTreeViewport(
-          contentWidth: treeContentWidth,
-        ),
+        child: _KnowledgeTreeViewport(contentWidth: treeContentWidth),
       ),
     );
   }
 }
 
 class _KnowledgeTreeViewport extends ConsumerStatefulWidget {
-  const _KnowledgeTreeViewport({
-    required this.contentWidth,
-  });
+  const _KnowledgeTreeViewport({required this.contentWidth});
 
   final double contentWidth;
 
@@ -58,7 +54,8 @@ class _KnowledgeTreeViewport extends ConsumerStatefulWidget {
       _KnowledgeTreeViewportState();
 }
 
-class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> {
+class _KnowledgeTreeViewportState
+    extends ConsumerState<_KnowledgeTreeViewport> {
   static const double _windowsFixedScale = 0.64;
 
   final TransformationController _controller = TransformationController();
@@ -101,10 +98,11 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
     _fitScale = scale;
     final offsetX = windowsFixedViewport
         ? 24.0
-        : math.max(0.0, (viewport.width - (knowledgeTreeCanvasSize.width * scale)) / 2);
-    final offsetY = windowsFixedViewport
-        ? 24.0
-        : 12.0;
+        : math.max(
+            0.0,
+            (viewport.width - (knowledgeTreeCanvasSize.width * scale)) / 2,
+          );
+    final offsetY = windowsFixedViewport ? 24.0 : 12.0;
     final matrix = Matrix4.identity()
       ..setEntry(0, 0, scale)
       ..setEntry(1, 1, scale);
@@ -118,8 +116,9 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
 
   double _minScale(bool compact) => compact ? _fitScale * 0.96 : _fitScale;
 
-  double _maxScale(bool compact) =>
-      compact ? math.max(_fitScale * 2.35, 1.7) : math.max(_fitScale * 1.65, 1.2);
+  double _maxScale(bool compact) => compact
+      ? math.max(_fitScale * 2.35, 1.7)
+      : math.max(_fitScale * 1.65, 1.2);
 
   void _setScale(
     double targetScale, {
@@ -130,7 +129,10 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
     if (viewport == null || viewport.isEmpty) {
       return;
     }
-    final clampedScale = targetScale.clamp(_minScale(compact), _maxScale(compact));
+    final clampedScale = targetScale.clamp(
+      _minScale(compact),
+      _maxScale(compact),
+    );
     final viewportFocalPoint =
         focalPoint ?? Offset(viewport.width / 2, viewport.height / 2);
     final scenePoint = _controller.toScene(viewportFocalPoint);
@@ -155,7 +157,10 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = context.isCompactLayout;
-        final contentWidth = math.min(widget.contentWidth, constraints.maxWidth);
+        final contentWidth = math.min(
+          widget.contentWidth,
+          constraints.maxWidth,
+        );
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(compact ? 0 : 28),
@@ -216,8 +221,9 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                                   knowledgeTreeCanvasSize.height,
                             ),
                           );
-                          _fitScale =
-                              windowsFixedViewport ? _windowsFixedScale : fitScale;
+                          _fitScale = windowsFixedViewport
+                              ? _windowsFixedScale
+                              : fitScale;
 
                           return Stack(
                             children: [
@@ -254,13 +260,13 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                                       horizontal: windowsFixedViewport
                                           ? 36
                                           : desktopLike
-                                              ? 8
-                                              : 44,
+                                          ? 8
+                                          : 44,
                                       vertical: windowsFixedViewport
                                           ? 80
                                           : desktopLike
-                                              ? 24
-                                              : 64,
+                                          ? 24
+                                          : 64,
                                     ),
                                     child: SizedBox(
                                       width: knowledgeTreeCanvasSize.width,
@@ -298,9 +304,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
                                 Positioned(
                                   right: 16,
                                   top: 16,
-                                  child: _PinnedTreeLegend(
-                                    compact: compact,
-                                  ),
+                                  child: _PinnedTreeLegend(compact: compact),
                                 ),
                             ],
                           );
@@ -347,9 +351,7 @@ class _KnowledgeTreeViewportState extends ConsumerState<_KnowledgeTreeViewport> 
 }
 
 class _TreeLegendCard extends StatelessWidget {
-  const _TreeLegendCard({
-    required this.compact,
-  });
+  const _TreeLegendCard({required this.compact});
 
   final bool compact;
 
@@ -380,9 +382,9 @@ class _TreeLegendCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
             child: Text(
               context.l10n.text('tree_legend'),
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
           _LegendChip(
@@ -415,9 +417,7 @@ class _TreeLegendCard extends StatelessWidget {
 }
 
 class _PinnedTreeLegend extends StatelessWidget {
-  const _PinnedTreeLegend({
-    required this.compact,
-  });
+  const _PinnedTreeLegend({required this.compact});
 
   final bool compact;
 
@@ -446,15 +446,18 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final track = node.trackId == null ? null : catalog.trackById(node.trackId!);
+    final track = node.trackId == null
+        ? null
+        : catalog.trackById(node.trackId!);
     final availability = track == null
         ? TrackAvailability.available
         : catalog.trackAvailabilityFor(state, track.id);
     final accent = track == null
         ? colors.primary
         : _accentForAvailability(colors, availability, track.color);
-    final bestPercent =
-        track == null ? 0 : catalog.bestAssessmentPercentFor(state, track.id);
+    final bestPercent = track == null
+        ? 0
+        : catalog.bestAssessmentPercentFor(state, track.id);
     final orbSize = node.radius * 2;
 
     return InkWell(
@@ -515,7 +518,9 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                               Icon(
                                 track.icon,
                                 color: accent,
-                                size: node.isHub ? 30 : math.max(16, node.radius * 0.36),
+                                size: node.isHub
+                                    ? 30
+                                    : math.max(16, node.radius * 0.36),
                               )
                             else
                               Icon(
@@ -538,8 +543,8 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                                 fontSize: node.isHub
                                     ? 16
                                     : node.radius < 68
-                                        ? 12
-                                        : 13,
+                                    ? 12
+                                    : 13,
                               ),
                             ),
                             if (node.subtitle != null) ...[
@@ -574,7 +579,9 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(999),
                         color: colors.surfaceSoft.withValues(alpha: 0.96),
-                        border: Border.all(color: accent.withValues(alpha: 0.5)),
+                        border: Border.all(
+                          color: accent.withValues(alpha: 0.5),
+                        ),
                       ),
                       child: Text(
                         bestPercent == 0
@@ -631,7 +638,10 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
     }
   }
 
-  static String _statusLabel(BuildContext context, TrackAvailability availability) {
+  static String _statusLabel(
+    BuildContext context,
+    TrackAvailability availability,
+  ) {
     switch (availability) {
       case TrackAvailability.available:
         return context.l10n.text('tree_available');
@@ -680,7 +690,9 @@ class _KnowledgeTreePainter extends CustomPainter {
           from.isHub || to.isHub || from.radius >= 78 || to.radius >= 78;
       final path = _buildBranchPath(from.position, to.position);
       glowPaint
-        ..color = colors.treeTrunkGlow.withValues(alpha: majorEdge ? 0.44 : 0.22)
+        ..color = colors.treeTrunkGlow.withValues(
+          alpha: majorEdge ? 0.44 : 0.22,
+        )
         ..strokeWidth = majorEdge ? 9 : 6;
       branchPaint
         ..color = colors.treeTrunk.withValues(alpha: majorEdge ? 0.92 : 0.74)
@@ -716,35 +728,38 @@ class _KnowledgeTreePainter extends CustomPainter {
 }
 
 class _BackdropPainter extends CustomPainter {
-  const _BackdropPainter({
-    required this.colors,
-  });
+  const _BackdropPainter({required this.colors});
 
   final AppThemeColors colors;
 
   @override
   void paint(Canvas canvas, Size size) {
     final accentPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          colors.primary.withValues(alpha: 0.08),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(center: const Offset(160, 140), radius: 220));
+      ..shader =
+          RadialGradient(
+            colors: [
+              colors.primary.withValues(alpha: 0.08),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(center: const Offset(160, 140), radius: 220),
+          );
     final accentPaintTwo = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          colors.accent.withValues(alpha: 0.06),
-          Colors.transparent,
-        ],
-      ).createShader(
-        Rect.fromCircle(center: Offset(size.width - 120, size.height - 160), radius: 260),
-      );
+      ..shader =
+          RadialGradient(
+            colors: [colors.accent.withValues(alpha: 0.06), Colors.transparent],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width - 120, size.height - 160),
+              radius: 260,
+            ),
+          );
 
     canvas.drawRect(Offset.zero & size, accentPaint);
     canvas.drawRect(Offset.zero & size, accentPaintTwo);
 
-    final particlePaint = Paint()..color = colors.textSecondary.withValues(alpha: 0.1);
+    final particlePaint = Paint()
+      ..color = colors.textSecondary.withValues(alpha: 0.1);
     const particleOffsets = <Offset>[
       Offset(120, 92),
       Offset(280, 174),
@@ -799,10 +814,7 @@ class _LegendChip extends StatelessWidget {
           Container(
             width: 10,
             height: 10,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color,
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
           ),
           const SizedBox(width: 8),
           Flexible(

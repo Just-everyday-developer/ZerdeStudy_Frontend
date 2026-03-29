@@ -56,7 +56,8 @@ class AuthRoleDto {
       isDefault: json['is_default'] as bool? ?? false,
       isPrivileged: json['is_privileged'] as bool? ?? false,
       isSupport: json['is_support'] as bool? ?? false,
-      createdAt: DateTime.tryParse('${json['created_at'] ?? ''}') ??
+      createdAt:
+          DateTime.tryParse('${json['created_at'] ?? ''}') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }

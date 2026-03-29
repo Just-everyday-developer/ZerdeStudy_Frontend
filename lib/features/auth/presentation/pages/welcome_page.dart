@@ -46,13 +46,12 @@ class WelcomePage extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 18),
-                        AnimatedWelcomeText(
-                          text: l10n.text('app_name'),
-                        ),
+                        AnimatedWelcomeText(text: l10n.text('app_name')),
                         const SizedBox(height: 12),
                         Text(
                           l10n.text('tagline'),
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
                                 color: colors.textSecondary,
                                 height: 1.45,
                               ),
@@ -68,7 +67,7 @@ class WelcomePage extends ConsumerWidget {
                           title: l10n.text('login'),
                           isPrimary: false,
                           icon: Icons.mail_outline_rounded,
-                          onTap: () => context.go(AppRoutes.login),
+                          onTap: () => context.push(AppRoutes.login),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -77,7 +76,7 @@ class WelcomePage extends ConsumerWidget {
                           title: l10n.text('signup'),
                           isPrimary: false,
                           icon: Icons.person_add_alt_1_rounded,
-                          onTap: () => context.go(AppRoutes.signup),
+                          onTap: () => context.push(AppRoutes.signup),
                         ),
                       ),
                     ],
@@ -86,7 +85,7 @@ class WelcomePage extends ConsumerWidget {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
-                      onPressed: () => context.go(AppRoutes.forgotPassword),
+                      onPressed: () => context.push(AppRoutes.forgotPassword),
                       child: Text(l10n.text('forgot_password')),
                     ),
                   ),

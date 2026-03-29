@@ -11,7 +11,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../providers/auth_controller.dart';
 import '../providers/email_providers.dart';
 import '../providers/password_providers.dart';
-import '../widgets/auth_background_wrapper.dart';
+import '../widgets/auth_panel.dart';
 import '../widgets/tech_action_button.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
@@ -61,19 +61,22 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       return;
     }
 
-    final error = await ref.read(authControllerProvider.notifier).register(
-          email: email,
-          password: password,
-        );
+    final error = await ref
+        .read(authControllerProvider.notifier)
+        .register(email: email, password: password);
     if (!mounted || error == null) {
       return;
     }
 
-    AppNotice.show(
-      context,
-      message: error,
-      type: AppNoticeType.error,
-    );
+    AppNotice.show(context, message: error, type: AppNoticeType.error);
+  }
+
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(AppRoutes.login);
   }
 
   @override
@@ -82,35 +85,34 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     final demoState = ref.watch(demoAppControllerProvider);
     final authState = ref.watch(authControllerProvider);
 
-    return AuthBackgroundWrapper(
-      child: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+    return AuthPanel(
+      title: l10n.text('signup_title'),
+      subtitle: l10n.text('tagline'),
+      topBar: Row(
+        children: [
+          IconButton(
+            onPressed: _goBack,
+            icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          ),
+          const Spacer(),
+          LocaleSelector(
+            currentLocale: demoState.locale,
+            onChanged: ref
+                .read(demoAppControllerProvider.notifier)
+                .changeLocale,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
+              constraints: const BoxConstraints(maxWidth: 960),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: LocaleSelector(
-                      currentLocale: demoState.locale,
-                      onChanged:
-                          ref.read(demoAppControllerProvider.notifier).changeLocale,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    l10n.text('signup_title'),
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    l10n.text('tagline'),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45),
-                  ),
-                  const SizedBox(height: 28),
                   TechTextField(
                     hint: l10n.text('email'),
                     icon: Icons.alternate_email_rounded,
@@ -132,9 +134,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   ),
                   const SizedBox(height: 12),
                   Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: Alignment.center,
                     child: TextButton.icon(
-                      onPressed: () => context.go(AppRoutes.login),
+                      onPressed: _goBack,
                       icon: const Icon(Icons.arrow_back_rounded),
                       label: Text(l10n.text('login')),
                     ),
@@ -143,7 +145,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

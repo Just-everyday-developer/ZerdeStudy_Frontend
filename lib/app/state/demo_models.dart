@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_locale.dart';
 
 class LocalizedText {
-  const LocalizedText({
-    required this.ru,
-    required this.en,
-    required this.kk,
-  });
+  const LocalizedText({required this.ru, required this.en, required this.kk});
 
   final String ru;
   final String en;
@@ -38,12 +34,7 @@ class DemoUser {
   final String role;
   final String goal;
 
-  DemoUser copyWith({
-    String? name,
-    String? email,
-    String? role,
-    String? goal,
-  }) {
+  DemoUser copyWith({String? name, String? email, String? role, String? goal}) {
     return DemoUser(
       name: name ?? this.name,
       email: email ?? this.email,
@@ -104,7 +95,8 @@ class AiMessage {
       ),
       text: json['text'] as String? ?? '',
       createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -128,10 +120,7 @@ class Achievement {
   final int progress;
   final bool unlocked;
 
-  Achievement copyWith({
-    int? progress,
-    bool? unlocked,
-  }) {
+  Achievement copyWith({int? progress, bool? unlocked}) {
     return Achievement(
       id: id,
       title: title,
@@ -172,20 +161,14 @@ class LeaderboardEntry {
 }
 
 class QuizOption {
-  const QuizOption({
-    required this.id,
-    required this.label,
-  });
+  const QuizOption({required this.id, required this.label});
 
   final String id;
   final LocalizedText label;
 }
 
 class TrackAssessmentOption {
-  const TrackAssessmentOption({
-    required this.id,
-    required this.label,
-  });
+  const TrackAssessmentOption({required this.id, required this.label});
 
   final String id;
   final LocalizedText label;
@@ -308,6 +291,38 @@ class LessonItem {
   final LocalizedText theoryContent;
 }
 
+class PracticeCodeChallenge {
+  const PracticeCodeChallenge({
+    required this.title,
+    required this.instructions,
+    required this.expectedOutput,
+    required this.requiredSnippets,
+    required this.successMessage,
+    required this.retryMessage,
+  });
+
+  final LocalizedText title;
+  final LocalizedText instructions;
+  final String expectedOutput;
+  final List<String> requiredSnippets;
+  final LocalizedText successMessage;
+  final LocalizedText retryMessage;
+}
+
+class PracticeComment {
+  const PracticeComment({
+    required this.id,
+    required this.authorName,
+    required this.role,
+    required this.message,
+  });
+
+  final String id;
+  final String authorName;
+  final LocalizedText role;
+  final LocalizedText message;
+}
+
 class PracticeTask {
   const PracticeTask({
     required this.id,
@@ -321,6 +336,8 @@ class PracticeTask {
     required this.knowledgeChecks,
     required this.promptSuggestion,
     required this.xpReward,
+    this.codeChallenge,
+    this.comments = const <PracticeComment>[],
   });
 
   final String id;
@@ -334,6 +351,8 @@ class PracticeTask {
   final List<LocalizedText> knowledgeChecks;
   final LocalizedText promptSuggestion;
   final int xpReward;
+  final PracticeCodeChallenge? codeChallenge;
+  final List<PracticeComment> comments;
 }
 
 class LearningModule {
@@ -427,9 +446,7 @@ class LearningTrack {
   final List<LearningModule> modules;
   final TrackAssessment? assessment;
 
-  LearningTrack copyWith({
-    TrackAssessment? assessment,
-  }) {
+  LearningTrack copyWith({TrackAssessment? assessment}) {
     return LearningTrack(
       id: id,
       title: title,
@@ -457,14 +474,24 @@ class LearningTrack {
   int get totalQuizzes {
     return modules.fold<int>(
       0,
-      (sum, module) => sum + module.lessons.fold<int>(0, (inner, lesson) => inner + lesson.quizzes.length),
+      (sum, module) =>
+          sum +
+          module.lessons.fold<int>(
+            0,
+            (inner, lesson) => inner + lesson.quizzes.length,
+          ),
     );
   }
 
   int get totalTrainers {
     return modules.fold<int>(
       0,
-      (sum, module) => sum + module.lessons.fold<int>(0, (inner, lesson) => inner + lesson.codeTrainers.length),
+      (sum, module) =>
+          sum +
+          module.lessons.fold<int>(
+            0,
+            (inner, lesson) => inner + lesson.codeTrainers.length,
+          ),
     );
   }
 }
@@ -534,7 +561,8 @@ class AssessmentAttemptEntry {
       percent: json['percent'] as int? ?? 0,
       passed: json['passed'] as bool? ?? false,
       completedAt:
-          DateTime.tryParse(json['completedAt'] as String? ?? '') ?? DateTime.now(),
+          DateTime.tryParse(json['completedAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -681,7 +709,8 @@ class LearningHistoryEntry {
       subtitle: json['subtitle'] as String?,
       scoreLabel: json['scoreLabel'] as String?,
       createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
       trackId: json['trackId'] as String?,
       refId: json['refId'] as String?,
     );
@@ -690,12 +719,12 @@ class LearningHistoryEntry {
 
 class LearningTarget {
   const LearningTarget.lesson(this.lesson)
-      : practice = null,
-        isPractice = false;
+    : practice = null,
+      isPractice = false;
 
   const LearningTarget.practice(this.practice)
-      : lesson = null,
-        isPractice = true;
+    : lesson = null,
+      isPractice = true;
 
   final LessonItem? lesson;
   final PracticeTask? practice;
@@ -741,10 +770,7 @@ enum CourseExerciseKind {
   textInput,
 }
 
-enum CourseCertificateTier {
-  standard,
-  premium,
-}
+enum CourseCertificateTier { standard, premium }
 
 class CoursePlayerComment {
   const CoursePlayerComment({
@@ -761,10 +787,7 @@ class CoursePlayerComment {
 }
 
 class CourseExerciseChoice {
-  const CourseExerciseChoice({
-    required this.id,
-    required this.label,
-  });
+  const CourseExerciseChoice({required this.id, required this.label});
 
   final String id;
   final String label;
@@ -948,7 +971,8 @@ class CoursePlayerProgress {
       ),
       earnedPoints: json['earnedPoints'] as int? ?? 0,
       enrolledAt:
-          DateTime.tryParse(json['enrolledAt'] as String? ?? '') ?? DateTime.now(),
+          DateTime.tryParse(json['enrolledAt'] as String? ?? '') ??
+          DateTime.now(),
       currentLessonId: json['currentLessonId'] as String?,
       lastOpenedAt: DateTime.tryParse(json['lastOpenedAt'] as String? ?? ''),
       completedAt: DateTime.tryParse(json['completedAt'] as String? ?? ''),
@@ -1215,18 +1239,12 @@ class CommunityCourse {
 }
 
 class QuizAnswerStat {
-  const QuizAnswerStat({
-    required this.attempts,
-    required this.correctAnswers,
-  });
+  const QuizAnswerStat({required this.attempts, required this.correctAnswers});
 
   final int attempts;
   final int correctAnswers;
 
-  QuizAnswerStat copyWith({
-    int? attempts,
-    int? correctAnswers,
-  }) {
+  QuizAnswerStat copyWith({int? attempts, int? correctAnswers}) {
     return QuizAnswerStat(
       attempts: attempts ?? this.attempts,
       correctAnswers: correctAnswers ?? this.correctAnswers,
@@ -1277,22 +1295,22 @@ class AppNotification {
   final bool isRead;
 
   AppNotification copyWith({bool? isRead}) => AppNotification(
-        id: id,
-        title: title,
-        body: body,
-        type: type,
-        createdAt: createdAt,
-        isRead: isRead ?? this.isRead,
-      );
+    id: id,
+    title: title,
+    body: body,
+    type: type,
+    createdAt: createdAt,
+    isRead: isRead ?? this.isRead,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'title': title,
-        'body': body,
-        'type': type.name,
-        'createdAt': createdAt.toIso8601String(),
-        'isRead': isRead,
-      };
+    'id': id,
+    'title': title,
+    'body': body,
+    'type': type.name,
+    'createdAt': createdAt.toIso8601String(),
+    'isRead': isRead,
+  };
 
   factory AppNotification.fromJson(Map<String, dynamic> json) =>
       AppNotification(
@@ -1305,7 +1323,7 @@ class AppNotification {
         ),
         createdAt:
             DateTime.tryParse(json['createdAt'] as String? ?? '') ??
-                DateTime.now(),
+            DateTime.now(),
         isRead: json['isRead'] as bool? ?? false,
       );
 }

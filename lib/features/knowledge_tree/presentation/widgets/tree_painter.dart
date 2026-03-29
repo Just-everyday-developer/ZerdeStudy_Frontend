@@ -43,8 +43,10 @@ class TreePainter extends CustomPainter {
       }
       final start = edge.first;
       final end = edge.last;
-      final branchDepth =
-          ((start.dy + end.dy) / 2 / size.height).clamp(0.0, 1.0);
+      final branchDepth = ((start.dy + end.dy) / 2 / size.height).clamp(
+        0.0,
+        1.0,
+      );
       final width = lerpDouble(11, 4, branchDepth) ?? 6;
       final glowPaint = Paint()
         ..color = AppColors.primary.withValues(alpha: 0.12)
@@ -93,7 +95,12 @@ class TreePainter extends CustomPainter {
         (previous.dx + current.dx) / 2,
         (previous.dy + current.dy) / 2,
       );
-      path.quadraticBezierTo(previous.dx, previous.dy, midPoint.dx, midPoint.dy);
+      path.quadraticBezierTo(
+        previous.dx,
+        previous.dy,
+        midPoint.dx,
+        midPoint.dy,
+      );
     }
     path.lineTo(points.last.dx, points.last.dy);
     return path;

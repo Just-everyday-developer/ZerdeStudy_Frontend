@@ -129,6 +129,183 @@ class AppLocalizations {
           AppLocale.en => 'Write a comment',
           AppLocale.kk => 'Пікір жазыңыз',
         };
+      case 'login_as':
+        return switch (locale) {
+          AppLocale.ru => 'Войти как',
+          AppLocale.en => 'Sign in as',
+          AppLocale.kk => 'Кім ретінде кіру',
+        };
+      case 'login_as_hint':
+        return switch (locale) {
+          AppLocale.ru =>
+            'Выберите рабочий режим, чтобы сразу перейти в нужный интерфейс после входа.',
+          AppLocale.en =>
+            'Choose the workspace mode so the app opens the right interface after login.',
+          AppLocale.kk =>
+            'Кіруден кейін дұрыс интерфейс ашылуы үшін жұмыс режимін таңдаңыз.',
+        };
+      case 'social_login_mock_notice':
+        return switch (locale) {
+          AppLocale.ru => 'Social login пока работает как demo-flow.',
+          AppLocale.en => 'Social login currently works as a demo flow.',
+          AppLocale.kk =>
+            'Social login әзірге demo-flow ретінде жұмыс істейді.',
+        };
+      case 'admin_portal_unavailable':
+        return switch (locale) {
+          AppLocale.ru => 'Панель администратора пока не готова.',
+          AppLocale.en => 'The admin workspace is not available yet.',
+          AppLocale.kk => 'Әкімші панелі әзірге дайын емес.',
+        };
+      case 'continue_to_password_reset':
+        return switch (locale) {
+          AppLocale.ru => 'Продолжить к новому паролю',
+          AppLocale.en => 'Continue to password reset',
+          AppLocale.kk => 'Жаңа құпиясөзге өту',
+        };
+      case 'set_new_password_title':
+        return switch (locale) {
+          AppLocale.ru => 'Новый пароль',
+          AppLocale.en => 'Set a new password',
+          AppLocale.kk => 'Жаңа құпиясөз орнату',
+        };
+      case 'set_new_password_subtitle':
+        return switch (locale) {
+          AppLocale.ru =>
+            'Задайте новый пароль для {email} и подтвердите его повторным вводом.',
+          AppLocale.en =>
+            'Create a new password for {email} and confirm it by typing it again.',
+          AppLocale.kk =>
+            '{email} үшін жаңа құпиясөз орнатып, оны қайта енгізіп растаңыз.',
+        };
+      case 'confirm_password':
+        return switch (locale) {
+          AppLocale.ru => 'Повторите пароль',
+          AppLocale.en => 'Confirm password',
+          AppLocale.kk => 'Құпиясөзді қайталаңыз',
+        };
+      case 'save_new_password':
+        return switch (locale) {
+          AppLocale.ru => 'Сохранить новый пароль',
+          AppLocale.en => 'Save new password',
+          AppLocale.kk => 'Жаңа құпиясөзді сақтау',
+        };
+      case 'back_to_code':
+        return switch (locale) {
+          AppLocale.ru => 'Назад к коду',
+          AppLocale.en => 'Back to code',
+          AppLocale.kk => 'Кодқа оралу',
+        };
+      case 'passwords_do_not_match':
+        return switch (locale) {
+          AppLocale.ru => 'Пароли не совпадают.',
+          AppLocale.en => 'Passwords do not match.',
+          AppLocale.kk => 'Құпиясөздер сәйкес келмейді.',
+        };
+      case 'password_reset_success':
+        return switch (locale) {
+          AppLocale.ru => 'Пароль обновлен. Открываем приложение.',
+          AppLocale.en => 'Password updated. Opening the app.',
+          AppLocale.kk => 'Құпиясөз жаңартылды. Қосымша ашылып жатыр.',
+        };
+      case 'password_reset_success_login_required':
+        return switch (locale) {
+          AppLocale.ru => 'Пароль обновлен. Войдите с новым паролем.',
+          AppLocale.en => 'Password updated. Sign in with the new password.',
+          AppLocale.kk => 'Құпиясөз жаңартылды. Жаңа құпиясөзбен кіріңіз.',
+        };
+      case 'notifications_section_title':
+        return switch (locale) {
+          AppLocale.ru => 'Уведомления',
+          AppLocale.en => 'Notifications',
+          AppLocale.kk => 'Хабарламалар',
+        };
+      case 'notifications_card_title':
+        return switch (locale) {
+          AppLocale.ru => 'Локальные уведомления на устройстве',
+          AppLocale.en => 'Local device notifications',
+          AppLocale.kk => 'Құрылғыдағы жергілікті хабарламалар',
+        };
+      case 'notifications_card_subtitle':
+        return switch (locale) {
+          AppLocale.ru =>
+            'Включите локальные уведомления для телефона и совместимых desktop-систем, затем отправьте тестовый сигнал на это устройство.',
+          AppLocale.en =>
+            'Enable local notifications for phones and supported desktop systems, then send a test alert to this device.',
+          AppLocale.kk =>
+            'Телефон мен қолдау көрсетілетін desktop жүйелеріне жергілікті хабарламаларды қосып, осы құрылғыға тесттік ескертуді жіберіңіз.',
+        };
+      case 'notifications_card_subtitle_unavailable':
+        return switch (locale) {
+          AppLocale.ru =>
+            'На этой платформе локальные уведомления в демо-режиме недоступны.',
+          AppLocale.en =>
+            'Local notifications are not available for this platform in the demo mode.',
+          AppLocale.kk =>
+            'Бұл платформада демо режимінде жергілікті хабарламалар қолжетімсіз.',
+        };
+      case 'notifications_status_supported':
+        return switch (locale) {
+          AppLocale.ru => 'Доступно',
+          AppLocale.en => 'Ready',
+          AppLocale.kk => 'Дайын',
+        };
+      case 'notifications_status_unavailable':
+        return switch (locale) {
+          AppLocale.ru => 'Недоступно',
+          AppLocale.en => 'Unavailable',
+          AppLocale.kk => 'Қолжетімсіз',
+        };
+      case 'notifications_send_test':
+        return switch (locale) {
+          AppLocale.ru => 'Отправить тестовое уведомление',
+          AppLocale.en => 'Send test notification',
+          AppLocale.kk => 'Тест хабарламасын жіберу',
+        };
+      case 'notifications_test_title':
+        return switch (locale) {
+          AppLocale.ru => 'Проверка уведомлений ZerdeStudy',
+          AppLocale.en => 'ZerdeStudy notification check',
+          AppLocale.kk => 'ZerdeStudy хабарламасын тексеру',
+        };
+      case 'notifications_test_body':
+        return switch (locale) {
+          AppLocale.ru =>
+            'Локальные уведомления подключены. Если вы видите это сообщение, функция работает.',
+          AppLocale.en =>
+            'Local notifications are connected. If you can see this message, the feature is working.',
+          AppLocale.kk =>
+            'Жергілікті хабарламалар қосылды. Егер осы хабарды көрсеңіз, функция жұмыс істеп тұр.',
+        };
+      case 'notifications_test_notice_sent':
+        return switch (locale) {
+          AppLocale.ru => 'Тестовое уведомление отправлено на это устройство.',
+          AppLocale.en => 'The test notification was sent to this device.',
+          AppLocale.kk => 'Тест хабарламасы осы құрылғыға жіберілді.',
+        };
+      case 'notifications_test_notice_denied':
+        return switch (locale) {
+          AppLocale.ru =>
+            'Разрешение на уведомления не выдано. Разрешите уведомления и попробуйте снова.',
+          AppLocale.en =>
+            'Notification permission was not granted. Allow notifications and try again.',
+          AppLocale.kk =>
+            'Хабарламаға рұқсат берілмеді. Рұқсат беріп, қайта байқап көріңіз.',
+        };
+      case 'notifications_test_notice_unsupported':
+        return switch (locale) {
+          AppLocale.ru => 'На этой платформе тестовое уведомление недоступно.',
+          AppLocale.en =>
+            'A test notification is not available on this platform.',
+          AppLocale.kk => 'Бұл платформада тест хабарламасы қолжетімсіз.',
+        };
+      case 'notifications_test_notice_failed':
+        return switch (locale) {
+          AppLocale.ru =>
+            'Не удалось отправить уведомление. Попробуйте еще раз.',
+          AppLocale.en => 'The notification could not be sent. Try again.',
+          AppLocale.kk => 'Хабарламаны жіберу мүмкін болмады. Қайта көріңіз.',
+        };
     }
     return null;
   }
@@ -1321,6 +1498,39 @@ class AppLocalizations {
           'The profile stores progress, achievements, certificates, favorites, completed materials, and result history.',
       AppLocale.kk:
           'Профильде прогресс, жетістіктер, сертификаттар, таңдаулылар, аяқталған материалдар және нәтижелер тарихы сақталады.',
+    },
+    'faq_contact_title': {
+      AppLocale.ru: 'Не нашли ответ?',
+      AppLocale.en: 'Did not find your answer?',
+      AppLocale.kk: 'Жауап табылмады ма?',
+    },
+    'faq_contact_subtitle': {
+      AppLocale.ru:
+          'Опишите вопрос, и мы отправим его модератору для ответа в очереди FAQ.',
+      AppLocale.en:
+          'Write your question and we will send it to a moderator for the FAQ queue.',
+      AppLocale.kk:
+          'Сұрағыңызды жазыңыз, біз оны FAQ кезегіне модераторға жібереміз.',
+    },
+    'faq_question_hint': {
+      AppLocale.ru: 'Напишите ваш вопрос',
+      AppLocale.en: 'Describe your question',
+      AppLocale.kk: 'Сұрағыңызды жазыңыз',
+    },
+    'faq_send_question': {
+      AppLocale.ru: 'Отправить модератору',
+      AppLocale.en: 'Send to moderator',
+      AppLocale.kk: 'Модераторға жіберу',
+    },
+    'faq_question_empty': {
+      AppLocale.ru: 'Напишите вопрос перед отправкой.',
+      AppLocale.en: 'Write a question before sending it.',
+      AppLocale.kk: 'Жібермес бұрын сұрақты жазыңыз.',
+    },
+    'faq_question_sent': {
+      AppLocale.ru: 'Вопрос отправлен модератору.',
+      AppLocale.en: 'Your question was sent to the moderator queue.',
+      AppLocale.kk: 'Сұрақ модератор кезегіне жіберілді.',
     },
     'tree_zoom_in': {
       AppLocale.ru: 'Приблизить',

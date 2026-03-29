@@ -12,10 +12,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
 class TrackPage extends ConsumerWidget {
-  const TrackPage({
-    super.key,
-    required this.trackId,
-  });
+  const TrackPage({super.key, required this.trackId});
 
   final String trackId;
 
@@ -145,8 +142,9 @@ class TrackPage extends ConsumerWidget {
                             ? 'Start assessment'
                             : 'Retake assessment',
                         icon: Icons.assignment_turned_in_rounded,
-                        onPressed: () =>
-                            context.push(AppRoutes.assessmentByTrackId(track.id)),
+                        onPressed: () => context.push(
+                          AppRoutes.assessmentByTrackId(track.id),
+                        ),
                       ),
                     ],
                   ),
@@ -282,10 +280,7 @@ class _TrackSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!compact) {
-      return GlowCard(
-        accent: accent,
-        child: child,
-      );
+      return GlowCard(accent: accent, child: child);
     }
 
     return Container(

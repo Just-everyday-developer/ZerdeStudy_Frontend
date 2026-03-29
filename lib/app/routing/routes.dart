@@ -9,37 +9,27 @@ import '../../core/utils/cyber_transition.dart';
 List<RouteBase> routes = [
   GoRoute(
     path: '/welcome',
-    pageBuilder: (context, state) => cyberTransition(
-      state: state,
-      child: const WelcomePage(),
-    ),
+    pageBuilder: (context, state) =>
+        cyberTransition(state: state, child: const WelcomePage()),
   ),
   GoRoute(
     path: '/login',
-    pageBuilder: (context, state) => cyberTransition(
-      state: state,
-      child: const LoginPage(),
-    ),
+    pageBuilder: (context, state) =>
+        cyberTransition(state: state, child: const LoginPage()),
   ),
   GoRoute(
     path: '/signup',
-    pageBuilder: (context, state) => cyberTransition(
-      state: state,
-      child: const SignUpPage(),
-    ),
+    pageBuilder: (context, state) =>
+        cyberTransition(state: state, child: const SignUpPage()),
   ),
   GoRoute(
     path: '/home',
-    pageBuilder: (context, state) => cyberTransition(
-      state: state,
-      child: const HomePage(),
-    ),
+    pageBuilder: (context, state) =>
+        cyberTransition(state: state, child: const HomePage()),
   ),
   GoRoute(
     path: '/tree',
-    pageBuilder: (context, state) => cyberTransition(
-      state: state,
-      child: const KnowledgeTreePage(),
-    ),
+    pageBuilder: (context, state) =>
+        cyberTransition(state: state, child: const KnowledgeTreePage()),
   ),
 ];

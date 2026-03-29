@@ -28,7 +28,9 @@ class AppShellScaffold extends ConsumerStatefulWidget {
 
 class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
   final List<int> _branchHistory = <int>[];
-  final FocusNode _shellFocusNode = FocusNode(debugLabel: 'app-shell-shortcuts');
+  final FocusNode _shellFocusNode = FocusNode(
+    debugLabel: 'app-shell-shortcuts',
+  );
 
   @override
   void initState() {
@@ -44,8 +46,8 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
   }
 
   Future<bool> _handleBack() async {
-    final navigator = widget.navigatorKeys[widget.navigationShell.currentIndex]
-        .currentState;
+    final navigator =
+        widget.navigatorKeys[widget.navigationShell.currentIndex].currentState;
     if (navigator != null && navigator.canPop()) {
       navigator.pop();
       return false;
@@ -89,8 +91,8 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
 
   void _selectAdjacentBranch(int delta) {
     final cycle = context.isCompactLayout
-        ? const <int>[0, 1, 2, 3, 4]
-        : const <int>[0, 1, 2, 3];
+        ? const <int>[0, 1, 2, 3, 4, 5]
+        : const <int>[0, 1, 2, 3, 4];
     final currentIndex = widget.navigationShell.currentIndex;
     final currentPosition = cycle.indexOf(currentIndex);
     final safePosition = currentPosition == -1 ? 0 : currentPosition;
@@ -109,7 +111,8 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
     final shiftPressed = HardwareKeyboard.instance.isShiftPressed;
 
     if (altPressed && !ctrlPressed) {
-      if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.keyZ) {
+      if (key == LogicalKeyboardKey.arrowLeft ||
+          key == LogicalKeyboardKey.keyZ) {
         _handleBack();
         return KeyEventResult.handled;
       }
@@ -195,6 +198,12 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
         selectedIcon: Icons.auto_stories_rounded,
       ),
       _ShellDestination(
+        label: _communityTabLabel(state.locale),
+        route: AppRoutes.community,
+        icon: Icons.groups_2_outlined,
+        selectedIcon: Icons.groups_2_rounded,
+      ),
+      _ShellDestination(
         label: l10n.text('tab_ai'),
         route: AppRoutes.ai,
         icon: Icons.smart_toy_outlined,
@@ -219,16 +228,18 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 700;
-          final currentNavigator =
-              widget.navigatorKeys[widget.navigationShell.currentIndex]
-                  .currentState;
+          final currentNavigator = widget
+              .navigatorKeys[widget.navigationShell.currentIndex]
+              .currentState;
           final canGoBack = currentNavigator?.canPop() ?? false;
           final shellBody = compact
               ? widget.navigationShell
               : Column(
                   children: [
                     _DesktopShellBar(
-                      destinations: destinations.take(4).toList(growable: false),
+                      destinations: destinations
+                          .take(5)
+                          .toList(growable: false),
                       currentIndex: widget.navigationShell.currentIndex,
                       currentUserName: state.user?.name ?? 'Talgat',
                       onDestinationSelected: _onDestinationSelected,
@@ -237,7 +248,8 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                         _onDestinationSelected(2);
                         _requestSearchFocus();
                       },
-                      onProfileTap: () => context.push(AppRoutes.profilePreview),
+                      onProfileTap: () =>
+                          context.push(AppRoutes.profilePreview),
                       onSettingsTap: () => showAppSettingsPanel(context),
                       onLocaleSelected: ref
                           .read(demoAppControllerProvider.notifier)
@@ -325,13 +337,10 @@ class _DesktopShellBar extends StatelessWidget {
             if (canGoBack) ...[
               IconButton(
                 onPressed: onBackTap,
-                icon: Icon(
-                  Icons.arrow_back_rounded,
-                  color: colors.textPrimary,
-                ),
+                icon: Icon(Icons.arrow_back_rounded, color: colors.textPrimary),
                 tooltip: MaterialLocalizations.of(context).backButtonTooltip,
               ),
-                const SizedBox(width: 8),
+              const SizedBox(width: 8),
             ],
             Expanded(
               child: Wrap(
@@ -473,9 +482,7 @@ class _DesktopNavChip extends StatelessWidget {
           color: selected
               ? colors.primary.withValues(alpha: 0.14)
               : colors.surfaceSoft,
-          border: Border.all(
-            color: selected ? colors.primary : colors.divider,
-          ),
+          border: Border.all(color: selected ? colors.primary : colors.divider),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -512,4 +519,12 @@ class _ShellDestination {
   final String route;
   final IconData icon;
   final IconData selectedIcon;
+}
+
+String _communityTabLabel(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Community',
+    AppLocale.en => 'Community',
+    AppLocale.kk => 'Community',
+  };
 }

@@ -11,26 +11,19 @@ enum AuthStatus {
 }
 
 class AuthState {
-  const AuthState({
-    required this.status,
-    this.session,
-    this.errorMessage,
-  });
+  const AuthState({required this.status, this.session, this.errorMessage});
 
   const AuthState.initializing()
-      : status = AuthStatus.initializing,
-        session = null,
-        errorMessage = null;
+    : status = AuthStatus.initializing,
+      session = null,
+      errorMessage = null;
 
-  const AuthState.unauthenticated({
-    this.errorMessage,
-  })  : status = AuthStatus.unauthenticated,
-        session = null;
+  const AuthState.unauthenticated({this.errorMessage})
+    : status = AuthStatus.unauthenticated,
+      session = null;
 
-  const AuthState.authenticated(
-    this.session, {
-    this.errorMessage,
-  }) : status = AuthStatus.authenticated;
+  const AuthState.authenticated(this.session, {this.errorMessage})
+    : status = AuthStatus.authenticated;
 
   static const Object _sentinel = Object();
 
@@ -54,8 +47,9 @@ class AuthState {
   }) {
     return AuthState(
       status: status ?? this.status,
-      session:
-          identical(session, _sentinel) ? this.session : session as AuthSession?,
+      session: identical(session, _sentinel)
+          ? this.session
+          : session as AuthSession?,
       errorMessage: identical(errorMessage, _sentinel)
           ? this.errorMessage
           : errorMessage as String?,

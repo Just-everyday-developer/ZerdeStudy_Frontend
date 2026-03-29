@@ -61,16 +61,17 @@ class _ModeratorCoursesPageState extends ConsumerState<ModeratorCoursesPage> {
                   children: [
                     Text(
                       'Проверка курсов',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${kModPendingCourses.length} ожидают проверки',
                       style: TextStyle(
-                          color: colors.textSecondary, fontSize: 12),
+                        color: colors.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -94,7 +95,9 @@ class _ModeratorCoursesPageState extends ConsumerState<ModeratorCoursesPage> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 120),
                         margin: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 3),
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
@@ -113,8 +116,9 @@ class _ModeratorCoursesPageState extends ConsumerState<ModeratorCoursesPage> {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFF9800)
-                                    .withValues(alpha: 0.12),
+                                color: const Color(
+                                  0xFFFF9800,
+                                ).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(
@@ -151,7 +155,9 @@ class _ModeratorCoursesPageState extends ConsumerState<ModeratorCoursesPage> {
                                   const SizedBox(height: 4),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: colors.surfaceSoft,
                                       borderRadius: BorderRadius.circular(6),
@@ -184,8 +190,11 @@ class _ModeratorCoursesPageState extends ConsumerState<ModeratorCoursesPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.touch_app_rounded,
-                          size: 48, color: colors.textSecondary),
+                      Icon(
+                        Icons.touch_app_rounded,
+                        size: 48,
+                        color: colors.textSecondary,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'Выберите курс для проверки',
@@ -242,8 +251,7 @@ class _CourseReviewPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final checkedCount =
-        checklist.values.where((v) => v).length;
+    final checkedCount = checklist.values.where((v) => v).length;
     final progress = checklistItems.isEmpty
         ? 0.0
         : checkedCount / checklistItems.length;
@@ -265,45 +273,66 @@ class _CourseReviewPanel extends StatelessWidget {
               children: [
                 Text(
                   course.title,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.person_outline_rounded,
-                        size: 14, color: colors.textSecondary),
+                    Icon(
+                      Icons.person_outline_rounded,
+                      size: 14,
+                      color: colors.textSecondary,
+                    ),
                     const SizedBox(width: 4),
-                    Text(course.author,
-                        style: TextStyle(
-                            color: colors.textSecondary, fontSize: 13)),
+                    Text(
+                      course.author,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Icon(Icons.video_library_outlined,
-                        size: 14, color: colors.textSecondary),
+                    Icon(
+                      Icons.video_library_outlined,
+                      size: 14,
+                      color: colors.textSecondary,
+                    ),
                     const SizedBox(width: 4),
-                    Text('${course.lessonCount} уроков',
-                        style: TextStyle(
-                            color: colors.textSecondary, fontSize: 13)),
+                    Text(
+                      '${course.lessonCount} уроков',
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Icon(Icons.schedule_rounded,
-                        size: 14, color: colors.textSecondary),
+                    Icon(
+                      Icons.schedule_rounded,
+                      size: 14,
+                      color: colors.textSecondary,
+                    ),
                     const SizedBox(width: 4),
-                    Text(course.duration,
-                        style: TextStyle(
-                            color: colors.textSecondary, fontSize: 13)),
+                    Text(
+                      course.duration,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: _kOrange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: _kOrange.withValues(alpha: 0.25)),
+                    border: Border.all(color: _kOrange.withValues(alpha: 0.25)),
                   ),
                   child: Text(
                     'Подана: ${course.submittedAt}',
@@ -313,10 +342,9 @@ class _CourseReviewPanel extends StatelessWidget {
                 const SizedBox(height: 20),
                 Text(
                   'Описание курса',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -329,19 +357,19 @@ class _CourseReviewPanel extends StatelessWidget {
                   child: Text(
                     course.description,
                     style: TextStyle(
-                        color: colors.textPrimary,
-                        height: 1.5,
-                        fontSize: 14),
+                      color: colors.textPrimary,
+                      height: 1.5,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
                 // Mock course content preview
                 Text(
                   'Предпросмотр программы курса',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 ...List.generate(
@@ -349,7 +377,9 @@ class _CourseReviewPanel extends StatelessWidget {
                   (i) => Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: colors.surface,
                       borderRadius: BorderRadius.circular(10),
@@ -368,9 +398,10 @@ class _CourseReviewPanel extends StatelessWidget {
                             child: Text(
                               '${i + 1}',
                               style: TextStyle(
-                                  color: colors.textSecondary,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12),
+                                color: colors.textSecondary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ),
@@ -378,11 +409,16 @@ class _CourseReviewPanel extends StatelessWidget {
                         Text(
                           'Урок ${i + 1}: ${['Введение', 'Основные концепции', 'Практическое задание', 'Итоговый проект'][i]}',
                           style: TextStyle(
-                              color: colors.textPrimary, fontSize: 13),
+                            color: colors.textPrimary,
+                            fontSize: 13,
+                          ),
                         ),
                         const Spacer(),
-                        Icon(Icons.play_circle_outline_rounded,
-                            color: colors.textSecondary, size: 18),
+                        Icon(
+                          Icons.play_circle_outline_rounded,
+                          color: colors.textSecondary,
+                          size: 18,
+                        ),
                       ],
                     ),
                   ),
@@ -409,10 +445,9 @@ class _CourseReviewPanel extends StatelessWidget {
                   children: [
                     Text(
                       'Чек-лист модератора',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -423,8 +458,7 @@ class _CourseReviewPanel extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: progress,
                               backgroundColor: colors.surfaceSoft,
-                              valueColor: const AlwaysStoppedAnimation(
-                                  _kGreen),
+                              valueColor: const AlwaysStoppedAnimation(_kGreen),
                               minHeight: 6,
                             ),
                           ),
@@ -452,8 +486,7 @@ class _CourseReviewPanel extends StatelessWidget {
                     final checked = checklist[key] ?? false;
                     return CheckboxListTile(
                       value: checked,
-                      onChanged: (v) =>
-                          onChecklistChanged(key, v ?? false),
+                      onChanged: (v) => onChecklistChanged(key, v ?? false),
                       title: Text(
                         key,
                         style: TextStyle(
@@ -543,23 +576,23 @@ class _VerdictSent extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, color, title, subtitle) = switch (verdict) {
       'approve' => (
-          Icons.check_circle_rounded,
-          const Color(0xFF4CAF50),
-          'Курс опубликован!',
-          '«${course.title}» успешно прошёл проверку и опубликован.',
-        ),
+        Icons.check_circle_rounded,
+        const Color(0xFF4CAF50),
+        'Курс опубликован!',
+        '«${course.title}» успешно прошёл проверку и опубликован.',
+      ),
       'reject' => (
-          Icons.cancel_rounded,
-          const Color(0xFFFF9800),
-          'Курс отклонён',
-          '«${course.title}» отправлен на доработку с комментарием.',
-        ),
+        Icons.cancel_rounded,
+        const Color(0xFFFF9800),
+        'Курс отклонён',
+        '«${course.title}» отправлен на доработку с комментарием.',
+      ),
       _ => (
-          Icons.block_rounded,
-          const Color(0xFFF44336),
-          'Курс заблокирован',
-          '«${course.title}» заблокирован за нарушение правил платформы.',
-        ),
+        Icons.block_rounded,
+        const Color(0xFFF44336),
+        'Курс заблокирован',
+        '«${course.title}» заблокирован за нарушение правил платформы.',
+      ),
     };
     return Center(
       child: Column(
@@ -576,10 +609,9 @@ class _VerdictSent extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Padding(

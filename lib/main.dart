@@ -8,6 +8,7 @@ import 'app/state/auth_demo_bridge.dart';
 import 'app/state/demo_app_controller.dart';
 import 'core/common_widgets/app_scroll_behavior.dart';
 import 'core/localization/app_localizations.dart';
+import 'core/notifications/local_notification_service.dart';
 import 'core/providers/background_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'core/window/app_window.dart';
@@ -20,12 +21,16 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await configureAppWindow();
   final preferences = await SharedPreferences.getInstance();
+  final localNotificationService = await LocalNotificationService.create();
 
   runApp(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(preferences),
         authSharedPreferencesProvider.overrideWithValue(preferences),
+        localNotificationServiceProvider.overrideWithValue(
+          localNotificationService,
+        ),
       ],
       child: const MyApp(),
     ),
@@ -81,9 +86,7 @@ class _MyAppState extends ConsumerState<MyApp>
       routerConfig: router,
       title: 'ZerdeStudy',
       builder: (context, child) {
-        return buildAppWindowFrame(
-          child: child ?? const SizedBox.shrink(),
-        );
+        return buildAppWindowFrame(child: child ?? const SizedBox.shrink());
       },
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

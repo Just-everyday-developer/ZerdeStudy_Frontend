@@ -5,11 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:frontend_flutter/app/state/app_experience.dart';
 import 'package:frontend_flutter/app/state/app_locale.dart';
 import 'package:frontend_flutter/app/state/demo_app_controller.dart';
+import 'package:frontend_flutter/app/state/demo_moderator_controller.dart';
+import 'package:frontend_flutter/core/common_widgets/inline_markdown_text.dart';
 import 'package:frontend_flutter/core/network/json_http_client.dart';
 import 'package:frontend_flutter/core/common_widgets/glow_card.dart';
 import 'package:frontend_flutter/core/localization/app_localizations.dart';
+import 'package:frontend_flutter/core/notifications/local_notification_service.dart';
 import 'package:frontend_flutter/core/theme/app_theme.dart';
 import 'package:frontend_flutter/features/ai/data/datasources/ai_chat_remote_data_source.dart';
 import 'package:frontend_flutter/features/ai/data/models/ai_chat_reply_dto.dart';
@@ -20,11 +24,14 @@ import 'package:frontend_flutter/features/auth/domain/entities/auth_role.dart';
 import 'package:frontend_flutter/features/auth/domain/entities/auth_session.dart';
 import 'package:frontend_flutter/features/auth/domain/entities/auth_user.dart';
 import 'package:frontend_flutter/features/auth/domain/repositories/auth_repository.dart';
+import 'package:frontend_flutter/features/faq/presentation/pages/faq_page.dart';
 import 'package:frontend_flutter/features/home/presentation/pages/community_courses_page.dart';
 import 'package:frontend_flutter/features/home/presentation/pages/home_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/learn_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/lesson_page.dart';
+import 'package:frontend_flutter/features/learning/presentation/pages/practice_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/track_assessment_page.dart';
+import 'package:frontend_flutter/features/moderator/presentation/pages/moderator_shell_page.dart';
 import 'package:frontend_flutter/features/profile/presentation/pages/profile_page.dart';
 import 'package:frontend_flutter/main.dart';
 
@@ -99,15 +106,33 @@ void main() {
     expect(find.text('Log in'), findsOneWidget);
     expect(find.text('Sign up'), findsOneWidget);
 
-    await tester.tap(find.text('Log in'));
+    await tester.tap(find.text('Log in').first);
     await pumpScene(tester);
+    expect(find.text('Sign in as'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).at(0), 'student@zerde.study');
     await tester.enterText(find.byType(TextField).at(1), '05072006');
-    await tester.tap(find.text('Log in').last);
+    final loginButton = find.widgetWithText(FilledButton, 'Log in').first;
+    await tester.scrollUntilVisible(
+      loginButton,
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(loginButton);
     await pumpScene(tester);
 
     expect(find.text('Recommended tracks'), findsOneWidget);
+  });
+
+  test('disabled local notification service returns unsupported', () async {
+    final service = LocalNotificationService.disabled();
+
+    final result = await service.sendTestNotification(
+      title: 'Test',
+      body: 'Body',
+    );
+
+    expect(result, LocalNotificationSendStatus.unsupported);
   });
 
   testWidgets('ctrl+k opens learn and reveals search', (tester) async {
@@ -142,7 +167,56 @@ void main() {
     expect(find.text('Programming languages'), findsOneWidget);
   });
 
-  testWidgets('forgot password flow opens code page and authenticates', (
+  testWidgets(
+    'forgot password flow opens code and reset screens then authenticates',
+    (tester) async {
+      await configureSurface(tester);
+      final container = await createContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+        ],
+      );
+      container
+          .read(demoAppControllerProvider.notifier)
+          .changeLocale(AppLocale.en);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const MyApp()),
+      );
+      await pumpScene(tester);
+
+      await tester.tap(find.text('Forgot password?'));
+      await pumpScene(tester);
+      await tester.enterText(
+        find.byType(TextField).first,
+        'student@zerde.study',
+      );
+      await tester.tap(find.text('Send code'));
+      await pumpScene(tester);
+
+      expect(find.byType(TextField), findsNWidgets(7));
+
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), 'student@zerde.study');
+      for (var i = 0; i < 6; i++) {
+        await tester.enterText(fields.at(i + 1), '${i + 1}');
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      await tester.tap(find.text('Continue to password reset'));
+      await pumpScene(tester);
+
+      expect(find.byType(TextField), findsNWidgets(2));
+      await tester.enterText(find.byType(TextField).at(0), 'Newpass123');
+      await tester.enterText(find.byType(TextField).at(1), 'Newpass123');
+      await tester.tap(find.text('Save new password'));
+      await pumpScene(tester);
+
+      expect(container.read(authControllerProvider).isAuthenticated, isTrue);
+    },
+  );
+
+  testWidgets('teacher role opens the teacher workspace after sign in', (
     tester,
   ) async {
     await configureSurface(tester);
@@ -160,26 +234,125 @@ void main() {
     );
     await pumpScene(tester);
 
-    await tester.tap(find.text('Forgot password?'));
+    await tester.tap(find.text('Log in').first);
     await pumpScene(tester);
-    await tester.enterText(find.byType(TextField).first, 'student@zerde.study');
-    await tester.tap(find.text('Send code'));
+    expect(find.text('Sign in as'), findsOneWidget);
+    expect(find.text('Teacher'), findsOneWidget);
+
+    container
+        .read(demoAppControllerProvider.notifier)
+        .setActiveExperience(AppExperience.teacher);
+    await pumpScene(tester);
+    expect(find.byType(TextField), findsNWidgets(2));
+
+    await tester.enterText(find.byType(TextField).at(0), 'teacher@zerde.study');
+    await tester.enterText(find.byType(TextField).at(1), '05072006');
+    final loginButton = find.widgetWithText(FilledButton, 'Log in').first;
+    await tester.scrollUntilVisible(
+      loginButton,
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(loginButton);
     await pumpScene(tester);
 
-    expect(find.byType(TextField), findsNWidgets(8));
+    expect(find.text('Teacher workspace'), findsOneWidget);
+    expect(find.text('Dashboard'), findsOneWidget);
+  });
 
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), 'student@zerde.study');
-    for (var i = 0; i < 6; i++) {
-      await tester.enterText(fields.at(i + 1), '${i + 1}');
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    await tester.enterText(fields.at(7), 'Newpass123');
+  testWidgets('moderator workspace renders comments and community sections', (
+    tester,
+  ) async {
+    await configureSurface(tester);
+    final container = await createContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+      ],
+    );
 
-    await tester.tap(find.text('Verify and continue'));
+    await tester.pumpWidget(
+      buildTestApp(container, const ModeratorShellPage(initialTab: 3)),
+    );
     await pumpScene(tester);
 
-    expect(container.read(authControllerProvider).isAuthenticated, isTrue);
+    expect(find.text('Модерация комментариев'), findsOneWidget);
+
+    await tester.pumpWidget(
+      buildTestApp(container, const ModeratorShellPage(initialTab: 4)),
+    );
+    await pumpScene(tester);
+
+    expect(find.text('Управление community-контентом'), findsOneWidget);
+  });
+
+  testWidgets('inline markdown text renders bold and code spans', (
+    tester,
+  ) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        container,
+        const Scaffold(
+          body: InlineMarkdownText(
+            text: 'Use **bold** and `code` in mentor replies.',
+          ),
+        ),
+      ),
+    );
+    await pumpScene(tester);
+
+    final selectable = tester.widget<SelectableText>(
+      find.byType(SelectableText),
+    );
+    final rootSpan = selectable.textSpan!;
+    final spans = rootSpan.children!.cast<TextSpan>();
+
+    expect(spans[1].text, 'bold');
+    expect(spans[1].style?.fontWeight, FontWeight.w700);
+    expect(spans[3].text, 'code');
+    expect(spans[3].style?.fontFamily, 'monospace');
+  });
+
+  testWidgets('community tab opens group detail and report flow', (
+    tester,
+  ) async {
+    await configureSurface(tester);
+    await tester.binding.setSurfaceSize(const Size(430, 5000));
+    final container = await createContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(
+          FakeAuthRepository(
+            initialSession: fakeStudentSession(email: 'student@zerde.study'),
+          ),
+        ),
+      ],
+    );
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const MyApp()),
+    );
+    await pumpScene(tester);
+
+    await tester.tap(find.text('Community'));
+    await pumpScene(tester);
+    expect(
+      find.text('Groups where learning becomes a team sport'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Open group').first);
+    await pumpScene(tester);
+    expect(find.text('Group members'), findsOneWidget);
+    expect(find.text('Report'), findsOneWidget);
+    await tester.tap(find.text('Report'));
+    await pumpScene(tester);
+
+    expect(find.text('Report this group'), findsOneWidget);
   });
 
   testWidgets('knowledge tree renders and opens track overview', (
@@ -210,6 +383,7 @@ void main() {
     expect(find.text('Legend'), findsOneWidget);
     expect(find.byIcon(Icons.add_rounded), findsNothing);
     expect(find.text('Operating Systems'), findsWidgets);
+    expect(find.text('OOP'), findsWidgets);
     expect(find.text('Frontend'), findsWidgets);
 
     await tester.tap(find.text('Discrete Math').first);
@@ -217,6 +391,126 @@ void main() {
 
     expect(find.text('Track overview'), findsOneWidget);
     expect(find.text('Modules'), findsOneWidget);
+  });
+
+  testWidgets('oop midterm supports draft run, submission, and comments', (
+    tester,
+  ) async {
+    await configureSurface(tester);
+    await tester.binding.setSurfaceSize(const Size(430, 2600));
+    final container = await createContainer();
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
+
+    await tester.pumpWidget(
+      buildTestApp(container, const PracticePage(practiceId: 'oop_midterm')),
+    );
+    await pumpScene(tester);
+
+    expect(find.text('Interactive code lab'), findsOneWidget);
+    expect(find.text('Comments'), findsOneWidget);
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      '''class StudentProfile {
+  StudentProfile(this.name);
+
+  final String name;
+
+  String summary() {
+    return 'Student: \$name';
+  }
+}
+
+class BootcampStudent extends StudentProfile {
+  BootcampStudent(super.name, this.points);
+
+  final int points;
+
+  @override
+  String summary() {
+    return '\$name finished OOP Midterm with \$points points.';
+  }
+}
+
+void main() {
+  final student = BootcampStudent('Aida', 86);
+  print(student.summary());
+}''',
+    );
+    await tester.tap(find.text('Run draft'));
+    await pumpScene(tester);
+    expect(find.text('Draft console'), findsOneWidget);
+
+    await tester.tap(
+      find.text(
+        'Which field belongs to the base class and which one belongs to the child class?',
+      ),
+    );
+    await pumpScene(tester);
+    await tester.tap(
+      find.text(
+        'Why does the child implementation of summary() run instead of the base one?',
+      ),
+    );
+    await pumpScene(tester);
+
+    await tester.tap(find.text('Submit for review'));
+    await pumpScene(tester);
+
+    expect(
+      container.read(demoAppControllerProvider).completedPracticeIds,
+      contains('oop_midterm'),
+    );
+    expect(find.textContaining('Midterm passed'), findsWidgets);
+
+    await tester.enterText(find.byType(TextField).at(1), 'Nice OOP midterm.');
+    await tester.ensureVisible(find.text('Send comment'));
+    await pumpScene(tester);
+    await tester.tap(find.text('Send comment'));
+    await pumpScene(tester);
+
+    expect(find.text('Nice OOP midterm.'), findsOneWidget);
+  });
+
+  testWidgets('faq page submits a question to the moderator queue', (
+    tester,
+  ) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
+
+    await tester.pumpWidget(buildTestApp(container, const FaqPage()));
+    await pumpScene(tester);
+
+    await tester.scrollUntilVisible(
+      find.text('Send to moderator'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await pumpScene(tester);
+
+    expect(find.text('Did not find your answer?'), findsOneWidget);
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'Can a moderator help me restore my certificate?',
+    );
+    await tester.tap(find.text('Send to moderator'));
+    await pumpScene(tester);
+
+    final submittedQuestions = container.read(demoModeratorFaqProvider);
+    expect(
+      submittedQuestions.first.question,
+      'Can a moderator help me restore my certificate?',
+    );
+    expect(
+      find.text('Can a moderator help me restore my certificate?'),
+      findsNothing,
+    );
   });
 
   testWidgets('learn discovery page shows search rails and frequent searches', (

@@ -1,8 +1,5 @@
 class AuthTokensDto {
-  const AuthTokensDto({
-    required this.accessToken,
-    required this.refreshToken,
-  });
+  const AuthTokensDto({required this.accessToken, required this.refreshToken});
 
   final String accessToken;
   final String refreshToken;

@@ -5,10 +5,7 @@ import '../../../../main.dart';
 import 'infinite_tech_painter.dart';
 
 class AuthBackgroundWrapper extends StatelessWidget {
-  const AuthBackgroundWrapper({
-    super.key,
-    required this.child,
-  });
+  const AuthBackgroundWrapper({super.key, required this.child});
 
   final Widget child;
 
@@ -62,9 +59,7 @@ class AuthBackgroundWrapper extends StatelessWidget {
 }
 
 class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({
-    required this.color,
-  });
+  const _GlowOrb({required this.color});
 
   final Color color;
 
@@ -77,11 +72,7 @@ class _GlowOrb extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [
-              color,
-              color.withValues(alpha: 0.08),
-              Colors.transparent,
-            ],
+            colors: [color, color.withValues(alpha: 0.08), Colors.transparent],
           ),
         ),
       ),

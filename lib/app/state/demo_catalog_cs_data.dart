@@ -8,7 +8,8 @@ List<LearningTrack> buildComputerScienceTracks() {
     _track(
       id: 'mathematics',
       title: 'Mathematics',
-      subtitle: 'The common mathematical foundation for computing and engineering',
+      subtitle:
+          'The common mathematical foundation for computing and engineering',
       description:
           'Build the broad mathematical base that supports algorithms, AI, analytics, and systems thinking.',
       teaser:
@@ -28,12 +29,404 @@ List<LearningTrack> buildComputerScienceTracks() {
       modules: const <DemoModuleSeed>[],
     ),
     _track(
+      id: 'oop',
+      title: 'OOP',
+      subtitle: 'Classes, inheritance, encapsulation, and polymorphism',
+      description:
+          'Build a practical object-oriented mental model for reusable program structure and small system design.',
+      teaser:
+          'Useful for backend services, app architecture, domain modeling, and interview-style coding tasks.',
+      outcome:
+          'You can model small learning scenarios with classes, overridden behavior, and clean object APIs.',
+      icon: Icons.account_tree_rounded,
+      color: const Color(0xFF6FD8FF),
+      order: 12,
+      nodeId: 'cs-oop',
+      connections: <String>['algorithms_data_structures', 'backend', 'mobile'],
+      modules: <DemoModuleSeed>[
+        _module(
+          id: 'oop_module_1',
+          title: 'Classes and Objects',
+          summary:
+              'Fields, constructors, methods, and the basic object model behind small learning entities.',
+          lessons: <DemoLessonSeed>[
+            _lesson(
+              id: 'oop_lesson_1_1',
+              title: 'Classes, fields, and constructors',
+              trackTitle: 'OOP',
+              summary:
+                  'Create a class, initialize it with a constructor, and read values from a real object instance.',
+              outcome:
+                  'You can define a small class and instantiate it with clear field values.',
+              codeSnippet: '''class Course {
+  Course(this.title);
+
+  final String title;
+}
+
+void main() {
+  final course = Course('OOP Basics');
+  print(course.title);
+}''',
+              output: 'OOP Basics',
+              quizOptions: <String>['Course', 'OOP Basics', 'title'],
+              correctQuizIndex: 1,
+              quizPrompt:
+                  'What does the object print after the Course instance is created?',
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Complete the constructor field',
+                instruction:
+                    'Choose the property that stores the course name inside the object.',
+                prompt: 'Course(this.____);',
+                options: <String>['title', 'modules', 'summary'],
+                correctIndex: 0,
+                template: 'Course(this.____);',
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_1_2',
+              title: 'Methods and encapsulation',
+              trackTitle: 'OOP',
+              summary:
+                  'Group object behavior with methods and keep the object response readable from the outside.',
+              outcome:
+                  'You can place a method on a class and use it to expose a clean result.',
+              codeSnippet: '''class StudentProgress {
+  StudentProgress(this.completedLessons);
+
+  final int completedLessons;
+
+  String badge() => completedLessons >= 5 ? 'Ready' : 'Warming up';
+}
+
+void main() {
+  final progress = StudentProgress(6);
+  print(progress.badge());
+}''',
+              output: 'Ready',
+              quizOptions: <String>['Ready', '6', 'badge'],
+              correctQuizIndex: 0,
+              quizPrompt:
+                  'What does the badge() method return for a learner with 6 completed lessons?',
+              trainer: const DemoTrainerSeed.matchOutput(
+                title: 'Match the method output',
+                instruction:
+                    'Choose the string returned by the method for the current object state.',
+                prompt: '''class StudentProgress {
+  StudentProgress(this.completedLessons);
+  final int completedLessons;
+  String badge() => completedLessons >= 3 ? 'On track' : 'Starting';
+}
+
+void main() {
+  final progress = StudentProgress(4);
+  print(progress.badge());
+}''',
+                options: <String>['Starting', 'On track', '4'],
+                correctIndex: 1,
+              ),
+            ),
+          ],
+          practice: _practice(
+            id: 'oop_practice_1',
+            title: 'Model a course object',
+            starterCode: '''class LessonCard {
+  LessonCard(this.title, this.minutes);
+
+  final String title;
+  final int minutes;
+}
+
+void main() {
+  final card = LessonCard('Encapsulation', 18);
+
+  // print one short summary for the card
+}''',
+          ),
+        ),
+        _module(
+          id: 'oop_module_2',
+          title: 'Inheritance and Polymorphism',
+          summary:
+              'Extend a base type, override behavior, and compare the output of parent and child objects.',
+          lessons: <DemoLessonSeed>[
+            _lesson(
+              id: 'oop_lesson_2_1',
+              title: 'Inheritance with extends',
+              trackTitle: 'OOP',
+              summary:
+                  'Reuse a base class and add specialized data in a derived object.',
+              outcome:
+                  'You can create a child class that extends a parent model with one extra field.',
+              codeSnippet: '''class Person {
+  Person(this.name);
+
+  final String name;
+}
+
+class Mentor extends Person {
+  Mentor(super.name, this.track);
+
+  final String track;
+}
+
+void main() {
+  final mentor = Mentor('Dana', 'OOP');
+  print('\${mentor.name} -> \${mentor.track}');
+}''',
+              output: 'Dana -> OOP',
+              quizOptions: <String>[
+                'Dana -> OOP',
+                'Mentor -> Dana',
+                'OOP -> Dana',
+              ],
+              correctQuizIndex: 0,
+              quizPrompt:
+                  'What is printed after the Mentor object inherits the name field and adds track?',
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Complete the inheritance keyword',
+                instruction:
+                    'Choose the keyword used when one class derives from another in Dart.',
+                prompt: 'class Mentor ____ Person { ... }',
+                options: <String>['extends', 'implements', 'mixes'],
+                correctIndex: 0,
+                template: 'class Mentor ____ Person {',
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_2_2',
+              title: 'Override and dynamic dispatch',
+              trackTitle: 'OOP',
+              summary:
+                  'Replace a parent method with more specific child behavior and read the updated output.',
+              outcome:
+                  'You can override a method and explain why the child implementation runs.',
+              codeSnippet: '''class CourseItem {
+  String label() => 'Base course';
+}
+
+class MidtermCourse extends CourseItem {
+  @override
+  String label() => 'OOP midterm';
+}
+
+void main() {
+  final item = MidtermCourse();
+  print(item.label());
+}''',
+              output: 'OOP midterm',
+              quizOptions: <String>[
+                'Base course',
+                'OOP midterm',
+                'MidtermCourse',
+              ],
+              correctQuizIndex: 1,
+              quizPrompt:
+                  'Which label is printed after the child class overrides the base method?',
+              trainer: const DemoTrainerSeed.reorder(
+                title: 'Rebuild the override flow',
+                instruction:
+                    'Arrange the lines so the child class prints its own implementation.',
+                prompt:
+                    'Put the overridden method example back in a working order.',
+                orderedLines: <String>[
+                  'class BaseItem { String label() => \'base\'; }',
+                  'class ChildItem extends BaseItem { @override String label() => \'child\'; }',
+                  'final item = ChildItem();',
+                  'print(item.label());',
+                ],
+              ),
+            ),
+          ],
+          practice: _practice(
+            id: 'oop_practice_2',
+            title: 'Compare parent and child behavior',
+            starterCode: '''class LearningUnit {
+  String status() => 'generic';
+}
+
+class QuizUnit extends LearningUnit {
+  @override
+  String status() => 'quiz ready';
+}
+
+void main() {
+  final item = QuizUnit();
+
+  // print the specialized status
+}''',
+          ),
+        ),
+        _module(
+          id: 'oop_module_3_midterm',
+          title: 'Midterm',
+          summary:
+              'A temporary OOP checkpoint with a draft code runner, final submission, and a review thread.',
+          lessons: <DemoLessonSeed>[
+            _lesson(
+              id: 'oop_lesson_3_1',
+              title: 'Midterm brief',
+              trackTitle: 'OOP',
+              summary:
+                  'Read the task, identify the base class, the child class, and the overridden method before typing.',
+              outcome:
+                  'You can plan the final object model before touching the code editor.',
+              codeSnippet: '''// Midterm idea:
+// 1. Create StudentProfile
+// 2. Extend it with BootcampStudent
+// 3. Override summary()
+// 4. Print the final result''',
+              output: 'Plan the object model before writing the final code.',
+              quizOptions: <String>[
+                'Start from inheritance and final output',
+                'Delete the base class',
+                'Avoid overriding methods',
+              ],
+              correctQuizIndex: 0,
+              quizPrompt:
+                  'Which approach gives the cleanest start before solving the OOP midterm?',
+              trainer: const DemoTrainerSeed.matching(
+                title: 'Map the midterm pieces',
+                instruction: 'Match each OOP element to its role in the task.',
+                prompt: 'Connect the structural parts of the midterm.',
+                options: <String>[
+                  'Base class',
+                  'Child class',
+                  'Overridden method',
+                ],
+                orderedLines: <String>[
+                  'Stores shared state for every learner object',
+                  'Adds points and specialized behavior',
+                  'Returns the final customized summary',
+                ],
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_3_2',
+              title: 'Submission checklist',
+              trackTitle: 'OOP',
+              summary:
+                  'Review the required snippets so the draft run and final review can recognize the OOP solution.',
+              outcome:
+                  'You can verify your own code against the core OOP requirements before submitting.',
+              codeSnippet: '''// Required pieces:
+// class StudentProfile
+// class BootcampStudent extends StudentProfile
+// @override
+// String summary()
+// print(student.summary())''',
+              output: 'Check the required snippets before submission.',
+              quizOptions: <String>[
+                '@override',
+                'print("done") only',
+                'No child class',
+              ],
+              correctQuizIndex: 0,
+              quizPrompt:
+                  'Which snippet is required for the final midterm review?',
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Complete the child class declaration',
+                instruction:
+                    'Choose the inheritance keyword used by the review checklist.',
+                prompt: 'class BootcampStudent ____ StudentProfile { ... }',
+                options: <String>['extends', 'with', 'typedef'],
+                correctIndex: 0,
+                template: 'class BootcampStudent ____ StudentProfile { ... }',
+              ),
+            ),
+          ],
+          practice: const DemoPracticeSeed(
+            id: 'oop_midterm',
+            title: 'OOP Midterm',
+            summary:
+                'Solve a small OOP modeling task in the editor, run a draft console output, then submit the result for review.',
+            brief:
+                'Create a base learner class, extend it with a bootcamp-specific student, override the summary method, and print the final sentence.',
+            starterCode: '''class StudentProfile {
+  StudentProfile(this.name);
+
+  final String name;
+
+  String summary() {
+    return 'Student: \$name';
+  }
+}
+
+class BootcampStudent extends StudentProfile {
+  BootcampStudent(super.name, this.points);
+
+  final int points;
+
+  @override
+  String summary() {
+    // TODO: return the final midterm sentence
+  }
+}
+
+void main() {
+  final student = BootcampStudent('Aida', 86);
+
+  // TODO: print the overridden summary
+}''',
+            successCriteria: <String>[
+              'Keep the base and child classes readable and separated.',
+              'Override summary() in the child class.',
+              'Print the final result from main().',
+            ],
+            knowledgeChecks: <String>[
+              'Which field belongs to the base class and which one belongs to the child class?',
+              'Why does the child implementation of summary() run instead of the base one?',
+            ],
+            promptSuggestion:
+                'Help me explain why this OOP midterm solution uses inheritance and method overriding.',
+            xpReward: 120,
+            codeChallenge: DemoPracticeCodeChallengeSeed(
+              title: 'Interactive code lab',
+              instructions:
+                  'Finish the OOP task, run the code as a draft, then submit it for review. The checker looks for the base class, the child class, the override, and the final print.',
+              expectedOutput: 'Aida finished OOP Midterm with 86 points.',
+              requiredSnippets: <String>[
+                'class StudentProfile',
+                'class BootcampStudent extends StudentProfile',
+                '@override',
+                'String summary()',
+                'finished OOP Midterm',
+                'student.summary()',
+                'print(',
+              ],
+              successMessage:
+                  'Midterm passed. The OOP structure, override, and final output all match the review rules.',
+              retryMessage:
+                  'The midterm is not ready yet. Check the inheritance structure, overridden summary(), and final print statement.',
+            ),
+            comments: <DemoPracticeCommentSeed>[
+              DemoPracticeCommentSeed(
+                id: 'oop_midterm_comment_1',
+                authorName: 'Dana Mentor',
+                role: 'Teacher',
+                message:
+                    'Start from the shared field in StudentProfile, then keep the custom points logic inside BootcampStudent.',
+              ),
+              DemoPracticeCommentSeed(
+                id: 'oop_midterm_comment_2',
+                authorName: 'Aruzhan',
+                role: 'Student',
+                message:
+                    'I forgot to print student.summary() on the first try, so the draft run helped me catch it quickly.',
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+    _track(
       id: 'mathematical_analysis',
       title: 'Mathematical Analysis',
       subtitle: 'Limits, derivatives, continuity, and change over time',
       description:
           'Understand how continuous change, rates, and accumulation support technical reasoning.',
-      teaser: 'Useful for optimization, modeling, and dynamic system intuition.',
+      teaser:
+          'Useful for optimization, modeling, and dynamic system intuition.',
       outcome:
           'You can explain how change over time appears in technical systems and models.',
       icon: Icons.functions_rounded,
@@ -50,7 +443,8 @@ List<LearningTrack> buildComputerScienceTracks() {
         _module(
           id: 'mathematical_analysis_module_1',
           title: 'Limits and Continuity',
-          summary: 'Sequences, limit theorems, one-sided limits, and continuous behavior.',
+          summary:
+              'Sequences, limit theorems, one-sided limits, and continuous behavior.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'mathematical_analysis_lesson_1_1',
@@ -63,7 +457,8 @@ print(f(1.001).toStringAsFixed(3));''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Complete the limit expression',
-                instruction: 'Choose the value that the function approaches as x nears 1.',
+                instruction:
+                    'Choose the value that the function approaches as x nears 1.',
                 prompt: 'lim(x->1) (x^2 - 1)/(x - 1) = ?',
                 options: <String>['2', '1', '0'],
                 correctIndex: 0,
@@ -85,7 +480,11 @@ print(diff.toStringAsFixed(3));''',
                 title: 'Match limit concepts',
                 instruction: 'Match each concept to its definition.',
                 prompt: 'Connect limit terms to their meanings.',
-                options: <String>['Left-hand limit', 'Right-hand limit', 'Continuity'],
+                options: <String>[
+                  'Left-hand limit',
+                  'Right-hand limit',
+                  'Continuity',
+                ],
                 orderedLines: <String>[
                   'Value approached from below',
                   'Value approached from above',
@@ -106,7 +505,8 @@ print(diff.toStringAsFixed(3));''',
         _module(
           id: 'mathematical_analysis_module_2',
           title: 'Differentiation',
-          summary: 'Derivative definition, differentiation rules, and the chain rule.',
+          summary:
+              'Derivative definition, differentiation rules, and the chain rule.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'mathematical_analysis_lesson_2_1',
@@ -135,7 +535,8 @@ print(df.toStringAsFixed(1));''',
               id: 'mathematical_analysis_lesson_2_2',
               title: 'Chain rule and product rule',
               trackTitle: 'Mathematical Analysis',
-              codeSnippet: '''// d/dx(3x^2) using power rule: n * coeff * x^(n-1)
+              codeSnippet:
+                  '''// d/dx(3x^2) using power rule: n * coeff * x^(n-1)
 final x = 2.0;
 final derivative = 2 * 3 * x;
 print(derivative);''',
@@ -223,7 +624,8 @@ print(sum.toStringAsFixed(1));''',
           practice: _practice(
             id: 'mathematical_analysis_practice_3',
             title: 'Approximate a definite integral',
-            starterCode: '''// Use a Riemann sum to approximate integral of x^3 from 0 to 2
+            starterCode:
+                '''// Use a Riemann sum to approximate integral of x^3 from 0 to 2
 var sum = 0.0;
 final n = 1000;
 final dx = 2.0 / n;
@@ -240,7 +642,8 @@ final dx = 2.0 / n;
               id: 'mathematical_analysis_lesson_4_1',
               title: 'Convergence tests',
               trackTitle: 'Mathematical Analysis',
-              codeSnippet: '''// Geometric series: sum = a / (1 - r) when |r| < 1
+              codeSnippet:
+                  '''// Geometric series: sum = a / (1 - r) when |r| < 1
 final a = 1.0;
 final r = 0.5;
 final sum = a / (1 - r);
@@ -271,20 +674,17 @@ print(approx.toStringAsFixed(3));''',
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Build the Taylor expansion',
                 instruction: 'Arrange the terms of e^x Taylor series in order.',
-                prompt: 'Order the first four terms of the Taylor series for e^x.',
-                orderedLines: <String>[
-                  '1',
-                  '+ x',
-                  '+ x^2 / 2!',
-                  '+ x^3 / 3!',
-                ],
+                prompt:
+                    'Order the first four terms of the Taylor series for e^x.',
+                orderedLines: <String>['1', '+ x', '+ x^2 / 2!', '+ x^3 / 3!'],
               ),
             ),
           ],
           practice: _practice(
             id: 'mathematical_analysis_practice_4',
             title: 'Approximate e using a Taylor series',
-            starterCode: '''// Compute e^1 using the first 10 terms of the Taylor series
+            starterCode:
+                '''// Compute e^1 using the first 10 terms of the Taylor series
 // e^x = sum(x^n / n!) for n = 0, 1, 2, ...
 var approx = 0.0;
 var factorial = 1;
@@ -298,9 +698,11 @@ var factorial = 1;
       id: 'discrete_math',
       title: 'Discrete Math',
       subtitle: 'Logic, sets, graphs, and counting techniques',
-      description: 'Learn the language behind algorithms and structured reasoning.',
+      description:
+          'Learn the language behind algorithms and structured reasoning.',
       teaser: 'Strong for algorithms, backend reasoning, and state modeling.',
-      outcome: 'You can reason about structure, conditions, and combinations clearly.',
+      outcome:
+          'You can reason about structure, conditions, and combinations clearly.',
       icon: Icons.route_rounded,
       color: const Color(0xFF7CE7FF),
       order: 2,
@@ -316,14 +718,17 @@ var factorial = 1;
           title: 'Logic & Proof Techniques',
           titleRu: 'Логика и методы доказательства',
           titleKk: 'Логика және дәлелдеу әдістері',
-          summary: 'Propositional and predicate logic, truth tables, and classical proof methods including direct proof, contrapositive, contradiction, and mathematical induction.',
+          summary:
+              'Propositional and predicate logic, truth tables, and classical proof methods including direct proof, contrapositive, contradiction, and mathematical induction.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'discrete_math_lesson_1_1',
               title: 'Propositional logic and truth tables',
               trackTitle: 'Discrete Math',
-              summary: 'Propositions, logical connectives, truth tables, tautologies, contradictions, and De Morgan\'s laws.',
-              outcome: 'Construct truth tables for compound propositions and apply De Morgan\'s laws to simplify logical expressions.',
+              summary:
+                  'Propositions, logical connectives, truth tables, tautologies, contradictions, and De Morgan\'s laws.',
+              outcome:
+                  'Construct truth tables for compound propositions and apply De Morgan\'s laws to simplify logical expressions.',
               theoryContent:
                   'A proposition is a declarative statement that is either true (T) or false (F), but not both. '
                   'For example, “2 + 2 = 4” is a proposition (true), while “x > 5” is not a proposition until x is specified — it is a predicate.\n\n'
@@ -370,15 +775,18 @@ for (final p in values) {
     print('p=\$p q=\$q  ¬(p∧q)=\$lhs  ¬p∨¬q=\$rhs  equal=\${lhs == rhs}');
   }
 }''',
-              output: 'p=true q=true  ¬(p∧q)=false  ¬p∨¬q=false  equal=true\np=true q=false  ¬(p∧q)=true  ¬p∨¬q=true  equal=true\np=false q=true  ¬(p∧q)=true  ¬p∨¬q=true  equal=true\np=false q=false  ¬(p∧q)=true  ¬p∨¬q=true  equal=true',
-              quizPrompt: 'According to De Morgan\'s law, ¬(P ∨ Q) is equivalent to:',
+              output:
+                  'p=true q=true  ¬(p∧q)=false  ¬p∨¬q=false  equal=true\np=true q=false  ¬(p∧q)=true  ¬p∨¬q=true  equal=true\np=false q=true  ¬(p∧q)=true  ¬p∨¬q=true  equal=true\np=false q=false  ¬(p∧q)=true  ¬p∨¬q=true  equal=true',
+              quizPrompt:
+                  'According to De Morgan\'s law, ¬(P ∨ Q) is equivalent to:',
               quizOptions: <String>['¬P ∨ ¬Q', '¬P ∧ ¬Q', 'P ∧ Q'],
               correctQuizIndex: 1,
               quizExplanation:
                   'De Morgan\'s second law: ¬(P ∨ Q) ≡ ¬P ∧ ¬Q. Negation of a disjunction becomes the conjunction of negations.',
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Apply De Morgan\'s law',
-                instruction: 'Complete the equivalent expression using De Morgan\'s law.',
+                instruction:
+                    'Complete the equivalent expression using De Morgan\'s law.',
                 prompt: '¬(P ∧ Q) ≡ ¬P ____ ¬Q',
                 options: <String>['∨', '∧', '→'],
                 correctIndex: 0,
@@ -426,8 +834,10 @@ for (final p in values) {
               id: 'discrete_math_lesson_1_2',
               title: 'Proof techniques',
               trackTitle: 'Discrete Math',
-              summary: 'Direct proof, proof by contrapositive, proof by contradiction, and mathematical induction with detailed examples.',
-              outcome: 'Apply the appropriate proof technique and carry out proofs by induction.',
+              summary:
+                  'Direct proof, proof by contrapositive, proof by contradiction, and mathematical induction with detailed examples.',
+              outcome:
+                  'Apply the appropriate proof technique and carry out proofs by induction.',
               theoryContent:
                   'A mathematical proof is a logical argument that establishes the truth of a statement beyond any doubt.\n\n'
                   '► Direct Proof\n'
@@ -462,7 +872,8 @@ for (final p in values) {
                 'Proof by contradiction assumes the negation and derives an impossibility.',
                 'Induction requires: base case + inductive step (assume P(k), prove P(k+1)).',
               ],
-              codeSnippet: '''// Verify induction formula: 1 + 2 + ... + n = n*(n+1)/2
+              codeSnippet:
+                  '''// Verify induction formula: 1 + 2 + ... + n = n*(n+1)/2
 int sumByLoop(int n) {
   var total = 0;
   for (var i = 1; i <= n; i++) total += i;
@@ -473,8 +884,10 @@ int sumByFormula(int n) => n * (n + 1) ~/ 2;
 for (var n = 1; n <= 10; n++) {
   print('n=\$n  loop=\${sumByLoop(n)}  formula=\${sumByFormula(n)}  match=\${sumByLoop(n) == sumByFormula(n)}');
 }''',
-              output: 'n=1  loop=1  formula=1  match=true\nn=2  loop=3  formula=3  match=true\nn=3  loop=6  formula=6  match=true\nn=4  loop=10  formula=10  match=true\nn=5  loop=15  formula=15  match=true\nn=6  loop=21  formula=21  match=true\nn=7  loop=28  formula=28  match=true\nn=8  loop=36  formula=36  match=true\nn=9  loop=45  formula=45  match=true\nn=10  loop=55  formula=55  match=true',
-              quizPrompt: 'In mathematical induction, what is the inductive step?',
+              output:
+                  'n=1  loop=1  formula=1  match=true\nn=2  loop=3  formula=3  match=true\nn=3  loop=6  formula=6  match=true\nn=4  loop=10  formula=10  match=true\nn=5  loop=15  formula=15  match=true\nn=6  loop=21  formula=21  match=true\nn=7  loop=28  formula=28  match=true\nn=8  loop=36  formula=36  match=true\nn=9  loop=45  formula=45  match=true\nn=10  loop=55  formula=55  match=true',
+              quizPrompt:
+                  'In mathematical induction, what is the inductive step?',
               quizOptions: <String>[
                 'Prove P(n) for all n directly',
                 'Assume P(k) and prove P(k+1)',
@@ -485,7 +898,8 @@ for (var n = 1; n <= 10; n++) {
                   'The inductive step: assume P(k) holds (inductive hypothesis) and prove P(k+1). Combined with the base case, this proves P(n) for all n ≥ n₀.',
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Induction proof steps',
-                instruction: 'Arrange the steps of an induction proof in the correct order.',
+                instruction:
+                    'Arrange the steps of an induction proof in the correct order.',
                 prompt: 'Put these proof steps in the correct logical order.',
                 orderedLines: <String>[
                   'State: Prove 1+2+…+n = n(n+1)/2 for all n ≥ 1',
@@ -502,7 +916,12 @@ for (var n = 1; n <= 10; n++) {
                   title: 'Proof techniques',
                   instruction: 'Match each proof technique to its description.',
                   prompt: 'Match the proof method to its approach.',
-                  options: <String>['Direct Proof', 'Contrapositive', 'Contradiction', 'Induction'],
+                  options: <String>[
+                    'Direct Proof',
+                    'Contrapositive',
+                    'Contradiction',
+                    'Induction',
+                  ],
                   orderedLines: <String>[
                     'Assume P, deduce Q step by step',
                     'Prove ¬Q → ¬P instead of P → Q',
@@ -549,14 +968,17 @@ for (var n = 1; n <= 10; n++) {
           title: 'Set Theory',
           titleRu: 'Теория множеств',
           titleKk: 'Жиындар теориясы',
-          summary: 'Set operations, Venn diagrams, inclusion-exclusion, power sets, Cartesian products, and cardinality.',
+          summary:
+              'Set operations, Venn diagrams, inclusion-exclusion, power sets, Cartesian products, and cardinality.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'discrete_math_lesson_2_1',
               title: 'Sets and operations',
               trackTitle: 'Discrete Math',
-              summary: 'Set notation, union, intersection, difference, complement, and the inclusion-exclusion principle.',
-              outcome: 'Perform set operations and apply the inclusion-exclusion principle to compute the cardinality of unions.',
+              summary:
+                  'Set notation, union, intersection, difference, complement, and the inclusion-exclusion principle.',
+              outcome:
+                  'Perform set operations and apply the inclusion-exclusion principle to compute the cardinality of unions.',
               theoryContent:
                   'A set is an unordered collection of distinct objects called elements. '
                   'We write a ∈ A to mean "a is an element of A" and a ∉ A for "a is not in A".\n\n'
@@ -598,24 +1020,29 @@ print('A \\ B = \${a.difference(b)}');
 final lhs = a.union(b).length;
 final rhs = a.length + b.length - a.intersection(b).length;
 print('|A ∪ B| = \$lhs, |A|+|B|-|A∩B| = \$rhs, equal=\${lhs == rhs}');''',
-              output: 'A ∪ B = {1, 2, 3, 4, 5, 6, 7}\nA ∩ B = {3, 4, 5}\nA \\ B = {1, 2}\n|A ∪ B| = 7, |A|+|B|-|A∩B| = 7, equal=true',
-              quizPrompt: 'If |A| = 12, |B| = 9, and |A ∩ B| = 4, what is |A ∪ B|?',
+              output:
+                  'A ∪ B = {1, 2, 3, 4, 5, 6, 7}\nA ∩ B = {3, 4, 5}\nA \\ B = {1, 2}\n|A ∪ B| = 7, |A|+|B|-|A∩B| = 7, equal=true',
+              quizPrompt:
+                  'If |A| = 12, |B| = 9, and |A ∩ B| = 4, what is |A ∪ B|?',
               quizOptions: <String>['21', '17', '13'],
               correctQuizIndex: 1,
               quizExplanation:
                   'By inclusion-exclusion: |A ∪ B| = 12 + 9 − 4 = 17. Without subtracting the intersection we\'d double-count 4 elements.',
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Inclusion-exclusion formula',
-                instruction: 'Complete the inclusion-exclusion formula for two sets.',
+                instruction:
+                    'Complete the inclusion-exclusion formula for two sets.',
                 prompt: '|A ∪ B| = |A| + |B| ____ |A ∩ B|',
                 options: <String>['−', '+', '×'],
                 correctIndex: 0,
-                template: 'final unionSize = a.length + b.length ____ intersection.length;',
+                template:
+                    'final unionSize = a.length + b.length ____ intersection.length;',
               ),
               extraTrainers: const <DemoTrainerSeed>[
                 DemoTrainerSeed.matching(
                   title: 'Set operations',
-                  instruction: 'For A = {1,2,3} and B = {2,3,4}, match each operation to its result.',
+                  instruction:
+                      'For A = {1,2,3} and B = {2,3,4}, match each operation to its result.',
                   prompt: 'Match the operation to its result.',
                   options: <String>['A ∪ B', 'A ∩ B', 'A \\ B', 'B \\ A'],
                   orderedLines: <String>[
@@ -653,8 +1080,10 @@ print('|A ∪ B| = \$lhs, |A|+|B|-|A∩B| = \$rhs, equal=\${lhs == rhs}');''',
               id: 'discrete_math_lesson_2_2',
               title: 'Power sets, Cartesian products, and cardinality',
               trackTitle: 'Discrete Math',
-              summary: 'Power sets, Cartesian products, and the cardinality of finite and infinite sets.',
-              outcome: 'Compute power sets and Cartesian products, and reason about cardinality of infinite sets.',
+              summary:
+                  'Power sets, Cartesian products, and the cardinality of finite and infinite sets.',
+              outcome:
+                  'Compute power sets and Cartesian products, and reason about cardinality of infinite sets.',
               theoryContent:
                   '► Power Set\n'
                   'The power set P(A) is the set of all subsets of A, including ∅ and A itself.\n\n'
@@ -705,8 +1134,10 @@ final b = ['x', 'y'];
 final cp = [for (final x in a) for (final y in b) '(\$x,\$y)'];
 print('A × B = \$cp');
 print('|A × B| = \${cp.length} (expected 3 × 2 = 6)');''',
-              output: 'P({1,2,3}) = [{}, {1}, {2}, {1, 2}, {3}, {1, 3}, {2, 3}, {1, 2, 3}]\n|P(A)| = 8 (expected 2^3 = 8)\nA × B = [(1,x), (1,y), (2,x), (2,y), (3,x), (3,y)]\n|A × B| = 6 (expected 3 × 2 = 6)',
-              quizPrompt: 'How many elements are in the power set P({1, 2, 3})?',
+              output:
+                  'P({1,2,3}) = [{}, {1}, {2}, {1, 2}, {3}, {1, 3}, {2, 3}, {1, 2, 3}]\n|P(A)| = 8 (expected 2^3 = 8)\nA × B = [(1,x), (1,y), (2,x), (2,y), (3,x), (3,y)]\n|A × B| = 6 (expected 3 × 2 = 6)',
+              quizPrompt:
+                  'How many elements are in the power set P({1, 2, 3})?',
               quizOptions: <String>['3', '6', '8'],
               correctQuizIndex: 2,
               quizExplanation:
@@ -723,7 +1154,12 @@ print('|A × B| = \${cp.length} (expected 3 × 2 = 6)');''',
                   title: 'Cardinality formulas',
                   instruction: 'Match each concept to its formula.',
                   prompt: 'Match the construct to its cardinality.',
-                  options: <String>['|P(A)|', '|A × B|', '|A ∪ B|', 'Subsets of size k from n'],
+                  options: <String>[
+                    '|P(A)|',
+                    '|A × B|',
+                    '|A ∪ B|',
+                    'Subsets of size k from n',
+                  ],
                   orderedLines: <String>[
                     '2^|A|',
                     '|A| · |B|',
@@ -733,7 +1169,8 @@ print('|A × B| = \${cp.length} (expected 3 × 2 = 6)');''',
                 ),
               ],
               titleRu: 'Степенные множества, декартовы произведения и мощность',
-              titleKk: 'Дәреже жиындары, декарттық көбейтінділер және кардиналдылық',
+              titleKk:
+                  'Дәреже жиындары, декарттық көбейтінділер және кардиналдылық',
               summaryRu:
                   'Степенные множества, декартовы произведения и мощность конечных и бесконечных множеств.',
               summaryKk:
@@ -759,7 +1196,8 @@ print('|A × B| = \${cp.length} (expected 3 × 2 = 6)');''',
           practice: _practice(
             id: 'discrete_math_practice_2',
             title: 'Set theory challenge',
-            starterCode: '''// 1. Write a function powerSet(Set<int> s) that returns all subsets
+            starterCode:
+                '''// 1. Write a function powerSet(Set<int> s) that returns all subsets
 //    using bitmask enumeration. Verify |P({1,2,3,4})| == 16.
 // 2. Verify inclusion-exclusion for three sets A, B, C:
 //    |A ∪ B ∪ C| = |A|+|B|+|C| - |A∩B| - |A∩C| - |B∩C| + |A∩B∩C|
@@ -774,14 +1212,17 @@ final c = {4, 5, 6, 7};''',
           title: 'Relations & Functions',
           titleRu: 'Отношения и функции',
           titleKk: 'Қатынастар және функциялар',
-          summary: 'Binary relations, equivalence relations, partial and total orders, injections, surjections, bijections, composition, and inverses.',
+          summary:
+              'Binary relations, equivalence relations, partial and total orders, injections, surjections, bijections, composition, and inverses.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'discrete_math_lesson_3_1',
               title: 'Equivalence relations',
               trackTitle: 'Discrete Math',
-              summary: 'Understand reflexive, symmetric, and transitive properties. Explore congruence modulo n.',
-              outcome: 'You can verify whether a relation is an equivalence and identify its equivalence classes.',
+              summary:
+                  'Understand reflexive, symmetric, and transitive properties. Explore congruence modulo n.',
+              outcome:
+                  'You can verify whether a relation is an equivalence and identify its equivalence classes.',
               theoryContent:
                   'A binary relation R on a set A is a set of ordered pairs from A × A. '
                   'We write aRb to mean (a, b) ∈ R.\n\n'
@@ -814,7 +1255,8 @@ print(congMod3(7, 7));          // reflexive
 print(congMod3(7, 4) == congMod3(4, 7)); // symmetric
 print(congMod3(7, 4) && congMod3(4, 1)); // transitive check''',
               output: 'true\ntrue\ntrue',
-              quizPrompt: 'Is “strictly less than” (<) an equivalence relation on integers?',
+              quizPrompt:
+                  'Is “strictly less than” (<) an equivalence relation on integers?',
               quizOptions: <String>[
                 'No — a < a is false (not reflexive)',
                 'Yes — it satisfies all three properties',
@@ -837,7 +1279,8 @@ print(congMod3(7, 4) && congMod3(4, 1)); // transitive check''',
               extraTrainers: const <DemoTrainerSeed>[
                 DemoTrainerSeed.matching(
                   title: 'Classify relations',
-                  instruction: 'Determine whether each relation has the given property.',
+                  instruction:
+                      'Determine whether each relation has the given property.',
                   prompt: 'Match each statement to Yes or No.',
                   options: <String>[
                     '”=” is reflexive',
@@ -880,8 +1323,10 @@ print(congMod3(7, 4) && congMod3(4, 1)); // transitive check''',
               id: 'discrete_math_lesson_3_2',
               title: 'Functions and bijections',
               trackTitle: 'Discrete Math',
-              summary: 'Learn about injections, surjections, bijections, and inverse functions.',
-              outcome: 'You can classify a function as injective, surjective, or bijective.',
+              summary:
+                  'Learn about injections, surjections, bijections, and inverse functions.',
+              outcome:
+                  'You can classify a function as injective, surjective, or bijective.',
               theoryContent:
                   'A function f: A → B assigns each element of A exactly one element of B. '
                   'The set A is the domain, B is the codomain, and f(A) = {f(a) : a ∈ A} is the image.\n\n'
@@ -921,11 +1366,13 @@ print('Bijection: \${injective && surjective}');''',
                   'f(2) = f(−2) = 4, so different inputs give the same output. Not injective → not a bijection.',
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Bijection condition',
-                instruction: 'For a bijection between finite sets, domain and codomain must have…',
+                instruction:
+                    'For a bijection between finite sets, domain and codomain must have…',
                 prompt: 'A bijection requires |domain| ____ |codomain|.',
                 options: <String>['==', '>', '<'],
                 correctIndex: 0,
-                template: 'final isBijection = domain.length ____ codomain.length;',
+                template:
+                    'final isBijection = domain.length ____ codomain.length;',
               ),
               extraTrainers: const <DemoTrainerSeed>[
                 DemoTrainerSeed.matching(
@@ -965,13 +1412,15 @@ print('Bijection: \${injective && surjective}');''',
                 'Сюръекция: кодомендіктің барлық элементтері жетіледі.',
                 'Биекция = инъекция + сюръекция. Кері функция тек биекциялар үшін бар.',
               ],
-              quizPromptRu: 'Является ли f(x) = x² биекцией на целых числах ℤ → ℤ?',
+              quizPromptRu:
+                  'Является ли f(x) = x² биекцией на целых числах ℤ → ℤ?',
             ),
           ],
           practice: _practice(
             id: 'discrete_math_practice_3',
             title: 'Relations & functions challenge',
-            starterCode: '''// 1. Given {0..19} and “congruence mod 4”, compute all equivalence classes.
+            starterCode:
+                '''// 1. Given {0..19} and “congruence mod 4”, compute all equivalence classes.
 bool congMod4(int a, int b) => a % 4 == b % 4;
 
 // 2. Given a mapping Map<int, String>, write isInjective() and isSurjective().
@@ -984,14 +1433,17 @@ bool congMod4(int a, int b) => a % 4 == b % 4;
           title: 'Combinatorics',
           titleRu: 'Комбинаторика',
           titleKk: 'Комбинаторика',
-          summary: 'Permutations, combinations, Pascal\'s triangle, and the binomial theorem.',
+          summary:
+              'Permutations, combinations, Pascal\'s triangle, and the binomial theorem.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'discrete_math_lesson_4_1',
               title: 'Permutations and combinations',
               trackTitle: 'Discrete Math',
-              summary: 'Distinguish when order matters (permutations) from when it does not (combinations).',
-              outcome: 'You can compute P(n,k) and C(n,k) and choose the right formula for a problem.',
+              summary:
+                  'Distinguish when order matters (permutations) from when it does not (combinations).',
+              outcome:
+                  'You can compute P(n,k) and C(n,k) and choose the right formula for a problem.',
               theoryContent:
                   'A permutation is an ordered arrangement of elements. The number of ways '
                   'to arrange k elements from a set of n is:\n\n'
@@ -1014,7 +1466,8 @@ bool congMod4(int a, int b) => a % 4 == b % 4;
                 'Combinations count unordered selections: C(n,k) = n!/(k!(n−k)!)',
                 'Pascal\'s rule: C(n,k) = C(n−1,k−1) + C(n−1,k).',
               ],
-              codeSnippet: '''int factorial(int n) => n <= 1 ? 1 : n * factorial(n - 1);
+              codeSnippet:
+                  '''int factorial(int n) => n <= 1 ? 1 : n * factorial(n - 1);
 int P(int n, int k) => factorial(n) ~/ factorial(n - k);
 int C(int n, int k) => factorial(n) ~/ (factorial(k) * factorial(n - k));
 print('P(7,3) = \${P(7, 3)}, C(7,3) = \${C(7, 3)}');''',
@@ -1026,7 +1479,8 @@ print('P(7,3) = \${P(7, 3)}, C(7,3) = \${C(7, 3)}');''',
                   'C(7,3) = 7! / (3! · 4!) = 5040 / (6 · 24) = 35. P(7,3) = 210 would be the answer if order mattered.',
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Build the combination formula',
-                instruction: 'Arrange the steps to compute C(n,k) in the correct order.',
+                instruction:
+                    'Arrange the steps to compute C(n,k) in the correct order.',
                 prompt: 'Order the calculation steps.',
                 orderedLines: <String>[
                   'Define n and k',
@@ -1080,8 +1534,10 @@ print('P(7,3) = \${P(7, 3)}, C(7,3) = \${C(7, 3)}');''',
               id: 'discrete_math_lesson_4_2',
               title: 'Binomial theorem',
               trackTitle: 'Discrete Math',
-              summary: 'Expand (a+b)ⁿ using Pascal\'s triangle and prove the 2ⁿ identity.',
-              outcome: 'You can expand binomial expressions and use Pascal\'s triangle to find coefficients.',
+              summary:
+                  'Expand (a+b)ⁿ using Pascal\'s triangle and prove the 2ⁿ identity.',
+              outcome:
+                  'You can expand binomial expressions and use Pascal\'s triangle to find coefficients.',
               theoryContent:
                   'The Binomial Theorem gives the expansion of (a + b)ⁿ:\n\n'
                   '►(a + b)ⁿ = Σ C(n,k) · aⁿ⁻ᵏ · bᵏ  for k = 0, 1, …, n\n\n'
@@ -1120,7 +1576,8 @@ print('Sum = \${row5.reduce((a, b) => a + b)}');''',
                   'Sum of row n = 2ⁿ. For n = 5, the sum is 2⁵ = 32.',
               trainer: const DemoTrainerSeed.matchOutput(
                 title: 'Predict the sum',
-                instruction: 'Sum of binomial coefficients for (a+b)⁶ equals 2⁶.',
+                instruction:
+                    'Sum of binomial coefficients for (a+b)⁶ equals 2⁶.',
                 prompt: '''final row6 = [1, 6, 15, 20, 15, 6, 1];
 print(row6.reduce((a, b) => a + b));''',
                 options: <String>['32', '64', '128'],
@@ -1129,7 +1586,8 @@ print(row6.reduce((a, b) => a + b));''',
               extraTrainers: const <DemoTrainerSeed>[
                 DemoTrainerSeed.matching(
                   title: 'Match binomial expressions',
-                  instruction: 'Connect each expression to its value or expansion.',
+                  instruction:
+                      'Connect each expression to its value or expansion.',
                   prompt: 'Match binomial expressions to results.',
                   options: <String>[
                     '(a+b)²',
@@ -1188,14 +1646,17 @@ print(row6.reduce((a, b) => a + b));''',
           title: 'Graph Theory',
           titleRu: 'Теория графов',
           titleKk: 'Граф теориясы',
-          summary: 'Graph types, connectivity, Eulerian and Hamiltonian paths, and the Königsberg bridge problem.',
+          summary:
+              'Graph types, connectivity, Eulerian and Hamiltonian paths, and the Königsberg bridge problem.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'discrete_math_lesson_5_1',
               title: 'Graph types and connectivity',
               trackTitle: 'Discrete Math',
-              summary: 'Directed, undirected, and weighted graphs. Adjacency representations and the handshaking lemma.',
-              outcome: 'You can represent a graph using adjacency lists, compute vertex degrees, and apply the handshaking lemma.',
+              summary:
+                  'Directed, undirected, and weighted graphs. Adjacency representations and the handshaking lemma.',
+              outcome:
+                  'You can represent a graph using adjacency lists, compute vertex degrees, and apply the handshaking lemma.',
               theoryContent:
                   'A graph G = (V, E) consists of a set V of vertices (nodes) and a set E of edges '
                   'connecting pairs of vertices.\n\n'
@@ -1234,7 +1695,8 @@ for (final v in graph.keys) {
 final sumDeg = graph.values.fold<int>(0, (s, e) => s + e.length);
 print('Sum of degrees: \$sumDeg');
 print('Edges: \${sumDeg ~/ 2}');''',
-              output: 'deg(A) = 3\ndeg(B) = 2\ndeg(C) = 3\ndeg(D) = 2\nSum of degrees: 10\nEdges: 5',
+              output:
+                  'deg(A) = 3\ndeg(B) = 2\ndeg(C) = 3\ndeg(D) = 2\nSum of degrees: 10\nEdges: 5',
               quizPrompt: 'A graph has degrees [3, 2, 3, 2]. How many edges?',
               quizOptions: <String>['4', '5', '10'],
               correctQuizIndex: 1,
@@ -1242,7 +1704,8 @@ print('Edges: \${sumDeg ~/ 2}');''',
                   'Sum of degrees = 3 + 2 + 3 + 2 = 10. By handshaking lemma, |E| = 10 / 2 = 5.',
               trainer: const DemoTrainerSeed.matchOutput(
                 title: 'Count edges using handshaking lemma',
-                instruction: 'Apply the handshaking lemma to find the number of edges.',
+                instruction:
+                    'Apply the handshaking lemma to find the number of edges.',
                 prompt: '''final degrees = [4, 3, 3, 2, 2];
 final sumDeg = degrees.reduce((a, b) => a + b);
 print(sumDeg ~/ 2);''',
@@ -1254,7 +1717,12 @@ print(sumDeg ~/ 2);''',
                   title: 'Match graph terms',
                   instruction: 'Connect each graph concept to its definition.',
                   prompt: 'Match terminology to meaning.',
-                  options: <String>['Vertex', 'Edge', 'Degree', 'Connected component'],
+                  options: <String>[
+                    'Vertex',
+                    'Edge',
+                    'Degree',
+                    'Connected component',
+                  ],
                   orderedLines: <String>[
                     'A node in a graph',
                     'A link between two nodes',
@@ -1290,8 +1758,10 @@ print(sumDeg ~/ 2);''',
               id: 'discrete_math_lesson_5_2',
               title: 'Euler and Hamilton paths',
               trackTitle: 'Discrete Math',
-              summary: 'Eulerian paths (every edge once) vs Hamiltonian paths (every vertex once). Euler\'s theorem.',
-              outcome: 'You can determine whether a graph has an Euler circuit by checking vertex degrees.',
+              summary:
+                  'Eulerian paths (every edge once) vs Hamiltonian paths (every vertex once). Euler\'s theorem.',
+              outcome:
+                  'You can determine whether a graph has an Euler circuit by checking vertex degrees.',
               theoryContent:
                   'The study of Eulerian paths began with the Seven Bridges of Königsberg (1736). '
                   'Euler proved it was impossible to walk crossing each bridge exactly once — '
@@ -1332,8 +1802,10 @@ for (final v in graph.keys) {
 print('Odd-degree vertices: \$oddCount');
 print('Euler circuit: \${oddCount == 0}');
 print('Euler path: \${oddCount == 0 || oddCount == 2}');''',
-              output: 'Odd-degree vertices: 0\nEuler circuit: true\nEuler path: true',
-              quizPrompt: 'Degrees [2, 2, 3, 3]. Does the graph have an Euler circuit?',
+              output:
+                  'Odd-degree vertices: 0\nEuler circuit: true\nEuler path: true',
+              quizPrompt:
+                  'Degrees [2, 2, 3, 3]. Does the graph have an Euler circuit?',
               quizOptions: <String>[
                 'No — two vertices have odd degree',
                 'Yes — all vertices have degree ≥ 2',
@@ -1344,18 +1816,25 @@ print('Euler path: \${oddCount == 0 || oddCount == 2}');''',
                   'For an Euler circuit, ALL vertices must have even degree. Two vertices have odd degree (3), so no circuit. But since exactly two are odd, an Euler path does exist.',
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Euler circuit condition',
-                instruction: 'Complete the condition for an Euler circuit to exist.',
+                instruction:
+                    'Complete the condition for an Euler circuit to exist.',
                 prompt: 'Euler circuit exists iff all vertex degrees are ____.',
                 options: <String>['even', 'odd', 'greater than 2'],
                 correctIndex: 0,
-                template: 'final hasCircuit = degrees.every((d) => d % 2 == ____);',
+                template:
+                    'final hasCircuit = degrees.every((d) => d % 2 == ____);',
               ),
               extraTrainers: const <DemoTrainerSeed>[
                 DemoTrainerSeed.matching(
                   title: 'Euler vs Hamilton',
                   instruction: 'Match each concept to its description.',
                   prompt: 'Connect path types to their definitions.',
-                  options: <String>['Eulerian path', 'Eulerian circuit', 'Hamiltonian path', 'Hamiltonian cycle'],
+                  options: <String>[
+                    'Eulerian path',
+                    'Eulerian circuit',
+                    'Hamiltonian path',
+                    'Hamiltonian cycle',
+                  ],
                   orderedLines: <String>[
                     'Visits every edge exactly once',
                     'Visits every edge once and returns to start',
@@ -1409,14 +1888,17 @@ print('Euler path: \${oddCount == 0 || oddCount == 2}');''',
           title: 'Trees & Algorithms',
           titleRu: 'Деревья и алгоритмы',
           titleKk: 'Ағаштар және алгоритмдер',
-          summary: 'Rooted trees, traversal algorithms, binary search trees, and minimum spanning trees.',
+          summary:
+              'Rooted trees, traversal algorithms, binary search trees, and minimum spanning trees.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'discrete_math_lesson_6_1',
               title: 'Trees and traversals',
               trackTitle: 'Discrete Math',
-              summary: 'Tree properties, binary tree structure, and preorder/inorder/postorder traversal algorithms.',
-              outcome: 'You can represent a tree in code and perform all three traversal orders correctly.',
+              summary:
+                  'Tree properties, binary tree structure, and preorder/inorder/postorder traversal algorithms.',
+              outcome:
+                  'You can represent a tree in code and perform all three traversal orders correctly.',
               theoryContent:
                   'A tree is a connected acyclic graph.\n\n'
                   '► Key property: a tree with n vertices has exactly n − 1 edges.\n\n'
@@ -1468,14 +1950,16 @@ void preorder(int? node) {
 preorder(1);
 print('Preorder: \$result');''',
               output: 'Preorder: [1, 2, 4, 5, 3]',
-              quizPrompt: 'What is the preorder traversal of tree 1(2(4,5), 3)?',
+              quizPrompt:
+                  'What is the preorder traversal of tree 1(2(4,5), 3)?',
               quizOptions: <String>['1 2 4 5 3', '4 2 5 1 3', '4 5 2 3 1'],
               correctQuizIndex: 0,
               quizExplanation:
                   'Preorder visits Root first, then Left, then Right: 1 → 2 → 4 → 5 → 3.',
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Preorder traversal steps',
-                instruction: 'Put the preorder traversal nodes in the correct visit order.',
+                instruction:
+                    'Put the preorder traversal nodes in the correct visit order.',
                 prompt: 'Order the nodes as visited in preorder.',
                 orderedLines: <String>[
                   'Visit root node 1',
@@ -1525,8 +2009,10 @@ print('Preorder: \$result');''',
               id: 'discrete_math_lesson_6_2',
               title: 'Spanning trees and algorithms',
               trackTitle: 'Discrete Math',
-              summary: 'Minimum spanning trees using Kruskal\'s and Prim\'s algorithms.',
-              outcome: 'You can apply Kruskal\'s algorithm to find the MST of a weighted graph.',
+              summary:
+                  'Minimum spanning trees using Kruskal\'s and Prim\'s algorithms.',
+              outcome:
+                  'You can apply Kruskal\'s algorithm to find the MST of a weighted graph.',
               theoryContent:
                   'A spanning tree of a connected graph G includes all vertices with minimum edges.\n\n'
                   '► MST: a spanning tree whose total edge weight is minimized.\n\n'
@@ -1574,15 +2060,18 @@ for (final (w, u, v) in edges) {
   }
 }
 print('MST weight: \$totalWeight');''',
-              output: 'Add A-C (weight 2)\nAdd C-D (weight 3)\nAdd A-B (weight 4)\nMST weight: 9',
-              quizPrompt: 'A connected graph has 5 vertices. How many edges does its MST have?',
+              output:
+                  'Add A-C (weight 2)\nAdd C-D (weight 3)\nAdd A-B (weight 4)\nMST weight: 9',
+              quizPrompt:
+                  'A connected graph has 5 vertices. How many edges does its MST have?',
               quizOptions: <String>['3', '4', '5'],
               correctQuizIndex: 1,
               quizExplanation:
                   'A spanning tree with n vertices always has n − 1 edges. For n = 5: 4 edges.',
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Kruskal\'s algorithm steps',
-                instruction: 'Arrange Kruskal\'s algorithm steps in correct order.',
+                instruction:
+                    'Arrange Kruskal\'s algorithm steps in correct order.',
                 prompt: 'Rebuild the Kruskal procedure.',
                 orderedLines: <String>[
                   'Sort all edges by weight (ascending)',
@@ -1595,9 +2084,15 @@ print('MST weight: \$totalWeight');''',
               extraTrainers: const <DemoTrainerSeed>[
                 DemoTrainerSeed.matching(
                   title: 'MST algorithms and concepts',
-                  instruction: 'Connect each algorithm/concept to its description.',
+                  instruction:
+                      'Connect each algorithm/concept to its description.',
                   prompt: 'Match algorithm to strategy.',
-                  options: <String>['Kruskal\'s', 'Prim\'s', 'Union-Find', 'MST edge count'],
+                  options: <String>[
+                    'Kruskal\'s',
+                    'Prim\'s',
+                    'Union-Find',
+                    'MST edge count',
+                  ],
                   orderedLines: <String>[
                     'Sort edges globally, add greedily if no cycle',
                     'Grow from a vertex, add cheapest crossing edge',
@@ -1649,14 +2144,17 @@ print('MST weight: \$totalWeight');''',
           title: 'Number Theory',
           titleRu: 'Теория чисел',
           titleKk: 'Сандар теориясы',
-          summary: 'Divisibility, primes, GCD via the Euclidean algorithm, modular arithmetic, and RSA basics.',
+          summary:
+              'Divisibility, primes, GCD via the Euclidean algorithm, modular arithmetic, and RSA basics.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'discrete_math_lesson_7_1',
               title: 'Divisibility, primes, and GCD',
               trackTitle: 'Discrete Math',
-              summary: 'Divisibility, prime factorization, and the Euclidean algorithm for computing GCD.',
-              outcome: 'You can compute GCD using the Euclidean algorithm and explain the Fundamental Theorem of Arithmetic.',
+              summary:
+                  'Divisibility, prime factorization, and the Euclidean algorithm for computing GCD.',
+              outcome:
+                  'You can compute GCD using the Euclidean algorithm and explain the Fundamental Theorem of Arithmetic.',
               theoryContent:
                   'Number theory studies properties of integers — the foundation of modern cryptography.\n\n'
                   '► Divisibility:\n'
@@ -1706,7 +2204,8 @@ print('lcm(12, 8) = \${12 * 8 ~/ gcd(12, 8)}');''',
                   'gcd(48,18) → gcd(18,12) → gcd(12,6) → gcd(6,0) = 6.',
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Trace the Euclidean algorithm',
-                instruction: 'Arrange the Euclidean algorithm steps for gcd(48, 18).',
+                instruction:
+                    'Arrange the Euclidean algorithm steps for gcd(48, 18).',
                 prompt: 'Order the reduction steps.',
                 orderedLines: <String>[
                   'gcd(48, 18)',
@@ -1721,7 +2220,12 @@ print('lcm(12, 8) = \${12 * 8 ~/ gcd(12, 8)}');''',
                   title: 'Number theory terms',
                   instruction: 'Connect each concept to its definition.',
                   prompt: 'Match terms to meanings.',
-                  options: <String>['Prime number', 'GCD', 'LCM', 'Bézout\'s identity'],
+                  options: <String>[
+                    'Prime number',
+                    'GCD',
+                    'LCM',
+                    'Bézout\'s identity',
+                  ],
                   orderedLines: <String>[
                     'Integer > 1 divisible only by 1 and itself',
                     'Largest integer dividing both a and b',
@@ -1756,8 +2260,10 @@ print('lcm(12, 8) = \${12 * 8 ~/ gcd(12, 8)}');''',
               id: 'discrete_math_lesson_7_2',
               title: 'Modular arithmetic and RSA basics',
               trackTitle: 'Discrete Math',
-              summary: 'Modular arithmetic rules, Euler\'s totient, Fermat\'s little theorem, and the RSA scheme.',
-              outcome: 'You can perform modular arithmetic and describe the RSA encryption/decryption process.',
+              summary:
+                  'Modular arithmetic rules, Euler\'s totient, Fermat\'s little theorem, and the RSA scheme.',
+              outcome:
+                  'You can perform modular arithmetic and describe the RSA encryption/decryption process.',
               theoryContent:
                   'Modular arithmetic is "clock arithmetic" — numbers wrap around after reaching modulus n.\n\n'
                   '► Notation: a ≡ b (mod n) means n divides (a − b).\n\n'
@@ -1806,12 +2312,12 @@ final enc = modPow(msg, 7, 33);
 final dec = modPow(enc, 3, 33);
 print('Message: \$msg → Encrypted: \$enc → Decrypted: \$dec');
 print('7^2 mod 5 = \${modPow(7, 2, 5)}');''',
-              output: 'Message: 4 → Encrypted: 16 → Decrypted: 4\n7^2 mod 5 = 4',
+              output:
+                  'Message: 4 → Encrypted: 16 → Decrypted: 4\n7^2 mod 5 = 4',
               quizPrompt: 'What is 7^2 mod 5?',
               quizOptions: <String>['2', '4', '9'],
               correctQuizIndex: 1,
-              quizExplanation:
-                  '7^2 = 49. 49 mod 5 = 49 − 9·5 = 4.',
+              quizExplanation: '7^2 = 49. 49 mod 5 = 49 − 9·5 = 4.',
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Modular arithmetic',
                 instruction: 'Compute the modular arithmetic expression.',
@@ -1825,7 +2331,12 @@ print('7^2 mod 5 = \${modPow(7, 2, 5)}');''',
                   title: 'RSA steps',
                   instruction: 'Connect each RSA step to its formula.',
                   prompt: 'Match RSA operations.',
-                  options: <String>['Key generation', 'Encryption', 'Decryption', 'Security basis'],
+                  options: <String>[
+                    'Key generation',
+                    'Encryption',
+                    'Decryption',
+                    'Security basis',
+                  ],
                   orderedLines: <String>[
                     'Choose primes p, q; compute n = pq, φ(n) = (p−1)(q−1)',
                     'c = m^e mod n using public key (n, e)',
@@ -1860,7 +2371,8 @@ print('7^2 mod 5 = \${modPow(7, 2, 5)}');''',
           practice: _practice(
             id: 'discrete_math_practice_7',
             title: 'Euclidean algorithm and modular arithmetic',
-            starterCode: '''// 1. Implement gcd(a, b) using the Euclidean algorithm
+            starterCode:
+                '''// 1. Implement gcd(a, b) using the Euclidean algorithm
 // 2. Compute gcd(252, 105)
 // 3. Compute (17 * 23) mod 10
 // 4. Verify Fermat's little theorem: 3^6 mod 7 == 1''',
@@ -1872,14 +2384,17 @@ print('7^2 mod 5 = \${modPow(7, 2, 5)}');''',
           title: 'Automata & Formal Languages',
           titleRu: 'Автоматы и формальные языки',
           titleKk: 'Автоматтар және формалды тілдер',
-          summary: 'Finite automata, regular expressions, context-free grammars, and the Chomsky hierarchy.',
+          summary:
+              'Finite automata, regular expressions, context-free grammars, and the Chomsky hierarchy.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'discrete_math_lesson_8_1',
               title: 'Finite automata and regular expressions',
               trackTitle: 'Discrete Math',
-              summary: 'DFAs, NFAs, and their connection to regular expressions and regular languages.',
-              outcome: 'You can simulate a DFA on an input string and determine whether it is accepted.',
+              summary:
+                  'DFAs, NFAs, and their connection to regular expressions and regular languages.',
+              outcome:
+                  'You can simulate a DFA on an input string and determine whether it is accepted.',
               theoryContent:
                   'A finite automaton reads an input string one symbol at a time and decides to accept or reject.\n\n'
                   '► DFA = (Q, Σ, δ, q₀, F):\n'
@@ -1919,14 +2434,16 @@ print(dfaAccepts('aab'));   // 2 a's → true
 print(dfaAccepts('a'));     // 1 a → false
 print(dfaAccepts('bbb'));   // 0 a's → true''',
               output: 'true\ntrue\nfalse\ntrue',
-              quizPrompt: 'DFA accepts even number of a\'s. Does it accept "aab"?',
+              quizPrompt:
+                  'DFA accepts even number of a\'s. Does it accept "aab"?',
               quizOptions: <String>['true', 'false', 'Error'],
               correctQuizIndex: 0,
               quizExplanation:
                   '"aab" has 2 a\'s (even). q0→q1→q0→q0 ∈ F → accepted.',
               trainer: const DemoTrainerSeed.matchOutput(
                 title: 'Predict DFA result',
-                instruction: 'Trace the DFA (even a\'s) and predict the output.',
+                instruction:
+                    'Trace the DFA (even a\'s) and predict the output.',
                 prompt: '''var state = 'q0';
 for (final ch in 'aba'.split('')) {
   if (ch == 'a') state = (state == 'q0') ? 'q1' : 'q0';
@@ -1940,7 +2457,12 @@ print(state == 'q0');''',
                   title: 'Automata terms',
                   instruction: 'Connect each concept to its definition.',
                   prompt: 'Match automata terms.',
-                  options: <String>['DFA', 'NFA', 'State', 'Transition function'],
+                  options: <String>[
+                    'DFA',
+                    'NFA',
+                    'State',
+                    'Transition function',
+                  ],
                   orderedLines: <String>[
                     'Exactly one next state per symbol',
                     'Multiple possible next states',
@@ -1976,8 +2498,10 @@ print(state == 'q0');''',
               id: 'discrete_math_lesson_8_2',
               title: 'Context-free grammars and computability',
               trackTitle: 'Discrete Math',
-              summary: 'CFGs, the Chomsky hierarchy, Turing machines, and the halting problem.',
-              outcome: 'You can write a simple CFG and explain why the halting problem is undecidable.',
+              summary:
+                  'CFGs, the Chomsky hierarchy, Turing machines, and the halting problem.',
+              outcome:
+                  'You can write a simple CFG and explain why the halting problem is undecidable.',
               theoryContent:
                   'Beyond regular languages, programming constructs require more expressive grammars.\n\n'
                   '► CFG = (V, Σ, R, S):\n'
@@ -2040,7 +2564,8 @@ print(isBalanced(''));''',
                   '{aⁿbⁿ} requires matching counts — DFAs can\'t count unboundedly. But a PDA with a stack can, making it context-free.',
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Chomsky hierarchy order',
-                instruction: 'Arrange from most restrictive to least restrictive.',
+                instruction:
+                    'Arrange from most restrictive to least restrictive.',
                 prompt: 'Order the Chomsky hierarchy levels.',
                 orderedLines: <String>[
                   'Type 3: Regular (DFA/NFA)',
@@ -2054,7 +2579,12 @@ print(isBalanced(''));''',
                   title: 'Language types and examples',
                   instruction: 'Connect each language class to its example.',
                   prompt: 'Match Chomsky levels to examples.',
-                  options: <String>['Regular', 'Context-Free', 'Context-Sensitive', 'Undecidable'],
+                  options: <String>[
+                    'Regular',
+                    'Context-Free',
+                    'Context-Sensitive',
+                    'Undecidable',
+                  ],
                   orderedLines: <String>[
                     'a*b* — any a\'s followed by b\'s',
                     '{aⁿbⁿ} — equal a\'s then equal b\'s',
@@ -2090,7 +2620,8 @@ print(isBalanced(''));''',
           practice: _practice(
             id: 'discrete_math_practice_8',
             title: 'DFA simulation and balanced parentheses',
-            starterCode: '''// 1. Simulate a DFA that accepts binary strings ending in '01'
+            starterCode:
+                '''// 1. Simulate a DFA that accepts binary strings ending in '01'
 // States: q0 (start), q1 (saw 0), q2 (saw 01, accepting)
 bool dfaEndsWith01(String input) {
   // complete this function
@@ -2108,7 +2639,8 @@ bool dfaEndsWith01(String input) {
       subtitle: 'Vectors, matrices, transformations, and feature spaces',
       description: 'Build intuition for transformations and optimization.',
       teaser: 'Strong for ML, graphics, and representing structured data.',
-      outcome: 'You can describe how values move through vector and matrix transforms.',
+      outcome:
+          'You can describe how values move through vector and matrix transforms.',
       icon: Icons.stacked_line_chart_rounded,
       color: const Color(0xFF62B5FF),
       order: 3,
@@ -2122,7 +2654,8 @@ bool dfaEndsWith01(String input) {
         _module(
           id: 'linear_algebra_calculus_module_1',
           title: 'Vectors and matrices',
-          summary: 'Represent inputs as vectors and transform them consistently.',
+          summary:
+              'Represent inputs as vectors and transform them consistently.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'linear_algebra_calculus_lesson_1_1',
@@ -2230,7 +2763,8 @@ print(loss);''',
         _module(
           id: 'linear_algebra_calculus_module_3',
           title: 'Determinants and Inverse',
-          summary: 'Cofactor expansion, determinant properties, and Cramer\'s rule.',
+          summary:
+              'Cofactor expansion, determinant properties, and Cramer\'s rule.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'linear_algebra_calculus_lesson_3_1',
@@ -2245,7 +2779,8 @@ print(det);''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Complete the 2x2 determinant',
-                instruction: 'Fill in the operator for the determinant formula.',
+                instruction:
+                    'Fill in the operator for the determinant formula.',
                 prompt: 'det = a*d ____ b*c',
                 options: <String>['-', '+', '*'],
                 correctIndex: 0,
@@ -2289,13 +2824,15 @@ final c = 2, d = 7;
         _module(
           id: 'linear_algebra_calculus_module_4',
           title: 'Eigenvalues and Eigenvectors',
-          summary: 'Characteristic polynomial, eigenvalues, and diagonalization.',
+          summary:
+              'Characteristic polynomial, eigenvalues, and diagonalization.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'linear_algebra_calculus_lesson_4_1',
               title: 'Characteristic polynomial',
               trackTitle: 'Linear Algebra',
-              codeSnippet: '''// For [[4,1],[2,3]], char poly: (4-λ)(3-λ) - 2 = 0
+              codeSnippet:
+                  '''// For [[4,1],[2,3]], char poly: (4-λ)(3-λ) - 2 = 0
 // λ^2 - 7λ + 10 = 0 => (λ-5)(λ-2) = 0
 final lambda1 = 5;
 final lambda2 = 2;
@@ -2353,7 +2890,8 @@ final lambda2 = 3;
     _track(
       id: 'probability_statistics_analytics',
       title: 'Probability & Statistics',
-      subtitle: 'Randomness, sampling, uncertainty, and evidence-based decisions',
+      subtitle:
+          'Randomness, sampling, uncertainty, and evidence-based decisions',
       description: 'Use uncertainty and measurement to guide decisions.',
       teaser: 'Strong for analytics, experiments, forecasting, QA, and ML.',
       outcome: 'You can reason about uncertainty and explain evidence clearly.',
@@ -2371,7 +2909,8 @@ final lambda2 = 3;
         _module(
           id: 'probability_statistics_analytics_module_1',
           title: 'Probability Foundations',
-          summary: 'Sample spaces, events, conditional probability, and Bayes\' theorem.',
+          summary:
+              'Sample spaces, events, conditional probability, and Bayes\' theorem.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'probability_statistics_analytics_lesson_1_1',
@@ -2386,7 +2925,8 @@ print(probability);''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Complete the probability formula',
-                instruction: 'Choose the operator that gives probability as a ratio.',
+                instruction:
+                    'Choose the operator that gives probability as a ratio.',
                 prompt: 'P(A) = |A| ____ |S|',
                 options: <String>['/', '*', '+'],
                 correctIndex: 0,
@@ -2432,7 +2972,8 @@ final pPositiveGivenHealthy = 0.05; // false positive rate
         _module(
           id: 'probability_statistics_analytics_module_2',
           title: 'Random Variables',
-          summary: 'Discrete and continuous random variables, expected value, and variance.',
+          summary:
+              'Discrete and continuous random variables, expected value, and variance.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'probability_statistics_analytics_lesson_2_1',
@@ -2449,7 +2990,11 @@ print(expected);''',
                 title: 'Match random variable concepts',
                 instruction: 'Match each concept to its definition.',
                 prompt: 'Connect terms to their meanings.',
-                options: <String>['Expected value', 'Variance', 'Standard deviation'],
+                options: <String>[
+                  'Expected value',
+                  'Variance',
+                  'Standard deviation',
+                ],
                 orderedLines: <String>[
                   'Weighted average of all possible outcomes',
                   'Average squared deviation from the mean',
@@ -2461,7 +3006,8 @@ print(expected);''',
               id: 'probability_statistics_analytics_lesson_2_2',
               title: 'Variance and standard deviation',
               trackTitle: 'Probability & Statistics',
-              codeSnippet: '''final data = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
+              codeSnippet:
+                  '''final data = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
 final mean = data.reduce((a, b) => a + b) / data.length;
 final variance = data.map((x) => (x - mean) * (x - mean))
     .reduce((a, b) => a + b) / data.length;
@@ -2509,7 +3055,8 @@ print(p.toStringAsFixed(4));''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Build the binomial probability',
-                instruction: 'Arrange the steps to compute a binomial probability.',
+                instruction:
+                    'Arrange the steps to compute a binomial probability.',
                 prompt: 'Order the binomial calculation steps.',
                 orderedLines: <String>[
                   'Choose n (trials) and k (successes)',
@@ -2536,7 +3083,8 @@ print('68%% within [\${mean - stdDev}, \$oneSD]');''',
               correctQuizIndex: 0,
               trainer: const DemoTrainerSeed.matching(
                 title: 'Match distributions to properties',
-                instruction: 'Match each distribution to its key characteristic.',
+                instruction:
+                    'Match each distribution to its key characteristic.',
                 prompt: 'Connect distributions to their descriptions.',
                 options: <String>['Bernoulli', 'Binomial', 'Normal'],
                 orderedLines: <String>[
@@ -2550,7 +3098,8 @@ print('68%% within [\${mean - stdDev}, \$oneSD]');''',
           practice: _practice(
             id: 'probability_statistics_analytics_practice_3',
             title: 'Model a binomial experiment',
-            starterCode: '''int factorial(int n) => n <= 1 ? 1 : n * factorial(n - 1);
+            starterCode:
+                '''int factorial(int n) => n <= 1 ? 1 : n * factorial(n - 1);
 
 // A fair die is rolled 4 times.
 // What is the probability of getting exactly 2 sixes?
@@ -2561,7 +3110,8 @@ print('68%% within [\${mean - stdDev}, \$oneSD]');''',
         _module(
           id: 'probability_statistics_analytics_module_4',
           title: 'Hypothesis Testing',
-          summary: 'Null hypothesis, p-values, t-tests, and confidence intervals.',
+          summary:
+              'Null hypothesis, p-values, t-tests, and confidence intervals.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'probability_statistics_analytics_lesson_4_1',
@@ -2577,7 +3127,8 @@ print(reject);''',
               correctQuizIndex: 0,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Complete the hypothesis decision',
-                instruction: 'Choose the comparison for rejecting the null hypothesis.',
+                instruction:
+                    'Choose the comparison for rejecting the null hypothesis.',
                 prompt: 'Reject H0 when p-value ____ alpha.',
                 options: <String>['<', '>', '=='],
                 correctIndex: 0,
@@ -2588,7 +3139,8 @@ print(reject);''',
               id: 'probability_statistics_analytics_lesson_4_2',
               title: 'T-tests and confidence intervals',
               trackTitle: 'Probability & Statistics',
-              codeSnippet: '''// 95% confidence interval: mean +/- z * (stdDev / sqrt(n))
+              codeSnippet:
+                  '''// 95% confidence interval: mean +/- z * (stdDev / sqrt(n))
 import 'dart:math';
 final mean = 50.0;
 final stdDev = 10.0;
@@ -2618,7 +3170,8 @@ print('[\${(mean - margin).toStringAsFixed(1)}, \${(mean + margin).toStringAsFix
           practice: _practice(
             id: 'probability_statistics_analytics_practice_4',
             title: 'Perform a hypothesis test',
-            starterCode: '''// A website claims average load time is 2.0 seconds.
+            starterCode:
+                '''// A website claims average load time is 2.0 seconds.
 // Your sample of 36 pages has mean 2.3s, std dev 0.6s.
 // Test at alpha = 0.05 whether the true mean exceeds 2.0.
 
@@ -2631,10 +3184,12 @@ print('[\${(mean - margin).toStringAsFixed(1)}, \${(mean + margin).toStringAsFix
     _track(
       id: 'algorithms_data_structures',
       title: 'Algorithms & Data Structures',
-      subtitle: 'Complexity, arrays, maps, trees, queues, and problem-solving patterns',
+      subtitle:
+          'Complexity, arrays, maps, trees, queues, and problem-solving patterns',
       description:
           'Learn how information is organized and how efficient procedures act on it.',
-      teaser: 'A central branch for backend, frontend state, QA thinking, and ML pipelines.',
+      teaser:
+          'A central branch for backend, frontend state, QA thinking, and ML pipelines.',
       outcome:
           'You can explain how data structures and algorithms shape runtime behavior.',
       icon: Icons.account_tree_rounded,
@@ -2657,7 +3212,8 @@ print('[\${(mean - margin).toStringAsFixed(1)}, \${(mean + margin).toStringAsFix
       subtitle: 'CPU, memory hierarchy, binary, and execution',
       description: 'Connect code behavior to the machine beneath it.',
       teaser: 'Strong for performance intuition and systems reasoning.',
-      outcome: 'You can explain how instructions, memory, and hardware affect software.',
+      outcome:
+          'You can explain how instructions, memory, and hardware affect software.',
       icon: Icons.memory_rounded,
       color: const Color(0xFFB2F27A),
       order: 9,
@@ -2670,7 +3226,8 @@ print('[\${(mean - margin).toStringAsFixed(1)}, \${(mean + margin).toStringAsFix
       title: 'Operating Systems',
       subtitle: 'Processes, memory, scheduling, and system calls',
       description: 'Understand the runtime environment beneath an application.',
-      teaser: 'Strong for backend performance, mobile behavior, and systems debugging.',
+      teaser:
+          'Strong for backend performance, mobile behavior, and systems debugging.',
       outcome: 'You can explain how the OS shapes runtime behavior.',
       icon: Icons.settings_applications_rounded,
       color: const Color(0xFF7AE582),
@@ -2690,7 +3247,8 @@ print('[\${(mean - margin).toStringAsFixed(1)}, \${(mean + margin).toStringAsFix
       subtitle: 'Layers, routing, DNS, protocols, transport, and latency',
       description: 'Learn how data moves through layers and protocols.',
       teaser: 'Strong for backend APIs, mobile latency, and security.',
-      outcome: 'You can explain where packets, protocols, and delays enter the story.',
+      outcome:
+          'You can explain where packets, protocols, and delays enter the story.',
       icon: Icons.wifi_tethering_rounded,
       color: const Color(0xFFFFB86B),
       order: 7,
@@ -2710,7 +3268,8 @@ print('[\${(mean - margin).toStringAsFixed(1)}, \${(mean + margin).toStringAsFix
       subtitle: 'Schemas, SQL, indexes, transactions, and replication',
       description: 'Store, query, and protect data with structured systems.',
       teaser: 'Strong for backend design, analytics, and product reliability.',
-      outcome: 'You can explain how data is stored, queried, and kept consistent.',
+      outcome:
+          'You can explain how data is stored, queried, and kept consistent.',
       icon: Icons.storage_rounded,
       color: const Color(0xFFFFD166),
       order: 6,
@@ -2727,7 +3286,8 @@ print('[\${(mean - margin).toStringAsFixed(1)}, \${(mean + margin).toStringAsFix
     _track(
       id: 'ai_theory',
       title: 'AI Theory',
-      subtitle: 'Search, reasoning, learning paradigms, and intelligent systems',
+      subtitle:
+          'Search, reasoning, learning paradigms, and intelligent systems',
       description:
           'Study the conceptual foundations behind intelligent behavior and machine reasoning.',
       teaser: 'Connects mathematics, algorithms, and ML engineering.',
@@ -2749,7 +3309,8 @@ print('[\${(mean - margin).toStringAsFixed(1)}, \${(mean + margin).toStringAsFix
     _track(
       id: 'information_security_foundations',
       title: 'Information Security',
-      subtitle: 'Confidentiality, integrity, access control, and secure system design',
+      subtitle:
+          'Confidentiality, integrity, access control, and secure system design',
       description:
           'Learn the foundational ideas that protect systems, users, and information.',
       teaser:
@@ -2785,8 +3346,13 @@ LearningTrack _track({
   required List<String> connections,
   required List<DemoModuleSeed> modules,
 }) {
-  final resolvedModules = modules.isEmpty ? _fallbackModules(id, title) : modules;
-  final lessonCount = resolvedModules.fold<int>(0, (s, m) => s + m.lessons.length);
+  final resolvedModules = modules.isEmpty
+      ? _fallbackModules(id, title)
+      : modules;
+  final lessonCount = resolvedModules.fold<int>(
+    0,
+    (s, m) => s + m.lessons.length,
+  );
   final practiceCount = resolvedModules.length;
   return buildTrackFromSeed(
     id: id,
@@ -2795,7 +3361,8 @@ LearningTrack _track({
     description: description,
     teaser: teaser,
     outcome: outcome,
-    heroMetric: '${resolvedModules.length} modules • $lessonCount lessons • $practiceCount practices',
+    heroMetric:
+        '${resolvedModules.length} modules • $lessonCount lessons • $practiceCount practices',
     icon: icon,
     color: color,
     zone: TrackZone.computerScienceCore,
@@ -2819,8 +3386,8 @@ DemoModuleSeed _module({
 }) {
   LocalizedText? buildL(String base, String? ru, String? kk) =>
       (ru != null || kk != null)
-          ? LocalizedText(en: base, ru: ru ?? base, kk: kk ?? ru ?? base)
-          : null;
+      ? LocalizedText(en: base, ru: ru ?? base, kk: kk ?? ru ?? base)
+      : null;
   return DemoModuleSeed(
     id: id,
     title: title,
@@ -2872,7 +3439,8 @@ DemoLessonSeed _lesson({
   final resolvedSummary = summary ?? 'Core idea in $trackTitle: $title.';
   final resolvedOutcome =
       outcome ?? 'You can explain $title using code and a short narrative.';
-  final resolvedKeyPoints = keyPoints ??
+  final resolvedKeyPoints =
+      keyPoints ??
       <String>[
         'Follow the data transformation step by step.',
         'Connect the code example to a real engineering situation.',
@@ -2880,30 +3448,27 @@ DemoLessonSeed _lesson({
       ];
   final resolvedQuizPrompt =
       quizPrompt ?? 'What does this example print or return?';
-  final resolvedQuizExplanation = quizExplanation ??
+  final resolvedQuizExplanation =
+      quizExplanation ??
       'The correct answer follows from the final value computed in the example.';
-  final resolvedPromptSuggestion = promptSuggestion ??
+  final resolvedPromptSuggestion =
+      promptSuggestion ??
       'Explain $title as if I am presenting $trackTitle on stage.';
 
   LocalizedText? buildL(String base, String? ru, String? kk) =>
       (ru != null || kk != null)
-          ? LocalizedText(
-              en: base,
-              ru: ru ?? base,
-              kk: kk ?? ru ?? base,
-            )
-          : null;
+      ? LocalizedText(en: base, ru: ru ?? base, kk: kk ?? ru ?? base)
+      : null;
 
   LocalizedText? buildListL(
-      List<String> base, List<String>? ru, List<String>? kk) {
+    List<String> base,
+    List<String>? ru,
+    List<String>? kk,
+  ) {
     if (ru == null && kk == null) return null;
     final ruJoined = (ru ?? base).join('\n');
     final kkJoined = (kk ?? ru ?? base).join('\n');
-    return LocalizedText(
-      en: base.join('\n'),
-      ru: ruJoined,
-      kk: kkJoined,
-    );
+    return LocalizedText(en: base.join('\n'), ru: ruJoined, kk: kkJoined);
   }
 
   return DemoLessonSeed(
@@ -2927,13 +3492,17 @@ DemoLessonSeed _lesson({
     titleL: buildL(title, titleRu, titleKk),
     summaryL: buildL(resolvedSummary, summaryRu, summaryKk),
     outcomeL: buildL(resolvedOutcome, outcomeRu, outcomeKk),
-    theoryContentL:
-        buildL(theoryContent ?? '', theoryContentRu, theoryContentKk),
+    theoryContentL: buildL(
+      theoryContent ?? '',
+      theoryContentRu,
+      theoryContentKk,
+    ),
     keyPointsL: buildListL(resolvedKeyPoints, keyPointsRu, keyPointsKk) != null
         ? resolvedKeyPoints
-            .asMap()
-            .entries
-            .map((e) => LocalizedText(
+              .asMap()
+              .entries
+              .map(
+                (e) => LocalizedText(
                   en: e.value,
                   ru: keyPointsRu != null && e.key < keyPointsRu.length
                       ? keyPointsRu[e.key]
@@ -2941,16 +3510,23 @@ DemoLessonSeed _lesson({
                   kk: keyPointsKk != null && e.key < keyPointsKk.length
                       ? keyPointsKk[e.key]
                       : keyPointsRu != null && e.key < keyPointsRu.length
-                          ? keyPointsRu[e.key]
-                          : e.value,
-                ))
-            .toList()
+                      ? keyPointsRu[e.key]
+                      : e.value,
+                ),
+              )
+              .toList()
         : null,
     quizPromptL: buildL(resolvedQuizPrompt, quizPromptRu, quizPromptKk),
-    quizExplanationL:
-        buildL(resolvedQuizExplanation, quizExplanationRu, quizExplanationKk),
-    promptSuggestionL:
-        buildL(resolvedPromptSuggestion, promptSuggestionRu, promptSuggestionKk),
+    quizExplanationL: buildL(
+      resolvedQuizExplanation,
+      quizExplanationRu,
+      quizExplanationKk,
+    ),
+    promptSuggestionL: buildL(
+      resolvedPromptSuggestion,
+      promptSuggestionRu,
+      promptSuggestionKk,
+    ),
   );
 }
 
@@ -2963,7 +3539,8 @@ DemoPracticeSeed _practice({
     id: id,
     title: title,
     summary: 'Use a small example to practice the idea and narrate the result.',
-    brief: 'Complete the starter code, print one meaningful result, and explain what the learner should notice.',
+    brief:
+        'Complete the starter code, print one meaningful result, and explain what the learner should notice.',
     starterCode: starterCode,
     successCriteria: const <String>[
       'Keep the example short and readable.',
@@ -2974,7 +3551,8 @@ DemoPracticeSeed _practice({
       'What is the key idea behind the example?',
       'How would you explain the result to a teammate?',
     ],
-    promptSuggestion: 'Help me turn this practice into a presenter-friendly walkthrough.',
+    promptSuggestion:
+        'Help me turn this practice into a presenter-friendly walkthrough.',
   );
 }
 
@@ -2985,7 +3563,8 @@ List<DemoModuleSeed> _fallbackModules(String trackId, String title) {
         _module(
           id: '${trackId}_module_1',
           title: 'Probability Foundations',
-          summary: 'Sample spaces, events, conditional probability, and Bayes\' theorem.',
+          summary:
+              'Sample spaces, events, conditional probability, and Bayes\' theorem.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: '${trackId}_lesson_1_1',
@@ -2999,7 +3578,8 @@ print(favorable / total);''',
               correctQuizIndex: 0,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Complete the probability formula',
-                instruction: 'Choose the operator that gives probability as a ratio.',
+                instruction:
+                    'Choose the operator that gives probability as a ratio.',
                 prompt: 'P(A) = favorable ____ total',
                 options: <String>['/', '*', '+'],
                 correctIndex: 0,
@@ -3116,7 +3696,8 @@ print(shirts * p * (1 - p) * (1 - p));''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Fill the binomial parameter',
-                instruction: 'The binomial distribution counts successes in n trials.',
+                instruction:
+                    'The binomial distribution counts successes in n trials.',
                 prompt: 'P(X=k) = C(n,k) * p^k * (1-p)^____',
                 options: <String>['n-k', 'n', 'k'],
                 correctIndex: 0,
@@ -3166,7 +3747,8 @@ final p = 0.5;
         _module(
           id: '${trackId}_module_4',
           title: 'Hypothesis Testing',
-          summary: 'Null hypothesis, p-values, t-tests, and confidence intervals.',
+          summary:
+              'Null hypothesis, p-values, t-tests, and confidence intervals.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: '${trackId}_lesson_4_1',
@@ -3316,7 +3898,8 @@ print(tasks / workers);''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Complete the parallel split',
-                instruction: 'Choose the operator that divides work across workers.',
+                instruction:
+                    'Choose the operator that divides work across workers.',
                 prompt: 'Which operator shares the load evenly?',
                 options: <String>['/', '*', '+'],
                 correctIndex: 0,
@@ -3353,7 +3936,8 @@ print('\$processName:\${threads.length}');''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Restore the process label',
-                instruction: 'Select the value that identifies the outer runtime container.',
+                instruction:
+                    'Select the value that identifies the outer runtime container.',
                 prompt: 'Which term owns the resources?',
                 options: <String>['process', 'thread', 'queue'],
                 correctIndex: 0,
@@ -3461,7 +4045,8 @@ print(layers.last);''',
               correctQuizIndex: 2,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Restore the top layer',
-                instruction: 'Choose the protocol that usually sits at the application level.',
+                instruction:
+                    'Choose the protocol that usually sits at the application level.',
                 prompt: 'Which item belongs to the application layer here?',
                 options: <String>['http', 'ethernet', 'arp'],
                 correctIndex: 0,
@@ -3480,7 +4065,8 @@ print(hop1 + hop2);''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Rebuild the hop calculation',
-                instruction: 'Arrange the lines from hop values to total latency.',
+                instruction:
+                    'Arrange the lines from hop values to total latency.',
                 prompt: 'Put the route latency example in order.',
                 orderedLines: <String>[
                   'final hopA = 9;',
@@ -3511,14 +4097,22 @@ print(hop1 + hop2);''',
 final host = 'zerdestudy.app';
 print('\$scheme://\$host');''',
               output: 'https://zerdestudy.app',
-              quizOptions: <String>['http://zerdestudy.app', 'https://zerdestudy.app', 'tls://zerdestudy.app'],
+              quizOptions: <String>[
+                'http://zerdestudy.app',
+                'https://zerdestudy.app',
+                'tls://zerdestudy.app',
+              ],
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.matchOutput(
                 title: 'Choose the secure URL',
                 instruction: 'Pick the output that matches the secure scheme.',
                 prompt: '''final scheme = 'https';
 print('\$scheme://demo.local');''',
-                options: <String>['http://demo.local', 'https://demo.local', 'tls://demo.local'],
+                options: <String>[
+                  'http://demo.local',
+                  'https://demo.local',
+                  'tls://demo.local',
+                ],
                 correctIndex: 1,
               ),
             ),
@@ -3530,7 +4124,11 @@ print('\$scheme://demo.local');''',
 final port = 443;
 print('\$host:\$port');''',
               output: 'api.zerdestudy.app:443',
-              quizOptions: <String>['api.zerdestudy.app:80', 'api.zerdestudy.app:443', 'zerdestudy.app:443'],
+              quizOptions: <String>[
+                'api.zerdestudy.app:80',
+                'api.zerdestudy.app:443',
+                'zerdestudy.app:443',
+              ],
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Complete the socket endpoint',
@@ -3572,7 +4170,8 @@ print('\$primaryKey:\$rows');''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Restore the primary key label',
-                instruction: 'Select the column typically used as a table identifier.',
+                instruction:
+                    'Select the column typically used as a table identifier.',
                 prompt: 'Which label is commonly used as the primary key?',
                 options: <String>['id', 'count', 'name'],
                 correctIndex: 0,
@@ -3587,7 +4186,11 @@ print('\$primaryKey:\$rows');''',
 FROM lessons
 WHERE status = 'done';''',
               output: 'Returns the number of completed lessons.',
-              quizOptions: <String>['All lesson rows', 'The number of completed lessons', 'The latest lesson title'],
+              quizOptions: <String>[
+                'All lesson rows',
+                'The number of completed lessons',
+                'The latest lesson title',
+              ],
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.reorder(
                 title: 'Rebuild the SQL query',
@@ -3628,7 +4231,8 @@ print(fullScanCost - indexedCost);''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.matchOutput(
                 title: 'Choose the indexed savings',
-                instruction: 'Pick the printed difference between scan and index.',
+                instruction:
+                    'Pick the printed difference between scan and index.',
                 prompt: '''final scan = 20;
 final index = 5;
 print(scan - index);''',
@@ -3683,8 +4287,10 @@ print(ideas.length);''',
               correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Complete the concept metric',
-                instruction: 'Choose the property that counts the listed building blocks.',
-                prompt: 'Which property returns the number of items in the list?',
+                instruction:
+                    'Choose the property that counts the listed building blocks.',
+                prompt:
+                    'Which property returns the number of items in the list?',
                 options: <String>['length', 'last', 'first'],
                 correctIndex: 0,
                 template: 'print(ideas.____);',
@@ -3756,7 +4362,8 @@ print(steps.first);''',
               correctQuizIndex: 0,
               trainer: const DemoTrainerSeed.fillBlank(
                 title: 'Complete the first step',
-                instruction: 'Choose the property that returns the starting item.',
+                instruction:
+                    'Choose the property that returns the starting item.',
                 prompt: 'Which property returns the first element?',
                 options: <String>['first', 'last', 'length'],
                 correctIndex: 0,

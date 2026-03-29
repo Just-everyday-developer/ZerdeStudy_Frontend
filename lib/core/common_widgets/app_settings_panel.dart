@@ -6,8 +6,10 @@ import '../../app/routing/app_routes.dart';
 import '../../app/state/app_theme_mode.dart';
 import '../../app/state/demo_app_controller.dart';
 import '../localization/app_localizations.dart';
+import '../notifications/local_notification_service.dart';
 import '../theme/app_theme_colors.dart';
 import 'adaptive_panel.dart';
+import 'app_notice.dart';
 import 'locale_selector.dart';
 
 Future<void> showAppSettingsPanel(BuildContext context) {
@@ -19,13 +21,73 @@ Future<void> showAppSettingsPanel(BuildContext context) {
   );
 }
 
-class _AppSettingsPanelContent extends ConsumerWidget {
+class _AppSettingsPanelContent extends ConsumerStatefulWidget {
   const _AppSettingsPanelContent();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AppSettingsPanelContent> createState() =>
+      _AppSettingsPanelContentState();
+}
+
+class _AppSettingsPanelContentState
+    extends ConsumerState<_AppSettingsPanelContent> {
+  bool _isSendingNotification = false;
+
+  Future<void> _sendTestNotification() async {
+    if (_isSendingNotification) {
+      return;
+    }
+
+    final l10n = context.l10n;
+    setState(() => _isSendingNotification = true);
+    final notificationService = ref.read(localNotificationServiceProvider);
+    final result = await notificationService.sendTestNotification(
+      title: l10n.text('notifications_test_title'),
+      body: l10n.text('notifications_test_body'),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _isSendingNotification = false);
+    switch (result) {
+      case LocalNotificationSendStatus.sent:
+        AppNotice.show(
+          context,
+          message: l10n.text('notifications_test_notice_sent'),
+          type: AppNoticeType.success,
+        );
+        break;
+      case LocalNotificationSendStatus.permissionDenied:
+        AppNotice.show(
+          context,
+          message: l10n.text('notifications_test_notice_denied'),
+          type: AppNoticeType.error,
+        );
+        break;
+      case LocalNotificationSendStatus.unsupported:
+        AppNotice.show(
+          context,
+          message: l10n.text('notifications_test_notice_unsupported'),
+          type: AppNoticeType.error,
+        );
+        break;
+      case LocalNotificationSendStatus.failed:
+        AppNotice.show(
+          context,
+          message: l10n.text('notifications_test_notice_failed'),
+          type: AppNoticeType.error,
+        );
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
     final controller = ref.read(demoAppControllerProvider.notifier);
+    final notificationService = ref.read(localNotificationServiceProvider);
     final colors = context.appColors;
     final l10n = context.l10n;
 
@@ -60,23 +122,123 @@ class _AppSettingsPanelContent extends ConsumerWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: AppThemeMode.values.map((mode) {
-              final selected = mode == state.themeMode;
-              return ChoiceChip(
-                label: Text(_themeLabel(l10n, mode)),
-                selected: selected,
-                onSelected: (_) => controller.changeThemeMode(mode),
-                selectedColor: colors.primary.withValues(alpha: 0.16),
-                backgroundColor: colors.surfaceSoft,
-                side: BorderSide(
-                  color: selected ? colors.primary : colors.divider,
+            children: AppThemeMode.values
+                .map((mode) {
+                  final selected = mode == state.themeMode;
+                  return ChoiceChip(
+                    label: Text(_themeLabel(l10n, mode)),
+                    selected: selected,
+                    onSelected: (_) => controller.changeThemeMode(mode),
+                    selectedColor: colors.primary.withValues(alpha: 0.16),
+                    backgroundColor: colors.surfaceSoft,
+                    side: BorderSide(
+                      color: selected ? colors.primary : colors.divider,
+                    ),
+                    labelStyle: TextStyle(
+                      color: selected ? colors.primary : colors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  );
+                })
+                .toList(growable: false),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            l10n.text('notifications_section_title'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: colors.surfaceSoft,
+              border: Border.all(color: colors.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.notifications_active_rounded,
+                      color: colors.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        l10n.text('notifications_card_title'),
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(999),
+                        color: notificationService.isSupported
+                            ? colors.primary.withValues(alpha: 0.16)
+                            : colors.danger.withValues(alpha: 0.14),
+                        border: Border.all(
+                          color: notificationService.isSupported
+                              ? colors.primary.withValues(alpha: 0.34)
+                              : colors.danger.withValues(alpha: 0.28),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.text(
+                          notificationService.isSupported
+                              ? 'notifications_status_supported'
+                              : 'notifications_status_unavailable',
+                        ),
+                        style: TextStyle(
+                          color: notificationService.isSupported
+                              ? colors.primary
+                              : colors.danger,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                labelStyle: TextStyle(
-                  color: selected ? colors.primary : colors.textSecondary,
-                  fontWeight: FontWeight.w700,
+                const SizedBox(height: 10),
+                Text(
+                  l10n.text(
+                    notificationService.isSupported
+                        ? 'notifications_card_subtitle'
+                        : 'notifications_card_subtitle_unavailable',
+                  ),
+                  style: TextStyle(color: colors.textSecondary, height: 1.4),
                 ),
-              );
-            }).toList(growable: false),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed:
+                      notificationService.isSupported && !_isSendingNotification
+                      ? _sendTestNotification
+                      : null,
+                  icon: _isSendingNotification
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              colors.background,
+                            ),
+                          ),
+                        )
+                      : const Icon(Icons.send_rounded),
+                  label: Text(l10n.text('notifications_send_test')),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 18),
           Text(
@@ -146,7 +308,10 @@ class _AppSettingsPanelContent extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.keyboard_command_key_rounded, color: colors.primary),
+                    Icon(
+                      Icons.keyboard_command_key_rounded,
+                      color: colors.primary,
+                    ),
                     const SizedBox(width: 10),
                     Text(
                       l10n.text('hotkeys'),
@@ -201,10 +366,7 @@ class _AppSettingsPanelContent extends ConsumerWidget {
 }
 
 class _ShortcutRow extends StatelessWidget {
-  const _ShortcutRow({
-    required this.combo,
-    required this.description,
-  });
+  const _ShortcutRow({required this.combo, required this.description});
 
   final String combo;
   final String description;
@@ -238,10 +400,7 @@ class _ShortcutRow extends StatelessWidget {
           Expanded(
             child: Text(
               description,
-              style: TextStyle(
-                color: colors.textSecondary,
-                height: 1.35,
-              ),
+              style: TextStyle(color: colors.textSecondary, height: 1.35),
             ),
           ),
         ],

@@ -46,7 +46,8 @@ class AuthUserDto {
           .map(AuthRoleDto.fromJson)
           .toList(growable: false),
       isActive: json['is_active'] as bool? ?? false,
-      createdAt: DateTime.tryParse('${json['created_at'] ?? ''}') ??
+      createdAt:
+          DateTime.tryParse('${json['created_at'] ?? ''}') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AnimatedWelcomeText extends StatelessWidget {
-  const AnimatedWelcomeText({
-    super.key,
-    required this.text,
-  });
+  const AnimatedWelcomeText({super.key, required this.text});
 
   final String text;
 
@@ -26,10 +23,9 @@ class AnimatedWelcomeText extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.displayMedium?.copyWith(
-              fontSize: 34,
-              height: 1.05,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.displayMedium?.copyWith(fontSize: 34, height: 1.05),
       ),
     );
   }

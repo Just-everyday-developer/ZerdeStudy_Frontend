@@ -44,16 +44,14 @@ class AppPageScaffold extends StatelessWidget {
                   ? IconButton(
                       onPressed: () => Navigator.maybePop(context),
                       icon: const Icon(Icons.arrow_back_rounded),
-                      tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).backButtonTooltip,
                     )
                   : null,
               title: title == null
                   ? null
-                  : Text(
-                      title!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  : Text(title!, maxLines: 1, overflow: TextOverflow.ellipsis),
               centerTitle: false,
               backgroundColor: Colors.transparent,
               actions: actions,
@@ -70,8 +68,9 @@ class AppPageScaffold extends StatelessWidget {
                 final availableWidth =
                     constraints.maxWidth - (horizontalPadding * 2);
                 final contentWidth = maxContentWidth ?? context.appPageMaxWidth;
-                final clampedWidth =
-                    availableWidth <= 0 ? constraints.maxWidth : availableWidth;
+                final clampedWidth = availableWidth <= 0
+                    ? constraints.maxWidth
+                    : availableWidth;
 
                 final content = Padding(
                   padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
@@ -88,7 +87,8 @@ class AppPageScaffold extends StatelessWidget {
                 );
 
                 return Align(
-                  alignment: expandContent ||
+                  alignment:
+                      expandContent ||
                           context.isCompactLayout ||
                           context.isNativeWindowsApp
                       ? Alignment.topLeft
@@ -151,10 +151,7 @@ class _Backdrop extends StatelessWidget {
 }
 
 class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({
-    required this.color,
-    required this.size,
-  });
+  const _GlowOrb({required this.color, required this.size});
 
   final Color color;
   final double size;

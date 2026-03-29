@@ -76,8 +76,11 @@ class LeaderboardPage extends ConsumerWidget {
                       height: 42,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: (entry.isCurrentUser ? colors.primary : colors.surfaceSoft)
-                            .withValues(alpha: 0.18),
+                        color:
+                            (entry.isCurrentUser
+                                    ? colors.primary
+                                    : colors.surfaceSoft)
+                                .withValues(alpha: 0.18),
                       ),
                       child: Center(
                         child: Text(
@@ -146,9 +149,7 @@ class LeaderboardPage extends ConsumerWidget {
 }
 
 class _CompactPodium extends StatelessWidget {
-  const _CompactPodium({
-    required this.entries,
-  });
+  const _CompactPodium({required this.entries});
 
   final List<LeaderboardEntry> entries;
 

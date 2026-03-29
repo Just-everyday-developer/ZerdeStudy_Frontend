@@ -12,4 +12,3 @@ final validateNameProvider = Provider<ValidateName>((ref) {
   final validator = ref.watch(nameValidatorProvider);
   return ValidateName(validator);
 });
-

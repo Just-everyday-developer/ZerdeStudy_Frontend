@@ -4,24 +4,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_theme_colors.dart';
 
 class AppTheme {
-  static ThemeData get darkTheme => _buildTheme(
-        brightness: Brightness.dark,
-        palette: AppThemeColors.dark,
-      );
+  static ThemeData get darkTheme =>
+      _buildTheme(brightness: Brightness.dark, palette: AppThemeColors.dark);
 
-  static ThemeData get lightTheme => _buildTheme(
-        brightness: Brightness.light,
-        palette: AppThemeColors.light,
-      );
+  static ThemeData get lightTheme =>
+      _buildTheme(brightness: Brightness.light, palette: AppThemeColors.light);
 
   static ThemeData _buildTheme({
     required Brightness brightness,
     required AppThemeColors palette,
   }) {
-    final baseTheme = ThemeData(
-      useMaterial3: true,
-      brightness: brightness,
-    );
+    final baseTheme = ThemeData(useMaterial3: true, brightness: brightness);
     final baseTextTheme = GoogleFonts.ibmPlexSansTextTheme(baseTheme.textTheme);
 
     return baseTheme.copyWith(
@@ -41,39 +34,38 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
-      textTheme: baseTextTheme.apply(
-        bodyColor: palette.textPrimary,
-        displayColor: palette.textPrimary,
-      ).copyWith(
-        displayLarge: GoogleFonts.orbitron(
-          textStyle: baseTextTheme.displayLarge,
-          fontWeight: FontWeight.w700,
-          color: palette.textPrimary,
-        ),
-        displayMedium: GoogleFonts.orbitron(
-          textStyle: baseTextTheme.displayMedium,
-          fontWeight: FontWeight.w700,
-          color: palette.textPrimary,
-        ),
-        headlineLarge: GoogleFonts.orbitron(
-          textStyle: baseTextTheme.headlineLarge,
-          fontWeight: FontWeight.w700,
-          color: palette.textPrimary,
-        ),
-        headlineMedium: GoogleFonts.orbitron(
-          textStyle: baseTextTheme.headlineMedium,
-          fontWeight: FontWeight.w700,
-          color: palette.textPrimary,
-        ),
-      ),
+      textTheme: baseTextTheme
+          .apply(
+            bodyColor: palette.textPrimary,
+            displayColor: palette.textPrimary,
+          )
+          .copyWith(
+            displayLarge: GoogleFonts.orbitron(
+              textStyle: baseTextTheme.displayLarge,
+              fontWeight: FontWeight.w700,
+              color: palette.textPrimary,
+            ),
+            displayMedium: GoogleFonts.orbitron(
+              textStyle: baseTextTheme.displayMedium,
+              fontWeight: FontWeight.w700,
+              color: palette.textPrimary,
+            ),
+            headlineLarge: GoogleFonts.orbitron(
+              textStyle: baseTextTheme.headlineLarge,
+              fontWeight: FontWeight.w700,
+              color: palette.textPrimary,
+            ),
+            headlineMedium: GoogleFonts.orbitron(
+              textStyle: baseTextTheme.headlineMedium,
+              fontWeight: FontWeight.w700,
+              color: palette.textPrimary,
+            ),
+          ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: palette.surface.withValues(alpha: 0.94),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         labelTextStyle: WidgetStateProperty.all(
-          GoogleFonts.ibmPlexSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          GoogleFonts.ibmPlexSans(fontSize: 12, fontWeight: FontWeight.w600),
         ),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           return IconThemeData(
@@ -99,9 +91,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide(color: palette.primary, width: 1.4),
         ),
-        hintStyle: GoogleFonts.ibmPlexSans(
-          color: palette.textSecondary,
-        ),
+        hintStyle: GoogleFonts.ibmPlexSans(color: palette.textSecondary),
       ),
       dividerColor: palette.divider,
       cardTheme: CardThemeData(

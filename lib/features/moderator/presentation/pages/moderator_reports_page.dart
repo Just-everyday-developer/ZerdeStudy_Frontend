@@ -51,7 +51,9 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
       int cmp;
       switch (_sortColumn) {
         case _SortColumn.priority:
-          cmp = _priorityOrder(a.priority).compareTo(_priorityOrder(b.priority));
+          cmp = _priorityOrder(
+            a.priority,
+          ).compareTo(_priorityOrder(b.priority));
         case _SortColumn.reason:
           cmp = a.reason.compareTo(b.reason);
         case _SortColumn.date:
@@ -99,15 +101,15 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                       children: [
                         Text(
                           'Жалобы и баны',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
+                          style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         Text(
                           '${kModReports.length} активных жалоб',
                           style: TextStyle(
-                              color: colors.textSecondary, fontSize: 12),
+                            color: colors.textSecondary,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -116,7 +118,9 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                       Text(
                         'Выбрано: ${_selected.length}',
                         style: TextStyle(
-                            color: colors.textSecondary, fontSize: 13),
+                          color: colors.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
@@ -183,8 +187,10 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
               // Table rows
               Expanded(
                 child: ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   itemCount: reports.length,
                   itemBuilder: (context, i) {
                     final report = reports[i];
@@ -226,15 +232,12 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                     children: [
                       Text(
                         'Детали жалобы',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const Spacer(),
                       IconButton(
-                        onPressed: () =>
-                            setState(() => _openReport = null),
+                        onPressed: () => setState(() => _openReport = null),
                         icon: const Icon(Icons.close_rounded),
                         iconSize: 18,
                       ),
@@ -248,21 +251,25 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _InfoRow(
-                            label: 'Инициатор',
-                            value: _openReport!.initiator,
-                            colors: colors),
+                          label: 'Инициатор',
+                          value: _openReport!.initiator,
+                          colors: colors,
+                        ),
                         _InfoRow(
-                            label: 'Объект',
-                            value: _openReport!.target,
-                            colors: colors),
+                          label: 'Объект',
+                          value: _openReport!.target,
+                          colors: colors,
+                        ),
                         _InfoRow(
-                            label: 'Причина',
-                            value: _openReport!.reason,
-                            colors: colors),
+                          label: 'Причина',
+                          value: _openReport!.reason,
+                          colors: colors,
+                        ),
                         _InfoRow(
-                            label: 'Дата',
-                            value: _openReport!.createdAt,
-                            colors: colors),
+                          label: 'Дата',
+                          value: _openReport!.createdAt,
+                          colors: colors,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'Нарушающий контент',
@@ -276,12 +283,14 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF44336)
-                                .withValues(alpha: 0.06),
+                            color: const Color(
+                              0xFFF44336,
+                            ).withValues(alpha: 0.06),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: const Color(0xFFF44336)
-                                  .withValues(alpha: 0.2),
+                              color: const Color(
+                                0xFFF44336,
+                              ).withValues(alpha: 0.2),
                             ),
                           ),
                           child: Text(
@@ -296,15 +305,17 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                         const SizedBox(height: 24),
                         Text(
                           'Инструменты бана',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
+                          style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 12),
-                        Text('Причина бана',
-                            style: TextStyle(
-                                color: colors.textSecondary, fontSize: 12)),
+                        Text(
+                          'Причина бана',
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
                           initialValue: _banReason,
@@ -315,22 +326,32 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                               borderSide: BorderSide(color: colors.divider),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                           ),
                           items: _banReasons
-                              .map((r) => DropdownMenuItem(
+                              .map(
+                                (r) => DropdownMenuItem(
                                   value: r,
-                                  child: Text(r,
-                                      style:
-                                          const TextStyle(fontSize: 13))))
+                                  child: Text(
+                                    r,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ),
+                              )
                               .toList(),
                           onChanged: (v) =>
                               setState(() => _banReason = v ?? _banReason),
                         ),
                         const SizedBox(height: 12),
-                        Text('Срок бана',
-                            style: TextStyle(
-                                color: colors.textSecondary, fontSize: 12)),
+                        Text(
+                          'Срок бана',
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
                           initialValue: _banDuration,
@@ -341,17 +362,23 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                               borderSide: BorderSide(color: colors.divider),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                           ),
                           items: _banDurations
-                              .map((d) => DropdownMenuItem(
+                              .map(
+                                (d) => DropdownMenuItem(
                                   value: d,
-                                  child: Text(d,
-                                      style:
-                                          const TextStyle(fontSize: 13))))
+                                  child: Text(
+                                    d,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ),
+                              )
                               .toList(),
-                          onChanged: (v) => setState(
-                              () => _banDuration = v ?? _banDuration),
+                          onChanged: (v) =>
+                              setState(() => _banDuration = v ?? _banDuration),
                         ),
                         const SizedBox(height: 10),
                         CheckboxListTile(
@@ -371,15 +398,13 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: () =>
-                                setState(() => _openReport = null),
+                            onPressed: () => setState(() => _openReport = null),
                             icon: const Icon(Icons.block_rounded, size: 16),
                             label: Text('Заблокировать · $_banDuration'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFF44336),
                               foregroundColor: Colors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -390,15 +415,13 @@ class _ModeratorReportsPageState extends ConsumerState<ModeratorReportsPage> {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
-                            onPressed: () =>
-                                setState(() => _openReport = null),
+                            onPressed: () => setState(() => _openReport = null),
                             icon: const Icon(Icons.close_rounded, size: 16),
                             label: const Text('Отклонить жалобу'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: colors.textSecondary,
                               side: BorderSide(color: colors.divider),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -443,14 +466,10 @@ class _ReportRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
       decoration: BoxDecoration(
-        color: isSelected
-            ? _kOrange.withValues(alpha: 0.06)
-            : colors.surface,
+        color: isSelected ? _kOrange.withValues(alpha: 0.06) : colors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSelected
-              ? _kOrange.withValues(alpha: 0.2)
-              : colors.divider,
+          color: isSelected ? _kOrange.withValues(alpha: 0.2) : colors.divider,
         ),
       ),
       child: InkWell(
@@ -474,10 +493,7 @@ class _ReportRow extends StatelessWidget {
                 child: _PriorityBadge(priority: report.priority),
               ),
               // Type
-              Expanded(
-                flex: 2,
-                child: _TypeChip(type: report.type),
-              ),
+              Expanded(flex: 2, child: _TypeChip(type: report.type)),
               // Initiator
               Expanded(
                 flex: 2,
@@ -515,8 +531,7 @@ class _ReportRow extends StatelessWidget {
                   report.createdAt,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:
-                      TextStyle(fontSize: 12, color: colors.textSecondary),
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
                 ),
               ),
               // Actions — fixed 96px to match header spacer
@@ -595,22 +610,25 @@ class _TableHeader extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Flexible(
-                    child: Text(label, style: baseStyle, overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      label,
+                      style: baseStyle,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   const SizedBox(width: 2),
                   Icon(
                     isActive
                         ? (ascending
-                            ? Icons.arrow_upward_rounded
-                            : Icons.arrow_downward_rounded)
+                              ? Icons.arrow_upward_rounded
+                              : Icons.arrow_downward_rounded)
                         : Icons.unfold_more_rounded,
                     size: 12,
                     color: isActive
                         ? const Color(0xFFFF6B35)
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.3),
+                        : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.3),
                   ),
                 ],
               ),
@@ -684,10 +702,9 @@ class _TypeChip extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ),

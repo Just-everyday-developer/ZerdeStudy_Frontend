@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/state/demo_moderator_controller.dart';
 import '../../../../app/state/demo_moderator_data.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
@@ -44,8 +45,9 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final unanswered = kModFaqQuestions.where((q) => q.answer.isEmpty).toList();
-    final answered = kModFaqQuestions.where((q) => q.answer.isNotEmpty).toList();
+    final faqQuestions = ref.watch(demoModeratorFaqProvider);
+    final unanswered = faqQuestions.where((q) => q.answer.isEmpty).toList();
+    final answered = faqQuestions.where((q) => q.answer.isNotEmpty).toList();
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,10 +66,9 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                 child: Text(
                   'Управление FAQ',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
               TabBar(
@@ -76,7 +77,9 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                 unselectedLabelColor: colors.textSecondary,
                 indicatorColor: _kOrange,
                 labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 13),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
                 tabs: [
                   Tab(text: 'Новые (${unanswered.length})'),
                   Tab(text: 'База знаний (${answered.length})'),
@@ -121,8 +124,11 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.forum_outlined,
-                          size: 48, color: colors.textSecondary),
+                      Icon(
+                        Icons.forum_outlined,
+                        size: 48,
+                        color: colors.textSecondary,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'Выберите вопрос для ответа',
@@ -153,9 +159,7 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                                 const SizedBox(height: 4),
                                 Text(
                                   _selected!.question,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleLarge
+                                  style: Theme.of(context).textTheme.titleLarge
                                       ?.copyWith(fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 4),
@@ -172,26 +176,35 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                           if (_selected!.isPublic)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF4CAF50)
-                                    .withValues(alpha: 0.1),
+                                color: const Color(
+                                  0xFF4CAF50,
+                                ).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                    color: const Color(0xFF4CAF50)
-                                        .withValues(alpha: 0.3)),
+                                  color: const Color(
+                                    0xFF4CAF50,
+                                  ).withValues(alpha: 0.3),
+                                ),
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.public_rounded,
-                                      color: Color(0xFF4CAF50), size: 14),
+                                  Icon(
+                                    Icons.public_rounded,
+                                    color: Color(0xFF4CAF50),
+                                    size: 14,
+                                  ),
                                   SizedBox(width: 6),
                                   Text(
                                     'Публичный',
                                     style: TextStyle(
-                                        color: Color(0xFF4CAF50),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600),
+                                      color: Color(0xFF4CAF50),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -202,10 +215,9 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                       // Templates
                       Text(
                         'Шаблоны ответов',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Wrap(
@@ -214,17 +226,18 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                         children: _templates
                             .map(
                               (t) => InkWell(
-                                onTap: () => setState(
-                                    () => _answerCtrl.text = t),
+                                onTap: () =>
+                                    setState(() => _answerCtrl.text = t),
                                 borderRadius: BorderRadius.circular(8),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 7),
+                                    horizontal: 12,
+                                    vertical: 7,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: colors.surfaceSoft,
                                     borderRadius: BorderRadius.circular(8),
-                                    border:
-                                        Border.all(color: colors.divider),
+                                    border: Border.all(color: colors.divider),
                                   ),
                                   child: Text(
                                     t.length > 45
@@ -244,18 +257,16 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                       // Answer editor
                       Text(
                         'Редактор ответа',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       TextField(
                         controller: _answerCtrl,
                         maxLines: 8,
                         decoration: InputDecoration(
-                          hintText:
-                              'Введите ответ на вопрос пользователя...',
+                          hintText: 'Введите ответ на вопрос пользователя...',
                           hintStyle: TextStyle(color: colors.textSecondary),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -267,8 +278,7 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: _kOrange),
+                            borderSide: const BorderSide(color: _kOrange),
                           ),
                           contentPadding: const EdgeInsets.all(16),
                         ),
@@ -278,18 +288,23 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2196F3)
-                              .withValues(alpha: 0.06),
+                          color: const Color(
+                            0xFF2196F3,
+                          ).withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: const Color(0xFF2196F3)
-                                .withValues(alpha: 0.2),
+                            color: const Color(
+                              0xFF2196F3,
+                            ).withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.lightbulb_outline_rounded,
-                                color: Color(0xFF2196F3), size: 16),
+                            const Icon(
+                              Icons.lightbulb_outline_rounded,
+                              color: Color(0xFF2196F3),
+                              size: 16,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -314,7 +329,9 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                               backgroundColor: _kOrange,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 12),
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -327,10 +344,11 @@ class _ModeratorFaqPageState extends ConsumerState<ModeratorFaqPage>
                             label: const Text('Сделать публичным'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF4CAF50),
-                              side: const BorderSide(
-                                  color: Color(0xFF4CAF50)),
+                              side: const BorderSide(color: Color(0xFF4CAF50)),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 12),
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -414,18 +432,19 @@ class _QuestionList extends StatelessWidget {
                     Text(
                       q.askedBy,
                       style: TextStyle(
-                          color: colors.textSecondary, fontSize: 11),
+                        color: colors.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      '·',
-                      style: TextStyle(color: colors.textSecondary),
-                    ),
+                    Text('·', style: TextStyle(color: colors.textSecondary)),
                     const SizedBox(width: 8),
                     Text(
                       q.askedAt,
                       style: TextStyle(
-                          color: colors.textSecondary, fontSize: 11),
+                        color: colors.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),

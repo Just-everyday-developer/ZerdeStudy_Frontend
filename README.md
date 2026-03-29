@@ -1184,3 +1184,144 @@ Debugging tips for this pass:
   so gesture conflicts usually mean the viewport listener changed.
 - If a compact card looks too centered or too narrow, check the page's own
   internal `ListView` padding before changing `AppPageScaffold`.
+
+## 18. Work Log: 2026-03-29
+
+Latest implementation pass for the auth experience split and teacher workspace:
+
+- `lib/features/auth/presentation/pages/login_page.dart`
+  Added the `Sign in as` role selector with `Student`, `Teacher`,
+  `Moderator`, and `Admin` paths. Student keeps the current app flow, teacher
+  opens the new teacher workspace, moderator opens the existing moderation
+  panel, and admin currently shows an availability notice.
+- `lib/features/auth/presentation/widgets/auth_experience_selector.dart`
+  Added role cards for the 4 entry models with localized labels and helper
+  descriptions.
+- `lib/features/auth/presentation/widgets/social_auth_button.dart`
+  Added `Log in with` actions for Google and GitHub and aligned them with the
+  current auth design system.
+- `lib/features/auth/presentation/pages/sign_up_page.dart`
+  Fixed the return path so navigating back from account creation no longer
+  breaks the login layout.
+- `lib/features/auth/presentation/pages/forgot_password_page.dart`
+- `lib/features/auth/presentation/pages/forgot_password_code_page.dart`
+- `lib/features/auth/presentation/pages/reset_password_page.dart`
+  Split the password recovery flow into dedicated email, code verification,
+  and new-password screens. The final step now includes password confirmation
+  and mismatch validation.
+- `lib/app/routing/router.dart`
+  Stabilized routing with a router refresh listenable so changing the selected
+  role no longer recreates `GoRouter` and unexpectedly resets the current auth
+  page.
+- `lib/features/teacher/presentation/pages/teacher_shell_page.dart`
+- `lib/features/teacher/presentation/pages/teacher_dashboard_page.dart`
+- `lib/features/teacher/presentation/pages/teacher_ai_generator_page.dart`
+- `lib/features/teacher/presentation/pages/teacher_course_builder_page.dart`
+- `lib/features/teacher/presentation/pages/teacher_assessment_builder_page.dart`
+- `lib/features/teacher/presentation/pages/teacher_publishing_page.dart`
+- `lib/features/teacher/presentation/pages/teacher_qna_page.dart`
+- `lib/features/teacher/presentation/pages/teacher_analytics_page.dart`
+- `lib/features/teacher/presentation/pages/teacher_profile_page.dart`
+  Added the first teacher UI pass with localized screens for dashboard,
+  AI course generation, course builder, assessment builder, publishing /
+  preview, Q&A, analytics, and teacher profile. The workspace supports both
+  light and dark themes through the shared app settings panel.
+- `lib/core/localization/app_localizations.dart`
+  Added localization keys required by the new auth flow and teacher entry
+  points.
+- `lib/features/auth/presentation/widgets/auth_experience_selector.dart`
+- `lib/features/auth/presentation/widgets/auth_panel.dart`
+- `lib/features/auth/presentation/pages/login_page.dart`
+  Rebalanced the 4 auth role cards into an even responsive grid and kept the
+  email / password / login cluster centered on desktop so the auth form stays
+  focused instead of stretching edge-to-edge.
+- `lib/features/teacher/presentation/providers/teacher_question_bank_provider.dart`
+- `lib/features/teacher/presentation/pages/teacher_assessment_builder_page.dart`
+  Added CSV and JSON question-bank import / export through a local exchange
+  dialog, plus live parsing so the teacher assessment screen immediately shows
+  the imported bank content.
+- `lib/features/community/presentation/pages/community_page.dart`
+- `lib/features/community/presentation/pages/community_group_page.dart`
+- `lib/features/community/presentation/providers/community_groups_provider.dart`
+- `lib/core/common_widgets/app_shell_scaffold.dart`
+- `lib/app/routing/app_routes.dart`
+- `lib/app/routing/router.dart`
+  Added a new localized student `Community` section with group creation,
+  group list filtering, detailed group pages, member search, media and links,
+  and red `Leave group` / `Report` actions. The report flow includes common
+  moderation reasons, an `Other` reason with free-text details, attachment
+  chips, and a send action.
+- `test/widget_test.dart`
+  Updated widget coverage for the split password recovery flow and the
+  teacher sign-in route, and added a smoke test for the new Community flow.
+- `lib/features/knowledge_tree/presentation/tree_map_config.dart`
+- `lib/app/state/demo_catalog_cs_data.dart`
+  Added a new `OOP` branch under the Computer Science hub, seeded it with
+  temporary object-oriented modules, and introduced a dedicated `Midterm`
+  module with its own OOP checkpoint task.
+- `lib/app/state/demo_models.dart`
+- `lib/app/state/demo_catalog_support.dart`
+- `lib/features/learning/presentation/pages/practice_page.dart`
+  Extended practice tasks with an optional interactive code sandbox and
+  comments thread, then used that new model to build an OOP midterm page with
+  a scrollable code editor, draft run button, final submission check, and a
+  bottom comments section.
+- `lib/app/state/demo_moderator_controller.dart`
+- `lib/features/faq/presentation/pages/faq_page.dart`
+- `lib/features/moderator/presentation/pages/moderator_faq_page.dart`
+- `lib/features/moderator/presentation/pages/moderator_dashboard_page.dart`
+  Added a shared demo FAQ inbox so students can write a question inside the
+  FAQ screen and send it to moderators. The new question form is localized,
+  uses in-app notices for validation and success, and the moderator FAQ queue
+  plus dashboard counter now react to newly submitted questions.
+- `lib/core/localization/app_localizations.dart`
+  Added localization keys for the FAQ contact form and moderator submission
+  states.
+- `lib/features/auth/presentation/pages/sign_up_page.dart`
+  Centered the sign-up form cluster on desktop so the email field, password
+  field, primary action, and back-to-login action stay visually grouped in
+  the middle of the auth panel.
+- `lib/app/state/demo_moderator_data.dart`
+- `lib/app/state/demo_moderator_controller.dart`
+- `lib/features/moderator/presentation/pages/moderator_shell_page.dart`
+- `lib/features/moderator/presentation/pages/moderator_dashboard_page.dart`
+- `lib/features/moderator/presentation/pages/moderator_comments_page.dart`
+- `lib/features/moderator/presentation/pages/moderator_community_page.dart`
+- `lib/app/routing/app_routes.dart`
+- `lib/app/routing/router.dart`
+  Expanded the moderator workspace to better match the UML scope. Added
+  dedicated `Moderate Comments` and `Manage Community Content` review screens,
+  shared demo state for those moderation queues, live sidebar badges, new
+  moderator routes, and a dashboard that now surfaces comments and community
+  content alongside courses, reports, and FAQ.
+- `lib/core/common_widgets/inline_markdown_text.dart`
+- `lib/features/ai/presentation/pages/ai_mentor_page.dart`
+- `lib/features/home/presentation/pages/community_course_player_page.dart`
+- `lib/features/ai/data/datasources/ai_chat_remote_data_source.dart`
+  Added shared inline markdown rendering for mentor replies so `**bold**`
+  becomes emphasized text and `` `code` `` is shown with a code-style look.
+  Updated the legacy frontend mentor prompt to encourage direct, human,
+  no-greeting answers with clearer structure.
+- `pubspec.yaml`
+- `android/app/build.gradle.kts`
+- `lib/core/notifications/local_notification_service.dart`
+- `lib/core/common_widgets/app_settings_panel.dart`
+- `lib/core/localization/app_localizations.dart`
+- `lib/main.dart`
+  Connected local device notifications through `flutter_local_notifications`,
+  initialized the service at app startup, enabled Android desugaring for the
+  plugin, and added a localized `Send test notification` action inside the
+  settings panel. The test flow requests permissions when needed and shows a
+  clear in-app result state for success, denied permission, unsupported
+  platforms, or send failures.
+- `test/widget_test.dart`
+  Added smoke coverage for the new OOP node on the knowledge tree and the OOP
+  midterm flow, including draft execution, submission, and comment posting.
+  Also added coverage for sending a FAQ question into the moderator queue.
+  Added smoke coverage for the new moderator comments and community sections.
+  Added a formatting test for inline mentor markdown spans.
+
+Verification for this pass:
+
+- `flutter analyze`
+- `flutter test`

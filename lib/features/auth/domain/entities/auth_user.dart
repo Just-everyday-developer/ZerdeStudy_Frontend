@@ -40,9 +40,10 @@ class AuthUser {
         .split(RegExp(r'\s+'))
         .where((word) => word.isNotEmpty)
         .map((word) {
-      final lower = word.toLowerCase();
-      return '${lower[0].toUpperCase()}${lower.substring(1)}';
-    }).toList(growable: false);
+          final lower = word.toLowerCase();
+          return '${lower[0].toUpperCase()}${lower.substring(1)}';
+        })
+        .toList(growable: false);
 
     return words.isEmpty ? 'Student' : words.join(' ');
   }

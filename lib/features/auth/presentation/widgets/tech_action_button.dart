@@ -19,15 +19,7 @@ class TechActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return isPrimary
-        ? AppButton.primary(
-            label: title,
-            onPressed: onTap,
-            icon: icon,
-          )
-        : AppButton.secondary(
-            label: title,
-            onPressed: onTap,
-            icon: icon,
-          );
+        ? AppButton.primary(label: title, onPressed: onTap, icon: icon)
+        : AppButton.secondary(label: title, onPressed: onTap, icon: icon);
   }
 }

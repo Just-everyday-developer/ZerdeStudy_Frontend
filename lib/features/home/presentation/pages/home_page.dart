@@ -22,8 +22,10 @@ class HomePage extends ConsumerWidget {
     final l10n = context.l10n;
     final currentTrack = catalog.trackById(state.currentTrackId);
     final currentProgress = catalog.progressForTrack(state, currentTrack.id);
-    final leaderboard =
-        catalog.leaderboardFor(state).take(5).toList(growable: false);
+    final leaderboard = catalog
+        .leaderboardFor(state)
+        .take(5)
+        .toList(growable: false);
     final recommendedTracks = catalog.tracks.take(4).toList(growable: false);
     final incorrectExercises = catalog.incorrectCourseExercisesFor(state);
     final incorrectQuizzes = catalog.incorrectTrackQuizzesFor(state);
@@ -45,18 +47,14 @@ class HomePage extends ConsumerWidget {
             children: [
               Text(
                 '${state.user?.name ?? 'Talgat'}, ${l10n.text('continue_learning').toLowerCase()}',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(fontSize: compact ? 24 : 28),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontSize: compact ? 24 : 28,
+                ),
               ),
               const SizedBox(height: 10),
               Text(
                 currentTrack.description.resolve(state.locale),
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  height: 1.45,
-                ),
+                style: TextStyle(color: colors.textSecondary, height: 1.45),
               ),
               const SizedBox(height: 18),
               Wrap(
@@ -120,7 +118,8 @@ class HomePage extends ConsumerWidget {
                   ),
                 ],
               ),
-              if (incorrectExercises.isNotEmpty || incorrectQuizzes.isNotEmpty) ...[
+              if (incorrectExercises.isNotEmpty ||
+                  incorrectQuizzes.isNotEmpty) ...[
                 const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
@@ -146,7 +145,8 @@ class HomePage extends ConsumerWidget {
                           'repeat_wrong_answers_hint',
                           <String, Object>{
                             'count':
-                                incorrectExercises.length + incorrectQuizzes.length,
+                                incorrectExercises.length +
+                                incorrectQuizzes.length,
                           },
                         ),
                         style: TextStyle(
@@ -155,7 +155,9 @@ class HomePage extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      ...incorrectExercises.take(2).map(
+                      ...incorrectExercises
+                          .take(2)
+                          .map(
                             (exercise) => Padding(
                               padding: const EdgeInsets.only(bottom: 6),
                               child: Text(
@@ -164,7 +166,9 @@ class HomePage extends ConsumerWidget {
                               ),
                             ),
                           ),
-                      ...incorrectQuizzes.take(2).map(
+                      ...incorrectQuizzes
+                          .take(2)
+                          .map(
                             (quiz) => Padding(
                               padding: const EdgeInsets.only(bottom: 6),
                               child: Text(
@@ -230,59 +234,62 @@ class HomePage extends ConsumerWidget {
           GlowCard(
             accent: colors.success,
             child: Column(
-              children: leaderboard.map((entry) {
-                final index = leaderboard.indexOf(entry) + 1;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: (entry.isCurrentUser
-                                ? colors.primary
-                                : colors.surfaceSoft)
-                            .withValues(alpha: 0.18),
-                        child: Text(
-                          '$index',
-                          style: TextStyle(
-                            color: entry.isCurrentUser
-                                ? colors.primary
-                                : colors.textSecondary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.name,
+              children: leaderboard
+                  .map((entry) {
+                    final index = leaderboard.indexOf(entry) + 1;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor:
+                                (entry.isCurrentUser
+                                        ? colors.primary
+                                        : colors.surfaceSoft)
+                                    .withValues(alpha: 0.18),
+                            child: Text(
+                              '$index',
                               style: TextStyle(
-                                color: colors.textPrimary,
+                                color: entry.isCurrentUser
+                                    ? colors.primary
+                                    : colors.textSecondary,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Level ${entry.level}',
-                              style: TextStyle(color: colors.textSecondary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  entry.name,
+                                  style: TextStyle(
+                                    color: colors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Level ${entry.level}',
+                                  style: TextStyle(color: colors.textSecondary),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          Text(
+                            '${entry.xp} XP',
+                            style: TextStyle(
+                              color: colors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        '${entry.xp} XP',
-                        style: TextStyle(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(growable: false),
+                    );
+                  })
+                  .toList(growable: false),
             ),
           ),
         ],
@@ -292,11 +299,7 @@ class HomePage extends ConsumerWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({
-    required this.title,
-    this.actionLabel,
-    this.onTap,
-  });
+  const _SectionTitle({required this.title, this.actionLabel, this.onTap});
 
   final String title;
   final String? actionLabel;
@@ -322,10 +325,7 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _MetricBadge extends StatelessWidget {
-  const _MetricBadge({
-    required this.label,
-    required this.value,
-  });
+  const _MetricBadge({required this.label, required this.value});
 
   final String label;
   final String value;

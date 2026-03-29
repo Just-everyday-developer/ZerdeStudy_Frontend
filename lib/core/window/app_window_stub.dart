@@ -4,9 +4,6 @@ Future<void> configureAppWindow() async {}
 
 bool get supportsCustomWindowFrame => false;
 
-Widget buildAppWindowFrame({
-  required Widget child,
-}) {
+Widget buildAppWindowFrame({required Widget child}) {
   return child;
 }
-

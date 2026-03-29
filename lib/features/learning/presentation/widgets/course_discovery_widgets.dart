@@ -93,7 +93,9 @@ class CourseDiscoverySearchBar extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
                 color: colors.primary.withValues(alpha: 0.12),
-                border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -157,7 +159,10 @@ class DiscoveryFilterPanelCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               color: colors.surfaceSoft,
             ),
-            child: Icon(icon, color: highlighted ? colors.primary : colors.textSecondary),
+            child: Icon(
+              icon,
+              color: highlighted ? colors.primary : colors.textSecondary,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -167,16 +172,13 @@ class DiscoveryFilterPanelCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.35,
-                  ),
+                  style: TextStyle(color: colors.textSecondary, height: 1.35),
                 ),
                 const SizedBox(height: 14),
                 child,
@@ -209,33 +211,38 @@ class DiscoveryFilterChoiceWrap<T> extends StatelessWidget {
     return Wrap(
       spacing: 10,
       runSpacing: 10,
-      children: options.map((option) {
-        final selected = option == selectedValue;
-        return InkWell(
-          onTap: () => onSelected(option),
-          borderRadius: BorderRadius.circular(999),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
+      children: options
+          .map((option) {
+            final selected = option == selectedValue;
+            return InkWell(
+              onTap: () => onSelected(option),
               borderRadius: BorderRadius.circular(999),
-              color: selected
-                  ? colors.primary.withValues(alpha: 0.16)
-                  : colors.surfaceSoft,
-              border: Border.all(
-                color: selected ? colors.primary : colors.divider,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  color: selected
+                      ? colors.primary.withValues(alpha: 0.16)
+                      : colors.surfaceSoft,
+                  border: Border.all(
+                    color: selected ? colors.primary : colors.divider,
+                  ),
+                ),
+                child: Text(
+                  labelBuilder(option),
+                  style: TextStyle(
+                    color: selected ? colors.primary : colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-            ),
-            child: Text(
-              labelBuilder(option),
-              style: TextStyle(
-                color: selected ? colors.primary : colors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        );
-      }).toList(growable: false),
+            );
+          })
+          .toList(growable: false),
     );
   }
 }
@@ -327,9 +334,9 @@ class CourseDiscoverySectionHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
         if (actionLabel != null && onActionTap != null)
@@ -464,10 +471,7 @@ class _BaseDiscoveryCourseCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              colors.surface,
-              colors.surfaceSoft,
-            ],
+            colors: [colors.surface, colors.surfaceSoft],
           ),
           border: Border.all(color: course.color.withValues(alpha: 0.24)),
           boxShadow: [
@@ -539,10 +543,10 @@ class _BaseDiscoveryCourseCard extends StatelessWidget {
                     maxLines: heroHeadlineMaxLines,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          height: 1.16,
-                          fontSize: showExtendedMeta ? null : 16,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      height: 1.16,
+                      fontSize: showExtendedMeta ? null : 16,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -569,10 +573,10 @@ class _BaseDiscoveryCourseCard extends StatelessWidget {
                       maxLines: titleMaxLines,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            height: 1.18,
-                            fontSize: showExtendedMeta ? null : 17,
-                          ),
+                        fontWeight: FontWeight.w800,
+                        height: 1.18,
+                        fontSize: showExtendedMeta ? null : 17,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -685,9 +689,9 @@ class DiscoveryViewAllCard extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: colors.primary,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ),
@@ -734,10 +738,7 @@ class DiscoveryAuthorCard extends StatelessWidget {
               backgroundColor: accent.withValues(alpha: 0.16),
               child: Text(
                 author.name.isEmpty ? '?' : author.name.substring(0, 1),
-                style: TextStyle(
-                  color: accent,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(color: accent, fontWeight: FontWeight.w800),
               ),
             ),
             const SizedBox(height: 12),
@@ -745,9 +746,9 @@ class DiscoveryAuthorCard extends StatelessWidget {
               author.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
@@ -832,9 +833,9 @@ class CatalogFilterCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 14),
           child,

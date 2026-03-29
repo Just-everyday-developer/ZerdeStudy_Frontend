@@ -19,23 +19,25 @@ class LocaleSelector extends StatelessWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: AppLocale.values.map((locale) {
-        final selected = locale == currentLocale;
-        return ChoiceChip(
-          label: Text(locale.label),
-          selected: selected,
-          onSelected: (_) => onChanged(locale),
-          selectedColor: colors.primary.withValues(alpha: 0.16),
-          backgroundColor: colors.surfaceSoft,
-          side: BorderSide(
-            color: selected ? colors.primary : colors.divider,
-          ),
-          labelStyle: TextStyle(
-            color: selected ? colors.primary : colors.textSecondary,
-            fontWeight: FontWeight.w700,
-          ),
-        );
-      }).toList(growable: false),
+      children: AppLocale.values
+          .map((locale) {
+            final selected = locale == currentLocale;
+            return ChoiceChip(
+              label: Text(locale.label),
+              selected: selected,
+              onSelected: (_) => onChanged(locale),
+              selectedColor: colors.primary.withValues(alpha: 0.16),
+              backgroundColor: colors.surfaceSoft,
+              side: BorderSide(
+                color: selected ? colors.primary : colors.divider,
+              ),
+              labelStyle: TextStyle(
+                color: selected ? colors.primary : colors.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            );
+          })
+          .toList(growable: false),
     );
   }
 }

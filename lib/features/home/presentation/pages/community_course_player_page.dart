@@ -9,6 +9,7 @@ import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/common_widgets/inline_markdown_text.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/network/api_exception.dart';
@@ -1398,8 +1399,8 @@ class _InlineCourseAiBubble extends StatelessWidget {
                   ),
                 )
               else
-                SelectableText(
-                  message.text,
+                InlineMarkdownText(
+                  text: message.text,
                   style: TextStyle(color: colors.textPrimary, height: 1.45),
                 ),
             ],

@@ -1,3 +1,4 @@
+import 'app_experience.dart';
 import 'app_locale.dart';
 import 'app_theme_mode.dart';
 import 'demo_models.dart';
@@ -6,6 +7,7 @@ class DemoAppState {
   const DemoAppState({
     required this.locale,
     required this.themeMode,
+    required this.activeExperience,
     required this.isAuthenticated,
     required this.isModerator,
     required this.user,
@@ -38,6 +40,7 @@ class DemoAppState {
 
   final AppLocale locale;
   final AppThemeMode themeMode;
+  final AppExperience activeExperience;
   final bool isAuthenticated;
   final bool isModerator;
   final DemoUser? user;
@@ -74,12 +77,17 @@ class DemoAppState {
   }
 
   int get totalQuizAttempts {
-    return quizAnswerStats.values.fold<int>(0, (sum, stat) => sum + stat.attempts);
+    return quizAnswerStats.values.fold<int>(
+      0,
+      (sum, stat) => sum + stat.attempts,
+    );
   }
 
   int get totalCorrectQuizAnswers {
-    return quizAnswerStats.values
-        .fold<int>(0, (sum, stat) => sum + stat.correctAnswers);
+    return quizAnswerStats.values.fold<int>(
+      0,
+      (sum, stat) => sum + stat.correctAnswers,
+    );
   }
 
   double get quizAccuracy {
@@ -92,6 +100,7 @@ class DemoAppState {
   DemoAppState copyWith({
     AppLocale? locale,
     AppThemeMode? themeMode,
+    AppExperience? activeExperience,
     bool? isAuthenticated,
     bool? isModerator,
     Object? user = _sentinel,
@@ -121,6 +130,7 @@ class DemoAppState {
     return DemoAppState(
       locale: locale ?? this.locale,
       themeMode: themeMode ?? this.themeMode,
+      activeExperience: activeExperience ?? this.activeExperience,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       isModerator: isModerator ?? this.isModerator,
       user: identical(user, _sentinel) ? this.user : user as DemoUser?,
@@ -135,34 +145,49 @@ class DemoAppState {
           completedLessonIds ?? Set<String>.from(this.completedLessonIds),
       completedPracticeIds:
           completedPracticeIds ?? Set<String>.from(this.completedPracticeIds),
-      completedQuizIds: completedQuizIds ?? Set<String>.from(this.completedQuizIds),
+      completedQuizIds:
+          completedQuizIds ?? Set<String>.from(this.completedQuizIds),
       completedTrainerIds:
           completedTrainerIds ?? Set<String>.from(this.completedTrainerIds),
       quizAnswerStats:
-          quizAnswerStats ?? Map<String, QuizAnswerStat>.from(this.quizAnswerStats),
-      assessmentResultsByTrackId: assessmentResultsByTrackId ??
-          Map<String, TrackAssessmentResult>.from(this.assessmentResultsByTrackId),
-      assessmentAttemptHistory: assessmentAttemptHistory ??
+          quizAnswerStats ??
+          Map<String, QuizAnswerStat>.from(this.quizAnswerStats),
+      assessmentResultsByTrackId:
+          assessmentResultsByTrackId ??
+          Map<String, TrackAssessmentResult>.from(
+            this.assessmentResultsByTrackId,
+          ),
+      assessmentAttemptHistory:
+          assessmentAttemptHistory ??
           List<AssessmentAttemptEntry>.from(this.assessmentAttemptHistory),
       learningHistory:
-          learningHistory ?? List<LearningHistoryEntry>.from(this.learningHistory),
-      viewedCommunityCourseIds: viewedCommunityCourseIds ??
+          learningHistory ??
+          List<LearningHistoryEntry>.from(this.learningHistory),
+      viewedCommunityCourseIds:
+          viewedCommunityCourseIds ??
           Set<String>.from(this.viewedCommunityCourseIds),
       savedCommunityCourseIds:
-          savedCommunityCourseIds ?? Set<String>.from(this.savedCommunityCourseIds),
+          savedCommunityCourseIds ??
+          Set<String>.from(this.savedCommunityCourseIds),
       courseRatingsByCourseId:
-          courseRatingsByCourseId ?? Map<String, int>.from(this.courseRatingsByCourseId),
-      enrolledCommunityCourseIds: enrolledCommunityCourseIds ??
+          courseRatingsByCourseId ??
+          Map<String, int>.from(this.courseRatingsByCourseId),
+      enrolledCommunityCourseIds:
+          enrolledCommunityCourseIds ??
           Set<String>.from(this.enrolledCommunityCourseIds),
-      coursePlayerProgressByCourseId: coursePlayerProgressByCourseId ??
-          Map<String, CoursePlayerProgress>.from(this.coursePlayerProgressByCourseId),
+      coursePlayerProgressByCourseId:
+          coursePlayerProgressByCourseId ??
+          Map<String, CoursePlayerProgress>.from(
+            this.coursePlayerProgressByCourseId,
+          ),
       xp: xp ?? this.xp,
       streak: streak ?? this.streak,
       dailyMissionDone: dailyMissionDone ?? this.dailyMissionDone,
       weeklyActivity: weeklyActivity ?? List<int>.from(this.weeklyActivity),
       aiMessages: aiMessages ?? List<AiMessage>.from(this.aiMessages),
       unlockedAchievementIds:
-          unlockedAchievementIds ?? Set<String>.from(this.unlockedAchievementIds),
+          unlockedAchievementIds ??
+          Set<String>.from(this.unlockedAchievementIds),
     );
   }
 
@@ -170,6 +195,7 @@ class DemoAppState {
     return <String, dynamic>{
       'locale': locale.code,
       'themeMode': themeMode.code,
+      'activeExperience': activeExperience.name,
       'isAuthenticated': isAuthenticated,
       'isModerator': isModerator,
       'user': user?.toJson(),
@@ -183,20 +209,24 @@ class DemoAppState {
       'quizAnswerStats': quizAnswerStats.map<String, dynamic>(
         (key, value) => MapEntry<String, dynamic>(key, value.toJson()),
       ),
-      'assessmentResultsByTrackId': assessmentResultsByTrackId.map<String, dynamic>(
-        (key, value) => MapEntry<String, dynamic>(key, value.toJson()),
-      ),
-      'assessmentAttemptHistory':
-          assessmentAttemptHistory.map((attempt) => attempt.toJson()).toList(),
-      'learningHistory':
-          learningHistory.map((entry) => entry.toJson()).toList(),
+      'assessmentResultsByTrackId': assessmentResultsByTrackId
+          .map<String, dynamic>(
+            (key, value) => MapEntry<String, dynamic>(key, value.toJson()),
+          ),
+      'assessmentAttemptHistory': assessmentAttemptHistory
+          .map((attempt) => attempt.toJson())
+          .toList(),
+      'learningHistory': learningHistory
+          .map((entry) => entry.toJson())
+          .toList(),
       'viewedCommunityCourseIds': viewedCommunityCourseIds.toList(),
       'savedCommunityCourseIds': savedCommunityCourseIds.toList(),
       'courseRatingsByCourseId': courseRatingsByCourseId,
       'enrolledCommunityCourseIds': enrolledCommunityCourseIds.toList(),
-      'coursePlayerProgressByCourseId': coursePlayerProgressByCourseId.map<String, dynamic>(
-        (key, value) => MapEntry<String, dynamic>(key, value.toJson()),
-      ),
+      'coursePlayerProgressByCourseId': coursePlayerProgressByCourseId
+          .map<String, dynamic>(
+            (key, value) => MapEntry<String, dynamic>(key, value.toJson()),
+          ),
       'xp': xp,
       'streak': streak,
       'dailyMissionDone': dailyMissionDone,
@@ -210,6 +240,13 @@ class DemoAppState {
     return DemoAppState(
       locale: AppLocale.fromCode(json['locale'] as String?),
       themeMode: AppThemeMode.fromCode(json['themeMode'] as String?),
+      activeExperience: AppExperience.values.firstWhere(
+        (experience) =>
+            experience.name ==
+            ((json['activeExperience'] as String?) ??
+                AppExperience.student.name),
+        orElse: () => AppExperience.student,
+      ),
       isAuthenticated: json['isAuthenticated'] as bool? ?? false,
       isModerator: (json['isModerator'] as bool?) ?? false,
       user: json['user'] is Map<String, dynamic>
@@ -219,34 +256,39 @@ class DemoAppState {
       focusedLessonId: json['focusedLessonId'] as String?,
       focusedPracticeId: json['focusedPracticeId'] as String?,
       completedLessonIds: Set<String>.from(
-        (json['completedLessonIds'] as List<dynamic>? ?? <dynamic>[]).cast<String>(),
+        (json['completedLessonIds'] as List<dynamic>? ?? <dynamic>[])
+            .cast<String>(),
       ),
       completedPracticeIds: Set<String>.from(
-        (json['completedPracticeIds'] as List<dynamic>? ?? <dynamic>[]).cast<String>(),
+        (json['completedPracticeIds'] as List<dynamic>? ?? <dynamic>[])
+            .cast<String>(),
       ),
       completedQuizIds: Set<String>.from(
-        (json['completedQuizIds'] as List<dynamic>? ?? <dynamic>[]).cast<String>(),
+        (json['completedQuizIds'] as List<dynamic>? ?? <dynamic>[])
+            .cast<String>(),
       ),
       completedTrainerIds: Set<String>.from(
-        (json['completedTrainerIds'] as List<dynamic>? ?? <dynamic>[]).cast<String>(),
+        (json['completedTrainerIds'] as List<dynamic>? ?? <dynamic>[])
+            .cast<String>(),
       ),
-      quizAnswerStats: (json['quizAnswerStats'] as Map<String, dynamic>? ??
-              <String, dynamic>{})
-          .map<String, QuizAnswerStat>(
-        (key, value) => MapEntry<String, QuizAnswerStat>(
-          key,
-          QuizAnswerStat.fromJson(value as Map<String, dynamic>),
-        ),
-      ),
+      quizAnswerStats:
+          (json['quizAnswerStats'] as Map<String, dynamic>? ??
+                  <String, dynamic>{})
+              .map<String, QuizAnswerStat>(
+                (key, value) => MapEntry<String, QuizAnswerStat>(
+                  key,
+                  QuizAnswerStat.fromJson(value as Map<String, dynamic>),
+                ),
+              ),
       assessmentResultsByTrackId:
           (json['assessmentResultsByTrackId'] as Map<String, dynamic>? ??
                   <String, dynamic>{})
               .map<String, TrackAssessmentResult>(
-        (key, value) => MapEntry<String, TrackAssessmentResult>(
-          key,
-          TrackAssessmentResult.fromJson(value as Map<String, dynamic>),
-        ),
-      ),
+                (key, value) => MapEntry<String, TrackAssessmentResult>(
+                  key,
+                  TrackAssessmentResult.fromJson(value as Map<String, dynamic>),
+                ),
+              ),
       assessmentAttemptHistory:
           (json['assessmentAttemptHistory'] as List<dynamic>? ?? <dynamic>[])
               .map(
@@ -255,13 +297,14 @@ class DemoAppState {
                 ),
               )
               .toList(),
-      learningHistory: (json['learningHistory'] as List<dynamic>? ?? <dynamic>[])
-          .map(
-            (entry) => LearningHistoryEntry.fromJson(
-              entry as Map<String, dynamic>,
-            ),
-          )
-          .toList(),
+      learningHistory:
+          (json['learningHistory'] as List<dynamic>? ?? <dynamic>[])
+              .map(
+                (entry) => LearningHistoryEntry.fromJson(
+                  entry as Map<String, dynamic>,
+                ),
+              )
+              .toList(),
       viewedCommunityCourseIds: Set<String>.from(
         (json['viewedCommunityCourseIds'] as List<dynamic>? ?? <dynamic>[])
             .cast<String>(),
@@ -274,8 +317,8 @@ class DemoAppState {
           (json['courseRatingsByCourseId'] as Map<String, dynamic>? ??
                   <String, dynamic>{})
               .map<String, int>(
-        (key, value) => MapEntry<String, int>(key, value as int? ?? 0),
-      ),
+                (key, value) => MapEntry<String, int>(key, value as int? ?? 0),
+              ),
       enrolledCommunityCourseIds: Set<String>.from(
         (json['enrolledCommunityCourseIds'] as List<dynamic>? ?? <dynamic>[])
             .cast<String>(),
@@ -284,11 +327,11 @@ class DemoAppState {
           (json['coursePlayerProgressByCourseId'] as Map<String, dynamic>? ??
                   <String, dynamic>{})
               .map<String, CoursePlayerProgress>(
-        (key, value) => MapEntry<String, CoursePlayerProgress>(
-          key,
-          CoursePlayerProgress.fromJson(value as Map<String, dynamic>),
-        ),
-      ),
+                (key, value) => MapEntry<String, CoursePlayerProgress>(
+                  key,
+                  CoursePlayerProgress.fromJson(value as Map<String, dynamic>),
+                ),
+              ),
       xp: json['xp'] as int? ?? 240,
       streak: json['streak'] as int? ?? 4,
       dailyMissionDone: json['dailyMissionDone'] as bool? ?? false,

@@ -7,7 +7,6 @@ final passwordValidatorProvider = Provider<PasswordValidator>((ref) {
   return PasswordValidatorImpl();
 });
 
-
 final validatePasswordProvider = Provider<ValidatePassword>((ref) {
   final validator = ref.watch(passwordValidatorProvider);
 

@@ -39,13 +39,17 @@ class InfiniteTechPainter extends CustomPainter {
 
       final symbol = isIcon
           ? String.fromCharCode(
-              BackgroundAssets.icons[random.nextInt(BackgroundAssets.icons.length)]
+              BackgroundAssets
+                  .icons[random.nextInt(BackgroundAssets.icons.length)]
                   .codePoint,
             )
-          : BackgroundAssets.symbols[random.nextInt(BackgroundAssets.symbols.length)];
+          : BackgroundAssets.symbols[random.nextInt(
+              BackgroundAssets.symbols.length,
+            )];
       final fontFamily = isIcon
-          ? BackgroundAssets.icons[random.nextInt(BackgroundAssets.icons.length)]
-              .fontFamily
+          ? BackgroundAssets
+                .icons[random.nextInt(BackgroundAssets.icons.length)]
+                .fontFamily
           : 'monospace';
 
       final painter = TextPainter(

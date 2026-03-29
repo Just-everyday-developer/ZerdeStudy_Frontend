@@ -9,6 +9,7 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/common_widgets/inline_markdown_text.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
@@ -286,8 +287,8 @@ class _MessageBubble extends StatelessWidget {
                   if (message.isPending)
                     _ThinkingText(locale: context.l10n.locale)
                   else
-                    Text(
-                      message.text,
+                    InlineMarkdownText(
+                      text: message.text,
                       style: TextStyle(color: colors.textPrimary, height: 1.45),
                     ),
                 ],

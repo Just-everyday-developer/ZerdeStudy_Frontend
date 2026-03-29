@@ -22,10 +22,7 @@ class TechTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: isObscure,
-      style: TextStyle(
-        color: colors.textPrimary,
-        fontWeight: FontWeight.w600,
-      ),
+      style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon, color: colors.primary),

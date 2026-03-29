@@ -11,15 +11,13 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
 class TrackAssessmentPage extends ConsumerStatefulWidget {
-  const TrackAssessmentPage({
-    super.key,
-    required this.trackId,
-  });
+  const TrackAssessmentPage({super.key, required this.trackId});
 
   final String trackId;
 
   @override
-  ConsumerState<TrackAssessmentPage> createState() => _TrackAssessmentPageState();
+  ConsumerState<TrackAssessmentPage> createState() =>
+      _TrackAssessmentPageState();
 }
 
 class _TrackAssessmentPageState extends ConsumerState<TrackAssessmentPage> {
@@ -78,10 +76,7 @@ class _TrackAssessmentPageState extends ConsumerState<TrackAssessmentPage> {
               children: [
                 Text(
                   assessment.summary.resolve(state.locale),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.45,
-                  ),
+                  style: TextStyle(color: colors.textSecondary, height: 1.45),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -98,11 +93,15 @@ class _TrackAssessmentPageState extends ConsumerState<TrackAssessmentPage> {
                     ),
                     _InfoPill(
                       label: 'Best',
-                      value: savedResult == null ? '0%' : '${savedResult.bestPercent}%',
+                      value: savedResult == null
+                          ? '0%'
+                          : '${savedResult.bestPercent}%',
                     ),
                     _InfoPill(
                       label: 'Attempts',
-                      value: savedResult == null ? '0' : '${savedResult.attemptCount}',
+                      value: savedResult == null
+                          ? '0'
+                          : '${savedResult.attemptCount}',
                     ),
                   ],
                 ),
@@ -191,10 +190,7 @@ class _AssessmentQuestionCard extends StatelessWidget {
         children: [
           Text(
             'Question $index',
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(color: accent, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
@@ -202,112 +198,107 @@ class _AssessmentQuestionCard extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 14),
-          ...question.options.map(
-            (option) {
-              final selected = option.id == selectedOptionId;
-              final showCorrect = submitted && option.id == question.correctOptionId;
-              final showWrong = submitted &&
-                  selected &&
-                  option.id != question.correctOptionId;
-              final tileAccent = showCorrect
-                  ? colors.success
-                  : showWrong
-                      ? colors.danger
-                      : selected
-                          ? colors.primary
-                          : colors.divider;
+          ...question.options.map((option) {
+            final selected = option.id == selectedOptionId;
+            final showCorrect =
+                submitted && option.id == question.correctOptionId;
+            final showWrong =
+                submitted && selected && option.id != question.correctOptionId;
+            final tileAccent = showCorrect
+                ? colors.success
+                : showWrong
+                ? colors.danger
+                : selected
+                ? colors.primary
+                : colors.divider;
 
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: InkWell(
-                  onTap: submitted ? null : () => onSelected(option.id),
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      color: colors.surfaceSoft,
-                      border: Border.all(color: tileAccent.withValues(alpha: 0.6)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 22,
-                          height: 22,
-                          margin: const EdgeInsets.only(top: 10, left: 2),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: tileAccent,
-                              width: 2,
-                            ),
-                            color: selected
-                                ? tileAccent.withValues(alpha: 0.16)
-                                : Colors.transparent,
-                          ),
-                          child: selected
-                              ? Center(
-                                  child: Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: tileAccent,
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              option.label.resolve(locale),
-                              style: TextStyle(
-                                color: colors.textPrimary,
-                                height: 1.35,
-                                fontWeight:
-                                    selected ? FontWeight.w700 : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (showCorrect)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: Icon(
-                              Icons.check_circle_rounded,
-                              color: colors.success,
-                            ),
-                          ),
-                        if (showWrong)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: Icon(
-                              Icons.cancel_rounded,
-                              color: colors.danger,
-                            ),
-                          ),
-                      ],
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                onTap: submitted ? null : () => onSelected(option.id),
+                borderRadius: BorderRadius.circular(18),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    color: colors.surfaceSoft,
+                    border: Border.all(
+                      color: tileAccent.withValues(alpha: 0.6),
                     ),
                   ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        margin: const EdgeInsets.only(top: 10, left: 2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: tileAccent, width: 2),
+                          color: selected
+                              ? tileAccent.withValues(alpha: 0.16)
+                              : Colors.transparent,
+                        ),
+                        child: selected
+                            ? Center(
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: tileAccent,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            option.label.resolve(locale),
+                            style: TextStyle(
+                              color: colors.textPrimary,
+                              height: 1.35,
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (showCorrect)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Icon(
+                            Icons.check_circle_rounded,
+                            color: colors.success,
+                          ),
+                        ),
+                      if (showWrong)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Icon(
+                            Icons.cancel_rounded,
+                            color: colors.danger,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          }),
           if (submitted) ...[
             const SizedBox(height: 4),
             Text(
               question.explanation.resolve(locale),
-              style: TextStyle(
-                color: colors.textSecondary,
-                height: 1.4,
-              ),
+              style: TextStyle(color: colors.textSecondary, height: 1.4),
             ),
           ],
         ],
@@ -317,10 +308,7 @@ class _AssessmentQuestionCard extends StatelessWidget {
 }
 
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({
-    required this.result,
-    required this.totalQuestions,
-  });
+  const _ResultCard({required this.result, required this.totalQuestions});
 
   final TrackAssessmentResult result;
   final int totalQuestions;
@@ -337,10 +325,7 @@ class _ResultCard extends StatelessWidget {
         children: [
           Text(
             result.lastPassed ? 'Passed' : 'Keep going',
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(color: accent, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 10),
           Text(
@@ -350,10 +335,7 @@ class _ResultCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             'Best score: ${result.bestPercent}%  •  Attempts: ${result.attemptCount}',
-            style: TextStyle(
-              color: colors.textSecondary,
-              height: 1.4,
-            ),
+            style: TextStyle(color: colors.textSecondary, height: 1.4),
           ),
         ],
       ),
@@ -362,10 +344,7 @@ class _ResultCard extends StatelessWidget {
 }
 
 class _InfoPill extends StatelessWidget {
-  const _InfoPill({
-    required this.label,
-    required this.value,
-  });
+  const _InfoPill({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -386,10 +365,7 @@ class _InfoPill extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: colors.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: colors.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 4),
           Text(
