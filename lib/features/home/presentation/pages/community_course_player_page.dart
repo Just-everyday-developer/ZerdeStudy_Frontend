@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
@@ -10,7 +11,12 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../ai/domain/entities/ai_chat_message.dart';
+import '../../../ai/presentation/providers/ai_app_context_provider.dart';
+import '../../../ai/presentation/providers/ai_chat_controller.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 
 class CommunityCoursePlayerPage extends ConsumerStatefulWidget {
   const CommunityCoursePlayerPage({
@@ -102,7 +108,14 @@ class _CommunityCoursePlayerPageState
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
           children: [
-            _heroCard(course, lesson, earnedPoints, totalPoints, percent, compact: true),
+            _heroCard(
+              course,
+              lesson,
+              earnedPoints,
+              totalPoints,
+              percent,
+              compact: true,
+            ),
             const SizedBox(height: 16),
             _objectiveCard(lesson),
             const SizedBox(height: 16),
@@ -113,7 +126,7 @@ class _CommunityCoursePlayerPageState
             AppButton.secondary(
               label: context.l10n.text('ask_ai_inline'),
               icon: Icons.smart_toy_rounded,
-              onPressed: () => _openInlineAi(context, controller, course),
+              onPressed: () => _openInlineAi(context, course, lesson),
             ),
             const SizedBox(height: 10),
             AppButton.primary(
@@ -140,7 +153,14 @@ class _CommunityCoursePlayerPageState
                   width: context.isWideLayout ? 320 : 290,
                   child: GlowCard(
                     accent: course.color,
-                    child: _sidebar(course, lesson.id, progress, earnedPoints, totalPoints, percent),
+                    child: _sidebar(
+                      course,
+                      lesson.id,
+                      progress,
+                      earnedPoints,
+                      totalPoints,
+                      percent,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 18),
@@ -201,7 +221,7 @@ class _CommunityCoursePlayerPageState
               AppButton.secondary(
                 label: context.l10n.text('ask_ai_inline'),
                 icon: Icons.smart_toy_rounded,
-                onPressed: () => _openInlineAi(context, controller, course),
+                onPressed: () => _openInlineAi(context, course, lesson),
               ),
               const SizedBox(height: 10),
               AppButton.primary(
@@ -214,11 +234,11 @@ class _CommunityCoursePlayerPageState
                 onPressed: progress.isCompleted || !_lessonAttempted(lesson)
                     ? null
                     : () => _continueLesson(
-                          controller: controller,
-                          course: course,
-                          progress: progress,
-                          lesson: lesson,
-                        ),
+                        controller: controller,
+                        course: course,
+                        progress: progress,
+                        lesson: lesson,
+                      ),
               ),
             ],
           ),
@@ -280,13 +300,13 @@ class _CommunityCoursePlayerPageState
                       progress.completedLessonIds.contains(lesson.id)
                           ? Icons.check_circle_rounded
                           : lesson.id == currentLessonId
-                              ? Icons.play_circle_fill_rounded
-                              : Icons.radio_button_unchecked_rounded,
+                          ? Icons.play_circle_fill_rounded
+                          : Icons.radio_button_unchecked_rounded,
                       color: progress.completedLessonIds.contains(lesson.id)
                           ? context.appColors.success
                           : lesson.id == currentLessonId
-                              ? course.color
-                              : context.appColors.textSecondary,
+                          ? course.color
+                          : context.appColors.textSecondary,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -442,8 +462,9 @@ class _CommunityCoursePlayerPageState
                   children: [
                     CircleAvatar(
                       radius: 34,
-                      backgroundColor:
-                          context.appColors.surface.withValues(alpha: 0.9),
+                      backgroundColor: context.appColors.surface.withValues(
+                        alpha: 0.9,
+                      ),
                       child: Icon(
                         Icons.play_arrow_rounded,
                         color: course.color,
@@ -540,10 +561,16 @@ class _CommunityCoursePlayerPageState
     final accent = solved
         ? context.appColors.success
         : attempted
-            ? context.appColors.accent
-            : course.color;
-    final controller = _inputs.putIfAbsent(exercise.id, TextEditingController.new);
-    final matching = _matching.putIfAbsent(exercise.id, () => <String, String>{});
+        ? context.appColors.accent
+        : course.color;
+    final controller = _inputs.putIfAbsent(
+      exercise.id,
+      TextEditingController.new,
+    );
+    final matching = _matching.putIfAbsent(
+      exercise.id,
+      () => <String, String>{},
+    );
     final order = _drag.putIfAbsent(
       exercise.id,
       () => List<String>.from(exercise.draggableItems),
@@ -590,57 +617,55 @@ class _CommunityCoursePlayerPageState
               if (exercise.kind == CourseExerciseKind.singleChoice)
                 Column(
                   children: exercise.choices
-                      .map(
-                        (choice) {
-                          final selected = _single[exercise.id] == choice.id;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: InkWell(
-                              onTap: () {
-                                setState(() => _single[exercise.id] = choice.id);
-                              },
-                              borderRadius: BorderRadius.circular(18),
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(18),
+                      .map((choice) {
+                        final selected = _single[exercise.id] == choice.id;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InkWell(
+                            onTap: () {
+                              setState(() => _single[exercise.id] = choice.id);
+                            },
+                            borderRadius: BorderRadius.circular(18),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                color: selected
+                                    ? course.color.withValues(alpha: 0.12)
+                                    : context.appColors.surfaceSoft,
+                                border: Border.all(
                                   color: selected
-                                      ? course.color.withValues(alpha: 0.12)
-                                      : context.appColors.surfaceSoft,
-                                  border: Border.all(
-                                    color: selected
-                                        ? course.color
-                                        : context.appColors.divider,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      selected
-                                          ? Icons.radio_button_checked_rounded
-                                          : Icons.radio_button_off_rounded,
-                                      color: selected
-                                          ? course.color
-                                          : context.appColors.textSecondary,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        choice.label,
-                                        style: TextStyle(
-                                          color: context.appColors.textPrimary,
-                                          fontWeight: FontWeight.w600,
-                                          height: 1.35,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                      ? course.color
+                                      : context.appColors.divider,
                                 ),
                               ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    selected
+                                        ? Icons.radio_button_checked_rounded
+                                        : Icons.radio_button_off_rounded,
+                                    color: selected
+                                        ? course.color
+                                        : context.appColors.textSecondary,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      choice.label,
+                                      style: TextStyle(
+                                        color: context.appColors.textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                      )
+                          ),
+                        );
+                      })
                       .toList(growable: false),
                 )
               else if (exercise.kind == CourseExerciseKind.multipleChoice)
@@ -648,8 +673,9 @@ class _CommunityCoursePlayerPageState
                   children: exercise.choices
                       .map(
                         (choice) => CheckboxListTile(
-                          value: (_multi[exercise.id] ?? <String>{})
-                              .contains(choice.id),
+                          value: (_multi[exercise.id] ?? <String>{}).contains(
+                            choice.id,
+                          ),
                           onChanged: (_) {
                             setState(() {
                               final selected = _multi.putIfAbsent(
@@ -894,21 +920,18 @@ class _CommunityCoursePlayerPageState
     final correct = switch (exercise.kind) {
       CourseExerciseKind.singleChoice =>
         _single[exercise.id] == exercise.correctChoiceIds.first,
-      CourseExerciseKind.multipleChoice =>
-        _setEquals(
-          _multi[exercise.id] ?? <String>{},
-          exercise.correctChoiceIds.toSet(),
-        ),
-      CourseExerciseKind.matching =>
-        _mapEquals(
-          _matching[exercise.id] ?? <String, String>{},
-          exercise.correctMatches,
-        ),
-      CourseExerciseKind.dragDrop =>
-        _listEquals(
-          _drag[exercise.id] ?? exercise.draggableItems,
-          exercise.correctOrder,
-        ),
+      CourseExerciseKind.multipleChoice => _setEquals(
+        _multi[exercise.id] ?? <String>{},
+        exercise.correctChoiceIds.toSet(),
+      ),
+      CourseExerciseKind.matching => _mapEquals(
+        _matching[exercise.id] ?? <String, String>{},
+        exercise.correctMatches,
+      ),
+      CourseExerciseKind.dragDrop => _listEquals(
+        _drag[exercise.id] ?? exercise.draggableItems,
+        exercise.correctOrder,
+      ),
       CourseExerciseKind.textInput =>
         _normalized(_inputs[exercise.id]?.text ?? '') ==
             _normalized(exercise.correctAnswer),
@@ -924,7 +947,7 @@ class _CommunityCoursePlayerPageState
     AppNotice.show(
       context,
       message: correct
-          ? '${exercise.title.resolve(context.l10n.locale)} • ${context.l10n.text('lesson_quiz_correct')}'
+          ? '${exercise.title.resolve(context.l10n.locale)} - ${context.l10n.text('lesson_quiz_correct')}'
           : context.l10n.text('lesson_quiz_retry'),
       type: correct ? AppNoticeType.success : AppNoticeType.error,
     );
@@ -936,8 +959,9 @@ class _CommunityCoursePlayerPageState
     required CoursePlayerProgress progress,
     required CoursePlayerLesson lesson,
   }) async {
-    final lessonExerciseIds =
-        lesson.exercises.map((exercise) => exercise.id).toSet();
+    final lessonExerciseIds = lesson.exercises
+        .map((exercise) => exercise.id)
+        .toSet();
     final correctIds = lessonExerciseIds.intersection(_correct);
     final incorrectIds = lessonExerciseIds.difference(correctIds);
     final newCorrectIds = correctIds.difference(progress.correctExerciseIds);
@@ -965,7 +989,7 @@ class _CommunityCoursePlayerPageState
       context,
       message: updated.completedAt != null && percent >= 70
           ? context.l10n.text('course_certificate_earned_notice')
-          : '${context.l10n.text('course_completed')} • $percent%',
+          : '${context.l10n.text('course_completed')} - $percent%',
       type: updated.completedAt != null && percent >= 70
           ? AppNoticeType.success
           : AppNoticeType.info,
@@ -974,96 +998,14 @@ class _CommunityCoursePlayerPageState
 
   Future<void> _openInlineAi(
     BuildContext context,
-    DemoAppController controller,
     CommunityCourse course,
+    CoursePlayerLesson lesson,
   ) async {
-    final promptController = TextEditingController();
-    String reply = '';
     await showAdaptivePanel<void>(
       context: context,
-      wideMaxWidth: 560,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const AdaptivePanelHandle(),
-                  const SizedBox(height: 18),
-                  Text(
-                    context.l10n.text('ask_ai_inline'),
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    course.title.en,
-                    style: TextStyle(color: context.appColors.textSecondary),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: promptController,
-                    minLines: 2,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: context.l10n.text('course_ai_prompt_hint'),
-                    ),
-                  ),
-                  if (reply.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        color: context.appColors.surfaceSoft,
-                        border:
-                            Border.all(color: context.appColors.divider),
-                      ),
-                      child: Text(
-                        reply,
-                        style: TextStyle(
-                          color: context.appColors.textPrimary,
-                          height: 1.45,
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(context.l10n.text('close')),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () {
-                            final answer = controller.askInlineCourseAi(
-                              courseId: course.id,
-                              prompt: promptController.text,
-                            );
-                            if (answer.isEmpty) {
-                              return;
-                            }
-                            setModalState(() => reply = answer);
-                          },
-                          child: Text(context.l10n.text('send_message')),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      wideMaxWidth: 760,
+      builder: (context) =>
+          _InlineCourseAiPanel(course: course, lesson: lesson),
     );
   }
 
@@ -1095,4 +1037,410 @@ class _CommunityCoursePlayerPageState
     }
     return true;
   }
+}
+
+class _InlineCourseAiPanel extends ConsumerStatefulWidget {
+  const _InlineCourseAiPanel({required this.course, required this.lesson});
+
+  final CommunityCourse course;
+  final CoursePlayerLesson lesson;
+
+  @override
+  ConsumerState<_InlineCourseAiPanel> createState() =>
+      _InlineCourseAiPanelState();
+}
+
+class _InlineCourseAiPanelState extends ConsumerState<_InlineCourseAiPanel> {
+  late final TextEditingController _promptController;
+  late final ScrollController _scrollController;
+  final List<AiChatMessage> _messages = <AiChatMessage>[];
+  bool _isSending = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _promptController = TextEditingController();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _promptController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final rawMessage = _promptController.text.trim();
+    if (rawMessage.isEmpty || _isSending) {
+      return;
+    }
+
+    final historyBeforeSend = List<AiChatMessage>.from(_messages);
+    final timestamp = DateTime.now();
+    final userMessage = AiChatMessage(
+      id: 'inline-user-${timestamp.microsecondsSinceEpoch}',
+      author: AiChatAuthor.user,
+      text: rawMessage,
+      createdAt: timestamp,
+    );
+    final pendingReply = AiChatMessage(
+      id: 'inline-mentor-${timestamp.microsecondsSinceEpoch}',
+      author: AiChatAuthor.mentor,
+      text: '',
+      createdAt: timestamp.add(const Duration(milliseconds: 1)),
+      isPending: true,
+    );
+
+    setState(() {
+      _promptController.clear();
+      _errorMessage = null;
+      _isSending = true;
+      _messages
+        ..add(userMessage)
+        ..add(pendingReply);
+    });
+    _scheduleScrollToBottom();
+
+    try {
+      final authUser = ref.read(authControllerProvider).user;
+      final appContext = ref.read(aiAppContextProvider);
+      final reply = await ref
+          .read(aiChatRemoteDataSourceProvider)
+          .sendMessage(
+            conversation: _buildConversationTranscript(
+              historyBeforeSend,
+              rawMessage,
+            ),
+            appContext: _buildInlineCourseContext(appContext),
+            userId: authUser?.id,
+          );
+
+      ref
+          .read(demoAppControllerProvider.notifier)
+          .recordAiExchange(
+            userMessage: rawMessage,
+            mentorMessage: reply.text,
+            xpDelta: 3,
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSending = false;
+        _replacePendingReply(pendingReply.id, reply.text);
+      });
+      _scheduleScrollToBottom();
+    } on ApiException catch (error) {
+      _handleError(pendingReply.id, error.message);
+    } catch (_) {
+      _handleError(pendingReply.id, 'Unable to get an AI response right now.');
+    }
+  }
+
+  void _handleError(String pendingReplyId, String message) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSending = false;
+      _errorMessage = message;
+      _messages.removeWhere((message) => message.id == pendingReplyId);
+    });
+    AppNotice.show(
+      context,
+      message: message,
+      type: AppNoticeType.error,
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+  void _replacePendingReply(String pendingReplyId, String replyText) {
+    final index = _messages.indexWhere(
+      (message) => message.id == pendingReplyId,
+    );
+    if (index == -1) {
+      return;
+    }
+
+    _messages[index] = _messages[index].copyWith(
+      text: replyText.trim(),
+      isPending: false,
+    );
+  }
+
+  void _scheduleScrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  String _buildConversationTranscript(
+    List<AiChatMessage> history,
+    String latestMessage,
+  ) {
+    final transcript = <String>[
+      for (final message in history.where((item) => !item.isPending))
+        '${message.author == AiChatAuthor.user ? 'User' : 'Mentor'}: ${message.text.trim()}',
+      'User: $latestMessage',
+    ];
+
+    while (transcript.length > 2 && transcript.join('\n').length > 2200) {
+      transcript.removeAt(0);
+    }
+
+    return transcript.join('\n').trim();
+  }
+
+  String _buildInlineCourseContext(String baseContext) {
+    final locale = context.l10n.locale;
+    final lessonComments = widget.lesson.comments
+        .map((comment) => '${comment.authorName}: ${comment.message}')
+        .join(' | ');
+
+    return '''
+$baseContext
+
+inline_course_context:
+- course_title: ${widget.course.title.resolve(locale)}
+- course_subtitle: ${widget.course.subtitle.resolve(locale)}
+- lesson_title: ${widget.lesson.title.resolve(locale)}
+- lesson_goal: ${widget.lesson.objective.resolve(locale)}
+- lesson_annotation: ${widget.lesson.annotation.resolve(locale)}
+- lesson_action: ${widget.lesson.nextActionLabel.resolve(locale)}
+- course_tags: ${widget.course.tags.join(', ')}
+- learning_outcomes: ${widget.course.learningOutcomes.join(' | ')}
+- lesson_comments: $lessonComments
+'''
+        .trim();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final compact = context.isCompactLayout;
+    final height = compact ? MediaQuery.of(context).size.height * 0.82 : 620.0;
+
+    return SizedBox(
+      height: height,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AdaptivePanelHandle(),
+            const SizedBox(height: 18),
+            Text(
+              context.l10n.text('ask_ai_inline'),
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.course.title.resolve(context.l10n.locale),
+              style: TextStyle(color: colors.textSecondary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.lesson.title.resolve(context.l10n.locale),
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: colors.danger.withValues(alpha: 0.1),
+                  border: Border.all(
+                    color: colors.danger.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Text(
+                  _errorMessage!,
+                  style: TextStyle(color: colors.textPrimary, height: 1.4),
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: colors.backgroundElevated,
+                  border: Border.all(color: colors.divider),
+                ),
+                child: _messages.isEmpty
+                    ? Center(
+                        child: Text(
+                          _inlineAiEmptyLabel(context.l10n.locale),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            height: 1.45,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        controller: _scrollController,
+                        itemCount: _messages.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          return _InlineCourseAiBubble(
+                            message: _messages[index],
+                          );
+                        },
+                      ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _promptController,
+              enabled: !_isSending,
+              minLines: 2,
+              maxLines: compact ? 5 : 6,
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText: context.l10n.text('course_ai_prompt_hint'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(context.l10n.text('close')),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _isSending ? null : _send,
+                    child: _isSending
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.2),
+                          )
+                        : Text(context.l10n.text('send_message')),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InlineCourseAiBubble extends StatelessWidget {
+  const _InlineCourseAiBubble({required this.message});
+
+  final AiChatMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final isMentor = message.author == AiChatAuthor.mentor;
+    final accent = isMentor ? colors.primary : colors.accent;
+
+    return Align(
+      alignment: isMentor ? Alignment.centerLeft : Alignment.centerRight,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: context.isCompactLayout ? double.infinity : 640,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: isMentor
+                ? colors.surfaceSoft
+                : accent.withValues(alpha: 0.12),
+            border: Border.all(
+              color: isMentor ? colors.divider : accent.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isMentor
+                    ? _mentorLabel(context.l10n.locale)
+                    : _youLabel(context.l10n.locale),
+                style: TextStyle(color: accent, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              if (message.isPending)
+                Text(
+                  _thinkingLabel(context.l10n.locale),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                )
+              else
+                SelectableText(
+                  message.text,
+                  style: TextStyle(color: colors.textPrimary, height: 1.45),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _inlineAiEmptyLabel(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru =>
+      'Задайте вопрос по текущему уроку, коду, упражнению или следующему шагу.',
+    AppLocale.en =>
+      'Ask about the current lesson, code sample, exercise, or the next step.',
+    AppLocale.kk =>
+      'Ағымдағы сабақ, код үлгісі, жаттығу немесе келесі қадам туралы сұраңыз.',
+  };
+}
+
+String _mentorLabel(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'ИИ-наставник',
+    AppLocale.en => 'AI mentor',
+    AppLocale.kk => 'AI тәлімгер',
+  };
+}
+
+String _youLabel(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Вы',
+    AppLocale.en => 'You',
+    AppLocale.kk => 'Сіз',
+  };
+}
+
+String _thinkingLabel(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Формирую ответ...',
+    AppLocale.en => 'Preparing the answer...',
+    AppLocale.kk => 'Жауап дайындалып жатыр...',
+  };
 }

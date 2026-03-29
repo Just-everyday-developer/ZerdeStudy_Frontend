@@ -28,29 +28,42 @@ import '../../features/moderator/presentation/pages/moderator_shell_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import 'app_routes.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'root');
-final GlobalKey<NavigatorState> _homeNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'home');
-final GlobalKey<NavigatorState> _treeNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'tree');
-final GlobalKey<NavigatorState> _learnNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'learn');
-final GlobalKey<NavigatorState> _aiNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'ai');
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'root',
+);
+final GlobalKey<NavigatorState> _homeNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'home',
+);
+final GlobalKey<NavigatorState> _treeNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'tree',
+);
+final GlobalKey<NavigatorState> _learnNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'learn',
+);
+final GlobalKey<NavigatorState> _aiNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'ai',
+);
 final GlobalKey<NavigatorState> _profileNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'profile');
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authControllerProvider);
+  final authSnapshot = ref.watch(
+    authControllerProvider.select(
+      (state) => (
+        isReady: state.isReady,
+        isAuthenticated: state.isAuthenticated,
+        isModerator: state.isModerator,
+      ),
+    ),
+  );
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoutes.welcome,
     redirect: (context, state) {
-      final isReady = authState.isReady;
-      final isAuthenticated = authState.isAuthenticated;
-      final isModerator = authState.isModerator;
+      final isReady = authSnapshot.isReady;
+      final isAuthenticated = authSnapshot.isAuthenticated;
+      final isModerator = authSnapshot.isModerator;
       final path = state.matchedLocation;
       final isAuthRoute = <String>{
         AppRoutes.welcome,
@@ -79,31 +92,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.welcome,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const WelcomePage(),
-        ),
+        pageBuilder: (context, state) =>
+            cyberTransition(state: state, child: const WelcomePage()),
       ),
       GoRoute(
         path: AppRoutes.login,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const LoginPage(),
-        ),
+        pageBuilder: (context, state) =>
+            cyberTransition(state: state, child: const LoginPage()),
       ),
       GoRoute(
         path: AppRoutes.signup,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const SignUpPage(),
-        ),
+        pageBuilder: (context, state) =>
+            cyberTransition(state: state, child: const SignUpPage()),
       ),
       GoRoute(
         path: AppRoutes.forgotPassword,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const ForgotPasswordPage(),
-        ),
+        pageBuilder: (context, state) =>
+            cyberTransition(state: state, child: const ForgotPasswordPage()),
       ),
       GoRoute(
         path: AppRoutes.forgotPasswordCode,
@@ -198,9 +203,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: LessonPage(
-            lessonId: state.pathParameters['lessonId'] ?? '',
-          ),
+          child: LessonPage(lessonId: state.pathParameters['lessonId'] ?? ''),
         ),
       ),
       GoRoute(
@@ -226,26 +229,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.stats,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const StatsPage(),
-        ),
+        pageBuilder: (context, state) =>
+            cyberTransition(state: state, child: const StatsPage()),
       ),
       GoRoute(
         path: AppRoutes.leaderboard,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const LeaderboardPage(),
-        ),
+        pageBuilder: (context, state) =>
+            cyberTransition(state: state, child: const LeaderboardPage()),
       ),
       GoRoute(
         path: AppRoutes.faq,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const FaqPage(),
-        ),
+        pageBuilder: (context, state) =>
+            cyberTransition(state: state, child: const FaqPage()),
       ),
       GoRoute(
         path: AppRoutes.courses,
@@ -256,8 +253,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             initialTopicKey: state.uri.queryParameters['topic'],
             initialSearchQuery: state.uri.queryParameters['search'],
             initialLevel: state.uri.queryParameters['level'],
-            initialMinRating:
-                double.tryParse(state.uri.queryParameters['minRating'] ?? ''),
+            initialMinRating: double.tryParse(
+              state.uri.queryParameters['minRating'] ?? '',
+            ),
             initialDurationCode: state.uri.queryParameters['duration'],
             initialCertificateOnly:
                 state.uri.queryParameters['certificate'] == '1',

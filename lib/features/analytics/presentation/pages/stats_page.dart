@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/state/demo_app_controller.dart';
+import '../../../../app/state/demo_app_state.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
@@ -23,6 +24,9 @@ class StatsPage extends ConsumerWidget {
         .length;
     final passedAssessments = catalog.passedAssessments(state);
     final averageAssessment = catalog.averageBestAssessmentPercent(state);
+    final aiSessions = state.aiMessages
+        .where((item) => item.author == AiAuthor.user)
+        .length;
     final colors = context.appColors;
 
     return AppPageScaffold(
@@ -43,10 +47,19 @@ class StatsPage extends ConsumerWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    _MetricTile(label: 'XP', value: '${state.xp}', width: itemWidth),
+                    _MetricTile(
+                      label: 'XP',
+                      value: '${state.xp}',
+                      width: itemWidth,
+                    ),
                     _MetricTile(
                       label: 'Level',
                       value: '${state.level}',
+                      width: itemWidth,
+                    ),
+                    _MetricTile(
+                      label: 'To next',
+                      value: '${state.xpToNextLevel} XP',
                       width: itemWidth,
                     ),
                     _MetricTile(
@@ -71,9 +84,42 @@ class StatsPage extends ConsumerWidget {
                           '$passedAssessments/${state.assessmentResultsByTrackId.length}',
                       width: itemWidth,
                     ),
+                    _MetricTile(
+                      label: 'AI sessions',
+                      value: '$aiSessions',
+                      width: itemWidth,
+                    ),
                   ],
                 );
               },
+            ),
+          ),
+          const SizedBox(height: 16),
+          GlowCard(
+            accent: colors.primary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Level progress',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${state.xpIntoLevel}/${DemoAppState.xpPerLevel} XP in the current level',
+                  style: TextStyle(color: colors.textSecondary, height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: state.xpIntoLevel / DemoAppState.xpPerLevel,
+                    minHeight: 10,
+                    backgroundColor: colors.backgroundElevated,
+                    color: colors.primary,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -124,11 +170,7 @@ class StatsPage extends ConsumerWidget {
                   label: 'Quiz accuracy',
                   value: '${(state.quizAccuracy * 100).round()}%',
                 ),
-                _BreakdownRow(
-                  label: 'AI sessions',
-                  value:
-                      '${state.aiMessages.where((item) => item.author == AiAuthor.user).length}',
-                ),
+                _BreakdownRow(label: 'AI sessions', value: '$aiSessions'),
                 _BreakdownRow(
                   label: 'Assessment passes',
                   value: '$passedAssessments',
@@ -156,7 +198,9 @@ class StatsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 ...TrackZone.values.map((zone) {
-                  final zoneTitle = catalog.zoneTitle(zone).resolve(state.locale);
+                  final zoneTitle = catalog
+                      .zoneTitle(zone)
+                      .resolve(state.locale);
                   final completed = catalog.completedUnitsForZone(state, zone);
                   final total = catalog.totalUnitsForZone(zone);
                   return Padding(
@@ -253,34 +297,36 @@ class StatsPage extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 10),
-                ...catalog.recentMilestonesFor(state).map(
-                  (milestone) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Icon(
-                            Icons.bolt_rounded,
-                            color: colors.success,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            milestone.resolve(state.locale),
-                            style: TextStyle(
-                              color: colors.textSecondary,
-                              height: 1.35,
+                ...catalog
+                    .recentMilestonesFor(state)
+                    .map(
+                      (milestone) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Icon(
+                                Icons.bolt_rounded,
+                                color: colors.success,
+                                size: 18,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                milestone.resolve(state.locale),
+                                style: TextStyle(
+                                  color: colors.textSecondary,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -326,9 +372,7 @@ class _MetricTile extends StatelessWidget {
 }
 
 class _WeeklyActivityChart extends StatelessWidget {
-  const _WeeklyActivityChart({
-    required this.values,
-  });
+  const _WeeklyActivityChart({required this.values});
 
   final List<int> values;
 
@@ -352,10 +396,7 @@ class _WeeklyActivityChart extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Column(
                 children: [
-                  Text(
-                    '$value',
-                    style: TextStyle(color: colors.textSecondary),
-                  ),
+                  Text('$value', style: TextStyle(color: colors.textSecondary)),
                   const SizedBox(height: 8),
                   Expanded(
                     child: Align(
@@ -394,10 +435,7 @@ class _WeeklyActivityChart extends StatelessWidget {
 }
 
 class _BreakdownRow extends StatelessWidget {
-  const _BreakdownRow({
-    required this.label,
-    required this.value,
-  });
+  const _BreakdownRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -411,10 +449,7 @@ class _BreakdownRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: TextStyle(color: colors.textSecondary),
-            ),
+            child: Text(label, style: TextStyle(color: colors.textSecondary)),
           ),
           Text(
             value,

@@ -96,6 +96,14 @@ class AiChatController extends Notifier<AiChatState> {
             userId: authUser?.id,
           );
 
+      ref
+          .read(demoAppControllerProvider.notifier)
+          .recordAiExchange(
+            userMessage: message,
+            mentorMessage: reply.text,
+            xpDelta: 2,
+          );
+
       state = state.copyWith(
         messages: _replacePendingMessage(
           pendingMessageId: pendingReply.id,

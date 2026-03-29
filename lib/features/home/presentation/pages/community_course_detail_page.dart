@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
+import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
 import '../../../../core/common_widgets/app_button.dart';
@@ -13,12 +14,10 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 
 class CommunityCourseDetailPage extends ConsumerStatefulWidget {
-  const CommunityCourseDetailPage({
-    super.key,
-    required this.courseId,
-  });
+  const CommunityCourseDetailPage({super.key, required this.courseId});
 
   final String courseId;
 
@@ -53,11 +52,37 @@ class _CommunityCourseDetailPageState
     final state = ref.watch(demoAppControllerProvider);
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
-    final course = catalog.courseById(widget.courseId);
+    final backendCourses = ref.watch(backendPublishedCoursesProvider);
+    final course = _resolveCourse(
+      catalog: catalog,
+      backendCourses: backendCourses.maybeWhen(
+        data: (courses) => courses,
+        orElse: () => null,
+      ),
+    );
+    if (course == null) {
+      final colors = context.appColors;
+      final loading = backendCourses.isLoading;
+
+      return Scaffold(
+        backgroundColor: colors.background,
+        body: Center(
+          child: loading
+              ? const CircularProgressIndicator()
+              : Text(
+                  'Course unavailable',
+                  style: TextStyle(color: colors.textPrimary),
+                ),
+        ),
+      );
+    }
     final saved = state.savedCommunityCourseIds.contains(widget.courseId);
     final enrolled = state.enrolledCommunityCourseIds.contains(widget.courseId);
     final userRating = state.courseRatingsByCourseId[widget.courseId];
-    final reviewSummary = catalog.displayCourseReviewSummaryFor(state, widget.courseId);
+    final reviewSummary = catalog.displayCourseReviewSummaryForCourse(
+      state,
+      course,
+    );
     final reviews = <CommunityCourseReview>[
       ..._localReviews,
       ...course.reviews,
@@ -79,13 +104,19 @@ class _CommunityCourseDetailPageState
                     userRating: userRating,
                     reviews: reviews,
                     commentController: _reviewController,
-                    onSave: () =>
-                        controller.toggleSavedCommunityCourse(widget.courseId),
-                    onRate: (stars) =>
-                        controller.rateCommunityCourse(widget.courseId, stars),
+                    onSave: () => controller.toggleSavedCommunityCourse(
+                      widget.courseId,
+                      course: course,
+                    ),
+                    onRate: (stars) => controller.rateCommunityCourse(
+                      widget.courseId,
+                      stars,
+                      courseOverride: course,
+                    ),
                     onSubmitComment: () =>
                         _submitReview(state.user?.name ?? 'Talgat', userRating),
-                    onPrimaryTap: () => _handlePrimaryTap(context, course, controller),
+                    onPrimaryTap: () =>
+                        _handlePrimaryTap(context, course, controller),
                   )
                 : _WideCourseDetailLayout(
                     course: course,
@@ -95,18 +126,37 @@ class _CommunityCourseDetailPageState
                     userRating: userRating,
                     reviews: reviews,
                     commentController: _reviewController,
-                    onSave: () =>
-                        controller.toggleSavedCommunityCourse(widget.courseId),
-                    onRate: (stars) =>
-                        controller.rateCommunityCourse(widget.courseId, stars),
+                    onSave: () => controller.toggleSavedCommunityCourse(
+                      widget.courseId,
+                      course: course,
+                    ),
+                    onRate: (stars) => controller.rateCommunityCourse(
+                      widget.courseId,
+                      stars,
+                      courseOverride: course,
+                    ),
                     onSubmitComment: () =>
                         _submitReview(state.user?.name ?? 'Talgat', userRating),
-                    onPrimaryTap: () => _handlePrimaryTap(context, course, controller),
+                    onPrimaryTap: () =>
+                        _handlePrimaryTap(context, course, controller),
                   ),
           ),
         ],
       ),
     );
+  }
+
+  CommunityCourse? _resolveCourse({
+    required DemoCatalog catalog,
+    required List<CommunityCourse>? backendCourses,
+  }) {
+    for (final course in backendCourses ?? const <CommunityCourse>[]) {
+      if (course.id == widget.courseId) {
+        return course;
+      }
+    }
+
+    return catalog.maybeCourseById(widget.courseId);
   }
 
   void _submitReview(String authorName, int? userRating) {
@@ -186,7 +236,9 @@ class _CommunityCourseDetailPageState
                 ),
               ),
               const SizedBox(height: 16),
-              ...course.learningOutcomes.take(3).map(
+              ...course.learningOutcomes
+                  .take(3)
+                  .map(
                     (item) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Row(
@@ -222,7 +274,12 @@ class _CommunityCourseDetailPageState
                       onPressed: () {
                         controller.enrollCommunityCourse(course.id);
                         Navigator.of(panelContext).pop();
-                        context.push(AppRoutes.coursePlayerById(course.id, skipIntro: true));
+                        context.push(
+                          AppRoutes.coursePlayerById(
+                            course.id,
+                            skipIntro: true,
+                          ),
+                        );
                       },
                       child: Text(panelContext.l10n.text('course_start_now')),
                     ),
@@ -385,24 +442,30 @@ class _WideCourseDetailLayout extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Padding(
-          padding: EdgeInsets.fromLTRB(horizontalPadding, 20, horizontalPadding, 24),
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            20,
+            horizontalPadding,
+            24,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.zero,
-                   child: Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       IconButton(
                         onPressed: () => Navigator.of(context).maybePop(),
                         icon: Icon(
                           Icons.arrow_back_rounded,
                           color: context.appColors.textPrimary,
                         ),
-                        tooltip: MaterialLocalizations.of(context)
-                            .backButtonTooltip,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).backButtonTooltip,
                       ),
                       const SizedBox(height: 8),
                       _DesktopHeroCard(
@@ -473,10 +536,7 @@ class _WideCourseDetailLayout extends StatelessWidget {
 }
 
 class _DesktopHeroCard extends StatelessWidget {
-  const _DesktopHeroCard({
-    required this.course,
-    required this.reviewSummary,
-  });
+  const _DesktopHeroCard({required this.course, required this.reviewSummary});
 
   final CommunityCourse course;
   final CommunityCourseReviewSummary reviewSummary;
@@ -497,8 +557,10 @@ class _DesktopHeroCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
                     color: course.color.withValues(alpha: 0.14),
@@ -528,10 +590,7 @@ class _DesktopHeroCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   course.description.en,
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    height: 1.55,
-                  ),
+                  style: TextStyle(color: colors.textSecondary, height: 1.55),
                 ),
                 const SizedBox(height: 18),
                 Wrap(
@@ -592,8 +651,9 @@ class _DesktopHeroCard extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 34,
-                              backgroundColor:
-                                  colors.surface.withValues(alpha: 0.94),
+                              backgroundColor: colors.surface.withValues(
+                                alpha: 0.94,
+                              ),
                               child: Icon(
                                 Icons.play_arrow_rounded,
                                 size: 38,
@@ -666,10 +726,9 @@ class _MobileHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontSize: 28,
-          height: 1.1,
-        );
+    final titleStyle = Theme.of(
+      context,
+    ).textTheme.titleLarge?.copyWith(fontSize: 28, height: 1.1);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -716,7 +775,9 @@ class _MobileHeroCard extends StatelessWidget {
               IconButton(
                 onPressed: onSave,
                 icon: Icon(
-                  saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  saved
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
                   color: saved ? course.color : colors.textPrimary,
                 ),
               ),
@@ -734,10 +795,7 @@ class _MobileHeroCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             course.subtitle.en,
-            style: TextStyle(
-              color: colors.textSecondary,
-              height: 1.4,
-            ),
+            style: TextStyle(color: colors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 14),
           Row(
@@ -770,9 +828,7 @@ class _MobileHeroCard extends StatelessWidget {
 }
 
 class _CompactInfoContent extends StatelessWidget {
-  const _CompactInfoContent({
-    required this.course,
-  });
+  const _CompactInfoContent({required this.course});
 
   final CommunityCourse course;
 
@@ -927,7 +983,9 @@ class _CourseSidebar extends StatelessWidget {
             label: saved
                 ? l10n.text('saved_to_profile')
                 : l10n.text('course_save_cta'),
-            icon: saved ? Icons.check_circle_rounded : Icons.favorite_border_rounded,
+            icon: saved
+                ? Icons.check_circle_rounded
+                : Icons.favorite_border_rounded,
             maxWidth: 260,
             onPressed: onSave,
           ),
@@ -942,10 +1000,7 @@ class _CourseSidebar extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             course.facts.startModeLabel,
-            style: TextStyle(
-              color: colors.textSecondary,
-              height: 1.4,
-            ),
+            style: TextStyle(color: colors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 18),
           Container(
@@ -1000,10 +1055,7 @@ class _CourseSidebar extends StatelessWidget {
 }
 
 class _CourseTextSection extends StatelessWidget {
-  const _CourseTextSection({
-    required this.title,
-    required this.child,
-  });
+  const _CourseTextSection({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -1014,10 +1066,7 @@ class _CourseTextSection extends StatelessWidget {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         child,
       ],
@@ -1040,10 +1089,7 @@ class _CourseTextSection extends StatelessWidget {
 }
 
 class _CourseBulletSection extends StatelessWidget {
-  const _CourseBulletSection({
-    required this.title,
-    required this.items,
-  });
+  const _CourseBulletSection({required this.title, required this.items});
 
   final String title;
   final List<String> items;
@@ -1054,10 +1100,7 @@ class _CourseBulletSection extends StatelessWidget {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         ...items.map(
           (item) => Padding(
@@ -1070,10 +1113,7 @@ class _CourseBulletSection extends StatelessWidget {
                 Expanded(
                   child: Text(
                     item,
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      height: 1.45,
-                    ),
+                    style: TextStyle(color: colors.textSecondary, height: 1.45),
                   ),
                 ),
               ],
@@ -1100,10 +1140,7 @@ class _CourseBulletSection extends StatelessWidget {
 }
 
 class _CourseProgramSection extends StatelessWidget {
-  const _CourseProgramSection({
-    required this.course,
-    required this.compact,
-  });
+  const _CourseProgramSection({required this.course, required this.compact});
 
   final CommunityCourse course;
   final bool compact;
@@ -1131,10 +1168,7 @@ class _CourseProgramSection extends StatelessWidget {
                 ...course.moduleSections.map(
                   (section) => Padding(
                     padding: const EdgeInsets.only(bottom: 14),
-                    child: _ProgramSectionCard(
-                      section: section,
-                      compact: true,
-                    ),
+                    child: _ProgramSectionCard(section: section, compact: true),
                   ),
                 ),
               ],
@@ -1156,10 +1190,7 @@ class _CourseProgramSection extends StatelessWidget {
           ...course.moduleSections.map(
             (section) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
-              child: _ProgramSectionCard(
-                section: section,
-                compact: false,
-              ),
+              child: _ProgramSectionCard(section: section, compact: false),
             ),
           ),
         ],
@@ -1169,9 +1200,7 @@ class _CourseProgramSection extends StatelessWidget {
 }
 
 class _CourseAudienceRequirementsSection extends StatelessWidget {
-  const _CourseAudienceRequirementsSection({
-    required this.course,
-  });
+  const _CourseAudienceRequirementsSection({required this.course});
 
   final CommunityCourse course;
 
@@ -1203,9 +1232,7 @@ class _CourseAudienceRequirementsSection extends StatelessWidget {
 }
 
 class _CourseTeachersSection extends StatelessWidget {
-  const _CourseTeachersSection({
-    required this.course,
-  });
+  const _CourseTeachersSection({required this.course});
 
   final CommunityCourse course;
 
@@ -1237,8 +1264,7 @@ class _CourseTeachersSection extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 22,
-                      backgroundColor:
-                          colors.primary.withValues(alpha: 0.16),
+                      backgroundColor: colors.primary.withValues(alpha: 0.16),
                       child: Text(
                         instructor.name.substring(0, 1),
                         style: TextStyle(
@@ -1305,9 +1331,7 @@ class _CourseTeachersSection extends StatelessWidget {
 }
 
 class _CourseCertificateSection extends StatelessWidget {
-  const _CourseCertificateSection({
-    required this.course,
-  });
+  const _CourseCertificateSection({required this.course});
 
   final CommunityCourse course;
 
@@ -1531,10 +1555,7 @@ class _CourseReviewsSection extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     review.text,
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      height: 1.45,
-                    ),
+                    style: TextStyle(color: colors.textSecondary, height: 1.45),
                   ),
                 ],
               ),
@@ -1559,10 +1580,7 @@ class _CourseReviewsSection extends StatelessWidget {
         ],
       );
     }
-    return GlowCard(
-      accent: course.color,
-      child: content,
-    );
+    return GlowCard(accent: course.color, child: content);
   }
 }
 
@@ -1607,7 +1625,10 @@ class _CourseRatingEditor extends StatelessWidget {
                     (index) => IconButton(
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                      constraints: const BoxConstraints.tightFor(
+                        width: 32,
+                        height: 32,
+                      ),
                       tooltip: '${index + 1}',
                       onPressed: () => onRate(index + 1),
                       icon: Icon(
@@ -1640,7 +1661,10 @@ class _CourseRatingEditor extends StatelessWidget {
                     (index) => IconButton(
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                      constraints: const BoxConstraints.tightFor(
+                        width: 32,
+                        height: 32,
+                      ),
                       tooltip: '${index + 1}',
                       onPressed: () => onRate(index + 1),
                       icon: Icon(
@@ -1747,10 +1771,7 @@ String _reviewCommentHint(AppLocale locale) {
 }
 
 class _CourseUpdatesSection extends StatelessWidget {
-  const _CourseUpdatesSection({
-    required this.course,
-    required this.compact,
-  });
+  const _CourseUpdatesSection({required this.course, required this.compact});
 
   final CommunityCourse course;
   final bool compact;
@@ -1825,10 +1846,7 @@ class _CourseUpdatesSection extends StatelessWidget {
 }
 
 class _ProgramSectionCard extends StatelessWidget {
-  const _ProgramSectionCard({
-    required this.section,
-    required this.compact,
-  });
+  const _ProgramSectionCard({required this.section, required this.compact});
 
   final CommunityCourseModuleSection section;
   final bool compact;
@@ -1856,10 +1874,7 @@ class _ProgramSectionCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             section.description,
-            style: TextStyle(
-              color: colors.textSecondary,
-              height: 1.4,
-            ),
+            style: TextStyle(color: colors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 12),
           ...section.items.asMap().entries.map(
@@ -1911,7 +1926,9 @@ class _ProgramSectionCard extends StatelessWidget {
                               _TeacherPill(label: entry.value.durationLabel),
                               _TeacherPill(label: '${entry.value.viewerCount}'),
                               if (!compact)
-                                _TeacherPill(label: '${entry.value.helpfulCount}'),
+                                _TeacherPill(
+                                  label: '${entry.value.helpfulCount}',
+                                ),
                             ],
                           ),
                         ],
@@ -1929,10 +1946,7 @@ class _ProgramSectionCard extends StatelessWidget {
 }
 
 class _AudienceBlock extends StatelessWidget {
-  const _AudienceBlock({
-    required this.title,
-    required this.items,
-  });
+  const _AudienceBlock({required this.title, required this.items});
 
   final String title;
   final List<String> items;
@@ -1956,10 +1970,7 @@ class _AudienceBlock extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 10),
             child: Text(
               item,
-              style: TextStyle(
-                color: colors.textSecondary,
-                height: 1.45,
-              ),
+              style: TextStyle(color: colors.textSecondary, height: 1.45),
             ),
           ),
         ),
@@ -1969,9 +1980,7 @@ class _AudienceBlock extends StatelessWidget {
 }
 
 class _TeacherPill extends StatelessWidget {
-  const _TeacherPill({
-    required this.label,
-  });
+  const _TeacherPill({required this.label});
 
   final String label;
 
@@ -1996,10 +2005,7 @@ class _TeacherPill extends StatelessWidget {
 }
 
 class _SidebarMeta extends StatelessWidget {
-  const _SidebarMeta({
-    required this.icon,
-    required this.label,
-  });
+  const _SidebarMeta({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -2033,10 +2039,7 @@ class _SidebarMeta extends StatelessWidget {
 }
 
 class _SidebarFactRow extends StatelessWidget {
-  const _SidebarFactRow({
-    required this.label,
-    required this.value,
-  });
+  const _SidebarFactRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -2143,10 +2146,7 @@ class _CourseDetailBackdrop extends StatelessWidget {
 }
 
 class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({
-    required this.color,
-    required this.size,
-  });
+  const _GlowOrb({required this.color, required this.size});
 
   final Color color;
   final double size;

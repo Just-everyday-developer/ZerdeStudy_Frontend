@@ -116,7 +116,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_portfolio_engineering',
       title: 'Portfolio Engineering for Students',
       subtitle: 'Turn side projects into convincing product stories',
-      description: 'Structure projects, demos, and README narratives for internships and showcases.',
+      description:
+          'Structure projects, demos, and README narratives for internships and showcases.',
       level: 'Beginner',
       rating: 4.8,
       enrollmentCount: 1240,
@@ -126,8 +127,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       categoryKey: _topicSoftSkills,
       topicKeys: <String>[_topicSoftSkills, _topicProgrammingLanguages],
       searchKeywords: <String>['portfolio', 'career', 'storytelling'],
-      isPopular: true,
-      isRecommended: true,
+      isPopular: false,
+      isRecommended: false,
       tags: <String>['portfolio', 'career', 'frontend'],
     ),
     _DiscoveryCourseSeed(
@@ -197,16 +198,19 @@ List<CommunityCourse> buildDiscoveryCourses() {
       customModuleSections: <CommunityCourseModuleSection>[
         CommunityCourseModuleSection(
           title: 'Getting Started: SQL and Your Data Environment',
-          description: 'Set up your SQL client, understand the product database schema, and write your first queries.',
+          description:
+              'Set up your SQL client, understand the product database schema, and write your first queries.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
-              title: 'Why product teams use SQL — and what analysts actually query',
+              title:
+                  'Why product teams use SQL — and what analysts actually query',
               durationLabel: '8 min',
               viewerCount: 2140,
               helpfulCount: 81,
             ),
             CommunityCourseModuleItem(
-              title: 'Setting up DBeaver, BigQuery sandbox, or a local PostgreSQL instance',
+              title:
+                  'Setting up DBeaver, BigQuery sandbox, or a local PostgreSQL instance',
               durationLabel: '10 min',
               viewerCount: 1980,
               helpfulCount: 74,
@@ -215,7 +219,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
         CommunityCourseModuleSection(
           title: 'Basic SELECT — Reading and Filtering Data',
-          description: 'Master SELECT, FROM, WHERE, and comparison operators on real product tables.',
+          description:
+              'Master SELECT, FROM, WHERE, and comparison operators on real product tables.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
               title: 'SELECT and FROM: choosing columns and tables',
@@ -239,7 +244,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
         CommunityCourseModuleSection(
           title: 'Sorting and Limiting Results',
-          description: 'Control query output with ORDER BY and LIMIT to surface the most relevant rows.',
+          description:
+              'Control query output with ORDER BY and LIMIT to surface the most relevant rows.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
               title: 'ORDER BY: sorting by metrics and dates',
@@ -257,7 +263,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
         CommunityCourseModuleSection(
           title: 'Aggregations — COUNT, SUM, AVG',
-          description: 'Compute product metrics with aggregate functions and handle NULL values correctly.',
+          description:
+              'Compute product metrics with aggregate functions and handle NULL values correctly.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
               title: 'COUNT, SUM, AVG, MIN, MAX on event and user tables',
@@ -281,7 +288,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
         CommunityCourseModuleSection(
           title: 'GROUP BY and HAVING',
-          description: 'Segment metrics by user properties, dates, and event types using GROUP BY and HAVING.',
+          description:
+              'Segment metrics by user properties, dates, and event types using GROUP BY and HAVING.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
               title: 'GROUP BY: aggregating per user, per day, per feature',
@@ -305,7 +313,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
         CommunityCourseModuleSection(
           title: 'Joining Tables — INNER, LEFT, and FULL',
-          description: 'Combine users, events, and properties tables with the right join type for each question.',
+          description:
+              'Combine users, events, and properties tables with the right join type for each question.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
               title: 'INNER JOIN and LEFT JOIN: when each one is correct',
@@ -314,7 +323,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
               helpfulCount: 65,
             ),
             CommunityCourseModuleItem(
-              title: 'Joining users to events: the most common product query pattern',
+              title:
+                  'Joining users to events: the most common product query pattern',
               durationLabel: '13 min',
               viewerCount: 1570,
               helpfulCount: 60,
@@ -329,7 +339,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
         CommunityCourseModuleSection(
           title: 'Subqueries and CTEs',
-          description: 'Break complex analytical logic into readable, reusable steps with CTEs and subqueries.',
+          description:
+              'Break complex analytical logic into readable, reusable steps with CTEs and subqueries.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
               title: 'Scalar subqueries and IN/EXISTS for filtering',
@@ -353,7 +364,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
         CommunityCourseModuleSection(
           title: 'Window Functions — ROW_NUMBER, LAG, RANK',
-          description: 'Apply window functions for rankings, time-series comparisons, and running totals.',
+          description:
+              'Apply window functions for rankings, time-series comparisons, and running totals.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
               title: 'OVER and PARTITION BY: understanding the window concept',
@@ -377,7 +389,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
         CommunityCourseModuleSection(
           title: 'Funnel Analysis with SQL',
-          description: 'Build step-by-step conversion funnels and compute drop-off rates from raw event logs.',
+          description:
+              'Build step-by-step conversion funnels and compute drop-off rates from raw event logs.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
               title: 'Modeling a signup or onboarding funnel in SQL',
@@ -401,22 +414,26 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
         CommunityCourseModuleSection(
           title: 'Cohort Retention Analysis',
-          description: 'Define user cohorts, build retention matrices, and identify where users drop off over time.',
+          description:
+              'Define user cohorts, build retention matrices, and identify where users drop off over time.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
-              title: 'What is a cohort — signup week, first action, first purchase',
+              title:
+                  'What is a cohort — signup week, first action, first purchase',
               durationLabel: '11 min',
               viewerCount: 1390,
               helpfulCount: 53,
             ),
             CommunityCourseModuleItem(
-              title: 'Building a retention matrix with date arithmetic and GROUP BY',
+              title:
+                  'Building a retention matrix with date arithmetic and GROUP BY',
               durationLabel: '16 min',
               viewerCount: 1460,
               helpfulCount: 57,
             ),
             CommunityCourseModuleItem(
-              title: 'Plotting retention curves and identifying inflection points',
+              title:
+                  'Plotting retention curves and identifying inflection points',
               durationLabel: '13 min',
               viewerCount: 1320,
               helpfulCount: 50,
@@ -429,19 +446,22 @@ List<CommunityCourse> buildDiscoveryCourses() {
               'Read experiment results with SQL, compute lift and confidence, and present a complete product analysis.',
           items: <CommunityCourseModuleItem>[
             CommunityCourseModuleItem(
-              title: 'Querying experiment assignment and event tables for A/B reads',
+              title:
+                  'Querying experiment assignment and event tables for A/B reads',
               durationLabel: '14 min',
               viewerCount: 1480,
               helpfulCount: 57,
             ),
             CommunityCourseModuleItem(
-              title: 'Lift calculation, sample-size checks, and segment breakdowns',
+              title:
+                  'Lift calculation, sample-size checks, and segment breakdowns',
               durationLabel: '15 min',
               viewerCount: 1370,
               helpfulCount: 53,
             ),
             CommunityCourseModuleItem(
-              title: 'Capstone: end-to-end product analysis from raw tables to insight',
+              title:
+                  'Capstone: end-to-end product analysis from raw tables to insight',
               durationLabel: '20 min',
               viewerCount: 1560,
               helpfulCount: 62,
@@ -454,7 +474,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_ml_journal_club',
       title: 'ML Journal Club Lite',
       subtitle: 'Read one paper idea and map it into product language',
-      description: 'Connect research ideas to product intuition without dense notation or dead ends.',
+      description:
+          'Connect research ideas to product intuition without dense notation or dead ends.',
       level: 'Intermediate',
       rating: 4.9,
       enrollmentCount: 560,
@@ -472,7 +493,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_secure_api_clinic',
       title: 'Secure API Clinic',
       subtitle: 'A guided walkthrough of auth, validation, and incident hints',
-      description: 'A backend-minded course focused on defensive API design and practical review habits.',
+      description:
+          'A backend-minded course focused on defensive API design and practical review habits.',
       level: 'Advanced',
       rating: 4.6,
       enrollmentCount: 430,
@@ -490,7 +512,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_design_systems_from_scratch',
       title: 'Design Systems from Scratch',
       subtitle: 'Tokens, hierarchy, reusable components, and product coherence',
-      description: 'Frame design systems as a language for teams instead of a loose bag of components.',
+      description:
+          'Frame design systems as a language for teams instead of a loose bag of components.',
       level: 'Intermediate',
       rating: 4.8,
       enrollmentCount: 760,
@@ -508,7 +531,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_dart_first_widget',
       title: 'Dart from First Widget',
       subtitle: 'Variables, widgets, and confident app-building habits',
-      description: 'Use Dart basics to build clean UI intuition and calmer coding habits.',
+      description:
+          'Use Dart basics to build clean UI intuition and calmer coding habits.',
       level: 'Beginner',
       rating: 4.7,
       enrollmentCount: 1520,
@@ -526,7 +550,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_python_automation',
       title: 'Python for Automation',
       subtitle: 'Scripts, data cleanup, and repeatable workflows',
-      description: 'Use Python to automate routine work, cleanup data, and ship quick tools.',
+      description:
+          'Use Python to automate routine work, cleanup data, and ship quick tools.',
       level: 'Beginner',
       rating: 4.8,
       enrollmentCount: 1880,
@@ -534,7 +559,11 @@ List<CommunityCourse> buildDiscoveryCourses() {
       color: Color(0xFF74B9FF),
       authorId: 'ilia_v',
       categoryKey: _topicProgrammingLanguages,
-      topicKeys: <String>[_topicProgrammingLanguages, _topicDataAnalytics, _topicAi],
+      topicKeys: <String>[
+        _topicProgrammingLanguages,
+        _topicDataAnalytics,
+        _topicAi,
+      ],
       searchKeywords: <String>['python', 'automation', 'scripts'],
       isPopular: true,
       isRecommended: true,
@@ -544,7 +573,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_javascript_patterns',
       title: 'JavaScript Patterns Sprint',
       subtitle: 'Functions, arrays, and practical browser-side habits',
-      description: 'A quick pass through reusable JavaScript patterns for product teams.',
+      description:
+          'A quick pass through reusable JavaScript patterns for product teams.',
       level: 'Beginner',
       rating: 4.6,
       enrollmentCount: 1320,
@@ -562,7 +592,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_typescript_interfaces',
       title: 'TypeScript for Product Interfaces',
       subtitle: 'Types, safety, and maintainable UI contracts',
-      description: 'Learn how TypeScript makes interface work calmer and more predictable.',
+      description:
+          'Learn how TypeScript makes interface work calmer and more predictable.',
       level: 'Intermediate',
       rating: 4.7,
       enrollmentCount: 1160,
@@ -580,7 +611,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_go_services',
       title: 'Go Services Bootcamp',
       subtitle: 'Structured backend services, logs, and concurrency basics',
-      description: 'A backend-flavored Go course focused on clean service design.',
+      description:
+          'A backend-flavored Go course focused on clean service design.',
       level: 'Intermediate',
       rating: 4.6,
       enrollmentCount: 840,
@@ -598,7 +630,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_kotlin_android',
       title: 'Kotlin Android Essentials',
       subtitle: 'Native Android thinking through a modern language lens',
-      description: 'Understand Kotlin syntax and mobile-focused coding habits through small examples.',
+      description:
+          'Understand Kotlin syntax and mobile-focused coding habits through small examples.',
       level: 'Intermediate',
       rating: 4.5,
       enrollmentCount: 790,
@@ -616,7 +649,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_swiftui_basics',
       title: 'SwiftUI Basics for Builders',
       subtitle: 'State, screens, and layout on Apple platforms',
-      description: 'Understand SwiftUI primitives without getting lost in boilerplate.',
+      description:
+          'Understand SwiftUI primitives without getting lost in boilerplate.',
       level: 'Intermediate',
       rating: 4.6,
       enrollmentCount: 720,
@@ -634,7 +668,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_rust_systems',
       title: 'Rust Systems Track',
       subtitle: 'Ownership, safety, and modern systems intuition',
-      description: 'A beginner-friendly route into Rust for developers who enjoy systems thinking.',
+      description:
+          'A beginner-friendly route into Rust for developers who enjoy systems thinking.',
       level: 'Advanced',
       rating: 4.8,
       enrollmentCount: 650,
@@ -652,7 +687,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_linux_terminal',
       title: 'Linux Terminal for Engineers',
       subtitle: 'Commands, pipes, and practical daily workflows',
-      description: 'A daily-driver course for learning Linux fluency through useful routines.',
+      description:
+          'A daily-driver course for learning Linux fluency through useful routines.',
       level: 'Beginner',
       rating: 4.8,
       enrollmentCount: 1650,
@@ -670,7 +706,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_data_storytelling',
       title: 'Data Storytelling Studio',
       subtitle: 'Turn dashboards into decisions and narratives',
-      description: 'Learn how to frame metrics, charts, and recommendations for product teams.',
+      description:
+          'Learn how to frame metrics, charts, and recommendations for product teams.',
       level: 'Beginner',
       rating: 4.7,
       enrollmentCount: 1120,
@@ -688,7 +725,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_statistics_metrics',
       title: 'Statistics for Product Metrics',
       subtitle: 'Variance, confidence, signal, and decision quality',
-      description: 'Use practical statistics intuition to interpret metric movement more responsibly.',
+      description:
+          'Use practical statistics intuition to interpret metric movement more responsibly.',
       level: 'Intermediate',
       rating: 4.8,
       enrollmentCount: 970,
@@ -706,7 +744,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_experiment_sql',
       title: 'Experiment Readouts with SQL',
       subtitle: 'Build A/B test reads with cleaner query flows',
-      description: 'Combine SQL and experiment thinking to produce review-ready readouts.',
+      description:
+          'Combine SQL and experiment thinking to produce review-ready readouts.',
       level: 'Intermediate',
       rating: 4.6,
       enrollmentCount: 690,
@@ -724,7 +763,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_postgresql_performance',
       title: 'PostgreSQL Performance First',
       subtitle: 'Indexes, plans, and healthy query habits',
-      description: 'Make PostgreSQL feel less mysterious by learning the few levers that matter most.',
+      description:
+          'Make PostgreSQL feel less mysterious by learning the few levers that matter most.',
       level: 'Advanced',
       rating: 4.7,
       enrollmentCount: 740,
@@ -742,7 +782,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_data_modeling_workshop',
       title: 'Data Modeling Workshop',
       subtitle: 'Design tables and entities that age well',
-      description: 'Learn schema design tradeoffs through product-flavored examples and refactors.',
+      description:
+          'Learn schema design tradeoffs through product-flavored examples and refactors.',
       level: 'Intermediate',
       rating: 4.7,
       enrollmentCount: 860,
@@ -760,7 +801,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_prompt_design_builders',
       title: 'Prompt Design for Builders',
       subtitle: 'Design prompts that fit product tasks and review loops',
-      description: 'A practical introduction to prompt structure, evaluation, and safer iteration.',
+      description:
+          'A practical introduction to prompt structure, evaluation, and safer iteration.',
       level: 'Beginner',
       rating: 4.8,
       enrollmentCount: 1590,
@@ -778,7 +820,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_llm_evaluation',
       title: 'LLM Evaluation Patterns',
       subtitle: 'Rubrics, failure modes, and small reliable test sets',
-      description: 'Learn how to evaluate AI features with deterministic checks and realistic examples.',
+      description:
+          'Learn how to evaluate AI features with deterministic checks and realistic examples.',
       level: 'Advanced',
       rating: 4.7,
       enrollmentCount: 620,
@@ -796,7 +839,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_feature_lab',
       title: 'Feature Engineering Lab',
       subtitle: 'From raw columns to useful model signals',
-      description: 'Map business understanding into structured features with lighter-weight math.',
+      description:
+          'Map business understanding into structured features with lighter-weight math.',
       level: 'Intermediate',
       rating: 4.6,
       enrollmentCount: 540,
@@ -814,7 +858,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_computer_vision',
       title: 'Computer Vision Starter',
       subtitle: 'Images, embeddings, and practical product examples',
-      description: 'Build intuition for vision workflows without turning the course into a math wall.',
+      description:
+          'Build intuition for vision workflows without turning the course into a math wall.',
       level: 'Intermediate',
       rating: 4.5,
       enrollmentCount: 480,
@@ -832,7 +877,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_recommender_systems',
       title: 'Recommender Systems Primer',
       subtitle: 'Rank, retrieve, and evaluate recommendations',
-      description: 'A product-minded map of recommenders, from candidate generation to evaluation.',
+      description:
+          'A product-minded map of recommenders, from candidate generation to evaluation.',
       level: 'Advanced',
       rating: 4.7,
       enrollmentCount: 510,
@@ -850,7 +896,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_feedback_communication',
       title: 'Feedback That Helps Teams Ship',
       subtitle: 'Write, receive, and act on feedback without friction',
-      description: 'Use structured communication to keep review loops honest, kind, and useful.',
+      description:
+          'Use structured communication to keep review loops honest, kind, and useful.',
       level: 'Beginner',
       rating: 4.8,
       enrollmentCount: 930,
@@ -868,7 +915,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_interview_storytelling',
       title: 'Interview Storytelling for Engineers',
       subtitle: 'Turn experience into clear and credible answers',
-      description: 'Practice concise stories for interviews, demos, and mentor conversations.',
+      description:
+          'Practice concise stories for interviews, demos, and mentor conversations.',
       level: 'Beginner',
       rating: 4.7,
       enrollmentCount: 1180,
@@ -886,7 +934,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_leadership_juniors',
       title: 'Leadership for Junior Engineers',
       subtitle: 'Ownership, alignment, and helpful initiative',
-      description: 'Learn leadership signals that make you reliable before you have formal authority.',
+      description:
+          'Learn leadership signals that make you reliable before you have formal authority.',
       level: 'Intermediate',
       rating: 4.6,
       enrollmentCount: 670,
@@ -904,7 +953,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_qa_communication',
       title: 'QA Communication and Bug Reports',
       subtitle: 'Report issues clearly and align with product teams',
-      description: 'A communication-first course for testers and anyone writing sharper bug reports.',
+      description:
+          'A communication-first course for testers and anyone writing sharper bug reports.',
       level: 'Beginner',
       rating: 4.7,
       enrollmentCount: 780,
@@ -922,7 +972,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_data_cleaning_python',
       title: 'Data Cleaning with Python',
       subtitle: 'Messy tables, quick fixes, and notebook habits',
-      description: 'Handle missing values, formatting drift, and sanity checks with practical Python routines.',
+      description:
+          'Handle missing values, formatting drift, and sanity checks with practical Python routines.',
       level: 'Beginner',
       rating: 4.8,
       enrollmentCount: 1440,
@@ -940,7 +991,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_sql_window_functions',
       title: 'SQL Window Functions in Practice',
       subtitle: 'Rank, lag, moving windows, and cohort-friendly analysis',
-      description: 'Learn the subset of SQL window functions that unlock real analytics work.',
+      description:
+          'Learn the subset of SQL window functions that unlock real analytics work.',
       level: 'Intermediate',
       rating: 4.9,
       enrollmentCount: 1330,
@@ -958,7 +1010,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_spreadsheet_thinking',
       title: 'Spreadsheet Thinking for Analysts',
       subtitle: 'Shape messy asks into structured analytical workflows',
-      description: 'A calmer way to turn business questions into tables, pivots, and clean analysis steps.',
+      description:
+          'A calmer way to turn business questions into tables, pivots, and clean analysis steps.',
       level: 'Beginner',
       rating: 4.5,
       enrollmentCount: 890,
@@ -976,7 +1029,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_cohort_analysis',
       title: 'Cohort Analysis Walkthrough',
       subtitle: 'Retention views that tell a product story',
-      description: 'Build cohort thinking with practical tables, visual checks, and product language.',
+      description:
+          'Build cohort thinking with practical tables, visual checks, and product language.',
       level: 'Intermediate',
       rating: 4.7,
       enrollmentCount: 770,
@@ -994,7 +1048,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_ai_product_prompting',
       title: 'AI Prompting for Product Teams',
       subtitle: 'Use AI as a collaborator in research, docs, and iteration',
-      description: 'A cross-functional course on using AI well inside product and engineering loops.',
+      description:
+          'A cross-functional course on using AI well inside product and engineering loops.',
       level: 'Beginner',
       rating: 4.8,
       enrollmentCount: 1710,
@@ -1012,7 +1067,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_model_monitoring',
       title: 'Model Monitoring Essentials',
       subtitle: 'Track drift, failure cases, and operational trust',
-      description: 'Learn what to watch after deploying models and how to communicate health clearly.',
+      description:
+          'Learn what to watch after deploying models and how to communicate health clearly.',
       level: 'Advanced',
       rating: 4.6,
       enrollmentCount: 430,
@@ -1030,7 +1086,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_nlp_starter',
       title: 'NLP Starter Path',
       subtitle: 'Tokenization, embeddings, and useful text workflows',
-      description: 'A light but practical route into NLP concepts for builders and analysts.',
+      description:
+          'A light but practical route into NLP concepts for builders and analysts.',
       level: 'Intermediate',
       rating: 4.6,
       enrollmentCount: 620,
@@ -1048,7 +1105,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_ai_ethics',
       title: 'AI Ethics for Product Decisions',
       subtitle: 'Bias, evaluation boundaries, and release judgment',
-      description: 'Use practical cases to think more clearly about responsible AI release decisions.',
+      description:
+          'Use practical cases to think more clearly about responsible AI release decisions.',
       level: 'Intermediate',
       rating: 4.7,
       enrollmentCount: 700,
@@ -1066,7 +1124,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_vector_search_sql',
       title: 'Vector Search and SQL',
       subtitle: 'Blend retrieval ideas with familiar database intuition',
-      description: 'A practical bridge between AI retrieval concepts and database-flavored reasoning.',
+      description:
+          'A practical bridge between AI retrieval concepts and database-flavored reasoning.',
       level: 'Advanced',
       rating: 4.5,
       enrollmentCount: 390,
@@ -1084,7 +1143,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_time_series_forecasting',
       title: 'Time Series Forecasting Basics',
       subtitle: 'Seasonality, trends, and practical forecast checks',
-      description: 'Learn how to reason about forecasts without pretending every dataset is perfect.',
+      description:
+          'Learn how to reason about forecasts without pretending every dataset is perfect.',
       level: 'Intermediate',
       rating: 4.6,
       enrollmentCount: 560,
@@ -1102,7 +1162,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_ai_prototyping_python',
       title: 'AI Prototyping with Python',
       subtitle: 'Ship small assistants and evaluation loops quickly',
-      description: 'Prototype AI ideas with simple Python scripts, test sets, and prompt iterations.',
+      description:
+          'Prototype AI ideas with simple Python scripts, test sets, and prompt iterations.',
       level: 'Intermediate',
       rating: 4.8,
       enrollmentCount: 940,
@@ -1120,7 +1181,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_database_design_teams',
       title: 'Database Design for Product Teams',
       subtitle: 'Talk about schema tradeoffs in clear product language',
-      description: 'Bridge engineering and product conversations around schema decisions and tradeoffs.',
+      description:
+          'Bridge engineering and product conversations around schema decisions and tradeoffs.',
       level: 'Intermediate',
       rating: 4.5,
       enrollmentCount: 610,
@@ -1138,7 +1200,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_sql_habits',
       title: 'SQL Habits That Scale',
       subtitle: 'Naming, formatting, and query review discipline',
-      description: 'Small habits that make SQL easier to trust, review, and reuse over time.',
+      description:
+          'Small habits that make SQL easier to trust, review, and reuse over time.',
       level: 'Beginner',
       rating: 4.7,
       enrollmentCount: 1210,
@@ -1156,7 +1219,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_postgresql_backends',
       title: 'PostgreSQL for Backend Builders',
       subtitle: 'Transactions, constraints, and trustworthy data layers',
-      description: 'A backend-oriented PostgreSQL course focused on durable schemas and safe write patterns.',
+      description:
+          'A backend-oriented PostgreSQL course focused on durable schemas and safe write patterns.',
       level: 'Advanced',
       rating: 4.7,
       enrollmentCount: 570,
@@ -1174,7 +1238,8 @@ List<CommunityCourse> buildDiscoveryCourses() {
       id: 'course_linux_qa_pipelines',
       title: 'Linux for QA Pipelines',
       subtitle: 'Terminal habits that make testing workflows faster',
-      description: 'Use Linux commands and scripts to streamline routine QA and automation tasks.',
+      description:
+          'Use Linux commands and scripts to streamline routine QA and automation tasks.',
       level: 'Intermediate',
       rating: 4.5,
       enrollmentCount: 660,
@@ -1191,8 +1256,10 @@ List<CommunityCourse> buildDiscoveryCourses() {
     _DiscoveryCourseSeed(
       id: 'course_cybersecurity_everyday',
       title: 'Cybersecurity for Everyday Development',
-      subtitle: 'Secure defaults, safer reviews, and practical threat awareness',
-      description: 'A team-friendly route into safer development habits for any engineer.',
+      subtitle:
+          'Secure defaults, safer reviews, and practical threat awareness',
+      description:
+          'A team-friendly route into safer development habits for any engineer.',
       level: 'Beginner',
       rating: 4.8,
       enrollmentCount: 1490,

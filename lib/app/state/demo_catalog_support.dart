@@ -10,8 +10,8 @@ class DemoTrainerSeed {
     required this.options,
     required this.correctIndex,
     required this.template,
-  })  : kind = CodeTrainerKind.fillBlank,
-        orderedLines = const <String>[];
+  }) : kind = CodeTrainerKind.fillBlank,
+       orderedLines = const <String>[];
 
   const DemoTrainerSeed.matchOutput({
     required this.title,
@@ -19,19 +19,19 @@ class DemoTrainerSeed {
     required this.prompt,
     required this.options,
     required this.correctIndex,
-  })  : kind = CodeTrainerKind.matchOutput,
-        template = null,
-        orderedLines = const <String>[];
+  }) : kind = CodeTrainerKind.matchOutput,
+       template = null,
+       orderedLines = const <String>[];
 
   const DemoTrainerSeed.reorder({
     required this.title,
     required this.instruction,
     required this.prompt,
     required this.orderedLines,
-  })  : kind = CodeTrainerKind.reorderLines,
-        template = null,
-        options = const <String>[],
-        correctIndex = 0;
+  }) : kind = CodeTrainerKind.reorderLines,
+       template = null,
+       options = const <String>[],
+       correctIndex = 0;
 
   const DemoTrainerSeed.matching({
     required this.title,
@@ -39,9 +39,9 @@ class DemoTrainerSeed {
     required this.prompt,
     required this.options,
     required this.orderedLines,
-  })  : kind = CodeTrainerKind.matching,
-        template = null,
-        correctIndex = 0;
+  }) : kind = CodeTrainerKind.matching,
+       template = null,
+       correctIndex = 0;
 
   final String title;
   final String instruction;
@@ -188,12 +188,7 @@ LearningTrack buildTrackFromSeed({
     nodeId: nodeId,
     connections: connections,
     modules: modules
-        .map(
-          (moduleSeed) => buildModuleFromSeed(
-            trackId: id,
-            seed: moduleSeed,
-          ),
-        )
+        .map((moduleSeed) => buildModuleFromSeed(trackId: id, seed: moduleSeed))
         .toList(growable: false),
   );
 }
@@ -229,17 +224,16 @@ LessonItem buildLessonFromSeed({
   required String moduleId,
   required DemoLessonSeed seed,
 }) {
-  final trainer = buildTrainerFromSeed(
-    lessonId: seed.id,
-    seed: seed.trainer,
-  );
+  final trainer = buildTrainerFromSeed(lessonId: seed.id, seed: seed.trainer);
   final allTrainers = <CodeTrainer>[trainer];
   for (var i = 0; i < seed.extraTrainers.length; i++) {
-    allTrainers.add(buildTrainerFromSeed(
-      lessonId: seed.id,
-      seed: seed.extraTrainers[i],
-      index: i + 2,
-    ));
+    allTrainers.add(
+      buildTrainerFromSeed(
+        lessonId: seed.id,
+        seed: seed.extraTrainers[i],
+        index: i + 2,
+      ),
+    );
   }
 
   final quiz = LessonQuiz(
@@ -276,13 +270,11 @@ LessonItem buildLessonFromSeed({
     outcome: seed.outcomeL ?? sameText(seed.outcome),
     codeSnippet: seed.codeSnippet,
     exampleOutput: seed.exampleOutput,
-    keyPoints: seed.keyPointsL ?? seed.keyPoints.map(sameText).toList(growable: false),
+    keyPoints:
+        seed.keyPointsL ?? seed.keyPoints.map(sameText).toList(growable: false),
     quizzes: <LessonQuiz>[quiz],
     codeTrainers: allTrainers,
-    completionRequirements: <String>[
-      quiz.id,
-      ...allTrainers.map((t) => t.id),
-    ],
+    completionRequirements: <String>[quiz.id, ...allTrainers.map((t) => t.id)],
     promptSuggestion: seed.promptSuggestionL ?? sameText(seed.promptSuggestion),
     xpReward: seed.xpReward,
     theoryContent: seed.theoryContentL ?? sameText(seed.theoryContent ?? ''),
@@ -358,10 +350,8 @@ CodeTrainer buildTrainerFromSeed({
         prompt: seed.prompt,
         options: List<QuizOption>.generate(
           shuffled.length,
-          (index) => QuizOption(
-            id: 'line_$index',
-            label: sameText(shuffled[index]),
-          ),
+          (index) =>
+              QuizOption(id: 'line_$index', label: sameText(shuffled[index])),
         ),
         correctSequence: List<String>.generate(
           seed.orderedLines.length,
@@ -420,24 +410,24 @@ CommunityCourse buildCommunityCourse({
 }) {
   final resolvedInstructors =
       instructors ?? _defaultInstructors(author: author, title: title);
-  final resolvedModules = moduleSections ??
+  final resolvedModules =
+      moduleSections ??
       _defaultModuleSections(
         title: title,
         subtitle: subtitle,
         lessons: lessons,
       );
-  final resolvedFacts = facts ??
+  final resolvedFacts =
+      facts ??
       _defaultFacts(
         level: level,
         estimatedHours: estimatedHours,
         moduleSections: resolvedModules,
         hasCertificate: estimatedHours >= 5 || level != 'Beginner',
       );
-  final resolvedReviewSummary = reviewSummary ??
-      _defaultReviewSummary(
-        rating: rating,
-        enrollmentCount: enrollmentCount,
-      );
+  final resolvedReviewSummary =
+      reviewSummary ??
+      _defaultReviewSummary(rating: rating, enrollmentCount: enrollmentCount);
 
   return CommunityCourse(
     id: id,
@@ -459,18 +449,16 @@ CommunityCourse buildCommunityCourse({
     lessons: lessons,
     heroBadge: tags.isEmpty ? level : tags.first,
     heroHeadline: 'Structured path into $title',
-    learningOutcomes: learningOutcomes ??
-        _defaultLearningOutcomes(
-          title: title,
-          subtitle: subtitle,
-          tags: tags,
-        ),
+    learningOutcomes:
+        learningOutcomes ??
+        _defaultLearningOutcomes(title: title, subtitle: subtitle, tags: tags),
     audience: audience ?? _defaultAudience(title: title),
     requirements: requirements ?? _defaultRequirements(level: level),
     instructors: resolvedInstructors,
     moduleSections: resolvedModules,
     reviewSummary: resolvedReviewSummary,
-    reviews: reviews ??
+    reviews:
+        reviews ??
         _defaultReviews(
           title: title,
           author: author,
@@ -478,13 +466,10 @@ CommunityCourse buildCommunityCourse({
         ),
     updates: updates ?? _defaultUpdates(title: title),
     facts: resolvedFacts,
-    offer: offer ??
-        _defaultOffer(
-          estimatedHours: estimatedHours,
-          level: level,
-        ),
+    offer: offer ?? _defaultOffer(estimatedHours: estimatedHours, level: level),
     supportsCoursePlayer: supportsCoursePlayer,
-    coursePlayerModules: coursePlayerModules ??
+    coursePlayerModules:
+        coursePlayerModules ??
         _defaultCoursePlayerModules(
           id: id,
           title: title,
@@ -505,24 +490,20 @@ List<String> _defaultLearningOutcomes({
     'Apply the main patterns from "$subtitle" in small production-like scenarios.',
     'Recognize common mistakes earlier and review your own work with more confidence.',
     'Use ${tags.isEmpty ? 'course concepts' : tags.first} as a repeatable decision tool.',
-    'Build a cleaner narrative for demos, interviews, and portfolio walkthroughs.',
+    'Build a cleaner narrative for interviews, reviews, and portfolio walkthroughs.',
     'Leave with a compact checklist you can reuse after the course ends.',
   ];
 }
 
-List<String> _defaultAudience({
-  required String title,
-}) {
+List<String> _defaultAudience({required String title}) {
   return <String>[
     'Learners who want a structured and calmer entry into $title.',
-    'Students preparing portfolio demos, interviews, or a stronger first project.',
+    'Students preparing portfolios, interviews, or a stronger first project.',
     'Engineers who want clearer mental models before going deeper into documentation.',
   ];
 }
 
-List<String> _defaultRequirements({
-  required String level,
-}) {
+List<String> _defaultRequirements({required String level}) {
   final beginner = level == 'Beginner';
   return <String>[
     beginner
@@ -545,8 +526,9 @@ List<CommunityCourseInstructor> _defaultInstructors({
       bio:
           '${author.name} teaches $title with a product-minded focus on clarity, iteration, and confident delivery.',
       courseCount: author.courseCount,
-      studentCount:
-          author.studentCount == 0 ? author.followersCount * 8 : author.studentCount,
+      studentCount: author.studentCount == 0
+          ? author.followersCount * 8
+          : author.studentCount,
       rating: author.rating,
     ),
     CommunityCourseInstructor(
@@ -554,7 +536,7 @@ List<CommunityCourseInstructor> _defaultInstructors({
       name: 'ZerdeStudy Mentor Team',
       role: 'Course Editors',
       bio:
-          'The internal mentor team packages examples, reviews the explanations, and keeps each mock course presentation-ready.',
+          'The internal mentor team packages examples, reviews the explanations, and keeps each course polished and clear.',
       courseCount: 12,
       studentCount: author.followersCount * 5,
       rating: 4.9,
@@ -583,7 +565,8 @@ List<CommunityCourseModuleSection> _defaultModuleSections({
   return <CommunityCourseModuleSection>[
     CommunityCourseModuleSection(
       title: 'Orientation and foundations',
-      description: 'Get aligned on the mental model, vocabulary, and learning flow.',
+      description:
+          'Get aligned on the mental model, vocabulary, and learning flow.',
       items: <CommunityCourseModuleItem>[
         _moduleItemFromPreview(first, viewersBase: 2200, helpfulBase: 74),
         CommunityCourseModuleItem(
@@ -596,7 +579,8 @@ List<CommunityCourseModuleSection> _defaultModuleSections({
     ),
     CommunityCourseModuleSection(
       title: 'Worked examples',
-      description: 'Break down the examples and turn them into a repeatable routine.',
+      description:
+          'Break down the examples and turn them into a repeatable routine.',
       items: <CommunityCourseModuleItem>[
         _moduleItemFromPreview(second, viewersBase: 1740, helpfulBase: 58),
         CommunityCourseModuleItem(
@@ -609,7 +593,8 @@ List<CommunityCourseModuleSection> _defaultModuleSections({
     ),
     CommunityCourseModuleSection(
       title: 'Apply and extend',
-      description: 'Practice the pattern, reflect on tradeoffs, and prepare a clean explanation.',
+      description:
+          'Practice the pattern, reflect on tradeoffs, and prepare a clean explanation.',
       items: <CommunityCourseModuleItem>[
         _moduleItemFromPreview(third, viewersBase: 1480, helpfulBase: 42),
         CommunityCourseModuleItem(
@@ -640,7 +625,9 @@ CommunityCourseReviewSummary _defaultReviewSummary({
   required double rating,
   required int enrollmentCount,
 }) {
-  final reviewCount = enrollmentCount > 0 ? (enrollmentCount / 3.8).round() : 120;
+  final reviewCount = enrollmentCount > 0
+      ? (enrollmentCount / 3.8).round()
+      : 120;
   final fiveStar = (reviewCount * 0.78).round();
   final fourStar = (reviewCount * 0.14).round();
   final threeStar = (reviewCount * 0.05).round();
@@ -680,7 +667,7 @@ List<CommunityCourseReview> _defaultReviews({
       authorName: 'Arman S.',
       timeLabel: '5 days ago',
       rating: 5,
-      headline: 'Useful for demos',
+      headline: 'Useful in practice',
       text:
           'This course helped me explain the topic aloud. The sequence from overview to examples to modules made the whole subject feel much more presentable.',
     ),
@@ -695,9 +682,7 @@ List<CommunityCourseReview> _defaultReviews({
   ];
 }
 
-List<CommunityCourseUpdate> _defaultUpdates({
-  required String title,
-}) {
+List<CommunityCourseUpdate> _defaultUpdates({required String title}) {
   return <CommunityCourseUpdate>[
     CommunityCourseUpdate(
       id: '${title.hashCode}_update_1',
@@ -740,8 +725,9 @@ CommunityCourseFacts _defaultFacts({
     interactiveCount: lessonCount * 3,
     languageLabel: 'English / Russian',
     hasCertificate: hasCertificate,
-    certificateLabel:
-        hasCertificate ? 'Certificate available' : 'No certificate in this edition',
+    certificateLabel: hasCertificate
+        ? 'Certificate available'
+        : 'No certificate in this edition',
     startModeLabel: level == 'Beginner' ? 'Start anytime' : 'Self-paced access',
   );
 }
@@ -774,19 +760,11 @@ CommunityCourseLessonPreview buildCourseLesson(
 }
 
 LocalizedText sameText(String value) {
-  return LocalizedText(
-    ru: value,
-    en: value,
-    kk: value,
-  );
+  return LocalizedText(ru: value, en: value, kk: value);
 }
 
 LocalizedText localizedText(String ru, String en, String kk) {
-  return LocalizedText(
-    ru: ru,
-    en: en,
-    kk: kk,
-  );
+  return LocalizedText(ru: ru, en: en, kk: kk);
 }
 
 List<CoursePlayerModule> _defaultCoursePlayerModules({
@@ -861,7 +839,8 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
           objective:
               'By the end of this step, you should be able to explain the purpose of $title in one clear sentence.',
           videoLabel: 'Intro walkthrough • 06:24',
-          imageCaption: 'A concept map showing how $topicTag moves from idea to implementation.',
+          imageCaption:
+              'A concept map showing how $topicTag moves from idea to implementation.',
           codeSnippet:
               'final topic = "$topicTag";\nconst stage = "foundation";\nprint("\$topic -> \$stage");',
           exampleOutput: '$topicTag -> foundation',
@@ -872,12 +851,24 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
               kind: CourseExerciseKind.singleChoice,
               title: sameText('Core idea'),
               prompt: sameText('What is the main goal of the first lesson?'),
-              description: 'Choose the explanation that best matches the lesson objective.',
+              description:
+                  'Choose the explanation that best matches the lesson objective.',
               points: 10,
               choices: const <CourseExerciseChoice>[
-                CourseExerciseChoice(id: 'a', label: 'Memorize every line without understanding the flow'),
-                CourseExerciseChoice(id: 'b', label: 'Build a small mental model and explain the pattern clearly'),
-                CourseExerciseChoice(id: 'c', label: 'Skip the concept and jump directly into advanced optimization'),
+                CourseExerciseChoice(
+                  id: 'a',
+                  label: 'Memorize every line without understanding the flow',
+                ),
+                CourseExerciseChoice(
+                  id: 'b',
+                  label:
+                      'Build a small mental model and explain the pattern clearly',
+                ),
+                CourseExerciseChoice(
+                  id: 'c',
+                  label:
+                      'Skip the concept and jump directly into advanced optimization',
+                ),
               ],
               correctChoiceIds: const <String>['b'],
             ),
@@ -885,7 +876,9 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
               id: '${id}_exercise_2',
               kind: CourseExerciseKind.textInput,
               title: sameText('Fill the blank'),
-              prompt: sameText('Complete the output label used in the code example.'),
+              prompt: sameText(
+                'Complete the output label used in the code example.',
+              ),
               description: 'Type the missing word exactly as it should appear.',
               points: 8,
               inputTemplate: 'print("$topicTag -> ____");',
@@ -905,21 +898,32 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
           objective:
               'You should be able to read the example from top to bottom and predict the final result.',
           videoLabel: 'Example breakdown • 08:10',
-          imageCaption: 'A layered diagram where input, transformation, and output are grouped into a clean flow.',
+          imageCaption:
+              'A layered diagram where input, transformation, and output are grouped into a clean flow.',
           codeSnippet:
               'final items = ["observe", "reason", "ship"];\nfinal summary = items.join(" -> ");\nprint(summary);',
           exampleOutput: 'observe -> reason -> ship',
-          nextAction: 'Check how the sequence changes and then continue into practice.',
+          nextAction:
+              'Check how the sequence changes and then continue into practice.',
           exercises: <CoursePlayerExercise>[
             CoursePlayerExercise(
               id: '${id}_exercise_3',
               kind: CourseExerciseKind.matching,
               title: sameText('Match the flow'),
               prompt: sameText('Match each code part with its role.'),
-              description: 'Pick the correct pair for every step in the example.',
+              description:
+                  'Pick the correct pair for every step in the example.',
               points: 12,
-              leftItems: const <String>['items', 'join(" -> ")', 'print(summary)'],
-              rightItems: const <String>['shows the final string', 'holds the starting values', 'combines the list into one line'],
+              leftItems: const <String>[
+                'items',
+                'join(" -> ")',
+                'print(summary)',
+              ],
+              rightItems: const <String>[
+                'shows the final string',
+                'holds the starting values',
+                'combines the list into one line',
+              ],
               correctMatches: const <String, String>{
                 'items': 'holds the starting values',
                 'join(" -> ")': 'combines the list into one line',
@@ -958,17 +962,21 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
           objective:
               'You should be ready to move into exercises, comments, and repeat only the parts that were incorrect.',
           videoLabel: 'Practice bridge • 07:42',
-          imageCaption: 'A compact checklist showing explanation, implementation, and review.',
+          imageCaption:
+              'A compact checklist showing explanation, implementation, and review.',
           codeSnippet:
               'String explainPattern(String domain) {\n  return "Use a small loop: learn, test, and refine in \$domain.";\n}\n\nprint(explainPattern("$title"));',
           exampleOutput: 'Use a small loop: learn, test, and refine in $title.',
-          nextAction: 'Complete the final code checks and open the next module.',
+          nextAction:
+              'Complete the final code checks and open the next module.',
           exercises: <CoursePlayerExercise>[
             CoursePlayerExercise(
               id: '${id}_exercise_5',
               kind: CourseExerciseKind.textInput,
               title: sameText('Complete the code'),
-              prompt: sameText('Type the missing method name so the code prints the expected output.'),
+              prompt: sameText(
+                'Type the missing method name so the code prints the expected output.',
+              ),
               description: 'Enter only the missing token.',
               points: 14,
               inputTemplate:
@@ -979,14 +987,28 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
               id: '${id}_exercise_6',
               kind: CourseExerciseKind.multipleChoice,
               title: sameText('Review the lesson'),
-              prompt: sameText('Which habits make the walkthrough easier to present?'),
+              prompt: sameText(
+                'Which habits make the walkthrough easier to present?',
+              ),
               description: 'Choose all correct options.',
               points: 12,
               choices: const <CourseExerciseChoice>[
-                CourseExerciseChoice(id: 'a', label: 'Read the input, transformation, and output in order'),
-                CourseExerciseChoice(id: 'b', label: 'Skip the visible result and focus only on syntax'),
-                CourseExerciseChoice(id: 'c', label: 'Use one clear sentence to summarize the pattern'),
-                CourseExerciseChoice(id: 'd', label: 'Ignore mistakes instead of revisiting them'),
+                CourseExerciseChoice(
+                  id: 'a',
+                  label: 'Read the input, transformation, and output in order',
+                ),
+                CourseExerciseChoice(
+                  id: 'b',
+                  label: 'Skip the visible result and focus only on syntax',
+                ),
+                CourseExerciseChoice(
+                  id: 'c',
+                  label: 'Use one clear sentence to summarize the pattern',
+                ),
+                CourseExerciseChoice(
+                  id: 'd',
+                  label: 'Ignore mistakes instead of revisiting them',
+                ),
               ],
               correctChoiceIds: const <String>['a', 'c'],
             ),
@@ -1000,59 +1022,75 @@ List<CoursePlayerModule> _defaultCoursePlayerModules({
       summary: sameText(
         'Use the same rhythm again with authored lesson names, then reflect on mistakes and finish the course with a stronger narrative.',
       ),
-      lessons: List<CoursePlayerLesson>.generate(
-        previewLessons.length,
-        (index) {
-          final preview = previewLessons[index];
-          return buildLesson(
-            lessonId: '${id}_player_bridge_${index + 1}',
-            lessonTitle: preview.title.en,
-            annotation: preview.summary.en,
-            explanation:
-                'This bridge lesson keeps the authored course voice but adds one more explanation, one more visual cue, and a final exercise that checks transfer.',
-            objective:
-                'Connect the authored topic to a practical task you can explain without switching screens.',
-            videoLabel: 'Module preview • 05:${index + 3}0',
-            imageCaption: 'A visual note for ${preview.title.en} showing how the topic maps into a repeatable task.',
-            codeSnippet:
-                'final topic = "${preview.title.en}";\nfinal checkpoint = ${index + 1};\nprint("Ready for \$topic #\$checkpoint");',
-            exampleOutput: 'Ready for ${preview.title.en} #${index + 1}',
-            nextAction: 'Continue to the next lesson and keep the same explanation loop.',
-            exercises: <CoursePlayerExercise>[
-              CoursePlayerExercise(
-                id: '${id}_bridge_exercise_${index + 1}_a',
-                kind: CourseExerciseKind.singleChoice,
-                title: sameText('Transfer check'),
-                prompt: sameText('What is the best way to approach ${preview.title.en}?'),
-                description: 'Choose the option that preserves the same rhythm from earlier lessons.',
-                points: 8,
-                choices: <CourseExerciseChoice>[
-                  CourseExerciseChoice(id: 'a', label: 'Jump into the deepest edge case first'),
-                  CourseExerciseChoice(id: 'b', label: 'Start with one example, explain the output, then move into practice'),
-                  CourseExerciseChoice(id: 'c', label: 'Avoid reviewing the result after running the code'),
-                ],
-                correctChoiceIds: const <String>['b'],
+      lessons: List<CoursePlayerLesson>.generate(previewLessons.length, (
+        index,
+      ) {
+        final preview = previewLessons[index];
+        return buildLesson(
+          lessonId: '${id}_player_bridge_${index + 1}',
+          lessonTitle: preview.title.en,
+          annotation: preview.summary.en,
+          explanation:
+              'This bridge lesson keeps the authored course voice but adds one more explanation, one more visual cue, and a final exercise that checks transfer.',
+          objective:
+              'Connect the authored topic to a practical task you can explain without switching screens.',
+          videoLabel: 'Module preview • 05:${index + 3}0',
+          imageCaption:
+              'A visual note for ${preview.title.en} showing how the topic maps into a repeatable task.',
+          codeSnippet:
+              'final topic = "${preview.title.en}";\nfinal checkpoint = ${index + 1};\nprint("Ready for \$topic #\$checkpoint");',
+          exampleOutput: 'Ready for ${preview.title.en} #${index + 1}',
+          nextAction:
+              'Continue to the next lesson and keep the same explanation loop.',
+          exercises: <CoursePlayerExercise>[
+            CoursePlayerExercise(
+              id: '${id}_bridge_exercise_${index + 1}_a',
+              kind: CourseExerciseKind.singleChoice,
+              title: sameText('Transfer check'),
+              prompt: sameText(
+                'What is the best way to approach ${preview.title.en}?',
               ),
-              CoursePlayerExercise(
-                id: '${id}_bridge_exercise_${index + 1}_b',
-                kind: CourseExerciseKind.textInput,
-                title: sameText('Output phrase'),
-                prompt: sameText('Fill the final number used in the output.'),
-                description: 'Type the checkpoint number from the code block.',
-                points: 6,
-                inputTemplate:
-                    'print("Ready for ${preview.title.en} #__");',
-                correctAnswer: '${index + 1}',
-              ),
-            ],
-          );
-        },
-      ),
+              description:
+                  'Choose the option that preserves the same rhythm from earlier lessons.',
+              points: 8,
+              choices: <CourseExerciseChoice>[
+                CourseExerciseChoice(
+                  id: 'a',
+                  label: 'Jump into the deepest edge case first',
+                ),
+                CourseExerciseChoice(
+                  id: 'b',
+                  label:
+                      'Start with one example, explain the output, then move into practice',
+                ),
+                CourseExerciseChoice(
+                  id: 'c',
+                  label: 'Avoid reviewing the result after running the code',
+                ),
+              ],
+              correctChoiceIds: const <String>['b'],
+            ),
+            CoursePlayerExercise(
+              id: '${id}_bridge_exercise_${index + 1}_b',
+              kind: CourseExerciseKind.textInput,
+              title: sameText('Output phrase'),
+              prompt: sameText('Fill the final number used in the output.'),
+              description: 'Type the checkpoint number from the code block.',
+              points: 6,
+              inputTemplate: 'print("Ready for ${preview.title.en} #__");',
+              correctAnswer: '${index + 1}',
+            ),
+          ],
+        );
+      }),
     ),
   ];
 }
 
-List<CoursePlayerComment> _defaultCourseComments(String courseTitle, String lessonTitle) {
+List<CoursePlayerComment> _defaultCourseComments(
+  String courseTitle,
+  String lessonTitle,
+) {
   return <CoursePlayerComment>[
     CoursePlayerComment(
       id: '${courseTitle.hashCode}_${lessonTitle.hashCode}_1',

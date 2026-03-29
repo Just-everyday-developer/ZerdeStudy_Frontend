@@ -36,21 +36,22 @@ class DemoAppController extends Notifier<DemoAppState> {
 
     try {
       final seeded = _seedState();
-      final restored = DemoAppState.fromJson(
-        jsonDecode(savedState) as Map<String, dynamic>,
+      final restored = _migrateRestoredState(
+        DemoAppState.fromJson(jsonDecode(savedState) as Map<String, dynamic>),
       );
       return _withDerived(
         restored.copyWith(
           courseRatingsByCourseId: restored.courseRatingsByCourseId.isEmpty
               ? seeded.courseRatingsByCourseId
               : restored.courseRatingsByCourseId,
-          enrolledCommunityCourseIds: restored.enrolledCommunityCourseIds.isEmpty
+          enrolledCommunityCourseIds:
+              restored.enrolledCommunityCourseIds.isEmpty
               ? seeded.enrolledCommunityCourseIds
               : restored.enrolledCommunityCourseIds,
           coursePlayerProgressByCourseId:
               restored.coursePlayerProgressByCourseId.isEmpty
-                  ? seeded.coursePlayerProgressByCourseId
-                  : restored.coursePlayerProgressByCourseId,
+              ? seeded.coursePlayerProgressByCourseId
+              : restored.coursePlayerProgressByCourseId,
         ),
       );
     } catch (_) {
@@ -58,17 +59,16 @@ class DemoAppController extends Notifier<DemoAppState> {
     }
   }
 
-  void loginWithEmail({
-    required String email,
-    String? name,
-  }) {
+  void loginWithEmail({required String email, String? name}) {
     state = _withDerived(
       state.copyWith(
         isAuthenticated: true,
         user: _createUser(
           name: name,
           email: email,
-          goal: state.user?.goal ?? 'Build confidence across CS Core and IT Spheres',
+          goal:
+              state.user?.goal ??
+              'Build confidence across CS Core and IT Spheres',
         ),
       ),
     );
@@ -78,7 +78,7 @@ class DemoAppController extends Notifier<DemoAppState> {
   void loginWithProvider(String providerLabel) {
     final normalized = providerLabel.toLowerCase().trim();
     final providerName = providerLabel.isEmpty
-        ? 'Demo'
+        ? 'Guest'
         : providerLabel[0].toUpperCase() + providerLabel.substring(1);
 
     state = _withDerived(
@@ -86,8 +86,8 @@ class DemoAppController extends Notifier<DemoAppState> {
         isAuthenticated: true,
         user: _createUser(
           name: 'Talgat',
-          email: '${normalized.isEmpty ? 'demo' : normalized}@zerdestudy.app',
-          goal: 'Reach a polished presentation flow across all branches',
+          email: '${normalized.isEmpty ? 'guest' : normalized}@zerdestudy.app',
+          goal: 'Build steady progress across CS Core and IT Spheres',
           role: '$providerName learner',
         ),
       ),
@@ -96,27 +96,20 @@ class DemoAppController extends Notifier<DemoAppState> {
   }
 
   void logout() {
-    state = _withDerived(
-      state.copyWith(
-        isAuthenticated: false,
-        user: null,
-      ),
-    );
+    state = _withDerived(state.copyWith(isAuthenticated: false, user: null));
     _persist();
   }
 
   void loginAsModerator() {
-    state = _withDerived(state.copyWith(
-      isAuthenticated: true,
-      isModerator: true,
-    ));
+    state = _withDerived(
+      state.copyWith(isAuthenticated: true, isModerator: true),
+    );
   }
 
   void logoutModerator() {
-    state = _withDerived(state.copyWith(
-      isAuthenticated: false,
-      isModerator: false,
-    ));
+    state = _withDerived(
+      state.copyWith(isAuthenticated: false, isModerator: false),
+    );
   }
 
   void syncExternalAuth({
@@ -200,11 +193,9 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void completeQuiz(String quizId, {required bool isCorrect}) {
     final quizStats = Map<String, QuizAnswerStat>.from(state.quizAnswerStats);
-    final previous = quizStats[quizId] ??
-        const QuizAnswerStat(
-          attempts: 0,
-          correctAnswers: 0,
-        );
+    final previous =
+        quizStats[quizId] ??
+        const QuizAnswerStat(attempts: 0, correctAnswers: 0);
     quizStats[quizId] = previous.copyWith(
       attempts: previous.attempts + 1,
       correctAnswers: previous.correctAnswers + (isCorrect ? 1 : 0),
@@ -259,20 +250,24 @@ class DemoAppController extends Notifier<DemoAppState> {
       ..add(lessonId);
 
     final candidate = previousState.copyWith(
-        currentTrackId: lesson.trackId,
-        completedLessonIds: completedLessonIds,
-        xp: previousState.xp + lesson.xpReward,
-        streak: previousState.streak + 1,
-        dailyMissionDone: true,
-        focusedLessonId: lessonId,
-        focusedPracticeId: null,
-        weeklyActivity: _bumpToday(previousState.weeklyActivity),
-      );
+      currentTrackId: lesson.trackId,
+      completedLessonIds: completedLessonIds,
+      xp: previousState.xp + lesson.xpReward,
+      streak: previousState.streak + 1,
+      dailyMissionDone: true,
+      focusedLessonId: lessonId,
+      focusedPracticeId: null,
+      weeklyActivity: _bumpToday(previousState.weeklyActivity),
+    );
 
     state = _withDerived(
       candidate.copyWith(
         learningHistory: <LearningHistoryEntry>[
-          ..._completionHistoryEntriesForLesson(previousState, candidate, lesson),
+          ..._completionHistoryEntriesForLesson(
+            previousState,
+            candidate,
+            lesson,
+          ),
           ...previousState.learningHistory,
         ],
       ),
@@ -291,15 +286,15 @@ class DemoAppController extends Notifier<DemoAppState> {
       ..add(practiceId);
 
     final candidate = previousState.copyWith(
-        currentTrackId: practice.trackId,
-        completedPracticeIds: completedPracticeIds,
-        xp: previousState.xp + practice.xpReward,
-        streak: previousState.streak + 1,
-        dailyMissionDone: true,
-        focusedPracticeId: practiceId,
-        focusedLessonId: null,
-        weeklyActivity: _bumpToday(previousState.weeklyActivity),
-      );
+      currentTrackId: practice.trackId,
+      completedPracticeIds: completedPracticeIds,
+      xp: previousState.xp + practice.xpReward,
+      streak: previousState.streak + 1,
+      dailyMissionDone: true,
+      focusedPracticeId: practiceId,
+      focusedLessonId: null,
+      weeklyActivity: _bumpToday(previousState.weeklyActivity),
+    );
 
     state = _withDerived(
       candidate.copyWith(
@@ -321,8 +316,9 @@ class DemoAppController extends Notifier<DemoAppState> {
       return;
     }
 
-    final viewedCommunityCourseIds =
-        Set<String>.from(state.viewedCommunityCourseIds)..add(courseId);
+    final viewedCommunityCourseIds = Set<String>.from(
+      state.viewedCommunityCourseIds,
+    )..add(courseId);
 
     state = _withDerived(
       state.copyWith(
@@ -333,15 +329,16 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
-  void saveCommunityCourse(String courseId) {
+  void saveCommunityCourse(String courseId, {CommunityCourse? course}) {
     if (state.savedCommunityCourseIds.contains(courseId)) {
       return;
     }
 
-    final savedCommunityCourseIds =
-        Set<String>.from(state.savedCommunityCourseIds)..add(courseId);
+    final savedCommunityCourseIds = Set<String>.from(
+      state.savedCommunityCourseIds,
+    )..add(courseId);
 
-    final course = _catalog.courseById(courseId);
+    final resolvedCourse = course ?? _catalog.courseById(courseId);
     state = _withDerived(
       state.copyWith(
         savedCommunityCourseIds: savedCommunityCourseIds,
@@ -351,9 +348,9 @@ class DemoAppController extends Notifier<DemoAppState> {
             id: 'history-course-${DateTime.now().microsecondsSinceEpoch}',
             kind: LearningHistoryKind.courseSaved,
             title: 'Saved community course',
-            subtitle: course.title.resolve(state.locale),
+            subtitle: resolvedCourse.title.resolve(state.locale),
             createdAt: DateTime.now(),
-            refId: course.id,
+            refId: resolvedCourse.id,
           ),
           ...state.learningHistory,
         ],
@@ -362,9 +359,9 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
-  void toggleSavedCommunityCourse(String courseId) {
+  void toggleSavedCommunityCourse(String courseId, {CommunityCourse? course}) {
     if (!state.savedCommunityCourseIds.contains(courseId)) {
-      saveCommunityCourse(courseId);
+      saveCommunityCourse(courseId, course: course);
       return;
     }
 
@@ -372,19 +369,21 @@ class DemoAppController extends Notifier<DemoAppState> {
       ..remove(courseId);
 
     state = _withDerived(
-      state.copyWith(
-        savedCommunityCourseIds: updatedSavedIds,
-      ),
+      state.copyWith(savedCommunityCourseIds: updatedSavedIds),
     );
     _persist();
   }
 
-  void rateCommunityCourse(String courseId, int stars) {
+  void rateCommunityCourse(
+    String courseId,
+    int stars, {
+    CommunityCourse? courseOverride,
+  }) {
     final normalized = stars.clamp(1, 5);
     final updatedRatings = Map<String, int>.from(state.courseRatingsByCourseId)
       ..[courseId] = normalized;
     final firstRating = !state.courseRatingsByCourseId.containsKey(courseId);
-    final course = _catalog.courseById(courseId);
+    final course = courseOverride ?? _catalog.courseById(courseId);
     final timestamp = DateTime.now();
 
     state = _withDerived(
@@ -396,7 +395,7 @@ class DemoAppController extends Notifier<DemoAppState> {
             id: 'history-course-rating-${timestamp.microsecondsSinceEpoch}',
             kind: LearningHistoryKind.courseSaved,
             title: 'Course rating updated',
-            subtitle: '${course.title.resolve(state.locale)} • $normalized/5',
+            subtitle: '${course.title.resolve(state.locale)} - $normalized/5',
             createdAt: timestamp,
             refId: courseId,
           ),
@@ -417,10 +416,13 @@ class DemoAppController extends Notifier<DemoAppState> {
       for (final module in course.coursePlayerModules) ...module.lessons,
     ];
     final timestamp = DateTime.now();
-    final updatedEnrollments = Set<String>.from(state.enrolledCommunityCourseIds)
-      ..add(courseId);
+    final updatedEnrollments = Set<String>.from(
+      state.enrolledCommunityCourseIds,
+    )..add(courseId);
     final updatedProgress =
-        Map<String, CoursePlayerProgress>.from(state.coursePlayerProgressByCourseId)
+        Map<String, CoursePlayerProgress>.from(
+            state.coursePlayerProgressByCourseId,
+          )
           ..[courseId] = CoursePlayerProgress(
             courseId: courseId,
             completedLessonIds: const <String>{},
@@ -466,7 +468,8 @@ class DemoAppController extends Notifier<DemoAppState> {
     final allLessons = <CoursePlayerLesson>[
       for (final module in course.coursePlayerModules) ...module.lessons,
     ];
-    final currentProgress = state.coursePlayerProgressByCourseId[courseId] ??
+    final currentProgress =
+        state.coursePlayerProgressByCourseId[courseId] ??
         CoursePlayerProgress(
           courseId: courseId,
           completedLessonIds: const <String>{},
@@ -477,33 +480,39 @@ class DemoAppController extends Notifier<DemoAppState> {
           enrolledAt: DateTime.now(),
           currentLessonId: allLessons.isEmpty ? null : allLessons.first.id,
         );
-    final updatedCompletedIds = Set<String>.from(currentProgress.completedLessonIds)
-      ..add(lessonId);
-    final currentIndex = allLessons.indexWhere((lesson) => lesson.id == lessonId);
+    final updatedCompletedIds = Set<String>.from(
+      currentProgress.completedLessonIds,
+    )..add(lessonId);
+    final currentIndex = allLessons.indexWhere(
+      (lesson) => lesson.id == lessonId,
+    );
     final nextLessonId =
-        currentIndex >= 0 && currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1].id : null;
-    final finishedCourse = updatedCompletedIds.length >= allLessons.length &&
+        currentIndex >= 0 && currentIndex < allLessons.length - 1
+        ? allLessons[currentIndex + 1].id
+        : null;
+    final finishedCourse =
+        updatedCompletedIds.length >= allLessons.length &&
         allLessons.isNotEmpty;
     final timestamp = DateTime.now();
     final updatedProgress = currentProgress.copyWith(
       completedLessonIds: updatedCompletedIds,
-      attemptedExerciseIds:
-          Set<String>.from(currentProgress.attemptedExerciseIds)
-            ..addAll(attemptedExerciseIds),
+      attemptedExerciseIds: Set<String>.from(
+        currentProgress.attemptedExerciseIds,
+      )..addAll(attemptedExerciseIds),
       correctExerciseIds: Set<String>.from(currentProgress.correctExerciseIds)
         ..addAll(correctExerciseIds),
-      incorrectExerciseIds:
-          Set<String>.from(currentProgress.incorrectExerciseIds)
-            ..addAll(incorrectExerciseIds),
+      incorrectExerciseIds: Set<String>.from(
+        currentProgress.incorrectExerciseIds,
+      )..addAll(incorrectExerciseIds),
       earnedPoints: currentProgress.earnedPoints + earnedPointsDelta,
       currentLessonId: finishedCourse ? null : nextLessonId,
       lastOpenedAt: timestamp,
       completedAt: finishedCourse ? timestamp : currentProgress.completedAt,
     );
 
-    final progressMap =
-        Map<String, CoursePlayerProgress>.from(state.coursePlayerProgressByCourseId)
-          ..[courseId] = updatedProgress;
+    final progressMap = Map<String, CoursePlayerProgress>.from(
+      state.coursePlayerProgressByCourseId,
+    )..[courseId] = updatedProgress;
 
     final historyEntries = <LearningHistoryEntry>[
       LearningHistoryEntry(
@@ -520,9 +529,7 @@ class DemoAppController extends Notifier<DemoAppState> {
     ];
     if (finishedCourse) {
       final percent = _catalog.coursePlayerCompletionPercent(
-        state.copyWith(
-          coursePlayerProgressByCourseId: progressMap,
-        ),
+        state.copyWith(coursePlayerProgressByCourseId: progressMap),
         courseId,
       );
       historyEntries.addAll(<LearningHistoryEntry>[
@@ -539,7 +546,7 @@ class DemoAppController extends Notifier<DemoAppState> {
           id: 'history-certificate-${timestamp.microsecondsSinceEpoch}',
           kind: LearningHistoryKind.certificateEarned,
           title: 'Certificate earned',
-          subtitle: '${course.title.resolve(state.locale)} • $percent%',
+          subtitle: '${course.title.resolve(state.locale)} - $percent%',
           createdAt: timestamp,
           refId: 'certificate_$courseId',
         ),
@@ -549,8 +556,9 @@ class DemoAppController extends Notifier<DemoAppState> {
     state = _withDerived(
       state.copyWith(
         coursePlayerProgressByCourseId: progressMap,
-        enrolledCommunityCourseIds:
-            Set<String>.from(state.enrolledCommunityCourseIds)..add(courseId),
+        enrolledCommunityCourseIds: Set<String>.from(
+          state.enrolledCommunityCourseIds,
+        )..add(courseId),
         xp: state.xp + (finishedCourse ? 26 : 12),
         dailyMissionDone: true,
         weeklyActivity: _bumpToday(state.weeklyActivity),
@@ -564,10 +572,46 @@ class DemoAppController extends Notifier<DemoAppState> {
     return updatedProgress;
   }
 
-  String askInlineCourseAi({
-    required String courseId,
-    required String prompt,
+  void recordAiExchange({
+    required String userMessage,
+    required String mentorMessage,
+    int xpDelta = 2,
+    bool trackActivity = true,
   }) {
+    final trimmedUserMessage = userMessage.trim();
+    final trimmedMentorMessage = mentorMessage.trim();
+    if (trimmedUserMessage.isEmpty || trimmedMentorMessage.isEmpty) {
+      return;
+    }
+
+    final timestamp = DateTime.now();
+    state = _withDerived(
+      state.copyWith(
+        aiMessages: <AiMessage>[
+          ...state.aiMessages,
+          AiMessage(
+            id: 'user-${timestamp.microsecondsSinceEpoch}',
+            author: AiAuthor.user,
+            text: trimmedUserMessage,
+            createdAt: timestamp,
+          ),
+          AiMessage(
+            id: 'mentor-${timestamp.microsecondsSinceEpoch}',
+            author: AiAuthor.mentor,
+            text: trimmedMentorMessage,
+            createdAt: timestamp.add(const Duration(milliseconds: 220)),
+          ),
+        ],
+        xp: state.xp + xpDelta,
+        weeklyActivity: trackActivity
+            ? _bumpToday(state.weeklyActivity)
+            : state.weeklyActivity,
+      ),
+    );
+    _persist();
+  }
+
+  String askInlineCourseAi({required String courseId, required String prompt}) {
     final trimmed = prompt.trim();
     if (trimmed.isEmpty) {
       return '';
@@ -582,28 +626,7 @@ class DemoAppController extends Notifier<DemoAppState> {
       currentLesson: currentLesson,
       prompt: trimmed,
     );
-    final timestamp = DateTime.now();
-    state = _withDerived(
-      state.copyWith(
-        aiMessages: <AiMessage>[
-          ...state.aiMessages,
-          AiMessage(
-            id: 'inline-user-${timestamp.microsecondsSinceEpoch}',
-            author: AiAuthor.user,
-            text: trimmed,
-            createdAt: timestamp,
-          ),
-          AiMessage(
-            id: 'inline-mentor-${timestamp.microsecondsSinceEpoch}',
-            author: AiAuthor.mentor,
-            text: reply,
-            createdAt: timestamp.add(const Duration(milliseconds: 180)),
-          ),
-        ],
-        xp: state.xp + 3,
-      ),
-    );
-    _persist();
+    recordAiExchange(userMessage: trimmed, mentorMessage: reply, xpDelta: 3);
     return reply;
   }
 
@@ -615,7 +638,8 @@ class DemoAppController extends Notifier<DemoAppState> {
     final assessment = _catalog.trackById(trackId).assessment!;
     final correctAnswers = assessment.questions
         .where(
-          (question) => selectedOptionIds[question.id] == question.correctOptionId,
+          (question) =>
+              selectedOptionIds[question.id] == question.correctOptionId,
         )
         .length;
     final totalQuestions = assessment.questions.length;
@@ -632,13 +656,15 @@ class DemoAppController extends Notifier<DemoAppState> {
     );
 
     final previousResult = previousState.assessmentResultsByTrackId[trackId];
-    final isBest = previousResult == null || percent >= previousResult.bestPercent;
+    final isBest =
+        previousResult == null || percent >= previousResult.bestPercent;
     final result = TrackAssessmentResult(
       trackId: trackId,
       bestPercent: isBest ? percent : previousResult.bestPercent,
       lastPercent: percent,
-      bestCorrectAnswers:
-          isBest ? correctAnswers : previousResult.bestCorrectAnswers,
+      bestCorrectAnswers: isBest
+          ? correctAnswers
+          : previousResult.bestCorrectAnswers,
       lastCorrectAnswers: correctAnswers,
       attemptCount: (previousResult?.attemptCount ?? 0) + 1,
       lastAttemptAt: timestamp,
@@ -649,9 +675,9 @@ class DemoAppController extends Notifier<DemoAppState> {
       ],
     );
 
-    final updatedResults =
-        Map<String, TrackAssessmentResult>.from(previousState.assessmentResultsByTrackId)
-          ..[trackId] = result;
+    final updatedResults = Map<String, TrackAssessmentResult>.from(
+      previousState.assessmentResultsByTrackId,
+    )..[trackId] = result;
     final updatedAttemptHistory = <AssessmentAttemptEntry>[
       attempt,
       ...previousState.assessmentAttemptHistory,
@@ -661,7 +687,10 @@ class DemoAppController extends Notifier<DemoAppState> {
         id: 'history-assessment-${timestamp.microsecondsSinceEpoch}',
         kind: LearningHistoryKind.assessmentCompleted,
         title: 'Track assessment completed',
-        subtitle: _catalog.trackById(trackId).title.resolve(previousState.locale),
+        subtitle: _catalog
+            .trackById(trackId)
+            .title
+            .resolve(previousState.locale),
         scoreLabel: '$correctAnswers/$totalQuestions | $percent%',
         createdAt: timestamp,
         trackId: trackId,
@@ -690,41 +719,18 @@ class DemoAppController extends Notifier<DemoAppState> {
       return;
     }
 
-    final timestamp = DateTime.now();
-    final messages = List<AiMessage>.from(state.aiMessages)
-      ..add(
-        AiMessage(
-          id: 'user-${timestamp.microsecondsSinceEpoch}',
-          author: AiAuthor.user,
-          text: trimmed,
-          createdAt: timestamp,
-        ),
-      )
-      ..add(
-        AiMessage(
-          id: 'mentor-${timestamp.microsecondsSinceEpoch}',
-          author: AiAuthor.mentor,
-          text: _catalog.mentorReply(state, trimmed),
-          createdAt: timestamp.add(const Duration(milliseconds: 320)),
-        ),
-      );
-
-    state = _withDerived(
-      state.copyWith(
-        aiMessages: messages,
-        xp: state.xp + 2,
-      ),
+    recordAiExchange(
+      userMessage: trimmed,
+      mentorMessage: _catalog.mentorReply(state, trimmed),
+      xpDelta: 2,
     );
-    _persist();
   }
 
   void resetDemo() {
     final locale = state.locale;
     final themeMode = state.themeMode;
-    final currentUser = state.user ??
-        _createUser(
-          email: 'tomyrkanov@gmail.com',
-        );
+    final currentUser =
+        state.user ?? _createUser(email: 'tomyrkanov@gmail.com');
     final seeded = _seedState().copyWith(
       locale: locale,
       themeMode: themeMode,
@@ -745,20 +751,18 @@ class DemoAppController extends Notifier<DemoAppState> {
       user: const DemoUser(
         name: 'Talgat O.',
         email: 'tomyrkanov@gmail.com',
-        role: 'Student Explorer',
-        goal: 'Cover the full demo without dead ends',
+        role: 'Student',
+        goal: 'Build steady progress across CS Core and IT Spheres',
       ),
-      currentTrackId: 'fundamentals',
-      focusedLessonId: 'fundamentals_lesson_1_2',
+      currentTrackId: 'discrete_math',
+      focusedLessonId: 'discrete_math_lesson_1_1',
       focusedPracticeId: null,
       completedLessonIds: <String>{
         'fundamentals_lesson_1_1',
         'frontend_lesson_1_1',
         'operating_systems_lesson_1_1',
       },
-      completedPracticeIds: <String>{
-        'frontend_practice_1',
-      },
+      completedPracticeIds: <String>{'frontend_practice_1'},
       completedQuizIds: <String>{
         'fundamentals_lesson_1_1_quiz_1',
         'frontend_lesson_1_1_quiz_1',
@@ -876,9 +880,7 @@ class DemoAppController extends Notifier<DemoAppState> {
         'course_portfolio_engineering',
         'course_sql_for_analysts',
       },
-      savedCommunityCourseIds: <String>{
-        'course_ml_journal_club',
-      },
+      savedCommunityCourseIds: <String>{'course_ml_journal_club'},
       courseRatingsByCourseId: <String, int>{
         'course_dart_first_widget': 5,
         'course_sql_for_analysts': 4,
@@ -948,7 +950,7 @@ class DemoAppController extends Notifier<DemoAppState> {
           id: 'mentor-seed',
           author: AiAuthor.mentor,
           text:
-              'I can walk through CS Core topics, explain code output, and help you narrate the demo with clear next steps.',
+              'I can walk through CS Core topics, explain code output, and help you choose the next clear step.',
           createdAt: DateTime(2026, 3, 16, 9, 0),
         ),
       ],
@@ -971,8 +973,70 @@ class DemoAppController extends Notifier<DemoAppState> {
     return DemoUser(
       name: (name == null || name.trim().isEmpty) ? 'Talgat O.' : name.trim(),
       email: email.trim(),
-      role: role ?? 'Student Explorer',
-      goal: goal ?? 'Cover the full demo without dead ends',
+      role: role ?? 'Student',
+      goal: goal ?? 'Build steady progress across CS Core and IT Spheres',
+    );
+  }
+
+  DemoAppState _migrateRestoredState(DemoAppState restored) {
+    final needsDiscreteMathFocus =
+        restored.currentTrackId == 'fundamentals' &&
+        (restored.focusedLessonId == null ||
+            restored.focusedLessonId == 'fundamentals_lesson_1_2');
+    final needsRoleCleanup = restored.user?.role == 'Student Explorer';
+    final needsGoalCleanup =
+        restored.user?.goal == 'Cover the full demo without dead ends';
+    final needsAiCleanup = restored.aiMessages.any(
+      (message) =>
+          message.author == AiAuthor.mentor &&
+          message.text.contains('narrate the demo'),
+    );
+
+    if (!needsDiscreteMathFocus &&
+        !needsRoleCleanup &&
+        !needsGoalCleanup &&
+        !needsAiCleanup) {
+      return restored;
+    }
+
+    final restoredUser = restored.user;
+    final updatedUser = restoredUser?.copyWith(
+      role: needsRoleCleanup ? 'Student' : restoredUser.role,
+      goal: needsGoalCleanup
+          ? 'Build steady progress across CS Core and IT Spheres'
+          : restoredUser.goal,
+    );
+
+    final updatedMessages = needsAiCleanup
+        ? restored.aiMessages
+              .map(
+                (message) =>
+                    message.author == AiAuthor.mentor &&
+                        message.text.contains('narrate the demo')
+                    ? AiMessage(
+                        id: message.id,
+                        author: message.author,
+                        text:
+                            'I can walk through CS Core topics, explain code output, and help you choose the next clear step.',
+                        createdAt: message.createdAt,
+                      )
+                    : message,
+              )
+              .toList(growable: false)
+        : restored.aiMessages;
+
+    return restored.copyWith(
+      currentTrackId: needsDiscreteMathFocus
+          ? 'discrete_math'
+          : restored.currentTrackId,
+      focusedLessonId: needsDiscreteMathFocus
+          ? 'discrete_math_lesson_1_1'
+          : restored.focusedLessonId,
+      focusedPracticeId: needsDiscreteMathFocus
+          ? null
+          : restored.focusedPracticeId,
+      user: updatedUser,
+      aiMessages: updatedMessages,
     );
   }
 
@@ -1007,7 +1071,8 @@ class DemoAppController extends Notifier<DemoAppState> {
       ),
     ];
 
-    if (!_isModuleCompleted(previousState, module) && _isModuleCompleted(nextState, module)) {
+    if (!_isModuleCompleted(previousState, module) &&
+        _isModuleCompleted(nextState, module)) {
       entries.add(
         LearningHistoryEntry(
           id: 'history-module-${timestamp.microsecondsSinceEpoch}',
@@ -1027,7 +1092,10 @@ class DemoAppController extends Notifier<DemoAppState> {
           id: 'history-track-${timestamp.microsecondsSinceEpoch}',
           kind: LearningHistoryKind.trackCompleted,
           title: 'Track completed',
-          subtitle: _catalog.trackById(lesson.trackId).title.resolve(previousState.locale),
+          subtitle: _catalog
+              .trackById(lesson.trackId)
+              .title
+              .resolve(previousState.locale),
           createdAt: timestamp,
           trackId: lesson.trackId,
           refId: lesson.trackId,
@@ -1059,7 +1127,8 @@ class DemoAppController extends Notifier<DemoAppState> {
       ),
     ];
 
-    if (!_isModuleCompleted(previousState, module) && _isModuleCompleted(nextState, module)) {
+    if (!_isModuleCompleted(previousState, module) &&
+        _isModuleCompleted(nextState, module)) {
       entries.add(
         LearningHistoryEntry(
           id: 'history-module-${timestamp.microsecondsSinceEpoch}',
@@ -1079,8 +1148,10 @@ class DemoAppController extends Notifier<DemoAppState> {
           id: 'history-track-${timestamp.microsecondsSinceEpoch}',
           kind: LearningHistoryKind.trackCompleted,
           title: 'Track completed',
-          subtitle:
-              _catalog.trackById(practice.trackId).title.resolve(previousState.locale),
+          subtitle: _catalog
+              .trackById(practice.trackId)
+              .title
+              .resolve(previousState.locale),
           createdAt: timestamp,
           trackId: practice.trackId,
           refId: practice.trackId,
@@ -1094,7 +1165,8 @@ class DemoAppController extends Notifier<DemoAppState> {
     final lessonsDone = module.lessons.every(
       (lesson) => candidate.completedLessonIds.contains(lesson.id),
     );
-    final practiceDone = module.practice == null ||
+    final practiceDone =
+        module.practice == null ||
         candidate.completedPracticeIds.contains(module.practice!.id);
     return lessonsDone && practiceDone;
   }
@@ -1129,15 +1201,23 @@ class DemoAppController extends Notifier<DemoAppState> {
     required String prompt,
   }) {
     final normalized = prompt.toLowerCase();
-    final lessonTitle = currentLesson?.title.resolve(state.locale) ?? course.title.resolve(state.locale);
+    final lessonTitle =
+        currentLesson?.title.resolve(state.locale) ??
+        course.title.resolve(state.locale);
 
-    if (normalized.contains('code') || normalized.contains('пример') || normalized.contains('example')) {
+    if (normalized.contains('code') ||
+        normalized.contains('пример') ||
+        normalized.contains('example')) {
       return 'Start from the smallest moving part in $lessonTitle, then point to the final print. In ${course.title.resolve(state.locale)}, that usually makes the code explanation feel much calmer.';
     }
-    if (normalized.contains('next') || normalized.contains('дальше') || normalized.contains('step')) {
+    if (normalized.contains('next') ||
+        normalized.contains('дальше') ||
+        normalized.contains('step')) {
       return 'The clean next step is to finish $lessonTitle, then open the task block and explain the pattern in one sentence before solving it.';
     }
-    if (normalized.contains('why') || normalized.contains('зачем') || normalized.contains('why this')) {
+    if (normalized.contains('why') ||
+        normalized.contains('зачем') ||
+        normalized.contains('why this')) {
       return '${course.title.resolve(state.locale)} is useful because it turns a broad topic into one repeatable workflow you can explain, demonstrate, and then reuse in practice.';
     }
     return 'For $lessonTitle, focus on three beats: the idea, one small code example, and the practical takeaway. If you want, ask me about the output or the next task.';

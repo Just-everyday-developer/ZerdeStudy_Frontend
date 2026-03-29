@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme_colors.dart';
 
-enum AppNoticeType {
-  info,
-  success,
-  error,
-}
+enum AppNoticeType { info, success, error }
 
 class AppNoticeEntry {
   const AppNoticeEntry({
@@ -50,13 +46,20 @@ class AppNotice {
       duration: duration,
     );
 
-    final nextEntries = List<AppNoticeEntry>.from(_entries.value)..insert(0, entry);
-    _entries.value = nextEntries.take(4).toList(growable: false);
+    final current = _entries.value;
+    if (current.isNotEmpty &&
+        current.first.message == message &&
+        current.first.type == type) {
+      return;
+    }
+
+    _entries.value = <AppNoticeEntry>[entry];
   }
 
   static void _remove(String id) {
-    final nextEntries =
-        _entries.value.where((entry) => entry.id != id).toList(growable: false);
+    final nextEntries = _entries.value
+        .where((entry) => entry.id != id)
+        .toList(growable: false);
     _entries.value = nextEntries;
     if (nextEntries.isEmpty && _overlayEntry != null) {
       _overlayEntry!.remove();
@@ -66,9 +69,7 @@ class AppNotice {
 }
 
 class _NoticeStack extends StatelessWidget {
-  const _NoticeStack({
-    required this.entries,
-  });
+  const _NoticeStack({required this.entries});
 
   final ValueNotifier<List<AppNoticeEntry>> entries;
 
@@ -92,13 +93,15 @@ class _NoticeStack extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: items
-                      .map((entry) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _NoticeTile(
-                              entry: entry,
-                              onDismissed: () => AppNotice._remove(entry.id),
-                            ),
-                          ))
+                      .map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _NoticeTile(
+                            entry: entry,
+                            onDismissed: () => AppNotice._remove(entry.id),
+                          ),
+                        ),
+                      )
                       .toList(growable: false),
                 ),
               ),
@@ -111,10 +114,7 @@ class _NoticeStack extends StatelessWidget {
 }
 
 class _NoticeTile extends StatefulWidget {
-  const _NoticeTile({
-    required this.entry,
-    required this.onDismissed,
-  });
+  const _NoticeTile({required this.entry, required this.onDismissed});
 
   final AppNoticeEntry entry;
   final VoidCallback onDismissed;

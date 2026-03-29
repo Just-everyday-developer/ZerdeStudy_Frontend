@@ -21,10 +21,7 @@ import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 
 class ProfilePage extends ConsumerWidget {
-  const ProfilePage({
-    super.key,
-    this.enableShellAvatarHero = false,
-  });
+  const ProfilePage({super.key, this.enableShellAvatarHero = false});
 
   final bool enableShellAvatarHero;
 
@@ -35,8 +32,9 @@ class ProfilePage extends ConsumerWidget {
     final catalog = ref.watch(demoCatalogProvider);
     final l10n = context.l10n;
     final achievements = catalog.achievementsFor(state);
-    final unlocked =
-        achievements.where((item) => item.unlocked).toList(growable: false);
+    final unlocked = achievements
+        .where((item) => item.unlocked)
+        .toList(growable: false);
     final previewAchievements = achievements.take(6).toList(growable: false);
     final certificates = catalog.certificatesFor(state);
     final favorites = catalog.savedCoursesFor(state);
@@ -73,8 +71,12 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ],
             ),
-            child: compact
-                ? Column(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final headerCompact = compact || constraints.maxWidth < 560;
+
+                if (headerCompact) {
+                  return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
@@ -116,7 +118,9 @@ class ProfilePage extends ConsumerWidget {
                       const SizedBox(height: 18),
                       Row(
                         children: [
-                          Expanded(child: _Pill(label: 'XP', value: '${state.xp}')),
+                          Expanded(
+                            child: _Pill(label: 'XP', value: '${state.xp}'),
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _Pill(
@@ -133,58 +137,109 @@ class ProfilePage extends ConsumerWidget {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 18),
+                      Text(
+                        l10n.text('locale'),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: colors.textSecondary),
+                      ),
+                      const SizedBox(height: 8),
+                      LocaleSelector(
+                        currentLocale: state.locale,
+                        onChanged: controller.changeLocale,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        l10n.text('theme'),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: colors.textSecondary),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: AppThemeMode.values
+                            .map((mode) {
+                              final selected = mode == state.themeMode;
+                              return ChoiceChip(
+                                label: Text(_themeModeLabel(l10n, mode)),
+                                selected: selected,
+                                onSelected: (_) =>
+                                    controller.changeThemeMode(mode),
+                                selectedColor: colors.primary.withValues(
+                                  alpha: 0.16,
+                                ),
+                                backgroundColor: colors.surfaceSoft,
+                                side: BorderSide(
+                                  color: selected
+                                      ? colors.primary
+                                      : colors.divider,
+                                ),
+                                labelStyle: TextStyle(
+                                  color: selected
+                                      ? colors.primary
+                                      : colors.textSecondary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              );
+                            })
+                            .toList(growable: false),
+                      ),
                     ],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      _ProfileAvatar(
-                        enableHero: enableShellAvatarHero,
-                        size: 108,
+                  );
+                }
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _ProfileAvatar(
+                      enableHero: enableShellAvatarHero,
+                      size: 108,
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?.name ?? 'Talgat O.',
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            user?.email ?? 'tomyrkanov@gmail.com',
+                            style: TextStyle(color: colors.textSecondary),
+                          ),
+                          const SizedBox(height: 16),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              _Pill(label: 'XP', value: '${state.xp}'),
+                              _Pill(
+                                label: l10n.text('level'),
+                                value: '${state.level}',
+                              ),
+                              _Pill(
+                                label: l10n.text('streak'),
+                                value: '${state.streak}d',
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 18),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user?.name ?? 'Talgat O.',
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              user?.email ?? 'tomyrkanov@gmail.com',
-                              style: TextStyle(color: colors.textSecondary),
-                            ),
-                            const SizedBox(height: 16),
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: [
-                                _Pill(label: 'XP', value: '${state.xp}'),
-                                _Pill(
-                                  label: l10n.text('level'),
-                                  value: '${state.level}',
-                                ),
-                                _Pill(
-                                  label: l10n.text('streak'),
-                                  value: '${state.streak}d',
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Column(
+                    ),
+                    const SizedBox(width: 24),
+                    SizedBox(
+                      width: 238,
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             l10n.text('locale'),
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: colors.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(color: colors.textSecondary),
                           ),
                           const SizedBox(height: 8),
                           LocaleSelector(
@@ -194,36 +249,47 @@ class ProfilePage extends ConsumerWidget {
                           const SizedBox(height: 14),
                           Text(
                             l10n.text('theme'),
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: colors.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(color: colors.textSecondary),
                           ),
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children: AppThemeMode.values.map((mode) {
-                              final selected = mode == state.themeMode;
-                              return ChoiceChip(
-                                label: Text(_themeModeLabel(l10n, mode)),
-                                selected: selected,
-                                onSelected: (_) => controller.changeThemeMode(mode),
-                                selectedColor: colors.primary.withValues(alpha: 0.16),
-                                backgroundColor: colors.surfaceSoft,
-                                side: BorderSide(
-                                  color: selected ? colors.primary : colors.divider,
-                                ),
-                                labelStyle: TextStyle(
-                                  color: selected ? colors.primary : colors.textSecondary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              );
-                            }).toList(growable: false),
+                            children: AppThemeMode.values
+                                .map((mode) {
+                                  final selected = mode == state.themeMode;
+                                  return ChoiceChip(
+                                    label: Text(_themeModeLabel(l10n, mode)),
+                                    selected: selected,
+                                    onSelected: (_) =>
+                                        controller.changeThemeMode(mode),
+                                    selectedColor: colors.primary.withValues(
+                                      alpha: 0.16,
+                                    ),
+                                    backgroundColor: colors.surfaceSoft,
+                                    side: BorderSide(
+                                      color: selected
+                                          ? colors.primary
+                                          : colors.divider,
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: selected
+                                          ? colors.primary
+                                          : colors.textSecondary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  );
+                                })
+                                .toList(growable: false),
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
           SizedBox(height: compact ? 14 : 16),
           GlowCard(
@@ -237,12 +303,19 @@ class ProfilePage extends ConsumerWidget {
                       '${unlocked.length}/${achievements.length} ${l10n.text('unlocked').toLowerCase()}',
                   icon: Icons.workspace_premium_rounded,
                   accent: colors.success,
-                  onOpen: () =>
-                      _showAchievementsSheet(context, achievements, state.locale),
+                  onOpen: () => _showAchievementsSheet(
+                    context,
+                    achievements,
+                    state.locale,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 SizedBox(
-                  height: compact ? 198 : context.isWideLayout ? 168 : 190,
+                  height: compact
+                      ? 198
+                      : context.isWideLayout
+                      ? 168
+                      : 190,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: previewAchievements.length,
@@ -252,8 +325,8 @@ class ProfilePage extends ConsumerWidget {
                         width: compact
                             ? 184
                             : context.isWideLayout
-                                ? 220
-                                : 206,
+                            ? 220
+                            : 206,
                         child: _AchievementPreviewCard(
                           achievement: previewAchievements[index],
                           locale: state.locale,
@@ -293,7 +366,11 @@ class ProfilePage extends ConsumerWidget {
                   )
                 else
                   SizedBox(
-                    height: compact ? 196 : context.isWideLayout ? 178 : 188,
+                    height: compact
+                        ? 196
+                        : context.isWideLayout
+                        ? 178
+                        : 188,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: certificates.length,
@@ -304,8 +381,8 @@ class ProfilePage extends ConsumerWidget {
                           width: compact
                               ? 212
                               : context.isWideLayout
-                                  ? 260
-                                  : 228,
+                              ? 260
+                              : 228,
                           child: _CertificatePreviewCard(
                             certificate: certificate,
                             onTap: () => context.push(
@@ -334,24 +411,25 @@ class ProfilePage extends ConsumerWidget {
                   onOpen: favorites.isEmpty
                       ? null
                       : () => _showFavoritesSheet(
-                            context,
-                            favorites,
-                            state,
-                            catalog,
-                          ),
+                          context,
+                          favorites,
+                          state,
+                          catalog,
+                        ),
                 ),
                 const SizedBox(height: 14),
                 if (favorites.isEmpty)
                   Text(
                     l10n.text('favorites_empty'),
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      height: 1.4,
-                    ),
+                    style: TextStyle(color: colors.textSecondary, height: 1.4),
                   )
                 else
                   SizedBox(
-                    height: compact ? 196 : context.isWideLayout ? 176 : 188,
+                    height: compact
+                        ? 196
+                        : context.isWideLayout
+                        ? 176
+                        : 188,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: favorites.length,
@@ -364,9 +442,8 @@ class ProfilePage extends ConsumerWidget {
                             course: course,
                             subtitle:
                                 '${course.author.name} / ${l10n.courseLevelLabel(course.level)} / ${catalog.displayCourseRatingFor(state, course.id).toStringAsFixed(1)}',
-                            onTap: () => context.push(
-                              AppRoutes.courseById(course.id),
-                            ),
+                            onTap: () =>
+                                context.push(AppRoutes.courseById(course.id)),
                           ),
                         );
                       },
@@ -414,7 +491,9 @@ class ProfilePage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 14),
                 if (completedTracks.isNotEmpty)
-                  ...completedTracks.take(3).map(
+                  ...completedTracks
+                      .take(3)
+                      .map(
                         (track) => Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _ProfileLinkTile(
@@ -423,19 +502,15 @@ class ProfilePage extends ConsumerWidget {
                                 '${l10n.text('tree_assessments')} ${catalog.bestAssessmentPercentFor(state, track.id)}% - ${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} ${l10n.text('tree_units')}',
                             accent: track.color,
                             icon: Icons.check_circle_rounded,
-                            onTap: () => context.push(
-                              AppRoutes.trackById(track.id),
-                            ),
+                            onTap: () =>
+                                context.push(AppRoutes.trackById(track.id)),
                           ),
                         ),
                       )
                 else
                   Text(
                     l10n.text('completed_empty'),
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      height: 1.4,
-                    ),
+                    style: TextStyle(color: colors.textSecondary, height: 1.4),
                   ),
               ],
             ),
@@ -453,15 +528,17 @@ class ProfilePage extends ConsumerWidget {
                       : '${history.length} ${l10n.text('result_history').toLowerCase()}',
                   icon: Icons.history_rounded,
                   accent: colors.success,
-                  onOpen:
-                      history.isEmpty ? null : () => _showHistorySheet(context, history),
+                  onOpen: history.isEmpty
+                      ? null
+                      : () => _showHistorySheet(context, history),
                 ),
                 const SizedBox(height: 14),
                 AppButton.secondary(
                   label: l10n.text('open_history'),
                   icon: Icons.receipt_long_rounded,
-                  onPressed:
-                      history.isEmpty ? null : () => _showHistorySheet(context, history),
+                  onPressed: history.isEmpty
+                      ? null
+                      : () => _showHistorySheet(context, history),
                 ),
               ],
             ),
@@ -496,7 +573,9 @@ class ProfilePage extends ConsumerWidget {
             label: l10n.text('logout'),
             icon: Icons.logout_rounded,
             onPressed: () async {
-              final error = await ref.read(authControllerProvider.notifier).logout();
+              final error = await ref
+                  .read(authControllerProvider.notifier)
+                  .logout();
               if (!context.mounted) {
                 return;
               }
@@ -521,10 +600,12 @@ class ProfilePage extends ConsumerWidget {
     List<Achievement> achievements,
     AppLocale locale,
   ) {
-    final unlocked =
-        achievements.where((item) => item.unlocked).toList(growable: false);
-    final locked =
-        achievements.where((item) => !item.unlocked).toList(growable: false);
+    final unlocked = achievements
+        .where((item) => item.unlocked)
+        .toList(growable: false);
+    final locked = achievements
+        .where((item) => !item.unlocked)
+        .toList(growable: false);
     final colors = context.appColors;
     final l10n = context.l10n;
 
@@ -605,7 +686,9 @@ class ProfilePage extends ConsumerWidget {
                       icon: Icons.workspace_premium_rounded,
                       onTap: () {
                         Navigator.of(context).pop();
-                        context.push(AppRoutes.courseById(certificate.courseId));
+                        context.push(
+                          AppRoutes.courseById(certificate.courseId),
+                        );
                       },
                     );
                   },
@@ -720,10 +803,7 @@ class _SectionPanelHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 6),
               Text(
                 subtitle,
@@ -739,10 +819,7 @@ class _SectionPanelHeader extends StatelessWidget {
           icon: Icon(icon, color: accent),
           label: Text(
             context.l10n.text('show_all'),
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: accent, fontWeight: FontWeight.w700),
           ),
         ),
       ],
@@ -777,10 +854,7 @@ class _AchievementSection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(color: accent, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 12),
           if (achievements.isEmpty)
@@ -908,10 +982,7 @@ class _AchievementPreviewCard extends StatelessWidget {
           SizedBox(height: isWide ? 6 : 8),
           Text(
             '${achievement.progress}/${achievement.goal}',
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: accent, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -935,8 +1006,8 @@ class _CertificatePreviewCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
-        child: Container(
-          padding: EdgeInsets.all(isWide ? 14 : 15),
+      child: Container(
+        padding: EdgeInsets.all(isWide ? 14 : 15),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           gradient: LinearGradient(
@@ -950,32 +1021,29 @@ class _CertificatePreviewCard extends StatelessWidget {
           ),
           border: Border.all(color: certificate.accent.withValues(alpha: 0.3)),
         ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.workspace_premium_rounded,
-                    color: certificate.accent,
-                    size: isWide ? 22 : 20,
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: colors.textSecondary,
-                  ),
-                ],
-              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.workspace_premium_rounded,
+                  color: certificate.accent,
+                  size: isWide ? 22 : 20,
+                ),
+                const Spacer(),
+                Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+              ],
+            ),
             SizedBox(height: isWide ? 10 : 12),
             Text(
               certificate.title,
               maxLines: isWide ? 2 : 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: isWide ? 16 : 15,
-                  ),
+                fontWeight: FontWeight.w800,
+                fontSize: isWide ? 16 : 15,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -991,10 +1059,7 @@ class _CertificatePreviewCard extends StatelessWidget {
             const Spacer(),
             Text(
               '${context.l10n.text('course_certificate')} - ${_formatDate(certificate.issuedAt)}',
-              style: TextStyle(
-                color: colors.textSecondary,
-                height: 1.35,
-              ),
+              style: TextStyle(color: colors.textSecondary, height: 1.35),
             ),
           ],
         ),
@@ -1026,49 +1091,42 @@ class _FavoritePreviewCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
-        child: Container(
-          padding: const EdgeInsets.all(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           color: colors.surfaceSoft,
           border: Border.all(color: course.color.withValues(alpha: 0.24)),
         ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: course.color.withValues(alpha: 0.16),
-                    child: Icon(
-                      Icons.bookmark_rounded,
-                      color: course.color,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: colors.textSecondary,
-                  ),
-                ],
-              ),
-            const SizedBox(height: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: course.color.withValues(alpha: 0.16),
+                  child: Icon(Icons.bookmark_rounded, color: course.color),
+                ),
+                const Spacer(),
+                Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+              ],
+            ),
+            const SizedBox(height: 10),
             Text(
               course.title.en,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
-            Text(
-              subtitle,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: colors.textSecondary,
-                height: 1.35,
+            Expanded(
+              child: Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: colors.textSecondary, height: 1.35),
               ),
             ),
           ],
@@ -1079,10 +1137,7 @@ class _FavoritePreviewCard extends StatelessWidget {
 }
 
 class _AchievementGridItem extends StatelessWidget {
-  const _AchievementGridItem({
-    required this.achievement,
-    required this.locale,
-  });
+  const _AchievementGridItem({required this.achievement, required this.locale});
 
   final Achievement achievement;
   final AppLocale locale;
@@ -1098,8 +1153,9 @@ class _AchievementGridItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         color: colors.surfaceSoft,
         border: Border.all(
-          color:
-              achievement.unlocked ? accent.withValues(alpha: 0.45) : colors.divider,
+          color: achievement.unlocked
+              ? accent.withValues(alpha: 0.45)
+              : colors.divider,
         ),
       ),
       child: Column(
@@ -1146,10 +1202,7 @@ class _AchievementGridItem extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '${achievement.progress}/${achievement.goal}',
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: accent, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -1158,10 +1211,7 @@ class _AchievementGridItem extends StatelessWidget {
 }
 
 class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({
-    required this.enableHero,
-    required this.size,
-  });
+  const _ProfileAvatar({required this.enableHero, required this.size});
 
   final bool enableHero;
   final double size;
@@ -1187,18 +1237,12 @@ class _ProfileAvatar extends StatelessWidget {
       return avatar;
     }
 
-    return Hero(
-      tag: 'shell-profile-avatar',
-      child: avatar,
-    );
+    return Hero(tag: 'shell-profile-avatar', child: avatar);
   }
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({
-    required this.label,
-    required this.value,
-  });
+  const _Pill({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -1217,10 +1261,7 @@ class _Pill extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: colors.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: colors.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 4),
           Text(
@@ -1286,18 +1327,12 @@ class _ProfileLinkTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      height: 1.35,
-                    ),
+                    style: TextStyle(color: colors.textSecondary, height: 1.35),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: colors.textSecondary,
-            ),
+            Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
           ],
         ),
       ),
@@ -1306,9 +1341,7 @@ class _ProfileLinkTile extends StatelessWidget {
 }
 
 class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({
-    required this.entry,
-  });
+  const _HistoryTile({required this.entry});
 
   final LearningHistoryEntry entry;
 
@@ -1340,22 +1373,19 @@ class _HistoryTile extends StatelessWidget {
         children: [
           CircleAvatar(
             backgroundColor: accent.withValues(alpha: 0.16),
-            child: Icon(
-              switch (entry.kind) {
-                LearningHistoryKind.lessonCompleted => Icons.play_lesson_rounded,
-                LearningHistoryKind.practiceCompleted => Icons.code_rounded,
-                LearningHistoryKind.moduleCompleted => Icons.layers_rounded,
-                LearningHistoryKind.trackCompleted => Icons.account_tree_rounded,
-                LearningHistoryKind.assessmentCompleted =>
-                  Icons.assignment_turned_in_rounded,
-                LearningHistoryKind.courseSaved => Icons.bookmark_rounded,
-                LearningHistoryKind.courseEnrolled => Icons.school_rounded,
-                LearningHistoryKind.courseCompleted => Icons.check_circle_rounded,
-                LearningHistoryKind.certificateEarned =>
-                  Icons.workspace_premium_rounded,
-              },
-              color: accent,
-            ),
+            child: Icon(switch (entry.kind) {
+              LearningHistoryKind.lessonCompleted => Icons.play_lesson_rounded,
+              LearningHistoryKind.practiceCompleted => Icons.code_rounded,
+              LearningHistoryKind.moduleCompleted => Icons.layers_rounded,
+              LearningHistoryKind.trackCompleted => Icons.account_tree_rounded,
+              LearningHistoryKind.assessmentCompleted =>
+                Icons.assignment_turned_in_rounded,
+              LearningHistoryKind.courseSaved => Icons.bookmark_rounded,
+              LearningHistoryKind.courseEnrolled => Icons.school_rounded,
+              LearningHistoryKind.courseCompleted => Icons.check_circle_rounded,
+              LearningHistoryKind.certificateEarned =>
+                Icons.workspace_premium_rounded,
+            }, color: accent),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1373,10 +1403,7 @@ class _HistoryTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     entry.subtitle!,
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      height: 1.35,
-                    ),
+                    style: TextStyle(color: colors.textSecondary, height: 1.35),
                   ),
                 ],
                 const SizedBox(height: 6),

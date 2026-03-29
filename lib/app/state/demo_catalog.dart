@@ -70,6 +70,8 @@ class DemoCatalog {
   CommunityCourse courseById(String courseId) =>
       _coursesById[courseId] ?? communityCourses.first;
 
+  CommunityCourse? maybeCourseById(String courseId) => _coursesById[courseId];
+
   CoursePlayerLesson? courseLessonById(String lessonId) =>
       _courseLessonsById[lessonId];
 
@@ -236,7 +238,14 @@ class DemoCatalog {
 
   double displayCourseRatingFor(DemoAppState? state, String courseId) {
     final course = courseById(courseId);
-    final userRating = state?.courseRatingsByCourseId[courseId];
+    return displayCourseRatingForCourse(state, course);
+  }
+
+  double displayCourseRatingForCourse(
+    DemoAppState? state,
+    CommunityCourse course,
+  ) {
+    final userRating = state?.courseRatingsByCourseId[course.id];
     if (userRating == null) {
       return course.reviewSummary.averageRating;
     }
@@ -249,7 +258,14 @@ class DemoCatalog {
 
   int displayCourseReviewCountFor(DemoAppState? state, String courseId) {
     final course = courseById(courseId);
-    final userRating = state?.courseRatingsByCourseId[courseId];
+    return displayCourseReviewCountForCourse(state, course);
+  }
+
+  int displayCourseReviewCountForCourse(
+    DemoAppState? state,
+    CommunityCourse course,
+  ) {
+    final userRating = state?.courseRatingsByCourseId[course.id];
     return course.reviewSummary.reviewCount + (userRating == null ? 0 : 1);
   }
 
@@ -258,7 +274,14 @@ class DemoCatalog {
     String courseId,
   ) {
     final course = courseById(courseId);
-    final userRating = state?.courseRatingsByCourseId[courseId];
+    return displayCourseReviewSummaryForCourse(state, course);
+  }
+
+  CommunityCourseReviewSummary displayCourseReviewSummaryForCourse(
+    DemoAppState? state,
+    CommunityCourse course,
+  ) {
+    final userRating = state?.courseRatingsByCourseId[course.id];
     if (userRating == null) {
       return course.reviewSummary;
     }
@@ -267,8 +290,8 @@ class DemoCatalog {
     );
     distribution[userRating] = (distribution[userRating] ?? 0) + 1;
     return CommunityCourseReviewSummary(
-      averageRating: displayCourseRatingFor(state, courseId),
-      reviewCount: displayCourseReviewCountFor(state, courseId),
+      averageRating: displayCourseRatingForCourse(state, course),
+      reviewCount: displayCourseReviewCountForCourse(state, course),
       ratingDistribution: distribution,
     );
   }
@@ -716,7 +739,7 @@ class DemoCatalog {
       _achievement(
         'xp_900',
         'XP 900',
-        'Cross 900 XP in the demo.',
+        'Cross 900 XP in your learning path.',
         Icons.bolt_rounded,
         900,
         state.xp,
@@ -881,7 +904,7 @@ class DemoCatalog {
       name: state.user?.name ?? 'Talgat',
       xp: state.xp,
       level: state.level,
-      role: state.user?.role ?? 'Student Explorer',
+      role: state.user?.role ?? 'Student',
       focus: trackById(state.currentTrackId).title.resolve(state.locale),
       isCurrentUser: true,
     );
@@ -966,7 +989,7 @@ class DemoCatalog {
     if (_containsAny(normalized, <String>['quiz', 'output', 'вывод'])) {
       return <String>[
         'For output questions, narrate variables aloud: initial value, transformation, final print. That makes $focus much easier to present confidently.',
-        'A good demo hint is to point to the last visible change. In $focus, the final output matters more than every intermediate detail.',
+        'Point to the last visible change. In $focus, the final output matters more than every intermediate detail.',
         'Walk the example line by line and notice where state changes. That is usually the key to the output in $focus.',
       ];
     }
@@ -985,7 +1008,7 @@ class DemoCatalog {
     ])) {
       return <String>[
         'The tree is one shared route: Computer Science Core sets the foundation, Fundamentals bridges theory into practice, and the lower layer opens the specialized IT spheres.',
-        'A strong demo order is Operating Systems -> Databases -> Fundamentals -> Backend. It shows how the product flows from foundation into applied work.',
+        'A strong learning order is Operating Systems -> Databases -> Fundamentals -> Backend. It shows how the platform flows from foundation into applied work.',
         'Each branch stays independently available to open, so the tree feels connected without forcing one sphere to unlock another.',
       ];
     }
@@ -1003,9 +1026,9 @@ class DemoCatalog {
       'user',
     ])) {
       return <String>[
-        'Community courses are read-only mock data in this MVP, but they demonstrate how expert content can complement the main tree.',
+        'Community courses complement the main tree with expert perspectives, practical examples, and extra study formats.',
         'A strong presentation line is that user-created courses add discovery without changing the core progression logic.',
-        'Treat community courses as an expansion surface: curated authors, preview lessons, and save actions already feel product-ready in the mock.',
+        'Treat community courses as an expansion surface: curated authors, preview lessons, and save actions support steady discovery.',
       ];
     }
     if (_containsAny(normalized, <String>['next', 'дальше', 'след'])) {
@@ -1013,7 +1036,7 @@ class DemoCatalog {
       final nextTrack = _suggestNextTrack(state, state.currentTrackId);
       return <String>[
         next == null
-            ? 'This track is fully covered. I would jump to ${nextTrack.title.resolve(state.locale)} to keep the demo moving.'
+            ? 'This track is fully covered. I would jump to ${nextTrack.title.resolve(state.locale)} to keep your momentum moving.'
             : 'The next clean step is ${next.title.resolve(state.locale)}. It keeps the story focused and actionable.',
         'After $focus, I would open ${nextTrack.title.resolve(state.locale)} to show how independent branches still feel connected.',
         'For a smooth narrative, finish the current unit and then pivot into ${nextTrack.title.resolve(state.locale)}.',
@@ -1021,8 +1044,8 @@ class DemoCatalog {
     }
     return <String>[
       'For $focus, I would explain the idea, show the code example, let the learner predict the output, and only then move into practice.',
-      'This MVP is strongest when you show live state changes. Complete one lesson in $focus and then jump straight to the tree and statistics screens.',
-      'If you are presenting the demo, anchor on the journey: open branch, study lesson, solve quiz, finish trainer, and watch stats update.',
+      'A strong study rhythm is to complete one lesson in $focus and then jump straight to the tree and statistics screens.',
+      'Anchor on the journey: open a branch, study a lesson, solve a quiz, finish a trainer, and watch the stats update.',
     ];
   }
 

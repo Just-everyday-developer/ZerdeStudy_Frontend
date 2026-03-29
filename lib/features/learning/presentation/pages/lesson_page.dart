@@ -317,23 +317,14 @@ class _QuizCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = quiz.prompt.resolve(locale);
+
     return GlowCard(
       accent: context.appColors.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.text('lesson_output_quiz'),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            quiz.prompt.resolve(locale),
-            style: TextStyle(
-              color: context.appColors.textSecondary,
-              height: 1.35,
-            ),
-          ),
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           ...quiz.options.map(
             (option) => _OptionTile(
@@ -380,21 +371,26 @@ class _TrainerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final title = trainer.prompt.isNotEmpty
+        ? trainer.prompt
+        : trainer.instruction.resolve(locale);
+    final supportingText = trainer.prompt.isNotEmpty
+        ? trainer.instruction.resolve(locale)
+        : '';
 
     return GlowCard(
       accent: colors.success,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.text('lesson_memory_lab'),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            trainer.instruction.resolve(locale),
-            style: TextStyle(color: colors.textSecondary, height: 1.35),
-          ),
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          if (supportingText.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              supportingText,
+              style: TextStyle(color: colors.textSecondary, height: 1.35),
+            ),
+          ],
           const SizedBox(height: 12),
           if (trainer.template != null)
             Container(

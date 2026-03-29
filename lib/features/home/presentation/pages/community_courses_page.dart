@@ -14,6 +14,8 @@ import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/providers/course_search_focus_provider.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../courses_backend/data/models/backend_course_query.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../../../learning/presentation/widgets/course_discovery_widgets.dart';
 
 class CommunityCoursesPage extends ConsumerStatefulWidget {
@@ -76,18 +78,35 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
     BuildContext context,
     DemoCatalog catalog,
     AppLocalizations l10n,
+    BackendCourseDictionaries dictionaries,
   ) async {
     var draftTopicKey = _selectedTopicKey;
     var draftLevel = _selectedLevel;
     var draftMinRating = _selectedMinRating;
     var draftDurationBucket = _selectedDurationBucket;
     var draftCertificateOnly = _certificateOnly;
+    final topicOptions = dictionaries.topics.isEmpty
+        ? <String>['', ...catalog.courseTopicKeys()]
+        : <String>['', ...dictionaries.topics.map((topic) => topic.code)];
+    final levelOptions = dictionaries.levels.isEmpty
+        ? catalog.courseLevels()
+        : <String>['All', ...dictionaries.levels.map((level) => level.code)];
+    final durationOptions = dictionaries.durationCategories.isEmpty
+        ? <String>[
+            '',
+            ...catalog.courseDurationBuckets().map((bucket) => bucket.code),
+          ]
+        : <String>[
+            '',
+            ...dictionaries.durationCategories.map((item) => item.code),
+          ];
 
     await showAdaptivePanel<void>(
       context: context,
       wideMaxWidth: 720,
       builder: (context) {
-        final panelHeight = MediaQuery.of(context).size.height *
+        final panelHeight =
+            MediaQuery.of(context).size.height *
             (context.isCompactLayout ? 0.9 : 0.78);
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -119,14 +138,15 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                             subtitle: l10n.text('filter_topic_hint'),
                             highlighted: draftTopicKey != null,
                             child: DiscoveryFilterChoiceWrap<String>(
-                              options: <String>[
-                                '',
-                                ...catalog.courseTopicKeys(),
-                              ],
+                              options: topicOptions,
                               selectedValue: draftTopicKey ?? '',
                               labelBuilder: (value) => value.isEmpty
                                   ? l10n.text('all_topics')
-                                  : l10n.courseTopicLabel(value),
+                                  : _topicFilterLabel(
+                                      l10n,
+                                      dictionaries,
+                                      value,
+                                    ),
                               onSelected: (value) {
                                 setModalState(() {
                                   draftTopicKey = value.isEmpty ? null : value;
@@ -141,9 +161,10 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                             subtitle: l10n.text('filter_level_hint'),
                             highlighted: draftLevel != 'All',
                             child: DiscoveryFilterChoiceWrap<String>(
-                              options: catalog.courseLevels(),
+                              options: levelOptions,
                               selectedValue: draftLevel,
-                              labelBuilder: l10n.courseLevelLabel,
+                              labelBuilder: (value) =>
+                                  _levelFilterLabel(l10n, dictionaries, value),
                               onSelected: (value) {
                                 setModalState(() => draftLevel = value);
                               },
@@ -178,20 +199,16 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                             subtitle: l10n.text('filter_duration_hint'),
                             highlighted: draftDurationBucket != null,
                             child: DiscoveryFilterChoiceWrap<String>(
-                              options: <String>[
-                                '',
-                                ...catalog
-                                    .courseDurationBuckets()
-                                    .map((bucket) => bucket.code),
-                              ],
+                              options: durationOptions,
                               selectedValue: draftDurationBucket?.code ?? '',
                               labelBuilder: (value) {
                                 if (value.isEmpty) {
                                   return l10n.text('any_duration');
                                 }
-                                return _durationLabel(
+                                return _durationFilterLabel(
                                   l10n,
-                                  CourseDurationBucket.fromCode(value),
+                                  dictionaries,
+                                  value,
                                 );
                               },
                               onSelected: (value) {
@@ -276,6 +293,26 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
     final catalog = ref.watch(demoCatalogProvider);
+    final backendDictionaries = ref.watch(
+      backendCourseDictionariesProvider.select(
+        (value) => value.maybeWhen(
+          data: (dictionaries) => dictionaries,
+          orElse: () => const BackendCourseDictionaries.empty(),
+        ),
+      ),
+    );
+    final backendQuery = BackendCourseQuery(
+      minRating: _selectedMinRating,
+      levelCode: normalizeBackendLevelCode(_selectedLevel),
+      durationCode: _selectedDurationBucket?.code,
+      topicCode: resolveBackendTopicCode(
+        _selectedTopicKey,
+        backendDictionaries.topics,
+      ),
+    );
+    final backendCourses = ref.watch(
+      backendCourseCatalogProvider(backendQuery),
+    );
     final l10n = context.l10n;
     final colors = context.appColors;
 
@@ -293,12 +330,26 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
     final results = catalog.searchCourses(
       state: state,
       query: _query,
-      topicKey: _selectedTopicKey,
-      level: _selectedLevel,
+      topicKey: _resolvedMockTopicKey(),
+      level: normalizeMockLevelLabel(_selectedLevel),
       minRating: _selectedMinRating,
       durationBucket: _selectedDurationBucket,
       certificateOnly: _certificateOnly ? true : null,
     );
+    final comparisonCourse = catalog.courseById('course_sql_for_analysts');
+    final remoteResults = backendCourses.maybeWhen(
+      data: (courses) => courses,
+      orElse: () => const <CommunityCourse>[],
+    );
+    final remoteSourceCourses = _shouldPinComparisonCourse()
+        ? withComparisonCourse(
+            backendCourses: remoteResults,
+            comparisonCourse: comparisonCourse,
+          )
+        : remoteResults;
+    final visibleRemoteResults = remoteResults.isEmpty
+        ? const <CommunityCourse>[]
+        : _filterRemoteCourses(remoteSourceCourses);
     final authors = _filteredAuthors(catalog.courseAuthors());
 
     return AppPageScaffold(
@@ -323,7 +374,8 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                 hintText: l10n.text('search_courses'),
                 onChanged: (value) => setState(() => _query = value),
                 onSubmitted: (value) => setState(() => _query = value.trim()),
-                onFilterTap: () => _openFilters(context, catalog, l10n),
+                onFilterTap: () =>
+                    _openFilters(context, catalog, l10n, backendDictionaries),
               ),
               const SizedBox(height: 18),
               Wrap(
@@ -331,20 +383,27 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                 runSpacing: 10,
                 children: [
                   _ResultSignalChip(
-                    label: l10n.format(
-                      'catalog_results',
-                      <String, Object>{'count': results.length},
-                    ),
+                    label: l10n.format('catalog_results', <String, Object>{
+                      'count': results.length,
+                    }),
                     color: colors.primary,
                   ),
                   if (_selectedTopicKey != null)
                     _ResultSignalChip(
-                      label: l10n.courseTopicLabel(_selectedTopicKey!),
+                      label: _topicFilterLabel(
+                        l10n,
+                        backendDictionaries,
+                        _selectedTopicKey!,
+                      ),
                       color: colors.accent,
                     ),
                   if (_selectedLevel != 'All')
                     _ResultSignalChip(
-                      label: l10n.courseLevelLabel(_selectedLevel),
+                      label: _levelFilterLabel(
+                        l10n,
+                        backendDictionaries,
+                        _selectedLevel,
+                      ),
                       color: colors.primary,
                     ),
                   if (_selectedMinRating != null)
@@ -355,7 +414,11 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                     ),
                   if (_selectedDurationBucket != null)
                     _ResultSignalChip(
-                      label: _durationLabel(l10n, _selectedDurationBucket!),
+                      label: _durationFilterLabel(
+                        l10n,
+                        backendDictionaries,
+                        _selectedDurationBucket!.code,
+                      ),
                       color: colors.textSecondary,
                     ),
                   if (_certificateOnly)
@@ -366,6 +429,79 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                 ],
               ),
               const SizedBox(height: 20),
+              if (visibleRemoteResults.isNotEmpty) ...[
+                CourseDiscoverySectionHeader(
+                  title: l10n.text('section_popular_courses'),
+                ),
+                const SizedBox(height: 14),
+                if (compact)
+                  ...visibleRemoteResults.map(
+                    (course) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: SizedBox(
+                        height: 416,
+                        child: DiscoveryWideCourseCard(
+                          course: course,
+                          saved: state.savedCommunityCourseIds.contains(
+                            course.id,
+                          ),
+                          levelLabel: _levelFilterLabel(
+                            l10n,
+                            backendDictionaries,
+                            course.level,
+                          ),
+                          savedLabel: l10n.text('saved'),
+                          rating: catalog.displayCourseRatingForCourse(
+                            state,
+                            course,
+                          ),
+                          reviewCount: catalog
+                              .displayCourseReviewCountForCourse(state, course),
+                          onTap: () =>
+                              context.push(AppRoutes.courseById(course.id)),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: visibleRemoteResults.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: wide ? 3 : 2,
+                      crossAxisSpacing: 18,
+                      mainAxisSpacing: 18,
+                      childAspectRatio: wide ? 0.83 : 0.78,
+                    ),
+                    itemBuilder: (context, index) {
+                      final course = visibleRemoteResults[index];
+                      return DiscoveryWideCourseCard(
+                        course: course,
+                        saved: state.savedCommunityCourseIds.contains(
+                          course.id,
+                        ),
+                        levelLabel: _levelFilterLabel(
+                          l10n,
+                          backendDictionaries,
+                          course.level,
+                        ),
+                        savedLabel: l10n.text('saved'),
+                        rating: catalog.displayCourseRatingForCourse(
+                          state,
+                          course,
+                        ),
+                        reviewCount: catalog.displayCourseReviewCountForCourse(
+                          state,
+                          course,
+                        ),
+                        onTap: () =>
+                            context.push(AppRoutes.courseById(course.id)),
+                      );
+                    },
+                  ),
+                const SizedBox(height: 24),
+              ],
               if (results.isEmpty)
                 GlowCard(
                   accent: colors.accent,
@@ -395,13 +531,21 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                       height: 416,
                       child: DiscoveryWideCourseCard(
                         course: course,
-                        saved: state.savedCommunityCourseIds.contains(course.id),
+                        saved: state.savedCommunityCourseIds.contains(
+                          course.id,
+                        ),
                         levelLabel: l10n.courseLevelLabel(course.level),
                         savedLabel: l10n.text('saved'),
-                        rating: catalog.displayCourseRatingFor(state, course.id),
-                        reviewCount:
-                            catalog.displayCourseReviewCountFor(state, course.id),
-                        onTap: () => context.push(AppRoutes.courseById(course.id)),
+                        rating: catalog.displayCourseRatingFor(
+                          state,
+                          course.id,
+                        ),
+                        reviewCount: catalog.displayCourseReviewCountFor(
+                          state,
+                          course.id,
+                        ),
+                        onTap: () =>
+                            context.push(AppRoutes.courseById(course.id)),
                       ),
                     ),
                   ),
@@ -425,9 +569,12 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                       levelLabel: l10n.courseLevelLabel(course.level),
                       savedLabel: l10n.text('saved'),
                       rating: catalog.displayCourseRatingFor(state, course.id),
-                      reviewCount:
-                          catalog.displayCourseReviewCountFor(state, course.id),
-                      onTap: () => context.push(AppRoutes.courseById(course.id)),
+                      reviewCount: catalog.displayCourseReviewCountFor(
+                        state,
+                        course.id,
+                      ),
+                      onTap: () =>
+                          context.push(AppRoutes.courseById(course.id)),
                     );
                   },
                 ),
@@ -464,20 +611,77 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
     );
   }
 
-  List<CommunityCourseAuthor> _filteredAuthors(List<CommunityCourseAuthor> authors) {
-    return authors.where((author) {
-      if (_selectedTopicKey != null &&
-          !author.topicKeys.contains(_selectedTopicKey)) {
-        return false;
-      }
-      if (_query.trim().isEmpty) {
-        return true;
-      }
-      final normalized = _query.trim().toLowerCase();
-      return author.name.toLowerCase().contains(normalized) ||
-          author.role.toLowerCase().contains(normalized) ||
-          author.summary.toLowerCase().contains(normalized);
-    }).toList(growable: false);
+  List<CommunityCourseAuthor> _filteredAuthors(
+    List<CommunityCourseAuthor> authors,
+  ) {
+    final allowedTopicKeys = resolveMockTopicKeys(_selectedTopicKey);
+    return authors
+        .where((author) {
+          if (_selectedTopicKey != null &&
+              !allowedTopicKeys.any(author.topicKeys.contains)) {
+            return false;
+          }
+          if (_query.trim().isEmpty) {
+            return true;
+          }
+          final normalized = _query.trim().toLowerCase();
+          return author.name.toLowerCase().contains(normalized) ||
+              author.role.toLowerCase().contains(normalized) ||
+              author.summary.toLowerCase().contains(normalized);
+        })
+        .toList(growable: false);
+  }
+
+  String? _resolvedMockTopicKey() {
+    if (_selectedTopicKey == null) {
+      return null;
+    }
+
+    final allowedTopicKeys = resolveMockTopicKeys(_selectedTopicKey);
+    if (allowedTopicKeys.isNotEmpty) {
+      return allowedTopicKeys.first;
+    }
+
+    return _selectedTopicKey;
+  }
+
+  List<CommunityCourse> _filterRemoteCourses(List<CommunityCourse> courses) {
+    return courses
+        .where((course) {
+          if (_certificateOnly && !course.facts.hasCertificate) {
+            return false;
+          }
+          if (_query.trim().isEmpty) {
+            return true;
+          }
+
+          final normalized = _query.trim().toLowerCase();
+          return course.title.en.toLowerCase().contains(normalized) ||
+              course.subtitle.en.toLowerCase().contains(normalized) ||
+              course.description.en.toLowerCase().contains(normalized) ||
+              course.heroBadge.toLowerCase().contains(normalized) ||
+              course.heroHeadline.toLowerCase().contains(normalized) ||
+              course.learningOutcomes.any(
+                (item) => item.toLowerCase().contains(normalized),
+              ) ||
+              course.searchKeywords.any(
+                (keyword) => keyword.toLowerCase().contains(normalized),
+              ) ||
+              course.tags.any(
+                (tag) => tag.toLowerCase().contains(normalized),
+              ) ||
+              course.author.name.toLowerCase().contains(normalized);
+        })
+        .toList(growable: false);
+  }
+
+  bool _shouldPinComparisonCourse() {
+    return _query.trim().isEmpty &&
+        _selectedTopicKey == null &&
+        _selectedLevel == 'All' &&
+        _selectedMinRating == null &&
+        _selectedDurationBucket == null &&
+        !_certificateOnly;
   }
 
   String _durationLabel(AppLocalizations l10n, CourseDurationBucket bucket) {
@@ -489,6 +693,37 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
       case CourseDurationBucket.deep:
         return l10n.text('duration_deep');
     }
+  }
+
+  String _topicFilterLabel(
+    AppLocalizations l10n,
+    BackendCourseDictionaries dictionaries,
+    String value,
+  ) {
+    return dictionaries.topicLabel(value) ?? l10n.courseTopicLabel(value);
+  }
+
+  String _levelFilterLabel(
+    AppLocalizations l10n,
+    BackendCourseDictionaries dictionaries,
+    String value,
+  ) {
+    if (value == 'All') {
+      return l10n.text('all_levels');
+    }
+
+    return dictionaries.levelLabel(value) ??
+        dictionaries.levelLabel(normalizeBackendLevelCode(value)) ??
+        l10n.courseLevelLabel(value);
+  }
+
+  String _durationFilterLabel(
+    AppLocalizations l10n,
+    BackendCourseDictionaries dictionaries,
+    String value,
+  ) {
+    return dictionaries.durationLabel(value) ??
+        _durationLabel(l10n, CourseDurationBucket.fromCode(value));
   }
 }
 
@@ -509,10 +744,7 @@ String _clearFiltersLabel(AppLocalizations l10n) {
 }
 
 class _ResultSignalChip extends StatelessWidget {
-  const _ResultSignalChip({
-    required this.label,
-    required this.color,
-  });
+  const _ResultSignalChip({required this.label, required this.color});
 
   final String label;
   final Color color;

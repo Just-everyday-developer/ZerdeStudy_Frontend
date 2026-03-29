@@ -2,14 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:frontend_flutter/app/state/app_locale.dart';
 import 'package:frontend_flutter/app/state/demo_app_controller.dart';
+import 'package:frontend_flutter/core/network/json_http_client.dart';
 import 'package:frontend_flutter/core/common_widgets/glow_card.dart';
 import 'package:frontend_flutter/core/localization/app_localizations.dart';
 import 'package:frontend_flutter/core/theme/app_theme.dart';
+import 'package:frontend_flutter/features/ai/data/datasources/ai_chat_remote_data_source.dart';
+import 'package:frontend_flutter/features/ai/data/models/ai_chat_reply_dto.dart';
 import 'package:frontend_flutter/features/ai/presentation/pages/ai_mentor_page.dart';
+import 'package:frontend_flutter/features/ai/presentation/providers/ai_chat_controller.dart';
+import 'package:frontend_flutter/features/auth/presentation/providers/auth_controller.dart';
+import 'package:frontend_flutter/features/auth/domain/entities/auth_role.dart';
+import 'package:frontend_flutter/features/auth/domain/entities/auth_session.dart';
+import 'package:frontend_flutter/features/auth/domain/entities/auth_user.dart';
+import 'package:frontend_flutter/features/auth/domain/repositories/auth_repository.dart';
 import 'package:frontend_flutter/features/home/presentation/pages/community_courses_page.dart';
 import 'package:frontend_flutter/features/home/presentation/pages/home_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/learn_page.dart';
@@ -26,12 +36,15 @@ void main() {
 
   Future<ProviderContainer> createContainer({
     Map<String, Object> mockValues = const <String, Object>{},
+    List<dynamic> overrides = const [],
   }) async {
     SharedPreferences.setMockInitialValues(mockValues);
     final preferences = await SharedPreferences.getInstance();
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(preferences),
+        authSharedPreferencesProvider.overrideWithValue(preferences),
+        ...overrides,
       ],
     );
     addTearDown(container.dispose);
@@ -67,26 +80,31 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
-  testWidgets('social login from welcome opens dashboard', (tester) async {
+  testWidgets('email login from welcome opens dashboard', (tester) async {
     await configureSurface(tester);
-    final container = await createContainer();
-    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+    final container = await createContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+      ],
+    );
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
 
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MyApp(),
-      ),
+      UncontrolledProviderScope(container: container, child: const MyApp()),
     );
     await pumpScene(tester);
 
     expect(find.text('Log in'), findsOneWidget);
-    expect(find.text('Continue with'), findsOneWidget);
-    expect(find.text('GitHub'), findsOneWidget);
-    expect(find.text('Google'), findsOneWidget);
-    expect(find.text('Apple ID'), findsOneWidget);
+    expect(find.text('Sign up'), findsOneWidget);
 
-    await tester.tap(find.text('Google'));
+    await tester.tap(find.text('Log in'));
+    await pumpScene(tester);
+
+    await tester.enterText(find.byType(TextField).at(0), 'student@zerde.study');
+    await tester.enterText(find.byType(TextField).at(1), '05072006');
+    await tester.tap(find.text('Log in').last);
     await pumpScene(tester);
 
     expect(find.text('Recommended tracks'), findsOneWidget);
@@ -94,19 +112,24 @@ void main() {
 
   testWidgets('ctrl+k opens learn and reveals search', (tester) async {
     await configureSurface(tester);
-    final container = await createContainer();
-    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+    final container = await createContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(
+          FakeAuthRepository(
+            initialSession: fakeStudentSession(email: 'student@zerde.study'),
+          ),
+        ),
+      ],
+    );
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
 
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MyApp(),
-      ),
+      UncontrolledProviderScope(container: container, child: const MyApp()),
     );
     await pumpScene(tester);
 
-    await tester.tap(find.text('Google'));
-    await pumpScene(tester);
     expect(find.text('Recommended tracks'), findsOneWidget);
 
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
@@ -119,62 +142,69 @@ void main() {
     expect(find.text('Programming languages'), findsOneWidget);
   });
 
-  testWidgets('forgot password flow opens code screen and enters app',
-      (tester) async {
+  testWidgets('forgot password flow opens code page and authenticates', (
+    tester,
+  ) async {
     await configureSurface(tester);
-    final container = await createContainer();
-    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+    final container = await createContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+      ],
+    );
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
 
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MyApp(),
-      ),
+      UncontrolledProviderScope(container: container, child: const MyApp()),
     );
     await pumpScene(tester);
 
     await tester.tap(find.text('Forgot password?'));
     await pumpScene(tester);
-
-    expect(find.text('Reset your password'), findsOneWidget);
-    await tester.enterText(
-      find.byType(TextField).first,
-      'demo@zerdestudy.app',
-    );
+    await tester.enterText(find.byType(TextField).first, 'student@zerde.study');
     await tester.tap(find.text('Send code'));
     await pumpScene(tester);
 
-    expect(find.text('Enter verification code'), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(8));
 
     final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'student@zerde.study');
     for (var i = 0; i < 6; i++) {
-      await tester.enterText(fields.at(i), '${i + 1}');
+      await tester.enterText(fields.at(i + 1), '${i + 1}');
       await tester.pump(const Duration(milliseconds: 50));
     }
+    await tester.enterText(fields.at(7), 'Newpass123');
 
     await tester.tap(find.text('Verify and continue'));
     await pumpScene(tester);
 
-    expect(find.text('Recommended tracks'), findsOneWidget);
+    expect(container.read(authControllerProvider).isAuthenticated, isTrue);
   });
 
-  testWidgets('knowledge tree renders and opens track overview',
-      (tester) async {
+  testWidgets('knowledge tree renders and opens track overview', (
+    tester,
+  ) async {
     await configureSurface(tester);
-    final container = await createContainer();
-    final controller = container.read(demoAppControllerProvider.notifier);
-    controller.changeLocale(AppLocale.en);
-    controller.loginWithProvider('google');
+    final container = await createContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(
+          FakeAuthRepository(
+            initialSession: fakeStudentSession(email: 'student@zerde.study'),
+          ),
+        ),
+      ],
+    );
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
 
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MyApp(),
-      ),
+      UncontrolledProviderScope(container: container, child: const MyApp()),
     );
     await pumpScene(tester);
 
-    await tester.tap(find.byIcon(Icons.account_tree_outlined));
+    await tester.tap(find.text('Tree'));
     await pumpScene(tester);
 
     expect(find.text('Legend'), findsOneWidget);
@@ -189,11 +219,14 @@ void main() {
     expect(find.text('Modules'), findsOneWidget);
   });
 
-  testWidgets('learn discovery page shows search rails and frequent searches',
-      (tester) async {
+  testWidgets('learn discovery page shows search rails and frequent searches', (
+    tester,
+  ) async {
     await configureSurface(tester);
     final container = await createContainer();
-    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
 
     await tester.pumpWidget(buildTestApp(container, const LearnPage()));
     await pumpScene(tester);
@@ -216,10 +249,14 @@ void main() {
     expect(find.text('Frequent searches'), findsOneWidget);
   });
 
-  testWidgets('catalog applies initial topic filter and search', (tester) async {
+  testWidgets('catalog applies initial topic filter and search', (
+    tester,
+  ) async {
     await configureSurface(tester);
     final container = await createContainer();
-    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
 
     await tester.pumpWidget(
       buildTestApp(
@@ -239,8 +276,9 @@ void main() {
     expect(find.text('PostgreSQL Performance First'), findsOneWidget);
   });
 
-  testWidgets('home no longer shows community or achievements previews',
-      (tester) async {
+  testWidgets('home no longer shows community or achievements previews', (
+    tester,
+  ) async {
     await configureSurface(tester);
     final container = await createContainer();
     final controller = container.read(demoAppControllerProvider.notifier);
@@ -255,11 +293,14 @@ void main() {
     expect(find.text('Recommended tracks'), findsOneWidget);
   });
 
-  testWidgets('lesson requires quiz and memory lab before completion',
-      (tester) async {
+  testWidgets('lesson requires quiz and memory lab before completion', (
+    tester,
+  ) async {
     await configureSurface(tester);
     final container = await createContainer();
-    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
 
     await tester.pumpWidget(
       buildTestApp(
@@ -269,22 +310,21 @@ void main() {
     );
     await pumpScene(tester);
 
-    expect(find.text('Output Quiz'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Code Memory Lab'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Code Memory Lab'), findsOneWidget);
+    final lesson = container
+        .read(demoCatalogProvider)
+        .lessonById('fundamentals_lesson_2_2');
+    final quizTitle = lesson.quizzes.first.prompt.resolve(AppLocale.en);
+
+    expect(find.text(quizTitle), findsOneWidget);
 
     await tester.tap(find.text('3'));
     await pumpScene(tester);
     await tester.tap(find.text('Check answer'));
     await pumpScene(tester);
 
-    container.read(demoAppControllerProvider.notifier).completeTrainer(
-          'fundamentals_lesson_2_2_trainer_1',
-        );
+    container
+        .read(demoAppControllerProvider.notifier)
+        .completeTrainer('fundamentals_lesson_2_2_trainer_1');
     await pumpScene(tester);
 
     await tester.scrollUntilVisible(
@@ -304,13 +344,12 @@ void main() {
   testWidgets('track assessment submits and persists result', (tester) async {
     await configureSurface(tester);
     final container = await createContainer();
-    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
 
     await tester.pumpWidget(
-      buildTestApp(
-        container,
-        const TrackAssessmentPage(trackId: 'frontend'),
-      ),
+      buildTestApp(container, const TrackAssessmentPage(trackId: 'frontend')),
     );
     await pumpScene(tester);
 
@@ -335,7 +374,9 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       await tester.tap(
-        find.descendant(of: card.first, matching: find.text(correctOption)).first,
+        find
+            .descendant(of: card.first, matching: find.text(correctOption))
+            .first,
       );
       await pumpScene(tester);
     }
@@ -359,8 +400,9 @@ void main() {
     expect(storedState, isNotNull);
   });
 
-  testWidgets('profile shows achievements preview favorites and history',
-      (tester) async {
+  testWidgets('profile shows achievements preview favorites and history', (
+    tester,
+  ) async {
     await configureSurface(tester);
     final container = await createContainer();
     final controller = container.read(demoAppControllerProvider.notifier);
@@ -394,7 +436,7 @@ void main() {
     expect(find.text('Achievements'), findsOneWidget);
     expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
     await tester.scrollUntilVisible(
-      find.text('Favorites'),
+      find.text('Favorites').first,
       250,
       scrollable: find.byType(Scrollable).first,
     );
@@ -402,42 +444,156 @@ void main() {
     expect(find.text('Secure API Clinic'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Completed'),
+      find.text('Completed').first,
       250,
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Completed'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Result history'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Result history'), findsOneWidget);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
+    await pumpScene(tester);
+    expect(find.text('Result history'), findsWidgets);
   });
 
   testWidgets('ai mentor still returns deterministic replies', (tester) async {
     await configureSurface(tester);
-    final container = await createContainer();
-    container.read(demoAppControllerProvider.notifier).changeLocale(AppLocale.en);
+    final container = await createContainer(
+      overrides: [
+        aiChatRemoteDataSourceProvider.overrideWithValue(
+          FakeAiChatRemoteDataSource(),
+        ),
+      ],
+    );
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
 
     await tester.pumpWidget(buildTestApp(container, const AiMentorPage()));
     await pumpScene(tester);
 
     await tester.enterText(find.byType(TextField).last, 'Explain the tree');
-    await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+    await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
     await pumpScene(tester);
-    final firstReply = container.read(demoAppControllerProvider).aiMessages.last.text;
+    final firstReply = container
+        .read(demoAppControllerProvider)
+        .aiMessages
+        .last
+        .text;
 
     await tester.enterText(
       find.byType(TextField).last,
       'Give me a hint for the next output quiz.',
     );
-    await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+    await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
     await pumpScene(tester);
-    final secondReply =
-        container.read(demoAppControllerProvider).aiMessages.last.text;
+    final secondReply = container
+        .read(demoAppControllerProvider)
+        .aiMessages
+        .last
+        .text;
 
     expect(firstReply, isNot(secondReply));
   });
+}
+
+class FakeAuthRepository implements AuthRepository {
+  FakeAuthRepository({AuthSession? initialSession}) : _session = initialSession;
+
+  AuthSession? _session;
+
+  @override
+  Future<AuthSession?> restoreSession() async => _session;
+
+  @override
+  Future<AuthSession> register({
+    required String email,
+    required String password,
+  }) async {
+    _session = fakeStudentSession(email: email);
+    return _session!;
+  }
+
+  @override
+  Future<AuthSession> login({
+    required String email,
+    required String password,
+  }) async {
+    _session = fakeStudentSession(email: email);
+    return _session!;
+  }
+
+  @override
+  Future<AuthSession> refreshSession() async {
+    _session ??= fakeStudentSession(email: 'student@zerde.study');
+    return _session!;
+  }
+
+  @override
+  Future<void> logout() async {
+    _session = null;
+  }
+
+  @override
+  Future<void> requestPasswordReset({required String email}) async {}
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {}
+}
+
+AuthSession fakeStudentSession({required String email}) {
+  return AuthSession(
+    accessToken: 'test-access-token',
+    refreshToken: 'test-refresh-token',
+    user: AuthUser(
+      id: 'student-1',
+      email: email,
+      roles: <AuthRole>[
+        AuthRole(
+          id: 'role-student',
+          code: 'student',
+          name: 'Student',
+          description: 'Student role',
+          isDefault: true,
+          isPrivileged: false,
+          isSupport: false,
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ],
+      isActive: true,
+      createdAt: DateTime(2026, 1, 1),
+    ),
+  );
+}
+
+class FakeAiChatRemoteDataSource extends AiChatRemoteDataSource {
+  FakeAiChatRemoteDataSource()
+    : super(
+        JsonHttpClient(
+          client: http.Client(),
+          uriResolver: (_) => Uri.parse('http://localhost'),
+        ),
+      );
+
+  @override
+  Future<AiChatReplyDto> sendMessage({
+    required String conversation,
+    required String appContext,
+    String? userId,
+  }) async {
+    final latestMessage = conversation.trim().split('\n').last.toLowerCase();
+    final text = latestMessage.contains('tree')
+        ? 'The tree groups topics into connected branches so you can see prerequisites and the next step.'
+        : 'Start with the last visible value, then trace the update line by line before choosing an answer.';
+
+    return AiChatReplyDto(
+      text: text,
+      provider: 'fake',
+      model: 'fake-model',
+      latencyMs: 1,
+    );
+  }
 }

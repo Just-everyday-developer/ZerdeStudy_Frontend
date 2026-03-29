@@ -10,8 +10,8 @@ class JsonHttpClient {
   JsonHttpClient({
     required http.Client client,
     required Uri Function(String path) uriResolver,
-  })  : _client = client,
-        _uriResolver = uriResolver;
+  }) : _client = client,
+       _uriResolver = uriResolver;
 
   final http.Client _client;
   final Uri Function(String path) _uriResolver;
@@ -19,11 +19,29 @@ class JsonHttpClient {
   Future<JsonMap> getJson(
     String path, {
     Map<String, String> headers = const <String, String>{},
+    Map<String, String>? queryParameters,
   }) async {
     final response = await _send(
-      () => _client.get(_uriResolver(path), headers: headers),
+      () => _client.get(
+        _resolveUri(path, queryParameters: queryParameters),
+        headers: headers,
+      ),
     );
     return _decodeJsonMap(response);
+  }
+
+  Future<List<JsonMap>> getJsonList(
+    String path, {
+    Map<String, String> headers = const <String, String>{},
+    Map<String, String>? queryParameters,
+  }) async {
+    final response = await _send(
+      () => _client.get(
+        _resolveUri(path, queryParameters: queryParameters),
+        headers: headers,
+      ),
+    );
+    return _decodeJsonList(response);
   }
 
   Future<JsonMap> postJson(
@@ -93,6 +111,40 @@ class JsonHttpClient {
       statusCode: 0,
       code: 'invalid_response',
       message: 'Unexpected response payload.',
+    );
+  }
+
+  List<JsonMap> _decodeJsonList(http.Response response) {
+    if (response.body.trim().isEmpty) {
+      return const <JsonMap>[];
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is List) {
+      return decoded
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(growable: false);
+    }
+
+    throw const ApiException(
+      statusCode: 0,
+      code: 'invalid_response',
+      message: 'Unexpected response payload.',
+    );
+  }
+
+  Uri _resolveUri(String path, {Map<String, String>? queryParameters}) {
+    final baseUri = _uriResolver(path);
+    if (queryParameters == null || queryParameters.isEmpty) {
+      return baseUri;
+    }
+
+    return baseUri.replace(
+      queryParameters: <String, String>{
+        ...baseUri.queryParameters,
+        ...queryParameters,
+      },
     );
   }
 

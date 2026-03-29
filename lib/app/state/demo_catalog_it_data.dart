@@ -12,7 +12,7 @@ List<LearningTrack> buildItSphereTracks() {
       subtitle: 'Mindset, tooling, debugging, HTTP, and workflow habits',
       description:
           'A practical start for navigating software work with calmer structure.',
-      teaser: 'A hidden support branch that still powers the wider MVP flow.',
+      teaser: 'A support branch that strengthens the wider learning flow.',
       outcome:
           'You can move through an IT task with clearer steps and feedback loops.',
       icon: Icons.school_rounded,
@@ -34,7 +34,8 @@ List<LearningTrack> buildItSphereTracks() {
       subtitle: 'Semantics, layout, component state, and interactive UI',
       description:
           'Build intuitive interfaces with structure, styling, state, and feedback.',
-      teaser: 'A product-facing branch that turns logic into usable experience.',
+      teaser:
+          'A product-facing branch that turns logic into usable experience.',
       outcome:
           'You can explain how UI structure and state create responsive product experience.',
       icon: Icons.web_asset_rounded,
@@ -74,7 +75,8 @@ List<LearningTrack> buildItSphereTracks() {
     _track(
       id: 'mobile',
       title: 'Mobile',
-      subtitle: 'Mobile product development across platforms and runtime environments',
+      subtitle:
+          'Mobile product development across platforms and runtime environments',
       description:
           'Design mobile flows that respect device constraints and app lifecycle.',
       teaser: 'The parent branch for platform-specific mobile directions.',
@@ -110,7 +112,8 @@ List<LearningTrack> buildItSphereTracks() {
     _track(
       id: 'ios_development',
       title: 'iOS',
-      subtitle: 'Apple platform lifecycle, interface patterns, and native app structure',
+      subtitle:
+          'Apple platform lifecycle, interface patterns, and native app structure',
       description:
           'Understand iOS app behavior, navigation, and platform expectations.',
       teaser: 'Shows how one product branch adapts to a specific ecosystem.',
@@ -162,7 +165,8 @@ List<LearningTrack> buildItSphereTracks() {
     _track(
       id: 'system_administration',
       title: 'System Administration',
-      subtitle: 'Servers, services, users, environments, and host-level operations',
+      subtitle:
+          'Servers, services, users, environments, and host-level operations',
       description:
           'Maintain hosts, environments, and runtime services with operational clarity.',
       teaser: 'A practical branch for host operations and environment control.',
@@ -183,7 +187,8 @@ List<LearningTrack> buildItSphereTracks() {
     _track(
       id: 'machine_learning',
       title: 'ML Engineer',
-      subtitle: 'Model pipelines, features, evaluation, and product-facing ML systems',
+      subtitle:
+          'Model pipelines, features, evaluation, and product-facing ML systems',
       description:
           'Learn the flow from structured data to model evaluation and product use.',
       teaser: 'Connect AI theory, data, math, and engineering delivery.',
@@ -204,7 +209,8 @@ List<LearningTrack> buildItSphereTracks() {
     _track(
       id: 'qa_engineering',
       title: 'QA Engineer',
-      subtitle: 'Quality strategy, test design, regression control, and release confidence',
+      subtitle:
+          'Quality strategy, test design, regression control, and release confidence',
       description:
           'Build confidence in product behavior through testing and quality thinking.',
       teaser: 'A strong branch for showing reliability from the product side.',
@@ -226,7 +232,8 @@ List<LearningTrack> buildItSphereTracks() {
       subtitle: 'Threat models, auth, secrets, vulnerabilities, and monitoring',
       description:
           'Think defensively about systems, identities, and attack surfaces.',
-      teaser: 'A trust-focused branch built on networks, OS, and security foundations.',
+      teaser:
+          'A trust-focused branch built on networks, OS, and security foundations.',
       outcome:
           'You can explain how software protects identity, data, and availability.',
       icon: Icons.security_rounded,
@@ -335,7 +342,8 @@ DemoLessonSeed _lesson(
     quizExplanation:
         'The correct answer follows from the final value computed in the example.',
     trainer: blueprint.trainer,
-    promptSuggestion: 'Explain $title as if I am presenting $trackTitle on stage.',
+    promptSuggestion:
+        'Explain $title as if I am presenting $trackTitle on stage.',
   );
 }
 
@@ -409,8 +417,7 @@ print(plan.join(' -> '));''',
   correctQuizIndex: 1,
   trainer: DemoTrainerSeed.fillBlank(
     title: 'Fill the workflow join',
-    instruction:
-        'Choose the method that combines list items into one string.',
+    instruction: 'Choose the method that combines list items into one string.',
     prompt: 'Which method turns the list into a readable workflow?',
     options: <String>['join', 'split', 'map'],
     correctIndex: 0,
@@ -462,8 +469,7 @@ print(cards.length);''',
   correctQuizIndex: 1,
   trainer: DemoTrainerSeed.fillBlank(
     title: 'Complete the list metric',
-    instruction:
-        'Choose the property that returns the number of items.',
+    instruction: 'Choose the property that returns the number of items.',
     prompt: 'Which property returns the number of list elements?',
     options: <String>['length', 'size', 'last'],
     correctIndex: 0,
@@ -471,7 +477,8 @@ print(cards.length);''',
   ),
 );
 
-const String _practiceStarterA = '''final steps = ['understand', 'build', 'verify'];
+const String _practiceStarterA =
+    '''final steps = ['understand', 'build', 'verify'];
 
 // print a useful result''';
 

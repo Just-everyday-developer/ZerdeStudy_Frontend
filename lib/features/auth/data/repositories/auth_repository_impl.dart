@@ -10,8 +10,8 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
     required AuthRemoteDataSource remote,
     required AuthLocalDataSource local,
-  })  : _remote = remote,
-        _local = local;
+  }) : _remote = remote,
+       _local = local;
 
   final AuthRemoteDataSource _remote;
   final AuthLocalDataSource _local;
@@ -36,7 +36,9 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     try {
-      final refreshed = await _remote.refresh(refreshToken: stored.refreshToken);
+      final refreshed = await _remote.refresh(
+        refreshToken: stored.refreshToken,
+      );
       return _storeAndBuildSession(refreshed);
     } on ApiException {
       await _local.clearSession();
@@ -89,6 +91,24 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     await _local.clearSession();
+  }
+
+  @override
+  Future<void> requestPasswordReset({required String email}) {
+    return _remote.forgotPassword(email: email);
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) {
+    return _remote.resetPassword(
+      email: email,
+      code: code,
+      newPassword: newPassword,
+    );
   }
 
   Future<AuthSession> _storeAndBuildSession(AuthTokensDto tokens) async {

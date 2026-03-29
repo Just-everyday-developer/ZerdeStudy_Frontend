@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
-import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/common_widgets/tech_text_field.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../providers/auth_controller.dart';
 import '../providers/email_providers.dart';
 import '../widgets/auth_background_wrapper.dart';
 import '../widgets/tech_action_button.dart';
@@ -35,9 +35,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     super.dispose();
   }
 
-  void _sendCode() {
+  Future<void> _sendCode() async {
     final l10n = context.l10n;
-    final locale = ref.read(demoAppControllerProvider).locale;
     final email = _emailCtrl.text.trim();
     if (!ref.read(validateEmailProvider)(email)) {
       AppNotice.show(
@@ -48,18 +47,25 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       return;
     }
 
-    AppNotice.show(
-      context,
-      message: _pendingResetMessage(locale),
-      type: AppNoticeType.info,
-      duration: const Duration(seconds: 3),
-    );
+    final error = await ref
+        .read(authControllerProvider.notifier)
+        .requestPasswordReset(email: email);
+    if (!mounted) {
+      return;
+    }
+    if (error != null) {
+      AppNotice.show(context, message: error, type: AppNoticeType.error);
+      return;
+    }
+
+    context.push(AppRoutes.forgotPasswordCodeWithEmail(email));
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = ref.watch(demoAppControllerProvider);
+    final authState = ref.watch(authControllerProvider);
 
     return AuthBackgroundWrapper(
       child: SafeArea(
@@ -87,11 +93,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    _forgotPasswordSubtitle(state.locale),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyLarge
-                        ?.copyWith(height: 1.45),
+                    l10n.text('forgot_password_subtitle'),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(height: 1.45),
                   ),
                   const SizedBox(height: 28),
                   TechTextField(
@@ -101,10 +106,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                   ),
                   const SizedBox(height: 20),
                   TechActionButton(
-                    title: l10n.text('send_code'),
+                    title: authState.isBusy ? '...' : l10n.text('send_code'),
                     isPrimary: true,
                     icon: Icons.mark_email_read_outlined,
-                    onTap: _sendCode,
+                    onTap: authState.isBusy ? () {} : _sendCode,
                   ),
                   const SizedBox(height: 12),
                   Align(
@@ -122,27 +127,5 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         ),
       ),
     );
-  }
-}
-
-String _forgotPasswordSubtitle(AppLocale locale) {
-  switch (locale) {
-    case AppLocale.ru:
-      return 'Экран восстановления пароля пока не подключен к реальному backend-потоку. На этой задаче мы подключили только register, login, me, refresh и logout.';
-    case AppLocale.en:
-      return 'Password reset is not wired to the real backend flow yet. This task only connects register, login, me, refresh, and logout.';
-    case AppLocale.kk:
-      return 'Құпиясөзді қалпына келтіру әзірше нақты backend ағынына қосылған жоқ. Бұл тапсырмада тек register, login, me, refresh және logout қосылды.';
-  }
-}
-
-String _pendingResetMessage(AppLocale locale) {
-  switch (locale) {
-    case AppLocale.ru:
-      return 'Восстановление пароля вынесем в следующую backend-задачу.';
-    case AppLocale.en:
-      return 'Password reset will be connected in the next backend task.';
-    case AppLocale.kk:
-      return 'Құпиясөзді қалпына келтіру келесі backend тапсырмасында қосылады.';
   }
 }

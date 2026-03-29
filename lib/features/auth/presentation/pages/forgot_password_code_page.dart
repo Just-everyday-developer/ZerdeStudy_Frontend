@@ -7,16 +7,17 @@ import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
+import '../../../../core/common_widgets/tech_text_field.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../providers/auth_controller.dart';
+import '../providers/email_providers.dart';
+import '../providers/password_providers.dart';
 import '../widgets/auth_background_wrapper.dart';
 import '../widgets/tech_action_button.dart';
 
 class ForgotPasswordCodePage extends ConsumerStatefulWidget {
-  const ForgotPasswordCodePage({
-    super.key,
-    this.email,
-  });
+  const ForgotPasswordCodePage({super.key, this.email});
 
   final String? email;
 
@@ -27,30 +28,36 @@ class ForgotPasswordCodePage extends ConsumerStatefulWidget {
 
 class _ForgotPasswordCodePageState
     extends ConsumerState<ForgotPasswordCodePage> {
+  late final TextEditingController _emailController;
   late final List<TextEditingController> _controllers;
   late final List<FocusNode> _focusNodes;
+  late final TextEditingController _passwordController;
 
   @override
   void initState() {
     super.initState();
+    _emailController = TextEditingController(text: widget.email ?? '');
+    _emailController.addListener(_handleEmailChanged);
     _controllers = List<TextEditingController>.generate(
       6,
       (_) => TextEditingController(),
     );
-    _focusNodes = List<FocusNode>.generate(
-      6,
-      (_) => FocusNode(),
-    );
+    _focusNodes = List<FocusNode>.generate(6, (_) => FocusNode());
+    _passwordController = TextEditingController();
   }
 
   @override
   void dispose() {
+    _emailController
+      ..removeListener(_handleEmailChanged)
+      ..dispose();
     for (final controller in _controllers) {
       controller.dispose();
     }
     for (final focusNode in _focusNodes) {
       focusNode.dispose();
     }
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -60,9 +67,19 @@ class _ForgotPasswordCodePageState
   bool get _isCodeComplete =>
       _controllers.every((controller) => controller.text.trim().isNotEmpty);
 
-  void _submitCode() {
+  Future<void> _submitCode() async {
     final l10n = context.l10n;
-    final locale = ref.read(demoAppControllerProvider).locale;
+    final email = _emailController.text.trim();
+    final newPassword = _passwordController.text.trim();
+
+    if (!ref.read(validateEmailProvider)(email)) {
+      AppNotice.show(
+        context,
+        message: l10n.text('invalid_email'),
+        type: AppNoticeType.error,
+      );
+      return;
+    }
     if (!_isCodeComplete) {
       AppNotice.show(
         context,
@@ -71,13 +88,59 @@ class _ForgotPasswordCodePageState
       );
       return;
     }
+    if (!ref.read(validatePasswordProvider)(newPassword)) {
+      AppNotice.show(
+        context,
+        message: l10n.text('invalid_password'),
+        type: AppNoticeType.error,
+      );
+      return;
+    }
+
+    final authController = ref.read(authControllerProvider.notifier);
+    final resetError = await authController.resetPassword(
+      email: email,
+      code: _enteredCode,
+      newPassword: newPassword,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (resetError != null) {
+      AppNotice.show(context, message: resetError, type: AppNoticeType.error);
+      return;
+    }
+
+    final loginError = await authController.login(
+      email: email,
+      password: newPassword,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (loginError != null) {
+      AppNotice.show(
+        context,
+        message: _passwordResetLoginRequiredMessage(context.l10n.locale),
+        type: AppNoticeType.info,
+        duration: const Duration(seconds: 3),
+      );
+      context.go(AppRoutes.login);
+      return;
+    }
 
     AppNotice.show(
       context,
-      message: _pendingResetMessage(locale),
-      type: AppNoticeType.info,
+      message: _passwordResetSuccessMessage(context.l10n.locale),
+      type: AppNoticeType.success,
       duration: const Duration(seconds: 3),
     );
+  }
+
+  void _handleEmailChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _onDigitChanged(int index, String value) {
@@ -98,6 +161,7 @@ class _ForgotPasswordCodePageState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = ref.watch(demoAppControllerProvider);
+    final authState = ref.watch(authControllerProvider);
     final colors = context.appColors;
 
     return AuthBackgroundWrapper(
@@ -126,43 +190,69 @@ class _ForgotPasswordCodePageState
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    _verificationCodeSubtitle(
-                      state.locale,
-                      widget.email ?? l10n.text('email'),
-                    ),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyLarge
-                        ?.copyWith(height: 1.45),
+                    l10n.format('verification_code_subtitle', <String, Object>{
+                      'email': _emailController.text.trim().isEmpty
+                          ? l10n.text('email')
+                          : _emailController.text.trim(),
+                    }),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(height: 1.45),
                   ),
                   const SizedBox(height: 28),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: List<Widget>.generate(
-                      6,
-                      (index) => _CodeDigitField(
-                        controller: _controllers[index],
-                        focusNode: _focusNodes[index],
-                        onChanged: (value) => _onDigitChanged(index, value),
-                      ),
-                    ),
+                  TechTextField(
+                    hint: l10n.text('email'),
+                    icon: Icons.alternate_email_rounded,
+                    controller: _emailController,
+                  ),
+                  const SizedBox(height: 18),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      const gap = 10.0;
+                      final fieldWidth =
+                          ((constraints.maxWidth - (gap * 5)) / 6).clamp(
+                            42.0,
+                            56.0,
+                          );
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: List<Widget>.generate(
+                          6,
+                          (index) => _CodeDigitField(
+                            width: fieldWidth,
+                            controller: _controllers[index],
+                            focusNode: _focusNodes[index],
+                            onChanged: (value) => _onDigitChanged(index, value),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 18),
                   Center(
                     child: Text(
                       _enteredCode.isEmpty ? '------' : _enteredCode,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: colors.textSecondary,
-                            letterSpacing: 4,
-                          ),
+                        color: colors.textSecondary,
+                        letterSpacing: 4,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 22),
+                  TechTextField(
+                    hint: _newPasswordLabel(state.locale),
+                    icon: Icons.lock_outline_rounded,
+                    isObscure: true,
+                    controller: _passwordController,
+                  ),
+                  const SizedBox(height: 22),
                   TechActionButton(
-                    title: l10n.text('verify_and_continue'),
+                    title: authState.isBusy
+                        ? '...'
+                        : l10n.text('verify_and_continue'),
                     isPrimary: true,
                     icon: Icons.verified_user_outlined,
-                    onTap: _submitCode,
+                    onTap: authState.isBusy ? () {} : _submitCode,
                   ),
                   const SizedBox(height: 12),
                   Align(
@@ -183,35 +273,48 @@ class _ForgotPasswordCodePageState
   }
 }
 
-String _verificationCodeSubtitle(AppLocale locale, String email) {
-  switch (locale) {
-    case AppLocale.ru:
-      return 'Экран ввода кода пока оставлен как заглушка для будущей backend-задачи. Для адреса $email реальная проверка пока не подключена.';
-    case AppLocale.en:
-      return 'This code entry screen is kept as a placeholder for a future backend task. Real verification for $email is not connected yet.';
-    case AppLocale.kk:
-      return '$email адресы үшін кодты тексеру әзірше қосылған жоқ. Бұл экран келесі backend тапсырмасына арналған уақытша орын.';
-  }
+String _newPasswordLabel(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Новый пароль',
+    AppLocale.en => 'New password',
+    AppLocale.kk => 'Жаңа құпиясөз',
+  };
 }
 
-String _pendingResetMessage(AppLocale locale) {
-  switch (locale) {
-    case AppLocale.ru:
-      return 'Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РїР°СЂРѕР»СЏ РІС‹РЅРµСЃРµРј РІ СЃР»РµРґСѓСЋС‰СѓСЋ backend-Р·Р°РґР°С‡Сѓ.';
-    case AppLocale.en:
-      return 'Password reset will be connected in the next backend task.';
-    case AppLocale.kk:
-      return 'ТљТ±РїРёСЏСЃУ©Р·РґС– Т›Р°Р»РїС‹РЅР° РєРµР»С‚С–СЂСѓ РєРµР»РµСЃС– backend С‚Р°РїСЃС‹СЂРјР°СЃС‹РЅРґР° Т›РѕСЃС‹Р»Р°РґС‹.';
-  }
+String _passwordResetSuccessMessage(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Пароль обновлён. Открываем приложение.',
+    AppLocale.en => 'Password updated. Opening the app.',
+    AppLocale.kk => 'Құпиясөз жаңартылды. Қосымша ашылып жатыр.',
+  };
+}
+
+String _passwordResetLoginRequiredMessage(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Пароль обновлён. Войдите с новым паролем.',
+    AppLocale.en => 'Password updated. Sign in with the new password.',
+    AppLocale.kk => 'Құпиясөз жаңартылды. Жаңа құпиясөзбен кіріңіз.',
+  };
+}
+
+// ignore: unused_element
+String _passwordResetGenericError(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Не удалось продолжить восстановление пароля.',
+    AppLocale.en => 'Unable to continue the password reset flow.',
+    AppLocale.kk => 'Құпиясөзді қалпына келтіруді жалғастыру мүмкін болмады.',
+  };
 }
 
 class _CodeDigitField extends StatelessWidget {
   const _CodeDigitField({
+    required this.width,
     required this.controller,
     required this.focusNode,
     required this.onChanged,
   });
 
+  final double width;
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onChanged;
@@ -221,7 +324,7 @@ class _CodeDigitField extends StatelessWidget {
     final colors = context.appColors;
 
     return SizedBox(
-      width: 48,
+      width: width,
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -230,9 +333,9 @@ class _CodeDigitField extends StatelessWidget {
         onChanged: onChanged,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         decoration: InputDecoration(
           counterText: '',
           filled: true,

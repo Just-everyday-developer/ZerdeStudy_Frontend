@@ -1,0 +1,13 @@
+Какие метрики стоит отслеживать
+
+Enrollment -> First Lesson Start — сколько записались и реально начали.
+Lesson Completion Rate — завершение уроков.
+Module Drop-off Rate — где студенты массово отваливаются.
+Quiz Accuracy и Question Difficulty — какие вопросы слишком легкие/сложные.
+Assignment Submission Rate — процент сданных работ.
+Average Time per Lesson — время прохождения.
+Repeat Wrong Answers Rate — где устойчивые пробелы в знаниях.
+Q&A Load — сколько вопросов возникает по уроку.
+Course Completion Rate — общий процент завершения.
+Certificate Rate — сколько реально дошли до финиша.
+Learner Satisfaction — рейтинг/feedback по урокам и курсу.
