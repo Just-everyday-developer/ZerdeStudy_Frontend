@@ -3,6 +3,7 @@ import '../../../../core/network/json_http_client.dart';
 import '../models/ai_chat_reply_dto.dart';
 
 class AiChatRemoteDataSource {
+  static const llmApiKeyHeader = 'X-LLM-API-Key';
   static const _legacyMentorInstruction = '''
 You are the ZerdeStudy AI mentor.
 Help students with programming, computer science, IT topics, backend, mobile, data, and learning strategy.
@@ -26,6 +27,7 @@ Use **bold** only for short emphasis and `code` for commands, code identifiers, 
     required String conversation,
     required String appContext,
     String? userId,
+    String? userApiKey,
   }) async {
     final metadata = <String, dynamic>{
       'source': 'frontend_flutter',
@@ -35,6 +37,8 @@ Use **bold** only for short emphasis and `code` for commands, code identifiers, 
     final headers = <String, String>{
       if (authToken.trim().isNotEmpty)
         'Authorization': 'Bearer ${authToken.trim()}',
+      if ((userApiKey ?? '').trim().isNotEmpty)
+        llmApiKeyHeader: userApiKey!.trim(),
     };
     final requestBody = <String, dynamic>{
       'text': conversation,

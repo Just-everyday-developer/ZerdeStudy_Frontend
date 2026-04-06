@@ -14,6 +14,7 @@ import '../../data/datasources/ai_chat_remote_data_source.dart';
 import '../../domain/entities/ai_chat_message.dart';
 import 'ai_app_context_provider.dart';
 import 'ai_chat_state.dart';
+import 'ai_user_api_key_controller.dart';
 
 final aiHttpClientProvider = Provider<http.Client>((ref) {
   final client = http.Client();
@@ -85,6 +86,7 @@ class AiChatController extends Notifier<AiChatState> {
     try {
       final authUser = ref.read(authControllerProvider).user;
       final appContext = ref.read(aiAppContextProvider);
+      final userApiKey = ref.read(aiUserApiKeyProvider);
       final reply = await ref
           .read(aiChatRemoteDataSourceProvider)
           .sendMessage(
@@ -94,6 +96,7 @@ class AiChatController extends Notifier<AiChatState> {
             ),
             appContext: appContext,
             userId: authUser?.id,
+            userApiKey: userApiKey,
           );
 
       ref

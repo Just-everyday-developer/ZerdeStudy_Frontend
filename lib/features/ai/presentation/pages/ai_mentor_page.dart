@@ -16,6 +16,7 @@ import '../../../../core/theme/app_theme_colors.dart';
 import '../../domain/entities/ai_chat_message.dart';
 import '../providers/ai_chat_controller.dart';
 import '../providers/ai_chat_state.dart';
+import '../providers/ai_user_api_key_controller.dart';
 
 class AiMentorPage extends ConsumerStatefulWidget {
   const AiMentorPage({super.key});
@@ -62,6 +63,105 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
     return _submitMessage(_controller.text, clearComposer: true);
   }
 
+  Future<void> _showApiKeyDialog() async {
+    final currentKey = ref.read(aiUserApiKeyProvider) ?? '';
+    final controller = TextEditingController(text: currentKey);
+    var obscureText = true;
+
+    final submittedKey = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setState) {
+            return AlertDialog(
+              title: const Text('Personal LLM API key'),
+              content: SizedBox(
+                width: 440,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Stored locally on this device. ai-service will use it only for outgoing provider requests.',
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      obscureText: obscureText,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      decoration: InputDecoration(
+                        labelText: 'API key',
+                        hintText: 'Paste your Gemini or provider key',
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              obscureText = !obscureText;
+                            });
+                          },
+                          icon: Icon(
+                            obscureText
+                                ? Icons.visibility_rounded
+                                : Icons.visibility_off_rounded,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(controller.text);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (submittedKey == null) {
+      return;
+    }
+
+    await ref.read(aiUserApiKeyProvider.notifier).saveKey(submittedKey);
+    if (!mounted) {
+      return;
+    }
+
+    final hasKey = (submittedKey.trim().isNotEmpty);
+    AppNotice.show(
+      context,
+      message: hasKey
+          ? 'Personal API key saved locally.'
+          : 'Personal API key removed.',
+      type: AppNoticeType.success,
+    );
+  }
+
+  Future<void> _clearApiKey() async {
+    await ref.read(aiUserApiKeyProvider.notifier).clearKey();
+    if (!mounted) {
+      return;
+    }
+
+    AppNotice.show(
+      context,
+      message: 'Personal API key removed.',
+      type: AppNoticeType.success,
+    );
+  }
+
   void _scrollToBottom() {
     if (!_scrollController.hasClients) {
       return;
@@ -103,6 +203,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
       demoAppControllerProvider.select((state) => state.locale),
     );
     final chatState = ref.watch(aiChatControllerProvider);
+    final userApiKey = ref.watch(aiUserApiKeyProvider);
     final colors = context.appColors;
     final compact = context.isCompactLayout;
 
@@ -120,6 +221,13 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                 18,
               ),
               children: [
+                _ApiKeyStatusCard(
+                  hasCustomKey: (userApiKey ?? '').trim().isNotEmpty,
+                  maskedKey: _maskApiKey(userApiKey),
+                  onEdit: _showApiKeyDialog,
+                  onClear: _clearApiKey,
+                ),
+                const SizedBox(height: 16),
                 _FaqSection(
                   locale: locale,
                   onAsk: (question) {
@@ -166,6 +274,17 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
       ),
     );
   }
+}
+
+String? _maskApiKey(String? value) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.isEmpty) {
+    return null;
+  }
+  if (trimmed.length <= 8) {
+    return '${trimmed.substring(0, 2)}***${trimmed.substring(trimmed.length - 2)}';
+  }
+  return '${trimmed.substring(0, 4)}***${trimmed.substring(trimmed.length - 4)}';
 }
 
 class _AiComposer extends StatelessWidget {
@@ -297,6 +416,69 @@ class _MessageBubble extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ApiKeyStatusCard extends StatelessWidget {
+  const _ApiKeyStatusCard({
+    required this.hasCustomKey,
+    required this.maskedKey,
+    required this.onEdit,
+    required this.onClear,
+  });
+
+  final bool hasCustomKey;
+  final String? maskedKey;
+  final Future<void> Function() onEdit;
+  final Future<void> Function() onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return GlowCard(
+      accent: hasCustomKey ? colors.primary : colors.divider,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.vpn_key_rounded, color: colors.primary, size: 20),
+              const SizedBox(width: 10),
+              Text(
+                'Personal AI key',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            hasCustomKey
+                ? 'Using your saved provider key: $maskedKey'
+                : 'Using the app default AI key. Add your own key if you want requests billed to your provider account.',
+            style: TextStyle(color: colors.textSecondary, height: 1.45),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => onEdit(),
+                icon: const Icon(Icons.edit_rounded, size: 16),
+                label: Text(hasCustomKey ? 'Change key' : 'Add key'),
+              ),
+              if (hasCustomKey)
+                TextButton.icon(
+                  onPressed: () => onClear(),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                  label: const Text('Clear'),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
