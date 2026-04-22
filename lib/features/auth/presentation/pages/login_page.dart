@@ -10,6 +10,8 @@ import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/common_widgets/tech_text_field.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../app_guide/presentation/app_guide_controller.dart';
+import '../../../app_guide/presentation/app_guide_copy.dart';
 import '../providers/auth_controller.dart';
 import '../providers/email_providers.dart';
 import '../providers/password_providers.dart';
@@ -123,6 +125,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
+  Future<void> _startGuide() async {
+    await ref.read(appGuideControllerProvider.notifier).startFromLogin(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -142,10 +148,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             icon: const Icon(Icons.arrow_back_rounded),
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           ),
-          const Spacer(),
-          LocaleSelector(
-            currentLocale: demoState.locale,
-            onChanged: demoController.changeLocale,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                alignment: WrapAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: _startGuide,
+                    icon: const Icon(Icons.explore_rounded),
+                    label: Text(AppGuideCopy.loginEntryLabel(context)),
+                  ),
+                  LocaleSelector(
+                    currentLocale: demoState.locale,
+                    onChanged: demoController.changeLocale,
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

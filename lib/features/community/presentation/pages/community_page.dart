@@ -11,6 +11,8 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/common_widgets/tech_text_field.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../app_guide/presentation/app_guide_controller.dart';
+import '../../../app_guide/presentation/app_guide_target.dart';
 import '../community_text.dart';
 import '../providers/community_groups_provider.dart';
 
@@ -125,11 +127,14 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                AppButton.primary(
-                  label: _createGroupLabel.resolve(locale),
-                  icon: Icons.add_circle_outline_rounded,
-                  onPressed: () => _showCreateGroupDialog(context, locale),
-                  maxWidth: 280,
+                AppGuideTarget(
+                  id: AppGuideTargetIds.communityCreate,
+                  child: AppButton.primary(
+                    label: _createGroupLabel.resolve(locale),
+                    icon: Icons.add_circle_outline_rounded,
+                    onPressed: () => _showCreateGroupDialog(context, locale),
+                    maxWidth: 280,
+                  ),
                 ),
               ],
             ),

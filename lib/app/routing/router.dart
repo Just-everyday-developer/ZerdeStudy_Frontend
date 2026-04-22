@@ -33,10 +33,8 @@ import '../../features/moderator/presentation/pages/moderator_shell_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/teacher/presentation/pages/teacher_shell_page.dart';
 import 'app_routes.dart';
+import 'router_keys.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
-  debugLabel: 'root',
-);
 final GlobalKey<NavigatorState> _homeNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'home',
 );
@@ -79,7 +77,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = ref.watch(_routerRefreshProvider);
 
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: appRootNavigatorKey,
     initialLocation: AppRoutes.welcome,
     refreshListenable: refreshListenable,
     redirect: (context, state) {
@@ -248,7 +246,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.community}/groups/:groupId',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: CommunityGroupPage(
@@ -258,7 +256,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.profilePreview,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const ProfilePage(enableShellAvatarHero: true),
@@ -266,7 +264,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.track}/:trackId',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: TrackPage(
@@ -276,7 +274,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.lesson}/:lessonId',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: LessonPage(lessonId: state.pathParameters['lessonId'] ?? ''),
@@ -284,7 +282,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.practice}/:practiceId',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: PracticePage(
@@ -294,7 +292,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.assessment}/:trackId',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: TrackAssessmentPage(
@@ -304,25 +302,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.stats,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) =>
             cyberTransition(state: state, child: const StatsPage()),
       ),
       GoRoute(
         path: AppRoutes.leaderboard,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) =>
             cyberTransition(state: state, child: const LeaderboardPage()),
       ),
       GoRoute(
         path: AppRoutes.faq,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) =>
             cyberTransition(state: state, child: const FaqPage()),
       ),
       GoRoute(
         path: AppRoutes.courses,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: CommunityCoursesPage(
@@ -340,7 +338,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.courses}/:courseId',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: CommunityCourseDetailPage(
@@ -350,7 +348,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.coursePlayer}/:courseId',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: CommunityCoursePlayerPage(
@@ -361,7 +359,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.teacher,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const TeacherShellPage(section: TeacherSection.dashboard),
@@ -369,7 +367,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.teacherGenerator,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const TeacherShellPage(section: TeacherSection.generator),
@@ -377,7 +375,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.teacherBuilder,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const TeacherShellPage(section: TeacherSection.builder),
@@ -385,7 +383,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.teacherAssessments,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const TeacherShellPage(section: TeacherSection.assessments),
@@ -393,7 +391,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.teacherPublishing,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const TeacherShellPage(section: TeacherSection.publishing),
@@ -401,7 +399,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.teacherQna,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const TeacherShellPage(section: TeacherSection.qna),
@@ -409,7 +407,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.teacherAnalytics,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const TeacherShellPage(section: TeacherSection.analytics),
@@ -417,7 +415,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.teacherProfile,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const TeacherShellPage(section: TeacherSection.profile),
@@ -425,7 +423,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.moderator,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const ModeratorShellPage(initialTab: 0),
@@ -433,7 +431,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.moderatorCourses,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const ModeratorShellPage(initialTab: 1),
@@ -441,7 +439,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.moderatorReports,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const ModeratorShellPage(initialTab: 2),
@@ -449,7 +447,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.moderatorComments,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const ModeratorShellPage(initialTab: 3),
@@ -457,7 +455,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.moderatorCommunity,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const ModeratorShellPage(initialTab: 4),
@@ -465,7 +463,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.moderatorFaq,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const ModeratorShellPage(initialTab: 5),

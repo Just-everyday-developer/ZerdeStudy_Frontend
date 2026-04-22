@@ -53,8 +53,16 @@ class _CommunityCourseDetailPageState
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
     final backendCourses = ref.watch(backendPublishedCoursesProvider);
+    final backendCourseDetail = ref.watch(
+      backendCourseDetailProvider(widget.courseId),
+    );
+    final detailedBackendCourse = backendCourseDetail.maybeWhen(
+      data: (course) => course,
+      orElse: () => null,
+    );
     final course = _resolveCourse(
       catalog: catalog,
+      detailedBackendCourse: detailedBackendCourse,
       backendCourses: backendCourses.maybeWhen(
         data: (courses) => courses,
         orElse: () => null,
@@ -62,7 +70,7 @@ class _CommunityCourseDetailPageState
     );
     if (course == null) {
       final colors = context.appColors;
-      final loading = backendCourses.isLoading;
+      final loading = backendCourses.isLoading || backendCourseDetail.isLoading;
 
       return Scaffold(
         backgroundColor: colors.background,
@@ -83,6 +91,8 @@ class _CommunityCourseDetailPageState
       state,
       course,
     );
+    final backendPreviewEnabled =
+        detailedBackendCourse?.supportsCoursePlayer ?? false;
     final reviews = <CommunityCourseReview>[
       ..._localReviews,
       ...course.reviews,
@@ -115,8 +125,12 @@ class _CommunityCourseDetailPageState
                     ),
                     onSubmitComment: () =>
                         _submitReview(state.user?.name ?? 'Talgat', userRating),
-                    onPrimaryTap: () =>
-                        _handlePrimaryTap(context, course, controller),
+                    onPrimaryTap: () => _handlePrimaryTap(
+                      context,
+                      course,
+                      controller,
+                      useBackendPreview: backendPreviewEnabled,
+                    ),
                   )
                 : _WideCourseDetailLayout(
                     course: course,
@@ -137,8 +151,12 @@ class _CommunityCourseDetailPageState
                     ),
                     onSubmitComment: () =>
                         _submitReview(state.user?.name ?? 'Talgat', userRating),
-                    onPrimaryTap: () =>
-                        _handlePrimaryTap(context, course, controller),
+                    onPrimaryTap: () => _handlePrimaryTap(
+                      context,
+                      course,
+                      controller,
+                      useBackendPreview: backendPreviewEnabled,
+                    ),
                   ),
           ),
         ],
@@ -148,8 +166,13 @@ class _CommunityCourseDetailPageState
 
   CommunityCourse? _resolveCourse({
     required DemoCatalog catalog,
+    required CommunityCourse? detailedBackendCourse,
     required List<CommunityCourse>? backendCourses,
   }) {
+    if (detailedBackendCourse != null) {
+      return detailedBackendCourse;
+    }
+
     for (final course in backendCourses ?? const <CommunityCourse>[]) {
       if (course.id == widget.courseId) {
         return course;
@@ -183,8 +206,15 @@ class _CommunityCourseDetailPageState
   Future<void> _handlePrimaryTap(
     BuildContext context,
     CommunityCourse course,
-    DemoAppController controller,
-  ) async {
+    DemoAppController controller, {
+    bool useBackendPreview = false,
+  }) async {
+    if (useBackendPreview) {
+      controller.enrollCommunityCourse(course.id, courseOverride: course);
+      await _openBackendPreview(context, course);
+      return;
+    }
+
     if (!course.supportsCoursePlayer) {
       AppNotice.show(
         context,
@@ -290,6 +320,558 @@ class _CommunityCourseDetailPageState
           ),
         );
       },
+    );
+  }
+
+  Future<void> _openBackendPreview(
+    BuildContext context,
+    CommunityCourse course,
+  ) {
+    return showAdaptivePanel<void>(
+      context: context,
+      wideMaxWidth: 1100,
+      builder: (context) => _BackendCoursePreviewPanel(course: course),
+    );
+  }
+}
+
+class _BackendCoursePreviewPanel extends StatefulWidget {
+  const _BackendCoursePreviewPanel({required this.course});
+
+  final CommunityCourse course;
+
+  @override
+  State<_BackendCoursePreviewPanel> createState() =>
+      _BackendCoursePreviewPanelState();
+}
+
+class _BackendCoursePreviewPanelState
+    extends State<_BackendCoursePreviewPanel> {
+  late final List<_BackendPreviewLessonEntry> _entries;
+  late String? _selectedLessonId;
+
+  @override
+  void initState() {
+    super.initState();
+    _entries = <_BackendPreviewLessonEntry>[
+      for (final module in widget.course.coursePlayerModules)
+        for (final lesson in module.lessons)
+          _BackendPreviewLessonEntry(module: module, lesson: lesson),
+    ];
+    _selectedLessonId = _entries.isEmpty ? null : _entries.first.lesson.id;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final compact = context.isCompactLayout;
+    final height = compact ? MediaQuery.of(context).size.height * 0.92 : 720.0;
+    final currentEntry = _currentEntry;
+
+    return SizedBox(
+      height: height,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AdaptivePanelHandle(),
+            const SizedBox(height: 18),
+            Text(
+              widget.course.title.resolve(context.l10n.locale),
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.course.subtitle.resolve(context.l10n.locale),
+              style: TextStyle(color: colors.textSecondary, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _PreviewStatChip(
+                  icon: Icons.layers_rounded,
+                  label:
+                      '${widget.course.coursePlayerModules.length} ${context.l10n.text('course_tab_modules')}',
+                ),
+                _PreviewStatChip(
+                  icon: Icons.menu_book_rounded,
+                  label: '${_entries.length} ${context.l10n.text('lessons')}',
+                ),
+                _PreviewStatChip(
+                  icon: Icons.workspace_premium_rounded,
+                  label: widget.course.facts.certificateLabel,
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            if (currentEntry == null)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'Lessons are not available for this course yet.',
+                    style: TextStyle(color: colors.textSecondary),
+                  ),
+                ),
+              )
+            else if (compact)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedLessonId,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.text('course_tab_modules'),
+                      ),
+                      items: _entries
+                          .map(
+                            (entry) => DropdownMenuItem<String>(
+                              value: entry.lesson.id,
+                              child: Text(
+                                '${entry.module.title.resolve(context.l10n.locale)} - ${entry.lesson.title.resolve(context.l10n.locale)}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        setState(() => _selectedLessonId = value);
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: _BackendPreviewLessonContent(
+                          course: widget.course,
+                          entry: currentEntry,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 320,
+                      child: GlowCard(
+                        accent: widget.course.color,
+                        child: ListView(
+                          padding: EdgeInsets.zero,
+                          children: [
+                            for (final module
+                                in widget.course.coursePlayerModules) ...[
+                              Text(
+                                module.title.resolve(context.l10n.locale),
+                                style: TextStyle(
+                                  color: colors.textPrimary,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              for (final lesson in module.lessons)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _BackendPreviewLessonTile(
+                                    title: lesson.title.resolve(
+                                      context.l10n.locale,
+                                    ),
+                                    subtitle: module.title.resolve(
+                                      context.l10n.locale,
+                                    ),
+                                    selected: lesson.id == _selectedLessonId,
+                                    accent: widget.course.color,
+                                    onTap: () => setState(
+                                      () => _selectedLessonId = lesson.id,
+                                    ),
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: _BackendPreviewLessonContent(
+                          course: widget.course,
+                          entry: currentEntry,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _hasPrevious ? _selectPrevious : null,
+                    child: const Text('Previous lesson'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _hasNext ? _selectNext : null,
+                    child: Text(
+                      _hasNext ? 'Next lesson' : context.l10n.text('close'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (!_hasNext) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(context.l10n.text('close')),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  _BackendPreviewLessonEntry? get _currentEntry {
+    for (final entry in _entries) {
+      if (entry.lesson.id == _selectedLessonId) {
+        return entry;
+      }
+    }
+    return _entries.isEmpty ? null : _entries.first;
+  }
+
+  bool get _hasPrevious {
+    final index = _selectedIndex;
+    return index > 0;
+  }
+
+  bool get _hasNext {
+    final index = _selectedIndex;
+    return index >= 0 && index < _entries.length - 1;
+  }
+
+  int get _selectedIndex {
+    return _entries.indexWhere((entry) => entry.lesson.id == _selectedLessonId);
+  }
+
+  void _selectPrevious() {
+    final index = _selectedIndex;
+    if (index <= 0) {
+      return;
+    }
+    setState(() => _selectedLessonId = _entries[index - 1].lesson.id);
+  }
+
+  void _selectNext() {
+    final index = _selectedIndex;
+    if (index == -1 || index >= _entries.length - 1) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() => _selectedLessonId = _entries[index + 1].lesson.id);
+  }
+}
+
+class _BackendPreviewLessonEntry {
+  const _BackendPreviewLessonEntry({
+    required this.module,
+    required this.lesson,
+  });
+
+  final CoursePlayerModule module;
+  final CoursePlayerLesson lesson;
+}
+
+class _BackendPreviewLessonContent extends StatelessWidget {
+  const _BackendPreviewLessonContent({
+    required this.course,
+    required this.entry,
+  });
+
+  final CommunityCourse course;
+  final _BackendPreviewLessonEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final lesson = entry.lesson;
+    final locale = context.l10n.locale;
+    final keyPoints = lesson.explanation
+        .resolve(locale)
+        .split(RegExp(r'[.!?]\s+'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .take(4)
+        .toList(growable: false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GlowCard(
+          accent: course.color,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                entry.module.title.resolve(locale),
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                lesson.title.resolve(locale),
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                lesson.annotation.resolve(locale),
+                style: TextStyle(color: colors.textSecondary, height: 1.45),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GlowCard(
+          accent: colors.primary,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.text('course_what_you_will_learn'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                lesson.objective.resolve(locale),
+                style: TextStyle(color: colors.textSecondary, height: 1.45),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GlowCard(
+          accent: colors.accent,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Key takeaways',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 10),
+              if (keyPoints.isEmpty)
+                Text(
+                  lesson.explanation.resolve(locale),
+                  style: TextStyle(color: colors.textSecondary, height: 1.45),
+                )
+              else
+                ...keyPoints.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: course.color,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            item,
+                            style: TextStyle(
+                              color: colors.textSecondary,
+                              height: 1.45,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GlowCard(
+          accent: colors.success,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Lesson theory',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                lesson.explanation.resolve(locale),
+                style: TextStyle(color: colors.textSecondary, height: 1.55),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GlowCard(
+          accent: colors.primary,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.text('lesson_code_example'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  color: colors.backgroundElevated,
+                  border: Border.all(color: colors.divider),
+                ),
+                child: SelectableText(
+                  lesson.codeSnippet,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontFamily: 'monospace',
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                context.l10n.text('lesson_expected_output'),
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: colors.surfaceSoft,
+                ),
+                child: SelectableText(
+                  lesson.exampleOutput,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BackendPreviewLessonTile extends StatelessWidget {
+  const _BackendPreviewLessonTile({
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: selected ? accent.withValues(alpha: 0.12) : colors.surfaceSoft,
+          border: Border.all(color: selected ? accent : colors.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: TextStyle(color: colors.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewStatChip extends StatelessWidget {
+  const _PreviewStatChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: colors.surfaceSoft,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: colors.primary),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

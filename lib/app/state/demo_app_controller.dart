@@ -21,6 +21,7 @@ final demoAppControllerProvider =
 
 class DemoAppController extends Notifier<DemoAppState> {
   static const String _storageKey = 'zerdestudy_demo_state_v4';
+  static const Object _profileFieldUnchanged = Object();
 
   late final SharedPreferences _preferences;
   late final DemoCatalog _catalog;
@@ -148,7 +149,10 @@ class DemoAppController extends Notifier<DemoAppState> {
     required AppExperience activeExperience,
     DemoUser? user,
   }) {
-    final sameUser = _sameUser(state.user, user);
+    final mergedUser = user == null
+        ? null
+        : _mergeSyncedUser(currentUser: state.user, incomingUser: user);
+    final sameUser = _sameUser(state.user, mergedUser);
     if (state.isAuthenticated == isAuthenticated &&
         state.isModerator == isModerator &&
         state.activeExperience == activeExperience &&
@@ -161,7 +165,7 @@ class DemoAppController extends Notifier<DemoAppState> {
         activeExperience: activeExperience,
         isAuthenticated: isAuthenticated,
         isModerator: isModerator,
-        user: user,
+        user: mergedUser,
       ),
     );
     _persist();
@@ -174,6 +178,32 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void changeThemeMode(AppThemeMode themeMode) {
     state = _withDerived(state.copyWith(themeMode: themeMode));
+    _persist();
+  }
+
+  void updateProfile({
+    required String name,
+    Object? avatarBase64 = _profileFieldUnchanged,
+  }) {
+    final currentUser =
+        state.user ??
+        _createUser(
+          email: 'student@zerdestudy.app',
+          goal: _goalForExperience(state.activeExperience),
+          role: _roleForExperience(state.activeExperience),
+        );
+    final normalizedName = name.trim().isEmpty ? currentUser.name : name.trim();
+
+    state = _withDerived(
+      state.copyWith(
+        user: currentUser.copyWith(
+          name: normalizedName,
+          avatarBase64: identical(avatarBase64, _profileFieldUnchanged)
+              ? currentUser.avatarBase64
+              : avatarBase64 as String?,
+        ),
+      ),
+    );
     _persist();
   }
 
@@ -439,12 +469,12 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
-  void enrollCommunityCourse(String courseId) {
+  void enrollCommunityCourse(String courseId, {CommunityCourse? courseOverride}) {
     if (state.enrolledCommunityCourseIds.contains(courseId)) {
       return;
     }
 
-    final course = _catalog.courseById(courseId);
+    final course = courseOverride ?? _catalog.courseById(courseId);
     final allLessons = <CoursePlayerLesson>[
       for (final module in course.coursePlayerModules) ...module.lessons,
     ];
@@ -1226,7 +1256,31 @@ class DemoAppController extends Notifier<DemoAppState> {
     return left.name == right.name &&
         left.email == right.email &&
         left.role == right.role &&
-        left.goal == right.goal;
+        left.goal == right.goal &&
+        left.avatarBase64 == right.avatarBase64;
+  }
+
+  DemoUser _mergeSyncedUser({
+    required DemoUser? currentUser,
+    required DemoUser incomingUser,
+  }) {
+    if (currentUser == null) {
+      return incomingUser;
+    }
+
+    final sameEmail =
+        currentUser.email.trim().toLowerCase() ==
+        incomingUser.email.trim().toLowerCase();
+    if (!sameEmail) {
+      return incomingUser;
+    }
+
+    return incomingUser.copyWith(
+      name: currentUser.name.trim().isEmpty
+          ? incomingUser.name
+          : currentUser.name,
+      avatarBase64: currentUser.avatarBase64,
+    );
   }
 
   String _goalForExperience(AppExperience experience) {

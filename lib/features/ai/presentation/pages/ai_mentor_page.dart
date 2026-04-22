@@ -13,6 +13,8 @@ import '../../../../core/common_widgets/inline_markdown_text.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../app_guide/presentation/app_guide_controller.dart';
+import '../../../app_guide/presentation/app_guide_target.dart';
 import '../../domain/entities/ai_chat_message.dart';
 import '../providers/ai_chat_controller.dart';
 import '../providers/ai_chat_state.dart';
@@ -263,11 +265,14 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
               compact ? 16 : 0,
               compact ? 16 : 20,
             ),
-            child: _AiComposer(
-              controller: _controller,
-              onSubmitted: (_) => _send(),
-              onSend: _send,
-              isSending: chatState.isSending,
+            child: AppGuideTarget(
+              id: AppGuideTargetIds.aiComposer,
+              child: _AiComposer(
+                controller: _controller,
+                onSubmitted: (_) => _send(),
+                onSend: _send,
+                isSending: chatState.isSending,
+              ),
             ),
           ),
         ],

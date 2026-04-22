@@ -302,6 +302,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
       ),
     );
     final backendQuery = BackendCourseQuery(
+      search: _query.isEmpty ? null : _query,
       minRating: _selectedMinRating,
       levelCode: normalizeBackendLevelCode(_selectedLevel),
       durationCode: _selectedDurationBucket?.code,
@@ -309,6 +310,8 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
         _selectedTopicKey,
         backendDictionaries.topics,
       ),
+      hasCertificate: _certificateOnly ? true : null,
+      limit: 48,
     );
     final backendCourses = ref.watch(
       backendCourseCatalogProvider(backendQuery),
@@ -350,6 +353,8 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
     final visibleRemoteResults = remoteResults.isEmpty
         ? const <CommunityCourse>[]
         : _filterRemoteCourses(remoteSourceCourses);
+    final totalVisibleResults = results.length + visibleRemoteResults.length;
+    final hasAnyResults = totalVisibleResults > 0;
     final authors = _filteredAuthors(catalog.courseAuthors());
 
     return AppPageScaffold(
@@ -384,7 +389,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                 children: [
                   _ResultSignalChip(
                     label: l10n.format('catalog_results', <String, Object>{
-                      'count': results.length,
+                      'count': totalVisibleResults,
                     }),
                     color: colors.primary,
                   ),
@@ -502,7 +507,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                   ),
                 const SizedBox(height: 24),
               ],
-              if (results.isEmpty)
+              if (!hasAnyResults)
                 GlowCard(
                   accent: colors.accent,
                   child: Column(
@@ -523,7 +528,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                     ],
                   ),
                 )
-              else if (compact)
+              else if (results.isNotEmpty && compact)
                 ...results.map(
                   (course) => Padding(
                     padding: const EdgeInsets.only(bottom: 16),
@@ -550,7 +555,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                     ),
                   ),
                 )
-              else
+              else if (results.isNotEmpty)
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),

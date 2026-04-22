@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../app/routing/app_routes.dart';
 import '../../app/state/app_theme_mode.dart';
 import '../../app/state/demo_app_controller.dart';
+import '../../features/app_guide/presentation/app_guide_controller.dart';
+import '../../features/app_guide/presentation/app_guide_copy.dart';
 import '../localization/app_localizations.dart';
 import '../notifications/local_notification_service.dart';
 import '../theme/app_theme_colors.dart';
@@ -13,16 +15,19 @@ import 'app_notice.dart';
 import 'locale_selector.dart';
 
 Future<void> showAppSettingsPanel(BuildContext context) {
+  final hostContext = context;
   return showAdaptivePanel<void>(
     context: context,
     builder: (context) {
-      return const _AppSettingsPanelContent();
+      return _AppSettingsPanelContent(hostContext: hostContext);
     },
   );
 }
 
 class _AppSettingsPanelContent extends ConsumerStatefulWidget {
-  const _AppSettingsPanelContent();
+  const _AppSettingsPanelContent({required this.hostContext});
+
+  final BuildContext hostContext;
 
   @override
   ConsumerState<_AppSettingsPanelContent> createState() =>
@@ -90,6 +95,7 @@ class _AppSettingsPanelContentState
     final notificationService = ref.read(localNotificationServiceProvider);
     final colors = context.appColors;
     final l10n = context.l10n;
+    final guideState = ref.watch(appGuideControllerProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
@@ -141,6 +147,70 @@ class _AppSettingsPanelContentState
                   );
                 })
                 .toList(growable: false),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            AppGuideCopy.settingsSectionTitle(context),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: colors.surfaceSoft,
+              border: Border.all(color: colors.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.explore_rounded, color: colors.primary),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        AppGuideCopy.settingsSectionTitle(context),
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  AppGuideCopy.settingsSectionSubtitle(
+                    context,
+                    hasCompleted: guideState.hasCompleted,
+                  ),
+                  style: TextStyle(color: colors.textSecondary, height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!widget.hostContext.mounted) {
+                        return;
+                      }
+                      ref
+                          .read(appGuideControllerProvider.notifier)
+                          .startManual(widget.hostContext);
+                    });
+                  },
+                  icon: const Icon(Icons.play_circle_fill_rounded),
+                  label: Text(
+                    AppGuideCopy.settingsActionLabel(
+                      context,
+                      hasCompleted: guideState.hasCompleted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 18),
           Text(

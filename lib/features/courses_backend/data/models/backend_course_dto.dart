@@ -110,6 +110,9 @@ class BackendCourseDto {
     required this.tags,
     required this.topic,
     required this.learningOutcomes,
+    required this.publishedAt,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   final String id;
@@ -130,6 +133,9 @@ class BackendCourseDto {
   final List<BackendCourseTagDto> tags;
   final BackendDictionaryEntryDto? topic;
   final List<String> learningOutcomes;
+  final DateTime publishedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   factory BackendCourseDto.fromJson(Map<String, dynamic> json) {
     final rawTags = json['tags'] as List<dynamic>? ?? const <dynamic>[];
@@ -184,6 +190,15 @@ class BackendCourseDto {
           .map((item) => '$item'.trim())
           .where((item) => item.isNotEmpty)
           .toList(growable: false),
+      publishedAt:
+          DateTime.tryParse('${json['published_at'] ?? ''}') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      createdAt:
+          DateTime.tryParse('${json['created_at'] ?? ''}') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt:
+          DateTime.tryParse('${json['updated_at'] ?? ''}') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 }

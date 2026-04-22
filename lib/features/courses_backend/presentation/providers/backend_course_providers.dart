@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/state/app_locale.dart';
+import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_catalog_support.dart';
 import '../../../../app/state/demo_models.dart';
@@ -12,6 +14,8 @@ import '../../../../core/network/json_http_client.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../data/datasources/backend_course_remote_data_source.dart';
 import '../../data/models/backend_course_dto.dart';
+import '../../data/models/backend_lesson_dto.dart';
+import '../../data/models/backend_module_dto.dart';
 import '../../data/models/backend_course_query.dart';
 
 final backendCourseAccessTokenProvider = Provider<String?>((ref) {
@@ -32,6 +36,13 @@ final backendCourseRemoteDataSourceProvider =
       final client = ref.watch(backendCourseJsonHttpClientProvider);
       return BackendCourseRemoteDataSource(client);
     });
+
+final backendCourseLocaleCodeProvider = Provider<String>((ref) {
+  final locale = ref.watch(
+    demoAppControllerProvider.select((state) => state.locale),
+  );
+  return _localeCodeFor(locale);
+});
 
 class BackendCourseDictionaries {
   const BackendCourseDictionaries({
@@ -130,37 +141,69 @@ final backendCourseCatalogProvider =
       }
     });
 
-CommunityCourse adaptBackendCourseToCommunityCourse(BackendCourseDto course) {
-  final mockTopicKeys = resolveMockTopicKeys(
-    course.topic?.code ?? course.topic?.name,
-  );
-  final topicKey = mockTopicKeys.isEmpty
-      ? courseTopicProgrammingLanguages
-      : mockTopicKeys.first;
-  final author = CommunityCourseAuthor(
-    id: course.author.id.isEmpty
-        ? 'backend-author-${course.id}'
-        : course.author.id,
-    name: _authorDisplayName(course.author.email),
-    role: _authorRoleLabel(course.author),
-    accentLabel: course.topic?.name.isNotEmpty == true
-        ? course.topic!.name
-        : course.status.name,
-    followersCount: course.studentsCount,
-    courseCount: 1,
-    topicKeys: mockTopicKeys.isEmpty ? <String>[topicKey] : mockTopicKeys,
-    summary: course.author.email,
-    rating: course.rating,
-    studentCount: course.studentsCount,
-  );
+final backendCourseDetailProvider =
+    FutureProvider.family<CommunityCourse?, String>((ref, courseId) async {
+      final normalizedCourseId = courseId.trim();
+      if (normalizedCourseId.isEmpty) {
+        return null;
+      }
 
-  final title = course.title.trim().isEmpty ? 'Untitled course' : course.title;
-  final subtitle = course.subtitle.trim().isEmpty
-      ? 'Backend course preview'
-      : course.subtitle.trim();
-  final description = course.description.trim().isEmpty
-      ? 'Course description is not available yet from the backend.'
-      : course.description.trim();
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return null;
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+      final localeCode = ref.watch(backendCourseLocaleCodeProvider);
+
+      try {
+        final course = await remote.fetchCourseById(
+          accessToken: accessToken,
+          courseId: normalizedCourseId,
+        );
+        final modules = (await remote.fetchModules(
+          accessToken: accessToken,
+          localeCode: localeCode,
+        ))
+            .where((module) => module.courseId == course.id)
+            .toList(growable: true)
+          ..sort((left, right) => left.createdAt.compareTo(right.createdAt));
+
+        final lessonResponses = await Future.wait<MapEntry<String, List<BackendLessonDto>>>(
+          modules.map((module) async {
+            final lessons = (await remote.fetchLessonsForModule(
+              accessToken: accessToken,
+              moduleId: module.id,
+            )).toList(growable: true);
+            lessons.sort(
+              (left, right) => left.createdAt.compareTo(right.createdAt),
+            );
+            return MapEntry<String, List<BackendLessonDto>>(module.id, lessons);
+          }),
+        );
+
+        final lessonsByModule = <String, List<BackendLessonDto>>{
+          for (final entry in lessonResponses) entry.key: entry.value,
+        };
+
+        return adaptBackendCourseToDetailedCommunityCourse(
+          course,
+          modules: modules,
+          lessonsByModule: lessonsByModule,
+          localeCode: localeCode,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
+
+CommunityCourse adaptBackendCourseToCommunityCourse(BackendCourseDto course) {
+  final topicKeys = _topicKeysForCourse(course);
+  final topicKey = topicKeys.first;
+  final author = _authorForCourse(course, topicKeys);
+  final title = _titleForCourse(course);
+  final subtitle = _subtitleForCourse(course);
+  final description = _descriptionForCourse(course);
   final tags = _courseTags(course);
   final lessonPreviews = _lessonPreviewsForCourse(course, title);
 
@@ -169,16 +212,14 @@ CommunityCourse adaptBackendCourseToCommunityCourse(BackendCourseDto course) {
     title: title,
     subtitle: subtitle,
     description: description,
-    level: course.level.name.trim().isEmpty
-        ? _mockLevelLabelForCode(course.level.code)
-        : course.level.name.trim(),
+    level: _displayLevelLabel(course.level),
     rating: course.rating,
     enrollmentCount: course.studentsCount,
     estimatedHours: math.max(1, course.expectedHours),
     color: _accentColorForCourse(course.id),
     author: author,
     categoryKey: topicKey,
-    topicKeys: mockTopicKeys.isEmpty ? <String>[topicKey] : mockTopicKeys,
+    topicKeys: topicKeys,
     searchKeywords: _searchKeywordsForCourse(course, author),
     isPopular: true,
     isRecommended: false,
@@ -201,12 +242,169 @@ CommunityCourse adaptBackendCourseToCommunityCourse(BackendCourseDto course) {
       videoMinutes: math.max(1, course.expectedHours) * 60,
       assessmentCount: math.max(1, course.learningOutcomes.length),
       interactiveCount: math.max(1, tags.length),
-      languageLabel: 'Unknown',
+      languageLabel: 'EN / RU / KK',
       hasCertificate: course.hasCertificate,
       certificateLabel: course.hasCertificate
           ? 'Certificate included'
           : 'No certificate yet',
-      startModeLabel: course.status.name,
+      startModeLabel: _displayStatusLabel(course),
+    ),
+  );
+}
+
+CommunityCourse adaptBackendCourseToDetailedCommunityCourse(
+  BackendCourseDto course, {
+  required List<BackendModuleDto> modules,
+  required Map<String, List<BackendLessonDto>> lessonsByModule,
+  required String localeCode,
+}) {
+  final topicKeys = _topicKeysForCourse(course);
+  final topicKey = topicKeys.first;
+  final author = _authorForCourse(course, topicKeys);
+  final title = _titleForCourse(course);
+  final subtitle = _subtitleForCourse(course);
+  final description = _descriptionForCourse(course);
+  final tags = _courseTags(course);
+  final localizedModules = modules
+      .map(
+        (module) => CoursePlayerModule(
+          id: module.id,
+          title: sameText(module.title.trim().isEmpty ? 'Module' : module.title),
+          summary: sameText(
+            module.summary.trim().isEmpty
+                ? 'Lessons for this module are available in the live curriculum.'
+                : module.summary,
+          ),
+          lessons: (lessonsByModule[module.id] ?? const <BackendLessonDto>[])
+              .map(
+                (lesson) => CoursePlayerLesson(
+                  id: lesson.id,
+                  title: _localizedTextFromBackend(
+                    lesson.title,
+                    fallback: 'Lesson',
+                  ),
+                  annotation: _localizedTextFromBackend(
+                    lesson.summary,
+                    fallback: 'Lesson summary is not available yet.',
+                  ),
+                  explanation: _localizedTextFromBackend(
+                    lesson.theoryContent,
+                    fallback: _displayBackendText(
+                      lesson.summary,
+                      localeCode: localeCode,
+                      fallback: 'Lesson theory is not available yet.',
+                    ),
+                  ),
+                  objective: _localizedTextFromBackend(
+                    lesson.outcome,
+                    fallback: _displayBackendText(
+                      lesson.summary,
+                      localeCode: localeCode,
+                      fallback: 'Explore the lesson content and key ideas.',
+                    ),
+                  ),
+                  videoLabel:
+                      '${math.max(1, lesson.durationMinutes)} min live lesson',
+                  imageCaption: _displayBackendText(
+                    lesson.summary,
+                    localeCode: localeCode,
+                    fallback: 'Read the lesson summary and continue through the module.',
+                  ),
+                  codeSnippet: lesson.codeSnippet.trim().isEmpty
+                      ? '// Code snippet is not available for this lesson yet.'
+                      : lesson.codeSnippet.trim(),
+                  exampleOutput: lesson.exampleOutput.trim().isEmpty
+                      ? 'No example output yet.'
+                      : lesson.exampleOutput.trim(),
+                  comments: const <CoursePlayerComment>[],
+                  exercises: const <CoursePlayerExercise>[],
+                  nextActionLabel: sameText(
+                    'Review the key points and continue to the next lesson when you are ready.',
+                  ),
+                ),
+              )
+              .toList(growable: false),
+        ),
+      )
+      .where((module) => module.lessons.isNotEmpty)
+      .toList(growable: false);
+
+  final lessonPreviews = _lessonPreviewsFromModules(localizedModules);
+  final moduleSections = localizedModules
+      .map(
+        (module) => CommunityCourseModuleSection(
+          title: module.title.en,
+          description: module.summary.en,
+          items: module.lessons
+              .map(
+                (lesson) => CommunityCourseModuleItem(
+                  title: lesson.title.resolve(_localeFromCode(localeCode)),
+                  durationLabel: _durationLabelForMinutes(
+                    _minutesFromVideoLabel(lesson.videoLabel),
+                  ),
+                  viewerCount: math.max(0, course.studentsCount),
+                  helpfulCount: math.max(
+                    1,
+                    _minutesFromVideoLabel(lesson.videoLabel) ~/ 15,
+                  ),
+                ),
+              )
+              .toList(growable: false),
+        ),
+      )
+      .toList(growable: false);
+  final learningOutcomes = course.learningOutcomes.isNotEmpty
+      ? course.learningOutcomes
+      : _learningOutcomesFromModules(localizedModules, localeCode);
+
+  return buildCommunityCourse(
+    id: course.id,
+    title: title,
+    subtitle: subtitle,
+    description: description,
+    level: _displayLevelLabel(course.level),
+    rating: course.rating,
+    enrollmentCount: course.studentsCount,
+    estimatedHours: math.max(1, course.expectedHours),
+    color: _accentColorForCourse(course.id),
+    author: author,
+    categoryKey: topicKey,
+    topicKeys: topicKeys,
+    searchKeywords: _searchKeywordsForCourse(course, author),
+    isPopular: true,
+    isRecommended: false,
+    tags: tags,
+    lessons: lessonPreviews.isEmpty
+        ? _lessonPreviewsForCourse(course, title)
+        : lessonPreviews,
+    supportsCoursePlayer: localizedModules.any((module) => module.lessons.isNotEmpty),
+    learningOutcomes: learningOutcomes,
+    moduleSections: moduleSections,
+    coursePlayerModules: localizedModules,
+    reviews: const <CommunityCourseReview>[],
+    updates: _updatesForCourse(course, localizedModules.length),
+    reviewSummary: CommunityCourseReviewSummary(
+      averageRating: course.rating,
+      reviewCount: course.ratingCount,
+      ratingDistribution: _buildRatingDistribution(
+        rating: course.rating,
+        reviewCount: course.ratingCount,
+      ),
+    ),
+    facts: CommunityCourseFacts(
+      lessonCount: localizedModules.fold<int>(
+        0,
+        (sum, module) => sum + module.lessons.length,
+      ),
+      videoMinutes: math.max(1, course.expectedHours) * 60,
+      assessmentCount: math.max(1, learningOutcomes.length),
+      interactiveCount: localizedModules.length,
+      languageLabel: 'EN / RU / KK',
+      hasCertificate: course.hasCertificate,
+      certificateLabel: course.hasCertificate
+          ? 'Certificate included'
+          : 'No certificate yet',
+      startModeLabel: _displayStatusLabel(course),
     ),
   );
 }
@@ -258,8 +456,23 @@ String? resolveBackendTopicCode(
         haystacks.any((value) => value.contains('program'))) {
       return topic.code;
     }
+    if (lower == courseTopicProgrammingLanguages &&
+        haystacks.any(
+          (value) =>
+              value.contains('python') ||
+              value.contains('golang') ||
+              value.contains('network') ||
+              value.contains('operating'),
+        )) {
+      return topic.code;
+    }
     if (lower == courseTopicDataAnalytics &&
-        haystacks.any((value) => value.contains('analytic'))) {
+        haystacks.any(
+          (value) =>
+              value.contains('analytic') ||
+              value.contains('algebra') ||
+              value.contains('stat'),
+        )) {
       return topic.code;
     }
     if (lower == courseTopicAi &&
@@ -284,11 +497,20 @@ List<String> resolveMockTopicKeys(String? rawTopic) {
   }
 
   if (normalized == courseTopicProgrammingLanguages ||
-      normalized.contains('program')) {
+      normalized.contains('program') ||
+      normalized.contains('python') ||
+      normalized.contains('golang') ||
+      normalized.contains('network') ||
+      normalized.contains('operating') ||
+      normalized.contains('linux') ||
+      normalized.contains('devops')) {
     return const <String>[courseTopicProgrammingLanguages];
   }
   if (normalized == courseTopicDataAnalytics ||
-      normalized.contains('analytic')) {
+      normalized.contains('analytic') ||
+      normalized.contains('algebra') ||
+      normalized.contains('statistics') ||
+      normalized.contains('discrete')) {
     return const <String>[courseTopicDataAnalytics];
   }
   if (normalized == courseTopicAi ||
@@ -394,10 +616,10 @@ List<String> _courseTags(BackendCourseDto course) {
       else if (tag.code.trim().isNotEmpty)
         tag.code.trim(),
     if (course.topic?.name.trim().isNotEmpty == true) course.topic!.name.trim(),
-    if (course.level.name.trim().isNotEmpty) course.level.name.trim(),
+    _displayLevelLabel(course.level),
   ];
 
-  return values.isEmpty ? <String>[course.level.name] : values;
+  return values.isEmpty ? <String>[_displayLevelLabel(course.level)] : values;
 }
 
 List<String> _searchKeywordsForCourse(
@@ -458,6 +680,234 @@ int _estimatedLessonMinutes(BackendCourseDto course) {
   final lessons = math.max(1, course.lessonsCount);
   final totalMinutes = math.max(1, course.expectedHours) * 60;
   return math.max(8, (totalMinutes / lessons).round());
+}
+
+List<String> _topicKeysForCourse(BackendCourseDto course) {
+  final mockTopicKeys = resolveMockTopicKeys(
+    course.topic?.code ?? course.topic?.name,
+  );
+  return mockTopicKeys.isEmpty
+      ? const <String>[courseTopicProgrammingLanguages]
+      : mockTopicKeys;
+}
+
+CommunityCourseAuthor _authorForCourse(
+  BackendCourseDto course,
+  List<String> topicKeys,
+) {
+  return CommunityCourseAuthor(
+    id: course.author.id.isEmpty
+        ? 'backend-author-${course.id}'
+        : course.author.id,
+    name: _authorDisplayName(course.author.email),
+    role: _authorRoleLabel(course.author),
+    accentLabel: course.topic?.name.isNotEmpty == true
+        ? course.topic!.name
+        : _displayStatusLabel(course),
+    followersCount: course.studentsCount,
+    courseCount: 1,
+    topicKeys: topicKeys,
+    summary: course.author.email,
+    rating: course.rating,
+    studentCount: course.studentsCount,
+  );
+}
+
+String _titleForCourse(BackendCourseDto course) {
+  return course.title.trim().isEmpty ? 'Untitled course' : course.title.trim();
+}
+
+String _subtitleForCourse(BackendCourseDto course) {
+  return course.subtitle.trim().isEmpty
+      ? 'Backend course preview'
+      : course.subtitle.trim();
+}
+
+String _descriptionForCourse(BackendCourseDto course) {
+  return course.description.trim().isEmpty
+      ? 'Course description is not available yet from the backend.'
+      : course.description.trim();
+}
+
+String _displayLevelLabel(BackendDictionaryEntryDto level) {
+  if (level.code.trim().isNotEmpty) {
+    return _mockLevelLabelForCode(level.code);
+  }
+  if (level.name.trim().isNotEmpty) {
+    return normalizeMockLevelLabel(level.name);
+  }
+  return 'Intermediate';
+}
+
+String _displayStatusLabel(BackendCourseDto course) {
+  final code = course.status.code.trim();
+  if (code.isEmpty) {
+    return course.status.name.trim().isEmpty ? 'Published' : course.status.name;
+  }
+
+  return code
+      .split(RegExp(r'[_\s-]+'))
+      .where((segment) => segment.isNotEmpty)
+      .map((segment) {
+        final lower = segment.toLowerCase();
+        return '${lower[0].toUpperCase()}${lower.substring(1)}';
+      })
+      .join(' ');
+}
+
+List<CommunityCourseLessonPreview> _lessonPreviewsFromModules(
+  List<CoursePlayerModule> modules,
+) {
+  final lessons = <CoursePlayerLesson>[
+    for (final module in modules) ...module.lessons,
+  ];
+
+  return lessons
+      .take(3)
+      .map(
+        (lesson) => CommunityCourseLessonPreview(
+          title: lesson.title,
+          summary: lesson.annotation,
+          durationMinutes: _minutesFromVideoLabel(lesson.videoLabel),
+        ),
+      )
+      .toList(growable: false);
+}
+
+List<String> _learningOutcomesFromModules(
+  List<CoursePlayerModule> modules,
+  String localeCode,
+) {
+  return modules
+      .expand((module) => module.lessons)
+      .map(
+        (lesson) => lesson.objective.resolve(_localeFromCode(localeCode)).trim(),
+      )
+      .where((item) => item.isNotEmpty)
+      .take(6)
+      .toList(growable: false);
+}
+
+List<CommunityCourseUpdate> _updatesForCourse(
+  BackendCourseDto course,
+  int moduleCount,
+) {
+  final updates = <CommunityCourseUpdate>[
+    CommunityCourseUpdate(
+      id: '${course.id}_sync',
+      title: 'Live curriculum sync',
+      summary:
+          'This course is connected to the curriculum service and shows $moduleCount live module${moduleCount == 1 ? '' : 's'}.',
+      timeLabel: _relativeTimeLabel(course.updatedAt),
+    ),
+  ];
+
+  if (course.publishedAt.millisecondsSinceEpoch > 0) {
+    updates.add(
+      CommunityCourseUpdate(
+        id: '${course.id}_published',
+        title: 'Published in curriculum',
+        summary: 'The course became available in the shared curriculum catalog.',
+        timeLabel: _relativeTimeLabel(course.publishedAt),
+      ),
+    );
+  }
+
+  return updates;
+}
+
+LocalizedText _localizedTextFromBackend(
+  BackendLocalizedTextDto value, {
+  String fallback = '',
+}) {
+  final normalizedFallback = fallback.trim();
+  final en = value.en.trim().isNotEmpty
+      ? value.en.trim()
+      : _firstNonEmpty(<String>[value.ru, value.kk, normalizedFallback]);
+  final ru = value.ru.trim().isNotEmpty
+      ? value.ru.trim()
+      : _firstNonEmpty(<String>[value.en, value.kk, normalizedFallback]);
+  final kk = value.kk.trim().isNotEmpty
+      ? value.kk.trim()
+      : _firstNonEmpty(<String>[value.en, value.ru, normalizedFallback]);
+
+  return localizedText(ru, en, kk);
+}
+
+String _displayBackendText(
+  BackendLocalizedTextDto value, {
+  required String localeCode,
+  String fallback = '',
+}) {
+  final text = _localizedTextFromBackend(value, fallback: fallback);
+  return text.resolve(_localeFromCode(localeCode));
+}
+
+String _firstNonEmpty(List<String> values) {
+  for (final value in values) {
+    final normalized = value.trim();
+    if (normalized.isNotEmpty) {
+      return normalized;
+    }
+  }
+  return '';
+}
+
+String _durationLabelForMinutes(int minutes) {
+  final normalized = math.max(1, minutes);
+  if (normalized < 60) {
+    return '${normalized}m';
+  }
+
+  final hours = normalized ~/ 60;
+  final restMinutes = normalized % 60;
+  return restMinutes == 0 ? '${hours}h' : '${hours}h ${restMinutes}m';
+}
+
+int _minutesFromVideoLabel(String value) {
+  final match = RegExp(r'(\d+)').firstMatch(value);
+  return int.tryParse(match?.group(1) ?? '') ?? 15;
+}
+
+String _relativeTimeLabel(DateTime value) {
+  if (value.millisecondsSinceEpoch <= 0) {
+    return 'Recently';
+  }
+
+  final diff = DateTime.now().difference(value.toLocal());
+  if (diff.inDays >= 1) {
+    return '${diff.inDays}d ago';
+  }
+  if (diff.inHours >= 1) {
+    return '${diff.inHours}h ago';
+  }
+  if (diff.inMinutes >= 1) {
+    return '${diff.inMinutes}m ago';
+  }
+  return 'Just now';
+}
+
+String _localeCodeFor(AppLocale locale) {
+  switch (locale) {
+    case AppLocale.ru:
+      return 'ru';
+    case AppLocale.en:
+      return 'en';
+    case AppLocale.kk:
+      return 'kk';
+  }
+}
+
+AppLocale _localeFromCode(String localeCode) {
+  switch (localeCode.trim().toLowerCase()) {
+    case 'ru':
+      return AppLocale.ru;
+    case 'kk':
+      return AppLocale.kk;
+    case 'en':
+    default:
+      return AppLocale.en;
+  }
 }
 
 Map<int, int> _buildRatingDistribution({

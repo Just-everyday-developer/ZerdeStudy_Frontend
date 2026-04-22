@@ -62,6 +62,24 @@ class JsonHttpClient {
     return _decodeJsonMap(response);
   }
 
+  Future<JsonMap> putJson(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String> headers = const <String, String>{},
+  }) async {
+    final response = await _send(
+      () => _client.put(
+        _uriResolver(path),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: jsonEncode(body ?? const <String, dynamic>{}),
+      ),
+    );
+    return _decodeJsonMap(response);
+  }
+
   Future<void> postEmpty(
     String path, {
     Map<String, dynamic>? body,
@@ -77,6 +95,13 @@ class JsonHttpClient {
         body: jsonEncode(body ?? const <String, dynamic>{}),
       ),
     );
+  }
+
+  Future<void> deleteEmpty(
+    String path, {
+    Map<String, String> headers = const <String, String>{},
+  }) async {
+    await _send(() => _client.delete(_uriResolver(path), headers: headers));
   }
 
   Future<http.Response> _send(Future<http.Response> Function() request) async {

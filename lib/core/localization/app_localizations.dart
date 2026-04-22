@@ -129,6 +129,77 @@ class AppLocalizations {
           AppLocale.en => 'Write a comment',
           AppLocale.kk => 'Пікір жазыңыз',
         };
+      case 'profile_edit':
+        return switch (locale) {
+          AppLocale.ru => 'Редактировать профиль',
+          AppLocale.en => 'Edit profile',
+          AppLocale.kk => 'Профильді өңдеу',
+        };
+      case 'profile_edit_title':
+        return switch (locale) {
+          AppLocale.ru => 'Имя и аватар',
+          AppLocale.en => 'Name and avatar',
+          AppLocale.kk => 'Аты мен аватар',
+        };
+      case 'profile_name_label':
+        return switch (locale) {
+          AppLocale.ru => 'Имя пользователя',
+          AppLocale.en => 'Display name',
+          AppLocale.kk => 'Пайдаланушы аты',
+        };
+      case 'profile_name_hint':
+        return switch (locale) {
+          AppLocale.ru => 'Введите имя, которое увидят в профиле',
+          AppLocale.en => 'Enter the name shown in your profile',
+          AppLocale.kk => 'Профильде көрінетін атты енгізіңіз',
+        };
+      case 'profile_avatar_pick':
+        return switch (locale) {
+          AppLocale.ru => 'Выбрать фото',
+          AppLocale.en => 'Choose photo',
+          AppLocale.kk => 'Фото таңдау',
+        };
+      case 'profile_avatar_remove':
+        return switch (locale) {
+          AppLocale.ru => 'Убрать аватар',
+          AppLocale.en => 'Remove avatar',
+          AppLocale.kk => 'Аватарды өшіру',
+        };
+      case 'profile_avatar_helper':
+        return switch (locale) {
+          AppLocale.ru =>
+            'Поддерживаются JPG, PNG и WebP. Изображение автоматически обрежется под круглый аватар.',
+          AppLocale.en =>
+            'JPG, PNG, and WebP are supported. The image is cropped automatically for a circular avatar.',
+          AppLocale.kk =>
+            'JPG, PNG және WebP қолдайды. Сурет дөңгелек аватарға автоматты түрде қиылады.',
+        };
+      case 'profile_avatar_error':
+        return switch (locale) {
+          AppLocale.ru =>
+            'Не удалось загрузить изображение. Попробуйте другой файл.',
+          AppLocale.en => 'Could not load this image. Try another file.',
+          AppLocale.kk =>
+            'Суретті жүктеу мүмкін болмады. Басқа файлды байқап көріңіз.',
+        };
+      case 'profile_updated':
+        return switch (locale) {
+          AppLocale.ru => 'Профиль обновлен',
+          AppLocale.en => 'Profile updated',
+          AppLocale.kk => 'Профиль жаңартылды',
+        };
+      case 'profile_save':
+        return switch (locale) {
+          AppLocale.ru => 'Сохранить',
+          AppLocale.en => 'Save',
+          AppLocale.kk => 'Сақтау',
+        };
+      case 'profile_cancel':
+        return switch (locale) {
+          AppLocale.ru => 'Отмена',
+          AppLocale.en => 'Cancel',
+          AppLocale.kk => 'Бас тарту',
+        };
       case 'login_as':
         return switch (locale) {
           AppLocale.ru => 'Войти как',

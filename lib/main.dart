@@ -12,6 +12,7 @@ import 'core/notifications/local_notification_service.dart';
 import 'core/providers/background_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'core/window/app_window.dart';
+import 'features/app_guide/presentation/app_guide_overlay_host.dart';
 import 'features/auth/presentation/providers/auth_controller.dart';
 import 'features/auth/presentation/providers/auth_state.dart';
 
@@ -86,7 +87,9 @@ class _MyAppState extends ConsumerState<MyApp>
       routerConfig: router,
       title: 'ZerdeStudy',
       builder: (context, child) {
-        return buildAppWindowFrame(child: child ?? const SizedBox.shrink());
+        return buildAppWindowFrame(
+          child: AppGuideOverlayHost(child: child ?? const SizedBox.shrink()),
+        );
       },
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

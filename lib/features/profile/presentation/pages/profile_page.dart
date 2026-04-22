@@ -1,6 +1,12 @@
+import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image/image.dart' as img;
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
@@ -11,14 +17,20 @@ import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
 import '../../../../core/common_widgets/app_button.dart';
-import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
+import '../../../../core/common_widgets/app_settings_panel.dart';
+import '../../../../core/common_widgets/app_user_avatar.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../app_guide/presentation/app_guide_controller.dart';
+import '../../../app_guide/presentation/app_guide_copy.dart';
+import '../../../app_guide/presentation/app_guide_target.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key, this.enableShellAvatarHero = false});
@@ -37,7 +49,21 @@ class ProfilePage extends ConsumerWidget {
         .toList(growable: false);
     final previewAchievements = achievements.take(6).toList(growable: false);
     final certificates = catalog.certificatesFor(state);
-    final favorites = catalog.savedCoursesFor(state);
+    final favorites = <CommunityCourse>[];
+    for (final courseId in state.savedCommunityCourseIds) {
+      final localCourse = catalog.maybeCourseById(courseId);
+      if (localCourse != null) {
+        favorites.add(localCourse);
+        continue;
+      }
+
+      final remoteCourse = ref
+          .watch(backendCourseDetailProvider(courseId))
+          .maybeWhen(data: (course) => course, orElse: () => null);
+      if (remoteCourse != null) {
+        favorites.add(remoteCourse);
+      }
+    }
     final completedTracks = catalog.completedTracksFor(state);
     final completedModules = catalog.completedModulesFor(state);
     final completedLessons = catalog.completedLessonsFor(state);
@@ -45,8 +71,13 @@ class ProfilePage extends ConsumerWidget {
     final history = state.learningHistory.toList(growable: false)
       ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
     final user = state.user;
+    final displayName = user?.name ?? 'Talgat O.';
+    final email = user?.email ?? 'tomyrkanov@gmail.com';
     final colors = context.appColors;
     final compact = context.isCompactLayout;
+    void openProfileEditor() {
+      _showEditProfileDialog(context, ref, user);
+    }
 
     return AppPageScaffold(
       horizontalPadding: compact ? 0 : null,
@@ -58,237 +89,258 @@ class ProfilePage extends ConsumerWidget {
           compact ? 104 : 120,
         ),
         children: [
-          Container(
-            padding: EdgeInsets.all(compact ? 18 : 22),
-            decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.96),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.primary.withValues(alpha: 0.08),
-                  blurRadius: 28,
-                  offset: const Offset(0, 16),
-                ),
-              ],
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final headerCompact = compact || constraints.maxWidth < 560;
+          AppGuideTarget(
+            id: AppGuideTargetIds.profileHeader,
+            child: Container(
+              padding: EdgeInsets.all(compact ? 18 : 22),
+              decoration: BoxDecoration(
+                color: colors.surface.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.08),
+                    blurRadius: 28,
+                    offset: const Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final headerCompact = compact || constraints.maxWidth < 560;
 
-                if (headerCompact) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _ProfileAvatar(
-                            enableHero: enableShellAvatarHero,
-                            size: 108,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user?.name ?? 'Talgat O.',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(fontSize: 28),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  user?.email ?? 'tomyrkanov@gmail.com',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: colors.textSecondary,
-                                    height: 1.35,
+                  if (headerCompact) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _EditableProfileAvatar(
+                              user: user,
+                              enableHero: enableShellAvatarHero,
+                              size: 108,
+                              onTap: openProfileEditor,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    displayName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(fontSize: 28),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    email,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: colors.textSecondary,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  AppButton.secondary(
+                                    label: l10n.text('profile_edit'),
+                                    icon: Icons.edit_rounded,
+                                    maxWidth: 220,
+                                    onPressed: openProfileEditor,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _Pill(label: 'XP', value: '${state.xp}'),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _Pill(
-                              label: l10n.text('level'),
-                              value: '${state.level}',
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _Pill(label: 'XP', value: '${state.xp}'),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _Pill(
-                              label: l10n.text('streak'),
-                              value: '${state.streak}d',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        l10n.text('locale'),
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(color: colors.textSecondary),
-                      ),
-                      const SizedBox(height: 8),
-                      LocaleSelector(
-                        currentLocale: state.locale,
-                        onChanged: controller.changeLocale,
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        l10n.text('theme'),
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(color: colors.textSecondary),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: AppThemeMode.values
-                            .map((mode) {
-                              final selected = mode == state.themeMode;
-                              return ChoiceChip(
-                                label: Text(_themeModeLabel(l10n, mode)),
-                                selected: selected,
-                                onSelected: (_) =>
-                                    controller.changeThemeMode(mode),
-                                selectedColor: colors.primary.withValues(
-                                  alpha: 0.16,
-                                ),
-                                backgroundColor: colors.surfaceSoft,
-                                side: BorderSide(
-                                  color: selected
-                                      ? colors.primary
-                                      : colors.divider,
-                                ),
-                                labelStyle: TextStyle(
-                                  color: selected
-                                      ? colors.primary
-                                      : colors.textSecondary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              );
-                            })
-                            .toList(growable: false),
-                      ),
-                    ],
-                  );
-                }
-
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _ProfileAvatar(
-                      enableHero: enableShellAvatarHero,
-                      size: 108,
-                    ),
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.name ?? 'Talgat O.',
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            user?.email ?? 'tomyrkanov@gmail.com',
-                            style: TextStyle(color: colors.textSecondary),
-                          ),
-                          const SizedBox(height: 16),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              _Pill(label: 'XP', value: '${state.xp}'),
-                              _Pill(
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _Pill(
                                 label: l10n.text('level'),
                                 value: '${state.level}',
                               ),
-                              _Pill(
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _Pill(
                                 label: l10n.text('streak'),
                                 value: '${state.streak}d',
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          l10n.text('locale'),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(color: colors.textSecondary),
+                        ),
+                        const SizedBox(height: 8),
+                        LocaleSelector(
+                          currentLocale: state.locale,
+                          onChanged: controller.changeLocale,
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          l10n.text('theme'),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(color: colors.textSecondary),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: AppThemeMode.values
+                              .map((mode) {
+                                final selected = mode == state.themeMode;
+                                return ChoiceChip(
+                                  label: Text(_themeModeLabel(l10n, mode)),
+                                  selected: selected,
+                                  onSelected: (_) =>
+                                      controller.changeThemeMode(mode),
+                                  selectedColor: colors.primary.withValues(
+                                    alpha: 0.16,
+                                  ),
+                                  backgroundColor: colors.surfaceSoft,
+                                  side: BorderSide(
+                                    color: selected
+                                        ? colors.primary
+                                        : colors.divider,
+                                  ),
+                                  labelStyle: TextStyle(
+                                    color: selected
+                                        ? colors.primary
+                                        : colors.textSecondary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                );
+                              })
+                              .toList(growable: false),
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _EditableProfileAvatar(
+                        user: user,
+                        enableHero: enableShellAvatarHero,
+                        size: 108,
+                        onTap: openProfileEditor,
                       ),
-                    ),
-                    const SizedBox(width: 24),
-                    SizedBox(
-                      width: 238,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            l10n.text('locale'),
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(color: colors.textSecondary),
-                          ),
-                          const SizedBox(height: 8),
-                          LocaleSelector(
-                            currentLocale: state.locale,
-                            onChanged: controller.changeLocale,
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            l10n.text('theme'),
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(color: colors.textSecondary),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: AppThemeMode.values
-                                .map((mode) {
-                                  final selected = mode == state.themeMode;
-                                  return ChoiceChip(
-                                    label: Text(_themeModeLabel(l10n, mode)),
-                                    selected: selected,
-                                    onSelected: (_) =>
-                                        controller.changeThemeMode(mode),
-                                    selectedColor: colors.primary.withValues(
-                                      alpha: 0.16,
-                                    ),
-                                    backgroundColor: colors.surfaceSoft,
-                                    side: BorderSide(
-                                      color: selected
-                                          ? colors.primary
-                                          : colors.divider,
-                                    ),
-                                    labelStyle: TextStyle(
-                                      color: selected
-                                          ? colors.primary
-                                          : colors.textSecondary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  );
-                                })
-                                .toList(growable: false),
-                          ),
-                        ],
+                      const SizedBox(width: 18),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayName,
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              email,
+                              style: TextStyle(color: colors.textSecondary),
+                            ),
+                            const SizedBox(height: 14),
+                            AppButton.secondary(
+                              label: l10n.text('profile_edit'),
+                              icon: Icons.edit_rounded,
+                              maxWidth: 220,
+                              onPressed: openProfileEditor,
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                _Pill(label: 'XP', value: '${state.xp}'),
+                                _Pill(
+                                  label: l10n.text('level'),
+                                  value: '${state.level}',
+                                ),
+                                _Pill(
+                                  label: l10n.text('streak'),
+                                  value: '${state.streak}d',
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                      const SizedBox(width: 24),
+                      SizedBox(
+                        width: 238,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              l10n.text('locale'),
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(color: colors.textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            LocaleSelector(
+                              currentLocale: state.locale,
+                              onChanged: controller.changeLocale,
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              l10n.text('theme'),
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(color: colors.textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: AppThemeMode.values
+                                  .map((mode) {
+                                    final selected = mode == state.themeMode;
+                                    return ChoiceChip(
+                                      label: Text(_themeModeLabel(l10n, mode)),
+                                      selected: selected,
+                                      onSelected: (_) =>
+                                          controller.changeThemeMode(mode),
+                                      selectedColor: colors.primary.withValues(
+                                        alpha: 0.16,
+                                      ),
+                                      backgroundColor: colors.surfaceSoft,
+                                      side: BorderSide(
+                                        color: selected
+                                            ? colors.primary
+                                            : colors.divider,
+                                      ),
+                                      labelStyle: TextStyle(
+                                        color: selected
+                                            ? colors.primary
+                                            : colors.textSecondary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    );
+                                  })
+                                  .toList(growable: false),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
           SizedBox(height: compact ? 14 : 16),
@@ -441,7 +493,7 @@ class ProfilePage extends ConsumerWidget {
                           child: _FavoritePreviewCard(
                             course: course,
                             subtitle:
-                                '${course.author.name} / ${l10n.courseLevelLabel(course.level)} / ${catalog.displayCourseRatingFor(state, course.id).toStringAsFixed(1)}',
+                                '${course.author.name} / ${l10n.courseLevelLabel(course.level)} / ${catalog.displayCourseRatingForCourse(state, course).toStringAsFixed(1)}',
                             onTap: () =>
                                 context.push(AppRoutes.courseById(course.id)),
                           ),
@@ -554,6 +606,15 @@ class ProfilePage extends ConsumerWidget {
             label: l10n.text('view_leaderboard'),
             icon: Icons.leaderboard_rounded,
             onPressed: () => context.push(AppRoutes.leaderboard),
+          ),
+          const SizedBox(height: 12),
+          AppGuideTarget(
+            id: AppGuideTargetIds.profileSettings,
+            child: AppButton.secondary(
+              label: AppGuideCopy.openSettingsLabel(context),
+              icon: Icons.settings_rounded,
+              onPressed: () => showAppSettingsPanel(context),
+            ),
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
@@ -726,7 +787,7 @@ class ProfilePage extends ConsumerWidget {
                     return _ProfileLinkTile(
                       title: course.title.en,
                       subtitle:
-                          '${course.author.name} - ${context.l10n.courseLevelLabel(course.level)} - ${catalog.displayCourseRatingFor(state, course.id).toStringAsFixed(1)}',
+                          '${course.author.name} - ${context.l10n.courseLevelLabel(course.level)} - ${catalog.displayCourseRatingForCourse(state, course).toStringAsFixed(1)}',
                       accent: course.color,
                       icon: Icons.bookmark_rounded,
                       onTap: () {
@@ -1210,34 +1271,335 @@ class _AchievementGridItem extends StatelessWidget {
   }
 }
 
-class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.enableHero, required this.size});
+Future<void> _showEditProfileDialog(
+  BuildContext context,
+  WidgetRef ref,
+  DemoUser? user,
+) async {
+  final result = await showDialog<_ProfileEditorResult>(
+    context: context,
+    builder: (dialogContext) => _EditProfileDialog(
+      initialName: user?.name ?? 'Talgat O.',
+      initialEmail: user?.email ?? 'tomyrkanov@gmail.com',
+      initialAvatarBase64: user?.avatarBase64,
+    ),
+  );
 
+  if (!context.mounted || result == null) {
+    return;
+  }
+
+  ref
+      .read(demoAppControllerProvider.notifier)
+      .updateProfile(name: result.name, avatarBase64: result.avatarBase64);
+
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(context.l10n.text('profile_updated'))));
+}
+
+class _EditableProfileAvatar extends StatelessWidget {
+  const _EditableProfileAvatar({
+    required this.user,
+    required this.enableHero,
+    required this.size,
+    required this.onTap,
+  });
+
+  final DemoUser? user;
   final bool enableHero;
   final double size;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final avatar = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: colors.primary.withValues(alpha: 0.14),
-      ),
-      child: Icon(
-        Icons.person_rounded,
-        color: colors.primary,
-        size: size * 0.48,
+
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AppUserAvatar(
+            name: user?.name ?? 'Talgat O.',
+            avatarBase64: user?.avatarBase64,
+            size: size,
+            enableHero: enableHero,
+          ),
+          Positioned(
+            right: 2,
+            bottom: 2,
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.primary,
+                border: Border.all(color: colors.surface, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.28),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.edit_rounded,
+                size: 16,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+}
 
-    if (!enableHero) {
-      return avatar;
+class _ProfileEditorResult {
+  const _ProfileEditorResult({required this.name, required this.avatarBase64});
+
+  final String name;
+  final String? avatarBase64;
+}
+
+class _EditProfileDialog extends StatefulWidget {
+  const _EditProfileDialog({
+    required this.initialName,
+    required this.initialEmail,
+    required this.initialAvatarBase64,
+  });
+
+  final String initialName;
+  final String initialEmail;
+  final String? initialAvatarBase64;
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog> {
+  late final TextEditingController _nameController;
+  late String? _avatarBase64;
+  bool _isPickingAvatar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _avatarBase64 = widget.initialAvatarBase64;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickAvatar() async {
+    setState(() => _isPickingAvatar = true);
+    try {
+      final picked = await FilePicker.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (!mounted || picked == null || picked.files.isEmpty) {
+        return;
+      }
+
+      final bytes = picked.files.single.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        _showError();
+        return;
+      }
+
+      final optimizedBytes = _optimizeAvatar(bytes);
+      setState(() => _avatarBase64 = base64Encode(optimizedBytes));
+    } catch (_) {
+      if (mounted) {
+        _showError();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingAvatar = false);
+      }
+    }
+  }
+
+  void _showError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.text('profile_avatar_error'))),
+    );
+  }
+
+  Uint8List _optimizeAvatar(Uint8List sourceBytes) {
+    final decoded = img.decodeImage(sourceBytes);
+    if (decoded == null) {
+      return sourceBytes;
     }
 
-    return Hero(tag: 'shell-profile-avatar', child: avatar);
+    final squareSize = math.min(decoded.width, decoded.height);
+    final cropped = img.copyCrop(
+      decoded,
+      x: (decoded.width - squareSize) ~/ 2,
+      y: (decoded.height - squareSize) ~/ 2,
+      width: squareSize,
+      height: squareSize,
+    );
+    final resized = img.copyResize(cropped, width: 320, height: 320);
+    return Uint8List.fromList(img.encodeJpg(resized, quality: 82));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final trimmedName = _nameController.text.trim();
+    final canSave = trimmedName.isNotEmpty && !_isPickingAvatar;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.all(20),
+      backgroundColor: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surface.withValues(alpha: 0.98),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.22)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.24),
+                blurRadius: 34,
+                offset: const Offset(0, 18),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          context.l10n.text('profile_edit_title'),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: AppUserAvatar(
+                      name: trimmedName.isEmpty
+                          ? widget.initialName
+                          : trimmedName,
+                      avatarBase64: _avatarBase64,
+                      size: 96,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _isPickingAvatar ? null : _pickAvatar,
+                          icon: const Icon(Icons.photo_library_rounded),
+                          label: Text(context.l10n.text('profile_avatar_pick')),
+                        ),
+                        if (_avatarBase64 != null)
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                setState(() => _avatarBase64 = null),
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            label: Text(
+                              context.l10n.text('profile_avatar_remove'),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    context.l10n.text('profile_avatar_helper'),
+                    style: TextStyle(color: colors.textSecondary, height: 1.4),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    context.l10n.text('profile_name_label'),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _nameController,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: context.l10n.text('profile_name_hint'),
+                      helperText: widget.initialEmail,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(context.l10n.text('profile_cancel')),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: canSave
+                              ? () => Navigator.of(context).pop(
+                                  _ProfileEditorResult(
+                                    name: trimmedName,
+                                    avatarBase64: _avatarBase64,
+                                  ),
+                                )
+                              : null,
+                          child: _isPickingAvatar
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                  ),
+                                )
+                              : Text(context.l10n.text('profile_save')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

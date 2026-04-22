@@ -15,6 +15,7 @@ import 'package:frontend_flutter/core/common_widgets/glow_card.dart';
 import 'package:frontend_flutter/core/localization/app_localizations.dart';
 import 'package:frontend_flutter/core/notifications/local_notification_service.dart';
 import 'package:frontend_flutter/core/theme/app_theme.dart';
+import 'package:frontend_flutter/features/app_guide/presentation/app_guide_controller.dart';
 import 'package:frontend_flutter/features/ai/data/datasources/ai_chat_remote_data_source.dart';
 import 'package:frontend_flutter/features/ai/data/models/ai_chat_reply_dto.dart';
 import 'package:frontend_flutter/features/ai/presentation/pages/ai_mentor_page.dart';
@@ -165,6 +166,83 @@ void main() {
 
     expect(find.text('Search courses'), findsOneWidget);
     expect(find.text('Programming languages'), findsOneWidget);
+  });
+
+  testWidgets('app guide moves from home step to knowledge tree', (
+    tester,
+  ) async {
+    await configureSurface(tester);
+    final container = await createContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+      ],
+    );
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const MyApp()),
+    );
+    await pumpScene(tester);
+
+    await tester.tap(find.text('Log in').first);
+    await pumpScene(tester);
+    await tester.tap(find.text('App guide'));
+    await pumpScene(tester);
+
+    expect(find.text('Main navigation'), findsOneWidget);
+
+    await tester.tap(find.text('Next'));
+    await pumpScene(tester);
+    expect(find.text('Home screen'), findsOneWidget);
+
+    await tester.tap(find.text('Next'));
+    await pumpScene(tester);
+
+    expect(container.read(appGuideControllerProvider).currentStepIndex, 2);
+    expect(find.text('Knowledge tree'), findsOneWidget);
+  });
+
+  testWidgets('app guide keeps the tree step actionable on desktop', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1920, 1080));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final container = await createContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+      ],
+    );
+    container
+        .read(demoAppControllerProvider.notifier)
+        .changeLocale(AppLocale.en);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const MyApp()),
+    );
+    await pumpScene(tester);
+
+    await tester.tap(find.text('Log in').first);
+    await pumpScene(tester);
+    await tester.tap(find.text('App guide'));
+    await pumpScene(tester);
+
+    await tester.tap(find.text('Next'));
+    await pumpScene(tester);
+    await tester.tap(find.text('Next'));
+    await pumpScene(tester);
+
+    expect(find.text('Knowledge tree'), findsOneWidget);
+
+    final nextButton = find.text('Next').last;
+    await tester.ensureVisible(nextButton);
+    await tester.tap(nextButton);
+    await pumpScene(tester);
+
+    expect(container.read(appGuideControllerProvider).currentStepIndex, 3);
+    expect(find.text('Learn catalog'), findsOneWidget);
   });
 
   testWidgets(
@@ -749,6 +827,29 @@ void main() {
     expect(find.text('Result history'), findsWidgets);
   });
 
+  testWidgets('profile lets user update display name', (tester) async {
+    await configureSurface(tester);
+    final container = await createContainer();
+    final controller = container.read(demoAppControllerProvider.notifier);
+    controller.changeLocale(AppLocale.en);
+    controller.loginWithProvider('google');
+
+    await tester.pumpWidget(buildTestApp(container, const ProfilePage()));
+    await pumpScene(tester);
+
+    await tester.tap(find.text('Edit profile').first);
+    await pumpScene(tester);
+
+    await tester.enterText(find.byType(TextField).last, 'Dana S.');
+    await pumpScene(tester);
+    await tester.tap(find.text('Save'));
+    await pumpScene(tester);
+
+    expect(container.read(demoAppControllerProvider).user?.name, 'Dana S.');
+    expect(find.text('Dana S.'), findsOneWidget);
+    expect(find.text('Profile updated'), findsOneWidget);
+  });
+
   testWidgets('ai mentor still returns deterministic replies', (tester) async {
     await configureSurface(tester);
     final container = await createContainer(
@@ -876,6 +977,7 @@ class FakeAiChatRemoteDataSource extends AiChatRemoteDataSource {
   Future<AiChatReplyDto> sendMessage({
     required String conversation,
     required String appContext,
+    String? userApiKey,
     String? userId,
   }) async {
     final latestMessage = conversation.trim().split('\n').last.toLowerCase();

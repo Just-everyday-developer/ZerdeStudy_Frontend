@@ -6,7 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../app/routing/app_routes.dart';
 import '../../app/state/app_locale.dart';
 import '../../app/state/demo_app_controller.dart';
+import '../../features/app_guide/presentation/app_guide_controller.dart';
+import '../../features/app_guide/presentation/app_guide_target.dart';
 import 'app_settings_panel.dart';
+import 'app_user_avatar.dart';
 import '../layout/app_breakpoints.dart';
 import '../localization/app_localizations.dart';
 import '../providers/course_search_focus_provider.dart';
@@ -242,6 +245,7 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                           .toList(growable: false),
                       currentIndex: widget.navigationShell.currentIndex,
                       currentUserName: state.user?.name ?? 'Talgat',
+                      currentUserAvatarBase64: state.user?.avatarBase64,
                       onDestinationSelected: _onDestinationSelected,
                       onBackTap: () => _handleBack(),
                       onSearchTap: () {
@@ -275,18 +279,21 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
               backgroundColor: colors.background,
               body: shellBody,
               bottomNavigationBar: compact
-                  ? NavigationBar(
-                      selectedIndex: widget.navigationShell.currentIndex,
-                      onDestinationSelected: _onDestinationSelected,
-                      destinations: destinations
-                          .map(
-                            (destination) => NavigationDestination(
-                              icon: Icon(destination.icon),
-                              selectedIcon: Icon(destination.selectedIcon),
-                              label: destination.label,
-                            ),
-                          )
-                          .toList(growable: false),
+                  ? AppGuideTarget(
+                      id: AppGuideTargetIds.shellNavigation,
+                      child: NavigationBar(
+                        selectedIndex: widget.navigationShell.currentIndex,
+                        onDestinationSelected: _onDestinationSelected,
+                        destinations: destinations
+                            .map(
+                              (destination) => NavigationDestination(
+                                icon: Icon(destination.icon),
+                                selectedIcon: Icon(destination.selectedIcon),
+                                label: destination.label,
+                              ),
+                            )
+                            .toList(growable: false),
+                      ),
                     )
                   : null,
             ),
@@ -302,6 +309,7 @@ class _DesktopShellBar extends StatelessWidget {
     required this.destinations,
     required this.currentIndex,
     required this.currentUserName,
+    required this.currentUserAvatarBase64,
     required this.onDestinationSelected,
     required this.onBackTap,
     required this.onSearchTap,
@@ -315,6 +323,7 @@ class _DesktopShellBar extends StatelessWidget {
   final List<_ShellDestination> destinations;
   final int currentIndex;
   final String currentUserName;
+  final String? currentUserAvatarBase64;
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onBackTap;
   final VoidCallback onSearchTap;
@@ -343,15 +352,18 @@ class _DesktopShellBar extends StatelessWidget {
               const SizedBox(width: 8),
             ],
             Expanded(
-              child: Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: List<Widget>.generate(
-                  destinations.length,
-                  (index) => _DesktopNavChip(
-                    destination: destinations[index],
-                    selected: currentIndex == index,
-                    onTap: () => onDestinationSelected(index),
+              child: AppGuideTarget(
+                id: AppGuideTargetIds.shellNavigation,
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: List<Widget>.generate(
+                    destinations.length,
+                    (index) => _DesktopNavChip(
+                      destination: destinations[index],
+                      selected: currentIndex == index,
+                      onTap: () => onDestinationSelected(index),
+                    ),
                   ),
                 ),
               ),
@@ -432,21 +444,11 @@ class _DesktopShellBar extends StatelessWidget {
             InkWell(
               onTap: onProfileTap,
               borderRadius: BorderRadius.circular(18),
-              child: Hero(
-                tag: 'shell-profile-avatar',
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: colors.primary.withValues(alpha: 0.18),
-                  child: Text(
-                    currentUserName.isEmpty
-                        ? 'Z'
-                        : currentUserName.substring(0, 1).toUpperCase(),
-                    style: TextStyle(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
+              child: AppUserAvatar(
+                name: currentUserName,
+                avatarBase64: currentUserAvatarBase64,
+                size: 36,
+                enableHero: true,
               ),
             ),
           ],

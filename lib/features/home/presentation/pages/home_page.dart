@@ -10,6 +10,8 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../app_guide/presentation/app_guide_controller.dart';
+import '../../../app_guide/presentation/app_guide_target.dart';
 import '../widgets/course_card.dart';
 
 class HomePage extends ConsumerWidget {
@@ -22,6 +24,10 @@ class HomePage extends ConsumerWidget {
     final l10n = context.l10n;
     final currentTrack = catalog.trackById(state.currentTrackId);
     final currentProgress = catalog.progressForTrack(state, currentTrack.id);
+    final localEnrolledCourseId = state.enrolledCommunityCourseIds.firstWhere(
+      (courseId) => catalog.maybeCourseById(courseId) != null,
+      orElse: () => '',
+    );
     final leaderboard = catalog
         .leaderboardFor(state)
         .take(5)
@@ -97,23 +103,26 @@ class HomePage extends ConsumerWidget {
                   const SizedBox(width: 16),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 280),
-                    child: AppButton.primary(
-                      label: currentProgress.nextTarget == null
-                          ? l10n.text('start_track')
-                          : l10n.text('continue_learning'),
-                      icon: Icons.play_circle_fill_rounded,
-                      onPressed: () {
-                        final target = currentProgress.nextTarget;
-                        if (target == null) {
-                          context.push(AppRoutes.trackById(currentTrack.id));
-                          return;
-                        }
-                        context.push(
-                          target.isPractice
-                              ? AppRoutes.practiceById(target.id)
-                              : AppRoutes.lessonById(target.id),
-                        );
-                      },
+                    child: AppGuideTarget(
+                      id: AppGuideTargetIds.homeContinue,
+                      child: AppButton.primary(
+                        label: currentProgress.nextTarget == null
+                            ? l10n.text('start_track')
+                            : l10n.text('continue_learning'),
+                        icon: Icons.play_circle_fill_rounded,
+                        onPressed: () {
+                          final target = currentProgress.nextTarget;
+                          if (target == null) {
+                            context.push(AppRoutes.trackById(currentTrack.id));
+                            return;
+                          }
+                          context.push(
+                            target.isPractice
+                                ? AppRoutes.practiceById(target.id)
+                                : AppRoutes.lessonById(target.id),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ],
@@ -183,10 +192,10 @@ class HomePage extends ConsumerWidget {
                         icon: Icons.refresh_rounded,
                         maxWidth: compact ? null : 300,
                         onPressed: () {
-                          if (state.enrolledCommunityCourseIds.isNotEmpty) {
+                          if (localEnrolledCourseId.isNotEmpty) {
                             context.push(
                               AppRoutes.coursePlayerById(
-                                state.enrolledCommunityCourseIds.first,
+                                localEnrolledCourseId,
                               ),
                             );
                             return;

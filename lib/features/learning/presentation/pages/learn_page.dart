@@ -15,6 +15,8 @@ import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/providers/course_search_focus_provider.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../app_guide/presentation/app_guide_controller.dart';
+import '../../../app_guide/presentation/app_guide_target.dart';
 import '../../../courses_backend/data/models/backend_course_query.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../widgets/course_discovery_widgets.dart';
@@ -286,6 +288,7 @@ class _LearnPageState extends ConsumerState<LearnPage> {
       ),
     );
     final backendQuery = BackendCourseQuery(
+      search: _query.isEmpty ? null : _query,
       minRating: _selectedMinRating,
       levelCode: normalizeBackendLevelCode(_selectedLevel),
       durationCode: _selectedDurationBucket?.code,
@@ -293,6 +296,8 @@ class _LearnPageState extends ConsumerState<LearnPage> {
         _selectedTopicKey,
         backendDictionaries.topics,
       ),
+      hasCertificate: _certificateOnly ? true : null,
+      limit: 24,
     );
     final backendCourses = ref.watch(
       backendCourseCatalogProvider(backendQuery),
@@ -401,16 +406,19 @@ class _LearnPageState extends ConsumerState<LearnPage> {
               compact ? 120 : 48,
             ),
             children: [
-              CourseDiscoverySearchBar(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                hintText: l10n.text('search_courses'),
-                onChanged: (_) {},
-                onSubmitted: (value) {
-                  setState(() => _query = value.trim());
-                },
-                onFilterTap: () =>
-                    _openFilters(context, catalog, l10n, backendDictionaries),
+              AppGuideTarget(
+                id: AppGuideTargetIds.learnSearch,
+                child: CourseDiscoverySearchBar(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  hintText: l10n.text('search_courses'),
+                  onChanged: (_) {},
+                  onSubmitted: (value) {
+                    setState(() => _query = value.trim());
+                  },
+                  onFilterTap: () =>
+                      _openFilters(context, catalog, l10n, backendDictionaries),
+                ),
               ),
               const SizedBox(height: 36),
               if (sections.isEmpty)

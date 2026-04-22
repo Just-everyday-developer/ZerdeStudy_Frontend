@@ -27,19 +27,32 @@ class DemoUser {
     required this.email,
     required this.role,
     required this.goal,
+    this.avatarBase64,
   });
+
+  static const Object _sentinel = Object();
 
   final String name;
   final String email;
   final String role;
   final String goal;
+  final String? avatarBase64;
 
-  DemoUser copyWith({String? name, String? email, String? role, String? goal}) {
+  DemoUser copyWith({
+    String? name,
+    String? email,
+    String? role,
+    String? goal,
+    Object? avatarBase64 = _sentinel,
+  }) {
     return DemoUser(
       name: name ?? this.name,
       email: email ?? this.email,
       role: role ?? this.role,
       goal: goal ?? this.goal,
+      avatarBase64: identical(avatarBase64, _sentinel)
+          ? this.avatarBase64
+          : avatarBase64 as String?,
     );
   }
 
@@ -49,6 +62,7 @@ class DemoUser {
       'email': email,
       'role': role,
       'goal': goal,
+      'avatarBase64': avatarBase64,
     };
   }
 
@@ -58,6 +72,7 @@ class DemoUser {
       email: json['email'] as String? ?? '',
       role: json['role'] as String? ?? '',
       goal: json['goal'] as String? ?? '',
+      avatarBase64: json['avatarBase64'] as String?,
     );
   }
 }
