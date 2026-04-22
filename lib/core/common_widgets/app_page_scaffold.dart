@@ -10,6 +10,7 @@ class AppPageScaffold extends StatelessWidget {
     this.title,
     this.actions,
     this.safeAreaTop = true,
+    this.safeAreaBottom = true,
     this.bottomNavigationBar,
     this.maxContentWidth,
     this.horizontalPadding,
@@ -20,6 +21,7 @@ class AppPageScaffold extends StatelessWidget {
   final String? title;
   final List<Widget>? actions;
   final bool safeAreaTop;
+  final bool safeAreaBottom;
   final Widget? bottomNavigationBar;
   final double? maxContentWidth;
   final double? horizontalPadding;
@@ -61,6 +63,7 @@ class AppPageScaffold extends StatelessWidget {
           const Positioned.fill(child: _Backdrop()),
           SafeArea(
             top: safeAreaTop,
+            bottom: safeAreaBottom,
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final horizontalPadding =

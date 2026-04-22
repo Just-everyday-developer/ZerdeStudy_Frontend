@@ -15,6 +15,8 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../app_guide/presentation/app_guide_controller.dart';
+import '../../../app_guide/presentation/app_guide_target.dart';
 import '../tree_map_config.dart';
 
 class KnowledgeTreePage extends ConsumerWidget {
@@ -22,23 +24,29 @@ class KnowledgeTreePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final screenSize = MediaQuery.sizeOf(context);
-    final compact = context.isCompactLayout;
-    final treeHeight = math.max(
-      460.0,
-      screenSize.height - (compact ? 104 : 128),
-    );
-    final treeContentWidth = compact
-        ? screenSize.width
-        : math.min(screenSize.width - 56, 1220.0);
-
     return AppPageScaffold(
       horizontalPadding: 0,
       expandContent: true,
-      child: SizedBox(
-        width: screenSize.width,
-        height: treeHeight,
-        child: _KnowledgeTreeViewport(contentWidth: treeContentWidth),
+      safeAreaBottom: false,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = context.isCompactLayout;
+          final availableWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.sizeOf(context).width;
+          final availableHeight = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : MediaQuery.sizeOf(context).height;
+          final treeContentWidth = compact
+              ? availableWidth
+              : math.min(math.max(availableWidth - 56, 0), 1220.0).toDouble();
+
+          return SizedBox(
+            width: availableWidth,
+            height: math.max(460.0, availableHeight),
+            child: _KnowledgeTreeViewport(contentWidth: treeContentWidth),
+          );
+        },
       ),
     );
   }
@@ -162,158 +170,168 @@ class _KnowledgeTreeViewportState
           constraints.maxWidth,
         );
 
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(compact ? 0 : 28),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  colors.surface,
-                  colors.backgroundElevated,
-                  colors.surfaceSoft.withValues(alpha: 0.9),
-                ],
+        return AppGuideTarget(
+          id: AppGuideTargetIds.treeCanvas,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(compact ? 0 : 28),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    colors.surface,
+                    colors.backgroundElevated,
+                    colors.surfaceSoft.withValues(alpha: 0.9),
+                  ],
+                ),
               ),
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: _BackdropPainter(colors: colors),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: _BackdropPainter(colors: colors),
+                      ),
                     ),
                   ),
-                ),
-                Positioned.fill(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      width: contentWidth,
-                      height: constraints.maxHeight,
-                      child: LayoutBuilder(
-                        builder: (context, contentConstraints) {
-                          final viewportSize = Size(
-                            contentConstraints.maxWidth,
-                            contentConstraints.maxHeight,
-                          );
-                          final desktopLike = !compact;
-                          final windowsFixedViewport =
-                              _isWindowsDesktopViewport(compact);
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: contentWidth,
+                        height: constraints.maxHeight,
+                        child: LayoutBuilder(
+                          builder: (context, contentConstraints) {
+                            final viewportSize = Size(
+                              contentConstraints.maxWidth,
+                              contentConstraints.maxHeight,
+                            );
+                            final desktopLike = !compact;
+                            final windowsFixedViewport =
+                                _isWindowsDesktopViewport(compact);
 
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) {
-                              _fitToViewport(
-                                viewportSize,
-                                windowsFixedViewport: windowsFixedViewport,
-                              );
-                            }
-                          });
-                          final fitScale = math.min(
-                            math.max(
-                              0.1,
-                              (viewportSize.width - 24) /
-                                  knowledgeTreeCanvasSize.width,
-                            ),
-                            math.max(
-                              0.1,
-                              (viewportSize.height - 24) /
-                                  knowledgeTreeCanvasSize.height,
-                            ),
-                          );
-                          _fitScale = windowsFixedViewport
-                              ? _windowsFixedScale
-                              : fitScale;
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                _fitToViewport(
+                                  viewportSize,
+                                  windowsFixedViewport: windowsFixedViewport,
+                                );
+                              }
+                            });
+                            final fitScale = math.min(
+                              math.max(
+                                0.1,
+                                (viewportSize.width - 24) /
+                                    knowledgeTreeCanvasSize.width,
+                              ),
+                              math.max(
+                                0.1,
+                                (viewportSize.height - 24) /
+                                    knowledgeTreeCanvasSize.height,
+                              ),
+                            );
+                            _fitScale = windowsFixedViewport
+                                ? _windowsFixedScale
+                                : fitScale;
 
-                          return Stack(
-                            children: [
-                              Positioned.fill(
-                                child: Listener(
-                                  behavior: HitTestBehavior.opaque,
-                                  onPointerSignal: (event) {
-                                    if (windowsFixedViewport) {
-                                      return;
-                                    }
-                                    if (event is! PointerScrollEvent ||
-                                        event.kind == PointerDeviceKind.touch) {
-                                      return;
-                                    }
-                                    final delta = (-event.scrollDelta.dy / 240)
-                                        .clamp(-0.18, 0.18);
-                                    _setScale(
-                                      _currentScale + delta,
-                                      focalPoint: event.localPosition,
-                                      compact: compact,
-                                    );
-                                  },
-                                  child: InteractiveViewer(
-                                    transformationController: _controller,
-                                    constrained: false,
-                                    minScale: _minScale(compact),
-                                    maxScale: windowsFixedViewport
-                                        ? _windowsFixedScale
-                                        : _maxScale(compact),
-                                    scaleEnabled: !windowsFixedViewport,
-                                    panEnabled: true,
-                                    trackpadScrollCausesScale: false,
-                                    boundaryMargin: EdgeInsets.symmetric(
-                                      horizontal: windowsFixedViewport
-                                          ? 36
-                                          : desktopLike
-                                          ? 8
-                                          : 44,
-                                      vertical: windowsFixedViewport
-                                          ? 80
-                                          : desktopLike
-                                          ? 24
-                                          : 64,
-                                    ),
-                                    child: SizedBox(
-                                      width: knowledgeTreeCanvasSize.width,
-                                      height: knowledgeTreeCanvasSize.height,
-                                      child: Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          Positioned.fill(
-                                            child: IgnorePointer(
-                                              child: CustomPaint(
-                                                painter: _KnowledgeTreePainter(
-                                                  nodes: knowledgeTreeNodes,
-                                                  edges: knowledgeTreeEdges,
-                                                  colors: colors,
+                            return Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: Listener(
+                                    behavior: HitTestBehavior.opaque,
+                                    onPointerSignal: (event) {
+                                      if (windowsFixedViewport) {
+                                        return;
+                                      }
+                                      if (event is! PointerScrollEvent ||
+                                          event.kind ==
+                                              PointerDeviceKind.touch) {
+                                        return;
+                                      }
+                                      final delta =
+                                          (-event.scrollDelta.dy / 240).clamp(
+                                            -0.18,
+                                            0.18,
+                                          );
+                                      _setScale(
+                                        _currentScale + delta,
+                                        focalPoint: event.localPosition,
+                                        compact: compact,
+                                      );
+                                    },
+                                    child: InteractiveViewer(
+                                      transformationController: _controller,
+                                      constrained: false,
+                                      minScale: _minScale(compact),
+                                      maxScale: windowsFixedViewport
+                                          ? _windowsFixedScale
+                                          : _maxScale(compact),
+                                      scaleEnabled: !windowsFixedViewport,
+                                      panEnabled: true,
+                                      trackpadScrollCausesScale: false,
+                                      boundaryMargin: EdgeInsets.symmetric(
+                                        horizontal: windowsFixedViewport
+                                            ? 36
+                                            : desktopLike
+                                            ? 8
+                                            : 44,
+                                        vertical: windowsFixedViewport
+                                            ? 80
+                                            : desktopLike
+                                            ? 24
+                                            : 64,
+                                      ),
+                                      child: SizedBox(
+                                        width: knowledgeTreeCanvasSize.width,
+                                        height: knowledgeTreeCanvasSize.height,
+                                        child: Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Positioned.fill(
+                                              child: IgnorePointer(
+                                                child: CustomPaint(
+                                                  painter:
+                                                      _KnowledgeTreePainter(
+                                                        nodes:
+                                                            knowledgeTreeNodes,
+                                                        edges:
+                                                            knowledgeTreeEdges,
+                                                        colors: colors,
+                                                      ),
                                                 ),
                                               ),
                                             ),
-                                          ),
-                                          ...knowledgeTreeNodes.map(
-                                            (node) => _buildPositionedNode(
-                                              context,
-                                              node,
-                                              catalog,
-                                              state,
-                                              colors,
+                                            ...knowledgeTreeNodes.map(
+                                              (node) => _buildPositionedNode(
+                                                context,
+                                                node,
+                                                catalog,
+                                                state,
+                                                colors,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              if (!compact)
-                                Positioned(
-                                  right: 16,
-                                  top: 16,
-                                  child: _PinnedTreeLegend(compact: compact),
-                                ),
-                            ],
-                          );
-                        },
+                                if (!compact)
+                                  Positioned(
+                                    right: 16,
+                                    top: 16,
+                                    child: _PinnedTreeLegend(compact: compact),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
