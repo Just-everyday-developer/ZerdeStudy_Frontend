@@ -258,13 +258,119 @@ void main() {
           ),
         ),
         _module(
-          id: 'oop_module_3_midterm',
+          id: 'oop_module_3',
+          title: 'Encapsulation and Interfaces',
+          summary:
+              'Control access to fields and enforce consistent behavior across multiple object types using interfaces.',
+          lessons: <DemoLessonSeed>[
+            _lesson(
+              id: 'oop_lesson_3_1',
+              title: 'Private fields and Getters',
+              trackTitle: 'OOP',
+              summary:
+                  'Hide internal object state and expose safe read-only data.',
+              outcome:
+                  'You can protect object variables from unintended external modifications.',
+              codeSnippet: '''class BankAccount {
+  BankAccount(this._balance);
+
+  final double _balance; // private field
+
+  double get balance => _balance;
+}
+
+void main() {
+  final account = BankAccount(100.0);
+  print(account.balance);
+}''',
+              output: '100.0',
+              quizOptions: <String>[
+                '_balance',
+                'balance',
+                'BankAccount',
+              ],
+              correctQuizIndex: 0,
+              quizPrompt:
+                  'Which field is kept private inside the class?',
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Hide the internal state',
+                instruction:
+                    'Choose the prefix used in Dart to make a field private.',
+                prompt: 'class User { final String ____password; }',
+                options: <String>['_', 'private ', 'hidden '],
+                correctIndex: 0,
+                template: 'class User { final String ____password; }',
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_3_2',
+              title: 'Interfaces with implements',
+              trackTitle: 'OOP',
+              summary:
+                  'Define a strict contract that multiple unrelated classes must follow.',
+              outcome:
+                  'You can force different objects to provide the same method signatures.',
+              codeSnippet: '''abstract class Printable {
+  String printDetails();
+}
+
+class Invoice implements Printable {
+  @override
+  String printDetails() => 'Invoice data';
+}
+
+void main() {
+  final doc = Invoice();
+  print(doc.printDetails());
+}''',
+              output: 'Invoice data',
+              quizOptions: <String>[
+                'implements',
+                'extends',
+                'abstract',
+              ],
+              correctQuizIndex: 0,
+              quizPrompt:
+                  'Which keyword forces a class to follow an interface contract?',
+              trainer: const DemoTrainerSeed.reorder(
+                title: 'Rebuild the interface flow',
+                instruction:
+                    'Arrange the lines so the class implements the required contract.',
+                prompt:
+                    'Put the interface example back in a working order.',
+                orderedLines: <String>[
+                  'abstract class Logger { void log(); }',
+                  'class FileLogger implements Logger {',
+                  '  @override void log() => print(\'file\');',
+                  '}',
+                ],
+              ),
+            ),
+          ],
+          practice: _practice(
+            id: 'oop_practice_3',
+            title: 'Build a secure model',
+            starterCode: '''class Vault {
+  Vault(this._secret);
+
+  final String _secret;
+}
+
+void main() {
+  final vault = Vault('hidden code');
+
+  // use a getter to print the secret securely
+}''',
+          ),
+        ),
+        _module(
+          id: 'oop_module_4_midterm',
           title: 'Midterm',
           summary:
               'A temporary OOP checkpoint with a draft code runner, final submission, and a review thread.',
           lessons: <DemoLessonSeed>[
             _lesson(
-              id: 'oop_lesson_3_1',
+              id: 'oop_lesson_4_1',
               title: 'Midterm brief',
               trackTitle: 'OOP',
               summary:
@@ -302,7 +408,7 @@ void main() {
               ),
             ),
             _lesson(
-              id: 'oop_lesson_3_2',
+              id: 'oop_lesson_4_2',
               title: 'Submission checklist',
               trackTitle: 'OOP',
               summary:

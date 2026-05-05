@@ -145,6 +145,18 @@ class ProfilePage extends ConsumerWidget {
                                       height: 1.35,
                                     ),
                                   ),
+                                  if (user != null && user.bio.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      user.bio,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: colors.textSecondary,
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 14),
                                   AppButton.secondary(
                                     label: l10n.text('profile_edit'),
@@ -254,6 +266,13 @@ class ProfilePage extends ConsumerWidget {
                               email,
                               style: TextStyle(color: colors.textSecondary),
                             ),
+                            if (user != null && user.bio.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                user.bio,
+                                style: TextStyle(color: colors.textSecondary),
+                              ),
+                            ],
                             const SizedBox(height: 14),
                             AppButton.secondary(
                               label: l10n.text('profile_edit'),
@@ -1281,6 +1300,7 @@ Future<void> _showEditProfileDialog(
     builder: (dialogContext) => _EditProfileDialog(
       initialName: user?.name ?? 'Talgat O.',
       initialEmail: user?.email ?? 'tomyrkanov@gmail.com',
+      initialBio: user?.bio ?? '',
       initialAvatarBase64: user?.avatarBase64,
     ),
   );
@@ -1291,7 +1311,7 @@ Future<void> _showEditProfileDialog(
 
   ref
       .read(demoAppControllerProvider.notifier)
-      .updateProfile(name: result.name, avatarBase64: result.avatarBase64);
+      .updateProfile(name: result.name, bio: result.bio, avatarBase64: result.avatarBase64);
 
   ScaffoldMessenger.of(
     context,
@@ -1359,9 +1379,10 @@ class _EditableProfileAvatar extends StatelessWidget {
 }
 
 class _ProfileEditorResult {
-  const _ProfileEditorResult({required this.name, required this.avatarBase64});
+  const _ProfileEditorResult({required this.name, required this.bio, required this.avatarBase64});
 
   final String name;
+  final String bio;
   final String? avatarBase64;
 }
 
@@ -1369,11 +1390,13 @@ class _EditProfileDialog extends StatefulWidget {
   const _EditProfileDialog({
     required this.initialName,
     required this.initialEmail,
+    required this.initialBio,
     required this.initialAvatarBase64,
   });
 
   final String initialName;
   final String initialEmail;
+  final String initialBio;
   final String? initialAvatarBase64;
 
   @override
@@ -1382,6 +1405,7 @@ class _EditProfileDialog extends StatefulWidget {
 
 class _EditProfileDialogState extends State<_EditProfileDialog> {
   late final TextEditingController _nameController;
+  late final TextEditingController _bioController;
   late String? _avatarBase64;
   bool _isPickingAvatar = false;
 
@@ -1389,12 +1413,14 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
+    _bioController = TextEditingController(text: widget.initialBio);
     _avatarBase64 = widget.initialAvatarBase64;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
@@ -1457,6 +1483,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final trimmedName = _nameController.text.trim();
+    final trimmedBio = _bioController.text.trim();
     final canSave = trimmedName.isNotEmpty && !_isPickingAvatar;
 
     return Dialog(
@@ -1561,6 +1588,25 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
                     ),
                   ),
                   const SizedBox(height: 18),
+                  Text(
+                    'Bio',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _bioController,
+                    maxLength: 255,
+                    maxLines: 3,
+                    minLines: 1,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      hintText: 'Tell us about yourself...',
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   Row(
                     children: [
                       Expanded(
@@ -1576,6 +1622,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
                               ? () => Navigator.of(context).pop(
                                   _ProfileEditorResult(
                                     name: trimmedName,
+                                    bio: trimmedBio,
                                     avatarBase64: _avatarBase64,
                                   ),
                                 )

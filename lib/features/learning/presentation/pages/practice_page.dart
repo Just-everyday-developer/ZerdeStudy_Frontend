@@ -423,7 +423,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   }
 }
 
-class _SandboxCard extends StatelessWidget {
+class _SandboxCard extends StatefulWidget {
   const _SandboxCard({
     required this.locale,
     required this.colors,
@@ -445,7 +445,21 @@ class _SandboxCard extends StatelessWidget {
   final String? submissionMessage;
 
   @override
+  State<_SandboxCard> createState() => _SandboxCardState();
+}
+
+class _SandboxCardState extends State<_SandboxCard> {
+  int _currentTab = 0;
+
+  @override
   Widget build(BuildContext context) {
+    final locale = widget.locale;
+    final colors = widget.colors;
+    final challenge = widget.challenge;
+    final draftOutput = widget.draftOutput;
+    final submissionPassed = widget.submissionPassed;
+    final submissionMessage = widget.submissionMessage;
+
     return GlowCard(
       accent: colors.primary,
       child: Column(
@@ -470,11 +484,11 @@ class _SandboxCard extends StatelessWidget {
             ),
             padding: const EdgeInsets.all(14),
             child: Scrollbar(
-              controller: codeScrollController,
+              controller: widget.codeScrollController,
               thumbVisibility: true,
               child: TextField(
-                controller: codeController,
-                scrollController: codeScrollController,
+                controller: widget.codeController,
+                scrollController: widget.codeScrollController,
                 keyboardType: TextInputType.multiline,
                 maxLines: null,
                 expands: true,
@@ -492,87 +506,320 @@ class _SandboxCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Text(
-            _practiceText(
-              locale,
-              ru: 'Expected draft output',
-              en: 'Expected draft output',
-              kk: 'Expected draft output',
-            ),
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: colors.surfaceSoft.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: colors.divider),
-            ),
-            child: SelectableText(
-              challenge.expectedOutput,
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontFamily: 'monospace',
-                height: 1.4,
+          Row(
+            children: [
+              _TabButton(
+                label: _practiceText(
+                  locale,
+                  ru: 'Вывод',
+                  en: 'Output',
+                  kk: 'Шығару',
+                ),
+                isActive: _currentTab == 0,
+                onTap: () => setState(() => _currentTab = 0),
+                colors: colors,
               ),
-            ),
+              const SizedBox(width: 8),
+              _TabButton(
+                label: _practiceText(
+                  locale,
+                  ru: 'Тестовые данные',
+                  en: 'Test Data',
+                  kk: 'Тест мәліметтері',
+                ),
+                isActive: _currentTab == 1,
+                onTap: () => setState(() => _currentTab = 1),
+                colors: colors,
+              ),
+              const SizedBox(width: 8),
+              _TabButton(
+                label: _practiceText(
+                  locale,
+                  ru: 'Решения',
+                  en: 'Solutions',
+                  kk: 'Шешімдер',
+                ),
+                isActive: _currentTab == 2,
+                onTap: () => setState(() => _currentTab = 2),
+                colors: colors,
+              ),
+            ],
           ),
-          if (draftOutput != null) ...[
-            const SizedBox(height: 14),
+          const SizedBox(height: 14),
+          if (_currentTab == 0) ...[
             Text(
               _practiceText(
                 locale,
-                ru: 'Draft console',
-                en: 'Draft console',
-                kk: 'Draft console',
+                ru: 'Ожидаемый вывод',
+                en: 'Expected output',
+                kk: 'Күтілетін нәтиже',
               ),
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
-            _ConsoleOutputBox(
-              colors: colors,
-              output: draftOutput!,
-              accent: submissionPassed == null
-                  ? colors.accent
-                  : submissionPassed!
-                  ? colors.success
-                  : colors.danger,
-            ),
-          ],
-          if (submissionMessage != null) ...[
-            const SizedBox(height: 14),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color:
-                    (submissionPassed == true ? colors.success : colors.danger)
-                        .withValues(alpha: 0.12),
+                color: colors.surfaceSoft.withValues(alpha: 0.92),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color:
-                      (submissionPassed == true
-                              ? colors.success
-                              : colors.danger)
-                          .withValues(alpha: 0.28),
-                ),
+                border: Border.all(color: colors.divider),
               ),
-              child: Text(
-                submissionMessage!,
+              child: SelectableText(
+                challenge.expectedOutput,
                 style: TextStyle(
                   color: colors.textPrimary,
-                  height: 1.45,
-                  fontWeight: FontWeight.w600,
+                  fontFamily: 'monospace',
+                  height: 1.4,
                 ),
               ),
             ),
+            if (draftOutput != null) ...[
+              const SizedBox(height: 14),
+              Text(
+                _practiceText(
+                  locale,
+                  ru: 'Консоль',
+                  en: 'Draft console',
+                  kk: 'Консоль',
+                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              _ConsoleOutputBox(
+                colors: colors,
+                output: draftOutput,
+                accent: submissionPassed == null
+                    ? colors.accent
+                    : submissionPassed
+                    ? colors.success
+                    : colors.danger,
+              ),
+            ],
+            if (submissionMessage != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color:
+                      (submissionPassed == true ? colors.success : colors.danger)
+                          .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color:
+                        (submissionPassed == true
+                                ? colors.success
+                                : colors.danger)
+                            .withValues(alpha: 0.28),
+                  ),
+                ),
+                child: Text(
+                  submissionMessage,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ] else if (_currentTab == 1) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colors.surfaceSoft.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: colors.divider),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Test #1',
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Input Data:\n(No input)',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Output Data:\n${challenge.expectedOutput}',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (_currentTab == 2) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colors.surfaceSoft.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: colors.divider),
+              ),
+              child: Column(
+                children: [
+                  _MockSolutionTile(
+                    colors: colors,
+                    user: 'Alexey V.',
+                    date: '2 дня назад',
+                    score: 5,
+                    codeId: '#955099846',
+                  ),
+                  const SizedBox(height: 10),
+                  _MockSolutionTile(
+                    colors: colors,
+                    user: 'Maria K.',
+                    date: '1 неделю назад',
+                    score: 5,
+                    codeId: '#954932111',
+                  ),
+                  const SizedBox(height: 10),
+                  _MockSolutionTile(
+                    colors: colors,
+                    user: 'Timur D.',
+                    date: '1 месяц назад',
+                    score: 4,
+                    codeId: '#943110992',
+                  ),
+                ],
+              ),
+            ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+    required this.colors,
+  });
+
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? colors.primary.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isActive ? colors.primary : colors.divider,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? colors.primary : colors.textSecondary,
+            fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MockSolutionTile extends StatelessWidget {
+  const _MockSolutionTile({
+    required this.colors,
+    required this.user,
+    required this.date,
+    required this.score,
+    required this.codeId,
+  });
+
+  final AppThemeColors colors;
+  final String user;
+  final String date;
+  final int score;
+  final String codeId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.backgroundElevated,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: colors.primary.withValues(alpha: 0.2),
+            child: Text(
+              user[0],
+              style: TextStyle(color: colors.primary, fontSize: 14, fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user,
+                  style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  codeId,
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.star_rounded, size: 14, color: colors.accent),
+                  const SizedBox(width: 4),
+                  Text(
+                    score.toString(),
+                    style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                date,
+                style: TextStyle(color: colors.textSecondary, fontSize: 12),
+              ),
+            ],
+          ),
         ],
       ),
     );

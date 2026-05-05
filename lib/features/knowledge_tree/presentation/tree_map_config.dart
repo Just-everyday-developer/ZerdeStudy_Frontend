@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../app/state/demo_models.dart';
 
-const Size knowledgeTreeCanvasSize = Size(1600, 2820);
+const Size knowledgeTreeCanvasSize = Size(1600, 2520);
 
 const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
-  // ── Layer 1: Root Hub ──
+  // Root
   KnowledgeTreeNodeSpec(
     id: 'root',
     title: LocalizedText(
@@ -14,16 +14,16 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       kk: 'Computer Science',
     ),
     subtitle: LocalizedText(
-      ru: 'Foundation',
-      en: 'Foundation',
-      kk: 'Foundation',
+      ru: 'Foundations',
+      en: 'Foundations',
+      kk: 'Foundations',
     ),
-    position: Offset(800, 150),
-    radius: 110,
+    position: Offset(800, 180),
+    radius: 120,
     isHub: true,
   ),
 
-  // ── Layer 2: Main branches ──
+  // Primary foundation branches
   KnowledgeTreeNodeSpec(
     id: 'mathematics',
     trackId: 'mathematics',
@@ -32,22 +32,15 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Mathematics',
       kk: 'Mathematics',
     ),
-    position: Offset(340, 450),
-    radius: 96,
+    position: Offset(220, 520),
+    radius: 92,
   ),
   KnowledgeTreeNodeSpec(
     id: 'oop',
     trackId: 'oop',
     title: LocalizedText(ru: 'OOP', en: 'OOP', kk: 'OOP'),
-    position: Offset(690, 470),
-    radius: 84,
-  ),
-  KnowledgeTreeNodeSpec(
-    id: 'databases',
-    trackId: 'databases',
-    title: LocalizedText(ru: 'Databases', en: 'Databases', kk: 'Databases'),
-    position: Offset(1020, 420),
-    radius: 84,
+    position: Offset(500, 500),
+    radius: 80,
   ),
   KnowledgeTreeNodeSpec(
     id: 'algorithms_data_structures',
@@ -57,21 +50,39 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Algorithms & Data Structures',
       kk: 'Algorithms & Data Structures',
     ),
-    position: Offset(1340, 640),
-    radius: 88,
+    position: Offset(800, 540),
+    radius: 102,
+  ),
+  KnowledgeTreeNodeSpec(
+    id: 'databases',
+    trackId: 'databases',
+    title: LocalizedText(ru: 'Databases', en: 'Databases', kk: 'Databases'),
+    position: Offset(1100, 500),
+    radius: 82,
+  ),
+  KnowledgeTreeNodeSpec(
+    id: 'operating_systems',
+    trackId: 'operating_systems',
+    title: LocalizedText(
+      ru: 'Operating Systems',
+      en: 'Operating Systems',
+      kk: 'Operating Systems',
+    ),
+    position: Offset(1380, 520),
+    radius: 94,
   ),
 
-  // ── Layer 3: Math sub-branches (top pair) ──
+  // Mathematics branches
   KnowledgeTreeNodeSpec(
     id: 'mathematical_analysis',
     trackId: 'mathematical_analysis',
     title: LocalizedText(
-      ru: 'Mathematical Analysis',
-      en: 'Mathematical Analysis',
-      kk: 'Mathematical Analysis',
+      ru: 'Math Analysis',
+      en: 'Math Analysis',
+      kk: 'Math Analysis',
     ),
-    position: Offset(140, 740),
-    radius: 76,
+    position: Offset(110, 840),
+    radius: 68,
   ),
   KnowledgeTreeNodeSpec(
     id: 'linear_algebra_calculus',
@@ -81,11 +92,9 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Linear Algebra',
       kk: 'Linear Algebra',
     ),
-    position: Offset(520, 740),
-    radius: 76,
+    position: Offset(330, 840),
+    radius: 68,
   ),
-
-  // ── Layer 4: Math sub-branches (bottom pair) + CS right branch ──
   KnowledgeTreeNodeSpec(
     id: 'discrete_math',
     trackId: 'discrete_math',
@@ -94,8 +103,8 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Discrete Math',
       kk: 'Discrete Math',
     ),
-    position: Offset(140, 1020),
-    radius: 76,
+    position: Offset(110, 1100),
+    radius: 72,
   ),
   KnowledgeTreeNodeSpec(
     id: 'probability_statistics_analytics',
@@ -105,29 +114,25 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Probability & Statistics',
       kk: 'Probability & Statistics',
     ),
-    position: Offset(520, 1020),
-    radius: 78,
+    position: Offset(330, 1100),
+    radius: 74,
   ),
-  KnowledgeTreeNodeSpec(
-    id: 'networking_protocols',
-    trackId: 'networking_protocols',
-    title: LocalizedText(
-      ru: 'Information Networks',
-      en: 'Information Networks',
-      kk: 'Information Networks',
-    ),
-    position: Offset(1140, 900),
-    radius: 80,
-  ),
+
+  // Supporting foundation branches
   KnowledgeTreeNodeSpec(
     id: 'ai_theory',
     trackId: 'ai_theory',
     title: LocalizedText(ru: 'AI Theory', en: 'AI Theory', kk: 'AI Theory'),
-    position: Offset(1360, 1130),
-    radius: 78,
+    position: Offset(700, 900),
+    radius: 74,
   ),
-
-  // ── Layer 5: Mid-tree CS branches ──
+  KnowledgeTreeNodeSpec(
+    id: 'networking_protocols',
+    trackId: 'networking_protocols',
+    title: LocalizedText(ru: 'Networks', en: 'Networks', kk: 'Networks'),
+    position: Offset(980, 860),
+    radius: 76,
+  ),
   KnowledgeTreeNodeSpec(
     id: 'computer_architecture',
     trackId: 'computer_architecture',
@@ -136,73 +141,71 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Computer Architecture',
       kk: 'Computer Architecture',
     ),
-    position: Offset(1020, 1340),
-    radius: 82,
+    position: Offset(1280, 860),
+    radius: 76,
   ),
   KnowledgeTreeNodeSpec(
     id: 'information_security_foundations',
     trackId: 'information_security_foundations',
     title: LocalizedText(
-      ru: 'Information Security',
-      en: 'Information Security',
-      kk: 'Information Security',
+      ru: 'Info Security',
+      en: 'Info Security',
+      kk: 'Info Security',
     ),
-    position: Offset(1300, 1540),
-    radius: 78,
+    position: Offset(1120, 1120),
+    radius: 72,
   ),
 
-  // ── Layer 6: Operating Systems (bridge) ──
-  KnowledgeTreeNodeSpec(
-    id: 'operating_systems',
-    trackId: 'operating_systems',
-    title: LocalizedText(
-      ru: 'Operating Systems',
-      en: 'Operating Systems',
-      kk: 'Operating Systems',
-    ),
-    position: Offset(800, 1720),
-    radius: 106,
-  ),
-
-  // ── Layer 7: Applied IT Hub ──
+  // Applied bridge
   KnowledgeTreeNodeSpec(
     id: 'applied_hub',
     title: LocalizedText(
-      ru: 'Applied IT Spheres',
-      en: 'Applied IT Spheres',
-      kk: 'Applied IT Spheres',
+      ru: 'Applied Paths',
+      en: 'Applied Paths',
+      kk: 'Applied Paths',
     ),
     subtitle: LocalizedText(
-      ru: 'Specializations',
-      en: 'Specializations',
-      kk: 'Specializations',
+      ru: 'Product + Systems',
+      en: 'Product + Systems',
+      kk: 'Product + Systems',
     ),
-    position: Offset(800, 1980),
-    radius: 96,
+    position: Offset(800, 1500),
+    radius: 110,
     isHub: true,
   ),
 
-  // ── Layer 8: Applied specializations ──
+  // Applied branches
   KnowledgeTreeNodeSpec(
     id: 'frontend',
     trackId: 'frontend',
     title: LocalizedText(ru: 'Frontend', en: 'Frontend', kk: 'Frontend'),
-    position: Offset(230, 2200),
-    radius: 78,
+    position: Offset(180, 1840),
+    radius: 80,
   ),
   KnowledgeTreeNodeSpec(
     id: 'backend',
     trackId: 'backend',
     title: LocalizedText(ru: 'Backend', en: 'Backend', kk: 'Backend'),
-    position: Offset(480, 2360),
-    radius: 78,
+    position: Offset(430, 1840),
+    radius: 80,
+  ),
+  KnowledgeTreeNodeSpec(
+    id: 'machine_learning',
+    trackId: 'machine_learning',
+    title: LocalizedText(
+      ru: 'ML Engineer',
+      en: 'ML Engineer',
+      kk: 'ML Engineer',
+    ),
+    position: Offset(640, 1840),
+    radius: 76,
   ),
   KnowledgeTreeNodeSpec(
     id: 'mobile',
     trackId: 'mobile',
     title: LocalizedText(ru: 'Mobile', en: 'Mobile', kk: 'Mobile'),
-    position: Offset(800, 2350),
-    radius: 88,
+    position: Offset(840, 1840),
+    radius: 90,
   ),
   KnowledgeTreeNodeSpec(
     id: 'sre_devops',
@@ -212,43 +215,8 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'DevOps / SRE',
       kk: 'DevOps / SRE',
     ),
-    position: Offset(1180, 2200),
-    radius: 78,
-  ),
-
-  // ── Layer 9: Deep specializations ──
-  KnowledgeTreeNodeSpec(
-    id: 'machine_learning',
-    trackId: 'machine_learning',
-    title: LocalizedText(
-      ru: 'ML Engineer',
-      en: 'ML Engineer',
-      kk: 'ML Engineer',
-    ),
-    position: Offset(200, 2520),
-    radius: 74,
-  ),
-  KnowledgeTreeNodeSpec(
-    id: 'qa_engineering',
-    trackId: 'qa_engineering',
-    title: LocalizedText(
-      ru: 'QA Engineer',
-      en: 'QA Engineer',
-      kk: 'QA Engineer',
-    ),
-    position: Offset(440, 2650),
-    radius: 70,
-  ),
-  KnowledgeTreeNodeSpec(
-    id: 'system_administration',
-    trackId: 'system_administration',
-    title: LocalizedText(
-      ru: 'System Admin',
-      en: 'System Admin',
-      kk: 'System Admin',
-    ),
-    position: Offset(1260, 2520),
-    radius: 74,
+    position: Offset(1090, 1840),
+    radius: 80,
   ),
   KnowledgeTreeNodeSpec(
     id: 'cybersecurity',
@@ -258,24 +226,46 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Cybersecurity',
       kk: 'Cybersecurity',
     ),
-    position: Offset(1120, 2650),
-    radius: 74,
+    position: Offset(1330, 1840),
+    radius: 80,
   ),
 
-  // ── Layer 10: Mobile sub-nodes ──
+  // Applied depth
+  KnowledgeTreeNodeSpec(
+    id: 'qa_engineering',
+    trackId: 'qa_engineering',
+    title: LocalizedText(
+      ru: 'QA Engineer',
+      en: 'QA Engineer',
+      kk: 'QA Engineer',
+    ),
+    position: Offset(300, 2140),
+    radius: 72,
+  ),
   KnowledgeTreeNodeSpec(
     id: 'android_development',
     trackId: 'android_development',
     title: LocalizedText(ru: 'Android', en: 'Android', kk: 'Android'),
-    position: Offset(660, 2580),
+    position: Offset(740, 2140),
     radius: 64,
   ),
   KnowledgeTreeNodeSpec(
     id: 'ios_development',
     trackId: 'ios_development',
     title: LocalizedText(ru: 'iOS', en: 'iOS', kk: 'iOS'),
-    position: Offset(940, 2580),
+    position: Offset(930, 2140),
     radius: 64,
+  ),
+  KnowledgeTreeNodeSpec(
+    id: 'system_administration',
+    trackId: 'system_administration',
+    title: LocalizedText(
+      ru: 'System Admin',
+      en: 'System Admin',
+      kk: 'System Admin',
+    ),
+    position: Offset(1170, 2140),
+    radius: 74,
   ),
   KnowledgeTreeNodeSpec(
     id: 'crossplatform_development',
@@ -285,30 +275,23 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
       en: 'Crossplatform',
       kk: 'Crossplatform',
     ),
-    position: Offset(800, 2730),
+    position: Offset(835, 2360),
     radius: 66,
   ),
 ];
 
 const List<KnowledgeTreeEdgeSpec> knowledgeTreeEdges = <KnowledgeTreeEdgeSpec>[
-  // Root → main branches
+  // Root to primary foundations
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'mathematics'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'oop'),
-  KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'databases'),
   KnowledgeTreeEdgeSpec(
     fromNodeId: 'root',
     toNodeId: 'algorithms_data_structures',
   ),
-  KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'networking_protocols'),
-  KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'ai_theory'),
-  KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'computer_architecture'),
-  KnowledgeTreeEdgeSpec(
-    fromNodeId: 'root',
-    toNodeId: 'information_security_foundations',
-  ),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'databases'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'operating_systems'),
 
-  // Mathematics → sub-branches
+  // Mathematics cluster
   KnowledgeTreeEdgeSpec(
     fromNodeId: 'mathematics',
     toNodeId: 'mathematical_analysis',
@@ -323,31 +306,68 @@ const List<KnowledgeTreeEdgeSpec> knowledgeTreeEdges = <KnowledgeTreeEdgeSpec>[
     toNodeId: 'probability_statistics_analytics',
   ),
 
-  // OS → Applied Hub → specializations
+  // Supporting foundations
+  KnowledgeTreeEdgeSpec(
+    fromNodeId: 'algorithms_data_structures',
+    toNodeId: 'ai_theory',
+  ),
+  KnowledgeTreeEdgeSpec(
+    fromNodeId: 'databases',
+    toNodeId: 'networking_protocols',
+  ),
+  KnowledgeTreeEdgeSpec(
+    fromNodeId: 'operating_systems',
+    toNodeId: 'computer_architecture',
+  ),
+  KnowledgeTreeEdgeSpec(
+    fromNodeId: 'networking_protocols',
+    toNodeId: 'information_security_foundations',
+  ),
+  KnowledgeTreeEdgeSpec(
+    fromNodeId: 'operating_systems',
+    toNodeId: 'information_security_foundations',
+  ),
+
+  // Foundation convergence into applied paths
+  KnowledgeTreeEdgeSpec(fromNodeId: 'mathematics', toNodeId: 'applied_hub'),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'oop', toNodeId: 'applied_hub'),
+  KnowledgeTreeEdgeSpec(
+    fromNodeId: 'algorithms_data_structures',
+    toNodeId: 'applied_hub',
+  ),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'databases', toNodeId: 'applied_hub'),
   KnowledgeTreeEdgeSpec(
     fromNodeId: 'operating_systems',
     toNodeId: 'applied_hub',
   ),
+
+  // Applied branches
   KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'frontend'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'backend'),
-  KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'mobile'),
-  KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'sre_devops'),
   KnowledgeTreeEdgeSpec(
     fromNodeId: 'applied_hub',
     toNodeId: 'machine_learning',
   ),
-  KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'qa_engineering'),
-  KnowledgeTreeEdgeSpec(
-    fromNodeId: 'applied_hub',
-    toNodeId: 'system_administration',
-  ),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'mobile'),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'sre_devops'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'applied_hub', toNodeId: 'cybersecurity'),
 
-  // Mobile → sub-platforms
+  // Applied depth
+  KnowledgeTreeEdgeSpec(fromNodeId: 'ai_theory', toNodeId: 'applied_hub'),
+  KnowledgeTreeEdgeSpec(
+    fromNodeId: 'information_security_foundations',
+    toNodeId: 'applied_hub',
+  ),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'frontend', toNodeId: 'qa_engineering'),
+  KnowledgeTreeEdgeSpec(fromNodeId: 'backend', toNodeId: 'qa_engineering'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'mobile', toNodeId: 'android_development'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'mobile', toNodeId: 'ios_development'),
   KnowledgeTreeEdgeSpec(
     fromNodeId: 'mobile',
     toNodeId: 'crossplatform_development',
+  ),
+  KnowledgeTreeEdgeSpec(
+    fromNodeId: 'sre_devops',
+    toNodeId: 'system_administration',
   ),
 ];

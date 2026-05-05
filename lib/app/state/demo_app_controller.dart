@@ -184,6 +184,7 @@ class DemoAppController extends Notifier<DemoAppState> {
   void updateProfile({
     required String name,
     Object? avatarBase64 = _profileFieldUnchanged,
+    String? bio,
   }) {
     final currentUser =
         state.user ??
@@ -198,6 +199,7 @@ class DemoAppController extends Notifier<DemoAppState> {
       state.copyWith(
         user: currentUser.copyWith(
           name: normalizedName,
+          bio: bio,
           avatarBase64: identical(avatarBase64, _profileFieldUnchanged)
               ? currentUser.avatarBase64
               : avatarBase64 as String?,

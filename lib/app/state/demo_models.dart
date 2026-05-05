@@ -27,6 +27,7 @@ class DemoUser {
     required this.email,
     required this.role,
     required this.goal,
+    this.bio = '',
     this.avatarBase64,
   });
 
@@ -36,6 +37,7 @@ class DemoUser {
   final String email;
   final String role;
   final String goal;
+  final String bio;
   final String? avatarBase64;
 
   DemoUser copyWith({
@@ -43,6 +45,7 @@ class DemoUser {
     String? email,
     String? role,
     String? goal,
+    String? bio,
     Object? avatarBase64 = _sentinel,
   }) {
     return DemoUser(
@@ -50,6 +53,7 @@ class DemoUser {
       email: email ?? this.email,
       role: role ?? this.role,
       goal: goal ?? this.goal,
+      bio: bio ?? this.bio,
       avatarBase64: identical(avatarBase64, _sentinel)
           ? this.avatarBase64
           : avatarBase64 as String?,
@@ -62,6 +66,7 @@ class DemoUser {
       'email': email,
       'role': role,
       'goal': goal,
+      'bio': bio,
       'avatarBase64': avatarBase64,
     };
   }
@@ -72,6 +77,7 @@ class DemoUser {
       email: json['email'] as String? ?? '',
       role: json['role'] as String? ?? '',
       goal: json['goal'] as String? ?? '',
+      bio: json['bio'] as String? ?? '',
       avatarBase64: json['avatarBase64'] as String?,
     );
   }

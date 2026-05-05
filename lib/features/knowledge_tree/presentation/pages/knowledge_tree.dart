@@ -161,6 +161,15 @@ class _KnowledgeTreeViewportState
     final state = ref.watch(demoAppControllerProvider);
     final catalog = ref.watch(demoCatalogProvider);
     final colors = context.appColors;
+    final nodeAccentColors = <String, Color>{
+      for (final node in knowledgeTreeNodes)
+        node.id: _nodeAccentColor(
+          node: node,
+          catalog: catalog,
+          state: state,
+          colors: colors,
+        ),
+    };
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -180,9 +189,10 @@ class _KnowledgeTreeViewportState
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    colors.surface,
-                    colors.backgroundElevated,
-                    colors.surfaceSoft.withValues(alpha: 0.9),
+                    const Color(0xFF03111D),
+                    const Color(0xFF051A28),
+                    Color.lerp(const Color(0xFF071F31), colors.surface, 0.35) ??
+                        colors.surface,
                   ],
                 ),
               ),
@@ -297,6 +307,8 @@ class _KnowledgeTreeViewportState
                                                             knowledgeTreeNodes,
                                                         edges:
                                                             knowledgeTreeEdges,
+                                                        nodeAccentColors:
+                                                            nodeAccentColors,
                                                         colors: colors,
                                                       ),
                                                 ),
@@ -309,6 +321,8 @@ class _KnowledgeTreeViewportState
                                                 catalog,
                                                 state,
                                                 colors,
+                                                nodeAccentColors[node.id] ??
+                                                    colors.primary,
                                               ),
                                             ),
                                           ],
@@ -317,12 +331,6 @@ class _KnowledgeTreeViewportState
                                     ),
                                   ),
                                 ),
-                                if (!compact)
-                                  Positioned(
-                                    right: 16,
-                                    top: 16,
-                                    child: _PinnedTreeLegend(compact: compact),
-                                  ),
                               ],
                             );
                           },
@@ -345,21 +353,24 @@ class _KnowledgeTreeViewportState
     DemoCatalog catalog,
     DemoAppState state,
     AppThemeColors colors,
+    Color accent,
   ) {
     final orbSize = node.radius * 2;
     final widgetWidth =
-        (node.isHub ? orbSize + 68 : math.max(orbSize + 64, 152)).toDouble();
-    final widgetHeight = node.isHub ? orbSize + 60 : orbSize + 56;
+        (node.isHub ? math.max(orbSize + 76, 230) : math.max(orbSize + 54, 164))
+            .toDouble();
+    final widgetHeight = node.isHub ? orbSize + 44 : orbSize + 28;
 
     return Positioned(
       left: node.position.dx - (widgetWidth / 2),
-      top: node.position.dy - (orbSize / 2),
+      top: node.position.dy - (widgetHeight / 2),
       width: widgetWidth,
       height: widgetHeight,
       child: _KnowledgeTreeNodeCard(
         node: node,
         state: state,
         catalog: catalog,
+        accent: accent,
         onTap: node.trackId == null || node.id == 'mathematics'
             ? null
             : () => context.push(AppRoutes.trackById(node.trackId!)),
@@ -368,97 +379,20 @@ class _KnowledgeTreeViewportState
   }
 }
 
-class _TreeLegendCard extends StatelessWidget {
-  const _TreeLegendCard({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: colors.surface.withValues(alpha: 0.94),
-        border: Border.all(color: colors.divider),
-        boxShadow: [
-          BoxShadow(
-            color: colors.primary.withValues(alpha: 0.08),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
-            child: Text(
-              context.l10n.text('tree_legend'),
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-          ),
-          _LegendChip(
-            label: context.l10n.text('tree_available'),
-            color: colors.primary,
-            compact: true,
-          ),
-          const SizedBox(height: 6),
-          _LegendChip(
-            label: context.l10n.text('tree_in_progress'),
-            color: colors.accent,
-            compact: true,
-          ),
-          const SizedBox(height: 6),
-          _LegendChip(
-            label: context.l10n.text('tree_completed'),
-            color: colors.success,
-            compact: true,
-          ),
-          const SizedBox(height: 6),
-          _LegendChip(
-            label: context.l10n.text('tree_mastered'),
-            color: const Color(0xFFFFD166),
-            compact: true,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PinnedTreeLegend extends StatelessWidget {
-  const _PinnedTreeLegend({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: compact ? 220 : 188,
-      child: _TreeLegendCard(compact: compact),
-    );
-  }
-}
 
 class _KnowledgeTreeNodeCard extends StatelessWidget {
   const _KnowledgeTreeNodeCard({
     required this.node,
     required this.state,
     required this.catalog,
+    required this.accent,
     required this.onTap,
   });
 
   final KnowledgeTreeNodeSpec node;
   final DemoAppState state;
   final DemoCatalog catalog;
+  final Color accent;
   final VoidCallback? onTap;
 
   @override
@@ -470,206 +404,234 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
     final availability = track == null
         ? TrackAvailability.available
         : catalog.trackAvailabilityFor(state, track.id);
-    final accent = track == null
-        ? colors.primary
-        : _accentForAvailability(colors, availability, track.color);
     final bestPercent = track == null
         ? 0
         : catalog.bestAssessmentPercentFor(state, track.id);
+    final progress = track == null
+        ? null
+        : catalog.progressForTrack(state, track.id);
     final orbSize = node.radius * 2;
+    final statusHasBadge =
+        bestPercent > 0 || (progress?.completedUnits ?? 0) > 0;
+    final statusLabel = bestPercent > 0
+        ? '$bestPercent%'
+        : progress == null || progress.completedUnits == 0
+        ? ''
+        : '${progress.completedUnits}';
+    final hubIcon = node.id == 'root'
+        ? Icons.hub_rounded
+        : Icons.auto_awesome_rounded;
 
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(32),
-      child: Column(
-        children: [
-          SizedBox(
-            width: orbSize + 18,
-            height: orbSize + 18,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Align(
-                  alignment: Alignment.center,
-                  child: Container(
-                    width: orbSize,
-                    height: orbSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          accent.withValues(alpha: 0.28),
-                          accent.withValues(alpha: 0.12),
-                          Colors.transparent,
+      child: SizedBox(
+        width: orbSize + 22,
+        height: orbSize + 22,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Align(
+              alignment: Alignment.center,
+              child: Container(
+                width: orbSize + 20,
+                height: orbSize + 20,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      accent.withValues(alpha: 0.24),
+                      accent.withValues(alpha: 0.08),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.center,
+              child: Container(
+                width: orbSize,
+                height: orbSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: progress != null && progress.fraction > 0 ? LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    stops: [
+                      0.0,
+                      progress.fraction,
+                      progress.fraction,
+                      1.0,
+                    ],
+                    colors: [
+                      accent.withValues(alpha: 0.5),
+                      accent.withValues(alpha: 0.5),
+                      const Color(0xFF071C2A).withValues(alpha: node.isHub ? 0.98 : 0.94),
+                      const Color(0xFF05121D).withValues(alpha: node.isHub ? 0.98 : 0.92),
+                    ],
+                  ) : LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(
+                        0xFF071C2A,
+                      ).withValues(alpha: node.isHub ? 0.98 : 0.94),
+                      const Color(
+                        0xFF05121D,
+                      ).withValues(alpha: node.isHub ? 0.98 : 0.92),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.96),
+                    width: node.isHub ? 3.1 : 2.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.22),
+                      blurRadius: node.isHub ? 24 : 18,
+                      spreadRadius: node.isHub ? 2 : 1,
+                    ),
+                  ],
+                ),
+                child: Container(
+                  margin: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: accent.withValues(alpha: 0.18),
+                      width: 1.1,
+                    ),
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            track?.icon ?? hubIcon,
+                            color: accent,
+                            size: node.isHub
+                                ? 30
+                                : math.max(18, node.radius * 0.34),
+                          ),
+                          const SizedBox(height: 7),
+                          Text(
+                            node.title.resolve(state.locale),
+                            textAlign: TextAlign.center,
+                            maxLines: node.isHub ? 2 : 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: colors.textPrimary,
+                              fontWeight: FontWeight.w800,
+                              height: 1.1,
+                              fontSize: node.isHub
+                                  ? 16
+                                  : node.radius <= 66
+                                  ? 11.5
+                                  : 12.5,
+                            ),
+                          ),
+                          if (node.subtitle != null) ...[
+                            const SizedBox(height: 5),
+                            Text(
+                              node.subtitle!.resolve(state.locale),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: colors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Container(
-                    width: orbSize - 10,
-                    height: orbSize - 10,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colors.surface.withValues(alpha: 0.92),
-                      border: Border.all(
-                        color: accent.withValues(alpha: 0.92),
-                        width: node.isHub ? 3.2 : 2.4,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: accent.withValues(alpha: 0.22),
-                          blurRadius: 22,
-                          spreadRadius: 2,
+              ),
+            ),
+            if (track != null)
+              Positioned(
+                top: 6,
+                right: 4,
+                child: statusHasBadge
+                    ? Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: statusLabel.isEmpty ? 0 : 8,
+                          vertical: statusLabel.isEmpty ? 0 : 5,
                         ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (track != null)
-                              Icon(
-                                track.icon,
-                                color: accent,
-                                size: node.isHub
-                                    ? 30
-                                    : math.max(16, node.radius * 0.36),
-                              )
-                            else
-                              Icon(
-                                node.id == 'root'
-                                    ? Icons.account_tree_rounded
-                                    : Icons.auto_awesome_mosaic_rounded,
-                                color: accent,
-                                size: node.isHub ? 30 : 22,
-                              ),
-                            const SizedBox(height: 6),
-                            Text(
-                              node.title.resolve(state.locale),
-                              textAlign: TextAlign.center,
-                              maxLines: node.isHub ? 2 : 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: colors.textPrimary,
-                                fontWeight: FontWeight.w800,
-                                height: 1.12,
-                                fontSize: node.isHub
-                                    ? 16
-                                    : node.radius < 68
-                                    ? 12
-                                    : 13,
-                              ),
-                            ),
-                            if (node.subtitle != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                node.subtitle!.resolve(state.locale),
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                        width: statusLabel.isEmpty ? 12 : null,
+                        height: statusLabel.isEmpty ? 12 : null,
+                        decoration: BoxDecoration(
+                          shape: statusLabel.isEmpty
+                              ? BoxShape.circle
+                              : BoxShape.rectangle,
+                          borderRadius: statusLabel.isEmpty
+                              ? null
+                              : BorderRadius.circular(999),
+                          color: colors.surfaceSoft.withValues(alpha: 0.96),
+                          border: Border.all(
+                            color: accent.withValues(alpha: 0.58),
+                          ),
+                        ),
+                        child: statusLabel.isEmpty
+                            ? null
+                            : Text(
+                                statusLabel,
                                 style: TextStyle(
-                                  color: colors.textSecondary,
-                                  fontWeight: FontWeight.w600,
+                                  color: accent,
+                                  fontWeight: FontWeight.w800,
                                   fontSize: 10,
                                 ),
                               ),
-                            ],
+                      )
+                    : Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accent,
+                          boxShadow: [
+                            BoxShadow(
+                              color: accent.withValues(alpha: 0.34),
+                              blurRadius: 10,
+                            ),
                           ],
                         ),
                       ),
+              ),
+            if (track != null && bestPercent == 0)
+              Positioned(
+                left: 8,
+                bottom: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    color: colors.surfaceSoft.withValues(alpha: 0.88),
+                    border: Border.all(color: accent.withValues(alpha: 0.28)),
+                  ),
+                  child: Text(
+                    _statusLabel(context, availability),
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 9,
                     ),
                   ),
                 ),
-                if (track != null)
-                  Positioned(
-                    top: 2,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(999),
-                        color: colors.surfaceSoft.withValues(alpha: 0.96),
-                        border: Border.all(
-                          color: accent.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Text(
-                        bestPercent == 0
-                            ? _statusLabel(context, availability)
-                            : '$bestPercent%',
-                        style: TextStyle(
-                          color: accent,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (track != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                color: accent.withValues(alpha: 0.12),
               ),
-              child: Text(
-                '${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} ${context.l10n.text('tree_units')}',
-                style: TextStyle(
-                  color: accent,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 10,
-                ),
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
-  }
-
-  static Color _accentForAvailability(
-    AppThemeColors colors,
-    TrackAvailability availability,
-    Color fallback,
-  ) {
-    switch (availability) {
-      case TrackAvailability.available:
-        return fallback;
-      case TrackAvailability.inProgress:
-        return colors.accent;
-      case TrackAvailability.completed:
-        return colors.success;
-      case TrackAvailability.mastered:
-        return const Color(0xFFFFD166);
-    }
-  }
-
-  static String _statusLabel(
-    BuildContext context,
-    TrackAvailability availability,
-  ) {
-    switch (availability) {
-      case TrackAvailability.available:
-        return context.l10n.text('tree_available');
-      case TrackAvailability.inProgress:
-        return context.l10n.text('tree_in_progress');
-      case TrackAvailability.completed:
-        return context.l10n.text('tree_completed');
-      case TrackAvailability.mastered:
-        return context.l10n.text('tree_mastered');
-    }
   }
 }
 
@@ -677,11 +639,13 @@ class _KnowledgeTreePainter extends CustomPainter {
   const _KnowledgeTreePainter({
     required this.nodes,
     required this.edges,
+    required this.nodeAccentColors,
     required this.colors,
   });
 
   final List<KnowledgeTreeNodeSpec> nodes;
   final List<KnowledgeTreeEdgeSpec> edges;
+  final Map<String, Color> nodeAccentColors;
   final AppThemeColors colors;
 
   @override
@@ -692,10 +656,12 @@ class _KnowledgeTreePainter extends CustomPainter {
     final glowPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
     final branchPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
     for (final edge in edges) {
       final from = nodesById[edge.fromNodeId];
@@ -704,44 +670,84 @@ class _KnowledgeTreePainter extends CustomPainter {
         continue;
       }
 
+      final fromAccent = nodeAccentColors[from.id] ?? colors.primary;
+      final toAccent = nodeAccentColors[to.id] ?? colors.accent;
       final majorEdge =
-          from.isHub || to.isHub || from.radius >= 78 || to.radius >= 78;
-      final path = _buildBranchPath(from.position, to.position);
+          from.isHub || to.isHub || from.radius >= 86 || to.radius >= 86;
+      final edgeColor = edge.toNodeId == 'applied_hub'
+          ? fromAccent
+          : Color.lerp(fromAccent, toAccent, 0.45) ?? toAccent;
+      final path = _buildBranchPath(from, to, edge);
       glowPaint
-        ..color = colors.treeTrunkGlow.withValues(
-          alpha: majorEdge ? 0.44 : 0.22,
-        )
-        ..strokeWidth = majorEdge ? 9 : 6;
+        ..color = edgeColor.withValues(alpha: majorEdge ? 0.34 : 0.2)
+        ..strokeWidth = majorEdge ? 8 : 5.5;
       branchPaint
-        ..color = colors.treeTrunk.withValues(alpha: majorEdge ? 0.92 : 0.74)
-        ..strokeWidth = majorEdge ? 5.5 : 2.8;
+        ..color = edgeColor.withValues(alpha: majorEdge ? 0.92 : 0.82)
+        ..strokeWidth = majorEdge ? 3.8 : 2.4;
       canvas.drawPath(path, glowPaint);
       canvas.drawPath(path, branchPaint);
     }
   }
 
-  Path _buildBranchPath(Offset start, Offset end) {
-    final verticalDistance = (end.dy - start.dy).abs();
-    final controlOffset = math.max(90, verticalDistance * 0.18);
-    final midX = start.dx + ((end.dx - start.dx) * 0.18);
-    final endMidX = end.dx - ((end.dx - start.dx) * 0.18);
+  Path _buildBranchPath(
+    KnowledgeTreeNodeSpec startNode,
+    KnowledgeTreeNodeSpec endNode,
+    KnowledgeTreeEdgeSpec edge,
+  ) {
+    if (edge.toNodeId == 'applied_hub') {
+      final start = Offset(
+        startNode.position.dx,
+        startNode.position.dy + startNode.radius - 6,
+      );
+      final end = Offset(
+        endNode.position.dx,
+        endNode.position.dy - endNode.radius + 6,
+      );
+      final bridgeY = end.dy - 86;
+
+      return Path()
+        ..moveTo(start.dx, start.dy)
+        ..lineTo(start.dx, bridgeY)
+        ..lineTo(end.dx, bridgeY)
+        ..lineTo(end.dx, end.dy);
+    }
+
+    final start = _circleEdgePoint(
+      center: startNode.position,
+      target: endNode.position,
+      radius: math.max(16, startNode.radius - 6),
+    );
+    final end = _circleEdgePoint(
+      center: endNode.position,
+      target: startNode.position,
+      radius: math.max(16, endNode.radius - 6),
+    );
+
     return Path()
       ..moveTo(start.dx, start.dy)
-      ..cubicTo(
-        midX,
-        start.dy + controlOffset,
-        endMidX,
-        end.dy - controlOffset,
-        end.dx,
-        end.dy,
-      );
+      ..lineTo(end.dx, end.dy);
+  }
+
+  Offset _circleEdgePoint({
+    required Offset center,
+    required Offset target,
+    required double radius,
+  }) {
+    final direction = target - center;
+    final distance = direction.distance;
+    if (distance == 0) {
+      return center;
+    }
+    final normalized = direction / distance;
+    return center + (normalized * radius);
   }
 
   @override
   bool shouldRepaint(covariant _KnowledgeTreePainter oldDelegate) {
     return oldDelegate.colors != colors ||
         oldDelegate.nodes != nodes ||
-        oldDelegate.edges != edges;
+        oldDelegate.edges != edges ||
+        oldDelegate.nodeAccentColors != nodeAccentColors;
   }
 }
 
@@ -756,41 +762,60 @@ class _BackdropPainter extends CustomPainter {
       ..shader =
           RadialGradient(
             colors: [
-              colors.primary.withValues(alpha: 0.08),
+              const Color(0xFF13D9FF).withValues(alpha: 0.18),
               Colors.transparent,
             ],
           ).createShader(
-            Rect.fromCircle(center: const Offset(160, 140), radius: 220),
+            Rect.fromCircle(center: const Offset(800, 240), radius: 320),
           );
     final accentPaintTwo = Paint()
       ..shader =
           RadialGradient(
-            colors: [colors.accent.withValues(alpha: 0.06), Colors.transparent],
+            colors: [
+              const Color(0xFFFFA63E).withValues(alpha: 0.12),
+              Colors.transparent,
+            ],
           ).createShader(
             Rect.fromCircle(
-              center: Offset(size.width - 120, size.height - 160),
-              radius: 260,
+              center: Offset(size.width / 2, size.height * 0.62),
+              radius: 380,
+            ),
+          );
+    final accentPaintThree = Paint()
+      ..shader =
+          RadialGradient(
+            colors: [
+              const Color(0xFFA991FF).withValues(alpha: 0.1),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width - 260, size.height - 320),
+              radius: 320,
             ),
           );
 
     canvas.drawRect(Offset.zero & size, accentPaint);
     canvas.drawRect(Offset.zero & size, accentPaintTwo);
+    canvas.drawRect(Offset.zero & size, accentPaintThree);
 
     final particlePaint = Paint()
-      ..color = colors.textSecondary.withValues(alpha: 0.1);
+      ..color = colors.textSecondary.withValues(alpha: 0.08);
     const particleOffsets = <Offset>[
-      Offset(120, 92),
-      Offset(280, 174),
-      Offset(700, 148),
-      Offset(780, 408),
-      Offset(170, 566),
-      Offset(620, 680),
-      Offset(250, 1020),
-      Offset(720, 1190),
-      Offset(440, 1410),
+      Offset(146, 132),
+      Offset(428, 324),
+      Offset(716, 282),
+      Offset(1220, 364),
+      Offset(262, 684),
+      Offset(846, 1016),
+      Offset(1348, 918),
+      Offset(560, 1478),
+      Offset(1160, 1708),
+      Offset(364, 2080),
+      Offset(1008, 2280),
     ];
     for (final offset in particleOffsets) {
-      canvas.drawCircle(offset, 6, particlePaint);
+      canvas.drawCircle(offset, 5, particlePaint);
     }
   }
 
@@ -800,54 +825,55 @@ class _BackdropPainter extends CustomPainter {
   }
 }
 
-class _LegendChip extends StatelessWidget {
-  const _LegendChip({
-    required this.label,
-    required this.color,
-    this.compact = false,
-  });
+Color _nodeAccentColor({
+  required KnowledgeTreeNodeSpec node,
+  required DemoCatalog catalog,
+  required DemoAppState state,
+  required AppThemeColors colors,
+}) {
+  if (node.trackId == null) {
+    switch (node.id) {
+      case 'root':
+        return const Color(0xFF13D9FF);
+      case 'applied_hub':
+        return const Color(0xFFFFA63E);
+      default:
+        return colors.primary;
+    }
+  }
 
-  final String label;
-  final Color color;
-  final bool compact;
+  final track = catalog.trackById(node.trackId!);
+  final availability = catalog.trackAvailabilityFor(state, track.id);
+  return _availabilityAccent(colors, availability, track.color);
+}
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 10 : 12,
-        vertical: compact ? 10 : 12,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: colors.surfaceSoft,
-        border: Border.all(color: colors.divider),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: compact ? 13 : 14,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+Color _availabilityAccent(
+  AppThemeColors colors,
+  TrackAvailability availability,
+  Color fallback,
+) {
+  switch (availability) {
+    case TrackAvailability.available:
+      return fallback;
+    case TrackAvailability.inProgress:
+      return colors.accent;
+    case TrackAvailability.completed:
+      return colors.success;
+    case TrackAvailability.mastered:
+      return const Color(0xFFFFD166);
   }
 }
+
+String _statusLabel(BuildContext context, TrackAvailability availability) {
+  switch (availability) {
+    case TrackAvailability.available:
+      return context.l10n.text('tree_available');
+    case TrackAvailability.inProgress:
+      return context.l10n.text('tree_in_progress');
+    case TrackAvailability.completed:
+      return context.l10n.text('tree_completed');
+    case TrackAvailability.mastered:
+      return context.l10n.text('tree_mastered');
+  }
+}
+
