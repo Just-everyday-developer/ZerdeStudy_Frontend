@@ -70,21 +70,23 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
     final controller = TextEditingController(text: currentKey);
     var obscureText = true;
 
+    final l10n = context.l10n;
+
     final submittedKey = await showDialog<String>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (dialogContext, setState) {
             return AlertDialog(
-              title: const Text('Personal LLM API key'),
+              title: Text(l10n.text('ai_api_key_title')),
               content: SizedBox(
                 width: 440,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Stored locally on this device. ai-service will use it only for outgoing provider requests.',
+                    Text(
+                      l10n.text('ai_api_key_description'),
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -93,8 +95,8 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                       autocorrect: false,
                       enableSuggestions: false,
                       decoration: InputDecoration(
-                        labelText: 'API key',
-                        hintText: 'Paste your Gemini or provider key',
+                        labelText: l10n.text('ai_api_key_label'),
+                        hintText: l10n.text('ai_api_key_hint'),
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(() {
@@ -115,13 +117,13 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
+                  child: Text(l10n.text('cancel')),
                 ),
                 FilledButton(
                   onPressed: () {
                     Navigator.of(dialogContext).pop(controller.text);
                   },
-                  child: const Text('Save'),
+                  child: Text(l10n.text('ai_api_key_save')),
                 ),
               ],
             );
@@ -145,8 +147,8 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
     AppNotice.show(
       context,
       message: hasKey
-          ? 'Personal API key saved locally.'
-          : 'Personal API key removed.',
+          ? context.l10n.text('ai_api_key_saved')
+          : context.l10n.text('ai_api_key_removed'),
       type: AppNoticeType.success,
     );
   }
@@ -159,7 +161,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
 
     AppNotice.show(
       context,
-      message: 'Personal API key removed.',
+      message: context.l10n.text('ai_api_key_removed'),
       type: AppNoticeType.success,
     );
   }

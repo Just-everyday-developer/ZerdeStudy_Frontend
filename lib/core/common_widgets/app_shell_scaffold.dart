@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/routing/app_routes.dart';
@@ -10,7 +9,6 @@ import '../../features/app_guide/presentation/app_guide_controller.dart';
 import '../../features/app_guide/presentation/app_guide_target.dart';
 import 'app_settings_panel.dart';
 import 'app_user_avatar.dart';
-import '../layout/app_breakpoints.dart';
 import '../localization/app_localizations.dart';
 import '../providers/course_search_focus_provider.dart';
 import '../theme/app_theme_colors.dart';
@@ -31,20 +29,14 @@ class AppShellScaffold extends ConsumerStatefulWidget {
 
 class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
   final List<int> _branchHistory = <int>[];
-  final FocusNode _shellFocusNode = FocusNode(
-    debugLabel: 'app-shell-shortcuts',
-  );
 
   @override
   void initState() {
     super.initState();
-    HardwareKeyboard.instance.addHandler(_handleHardwareShortcut);
   }
 
   @override
   void dispose() {
-    HardwareKeyboard.instance.removeHandler(_handleHardwareShortcut);
-    _shellFocusNode.dispose();
     super.dispose();
   }
 
@@ -83,99 +75,6 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
   void _requestSearchFocus() {
     ref.read(courseSearchFocusRequestProvider.notifier).ping();
   }
-
-  bool _hasEditableTextFocus() {
-    final focusedContext = FocusManager.instance.primaryFocus?.context;
-    if (focusedContext == null) {
-      return false;
-    }
-    return focusedContext.widget is EditableText;
-  }
-
-  void _selectAdjacentBranch(int delta) {
-    final cycle = context.isCompactLayout
-        ? const <int>[0, 1, 2, 3, 4, 5]
-        : const <int>[0, 1, 2, 3, 4];
-    final currentIndex = widget.navigationShell.currentIndex;
-    final currentPosition = cycle.indexOf(currentIndex);
-    final safePosition = currentPosition == -1 ? 0 : currentPosition;
-    final nextPosition = (safePosition + delta + cycle.length) % cycle.length;
-    _onDestinationSelected(cycle[nextPosition]);
-  }
-
-  KeyEventResult _handleShellKeyEvent(KeyEvent event) {
-    if (event is! KeyDownEvent) {
-      return KeyEventResult.ignored;
-    }
-
-    final key = event.logicalKey;
-    final ctrlPressed = HardwareKeyboard.instance.isControlPressed;
-    final altPressed = HardwareKeyboard.instance.isAltPressed;
-    final shiftPressed = HardwareKeyboard.instance.isShiftPressed;
-
-    if (altPressed && !ctrlPressed) {
-      if (key == LogicalKeyboardKey.arrowLeft ||
-          key == LogicalKeyboardKey.keyZ) {
-        _handleBack();
-        return KeyEventResult.handled;
-      }
-
-      final directIndex = switch (key) {
-        LogicalKeyboardKey.digit1 || LogicalKeyboardKey.numpad1 => 0,
-        LogicalKeyboardKey.digit2 || LogicalKeyboardKey.numpad2 => 1,
-        LogicalKeyboardKey.digit3 || LogicalKeyboardKey.numpad3 => 2,
-        LogicalKeyboardKey.digit4 || LogicalKeyboardKey.numpad4 => 3,
-        LogicalKeyboardKey.digit5 || LogicalKeyboardKey.numpad5 => 4,
-        _ => null,
-      };
-      if (directIndex != null) {
-        _onDestinationSelected(directIndex);
-        return KeyEventResult.handled;
-      }
-    }
-
-    if (ctrlPressed && key == LogicalKeyboardKey.tab) {
-      _selectAdjacentBranch(shiftPressed ? -1 : 1);
-      return KeyEventResult.handled;
-    }
-
-    if (ctrlPressed && key == LogicalKeyboardKey.keyK) {
-      _onDestinationSelected(2);
-      _requestSearchFocus();
-      return KeyEventResult.handled;
-    }
-
-    if (ctrlPressed && key == LogicalKeyboardKey.keyL) {
-      _onDestinationSelected(2);
-      return KeyEventResult.handled;
-    }
-
-    if (ctrlPressed && key == LogicalKeyboardKey.keyT) {
-      _onDestinationSelected(1);
-      return KeyEventResult.handled;
-    }
-
-    if (!ctrlPressed && !altPressed && !_hasEditableTextFocus()) {
-      if (key == LogicalKeyboardKey.arrowLeft) {
-        _selectAdjacentBranch(-1);
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.arrowRight) {
-        _selectAdjacentBranch(1);
-        return KeyEventResult.handled;
-      }
-    }
-
-    return KeyEventResult.ignored;
-  }
-
-  bool _handleHardwareShortcut(KeyEvent event) {
-    if (!mounted) {
-      return false;
-    }
-    return _handleShellKeyEvent(event) == KeyEventResult.handled;
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -272,31 +171,27 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                   ],
                 );
 
-          return Focus(
-            focusNode: _shellFocusNode,
-            autofocus: true,
-            child: Scaffold(
-              backgroundColor: colors.background,
-              body: shellBody,
-              bottomNavigationBar: compact
-                  ? AppGuideTarget(
-                      id: AppGuideTargetIds.shellNavigation,
-                      child: NavigationBar(
-                        selectedIndex: widget.navigationShell.currentIndex,
-                        onDestinationSelected: _onDestinationSelected,
-                        destinations: destinations
-                            .map(
-                              (destination) => NavigationDestination(
-                                icon: Icon(destination.icon),
-                                selectedIcon: Icon(destination.selectedIcon),
-                                label: destination.label,
-                              ),
-                            )
-                            .toList(growable: false),
-                      ),
-                    )
-                  : null,
-            ),
+          return Scaffold(
+            backgroundColor: colors.background,
+            body: shellBody,
+            bottomNavigationBar: compact
+                ? AppGuideTarget(
+                    id: AppGuideTargetIds.shellNavigation,
+                    child: NavigationBar(
+                      selectedIndex: widget.navigationShell.currentIndex,
+                      onDestinationSelected: _onDestinationSelected,
+                      destinations: destinations
+                          .map(
+                            (destination) => NavigationDestination(
+                              icon: Icon(destination.icon),
+                              selectedIcon: Icon(destination.selectedIcon),
+                              label: destination.label,
+                            ),
+                          )
+                          .toList(growable: false),
+                    ),
+                  )
+                : null,
           );
         },
       ),

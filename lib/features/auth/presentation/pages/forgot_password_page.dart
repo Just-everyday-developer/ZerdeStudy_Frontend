@@ -104,10 +104,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           ),
           const SizedBox(height: 20),
           TechActionButton(
-            title: authState.isBusy ? '...' : l10n.text('send_code'),
+            title: l10n.text('send_code'),
             isPrimary: true,
             icon: Icons.mark_email_read_outlined,
-            onTap: authState.isBusy ? () {} : _sendCode,
+            onTap: authState.isBusy ? null : _sendCode,
           ),
           const SizedBox(height: 12),
           Align(

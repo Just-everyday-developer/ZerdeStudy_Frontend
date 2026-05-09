@@ -207,11 +207,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   const SizedBox(height: 20),
                   TechActionButton(
-                    title: authState.isBusy ? '...' : l10n.text('login'),
+                    title: l10n.text('login'),
                     isPrimary: true,
                     icon: Icons.login_rounded,
                     onTap: authState.isBusy
-                        ? () {}
+                        ? null
                         : () => _submit(selectedExperience),
                   ),
                   const SizedBox(height: 8),

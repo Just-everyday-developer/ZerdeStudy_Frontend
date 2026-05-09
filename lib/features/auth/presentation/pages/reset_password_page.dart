@@ -177,10 +177,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           ),
           const SizedBox(height: 20),
           TechActionButton(
-            title: authState.isBusy ? '...' : l10n.text('save_new_password'),
+            title: l10n.text('save_new_password'),
             isPrimary: true,
             icon: Icons.lock_reset_rounded,
-            onTap: authState.isBusy ? () {} : _submit,
+            onTap: authState.isBusy ? null : _submit,
           ),
           const SizedBox(height: 12),
           Align(

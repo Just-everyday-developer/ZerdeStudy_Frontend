@@ -127,10 +127,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   ),
                   const SizedBox(height: 20),
                   TechActionButton(
-                    title: authState.isBusy ? '...' : l10n.text('signup'),
+                    title: l10n.text('signup'),
                     isPrimary: true,
                     icon: Icons.rocket_launch_rounded,
-                    onTap: authState.isBusy ? () {} : _submit,
+                    onTap: authState.isBusy ? null : _submit,
                   ),
                   const SizedBox(height: 12),
                   Align(

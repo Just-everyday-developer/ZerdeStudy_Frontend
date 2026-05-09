@@ -67,11 +67,11 @@ class HomePage extends ConsumerWidget {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  _MetricBadge(label: 'XP', value: '${state.xp}'),
-                  _MetricBadge(label: 'Level', value: '${state.level}'),
-                  _MetricBadge(label: 'Streak', value: '${state.streak}d'),
+                  _MetricBadge(label: l10n.text('metric_xp'), value: '${state.xp}'),
+                  _MetricBadge(label: l10n.text('metric_level'), value: '${state.level}'),
+                  _MetricBadge(label: l10n.text('metric_streak'), value: '${state.streak}d'),
                   _MetricBadge(
-                    label: 'Mastered',
+                    label: l10n.text('metric_mastered'),
                     value: '${catalog.masteredTracks(state)}',
                   ),
                 ],
@@ -83,7 +83,10 @@ class HomePage extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '${currentProgress.completedUnits}/${currentProgress.totalUnits} completed units',
+                l10n.format('completed_units', <String, Object>{
+                  'completed': currentProgress.completedUnits,
+                  'total': currentProgress.totalUnits,
+                }),
                 style: TextStyle(color: colors.textSecondary),
               ),
               const SizedBox(height: 14),
@@ -281,7 +284,7 @@ class HomePage extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Level ${entry.level}',
+                                  '${l10n.text('metric_level')} ${entry.level}',
                                   style: TextStyle(color: colors.textSecondary),
                                 ),
                               ],

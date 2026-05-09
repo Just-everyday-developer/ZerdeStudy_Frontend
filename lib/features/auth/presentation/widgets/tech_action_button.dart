@@ -13,7 +13,7 @@ class TechActionButton extends StatelessWidget {
 
   final String title;
   final bool isPrimary;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final IconData? icon;
 
   @override

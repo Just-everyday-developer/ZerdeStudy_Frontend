@@ -1762,6 +1762,130 @@ class AppLocalizations {
       AppLocale.en: 'Ask a question',
       AppLocale.kk: 'Сұрақ қою',
     },
+    'tab_community': {
+      AppLocale.ru: 'Сообщество',
+      AppLocale.en: 'Community',
+      AppLocale.kk: 'Қоғамдастық',
+    },
+    'metric_xp': {
+      AppLocale.ru: 'XP',
+      AppLocale.en: 'XP',
+      AppLocale.kk: 'XP',
+    },
+    'metric_level': {
+      AppLocale.ru: 'Уровень',
+      AppLocale.en: 'Level',
+      AppLocale.kk: 'Деңгей',
+    },
+    'metric_streak': {
+      AppLocale.ru: 'Серия',
+      AppLocale.en: 'Streak',
+      AppLocale.kk: 'Серия',
+    },
+    'metric_mastered': {
+      AppLocale.ru: 'Освоено',
+      AppLocale.en: 'Mastered',
+      AppLocale.kk: 'Меңгерілген',
+    },
+    'completed_units': {
+      AppLocale.ru: '{completed}/{total} юнитов завершено',
+      AppLocale.en: '{completed}/{total} completed units',
+      AppLocale.kk: '{completed}/{total} юнит аяқталды',
+    },
+    'ai_api_key_title': {
+      AppLocale.ru: 'Персональный ключ LLM API',
+      AppLocale.en: 'Personal LLM API key',
+      AppLocale.kk: 'Жеке LLM API кілті',
+    },
+    'ai_api_key_description': {
+      AppLocale.ru:
+          'Хранится локально на устройстве. Сервис AI будет использовать его только для исходящих запросов.',
+      AppLocale.en:
+          'Stored locally on this device. The AI service will use it only for outgoing provider requests.',
+      AppLocale.kk:
+          'Құрылғыда жергілікті сақталады. AI қызметі оны тек шығыс сұраныстар үшін пайдаланады.',
+    },
+    'ai_api_key_label': {
+      AppLocale.ru: 'API ключ',
+      AppLocale.en: 'API key',
+      AppLocale.kk: 'API кілті',
+    },
+    'ai_api_key_hint': {
+      AppLocale.ru: 'Вставьте ваш Gemini или провайдер-ключ',
+      AppLocale.en: 'Paste your Gemini or provider key',
+      AppLocale.kk: 'Gemini немесе провайдер кілтін қойыңыз',
+    },
+    'ai_api_key_save': {
+      AppLocale.ru: 'Сохранить',
+      AppLocale.en: 'Save',
+      AppLocale.kk: 'Сақтау',
+    },
+    'ai_api_key_saved': {
+      AppLocale.ru: 'Персональный API ключ сохранён локально.',
+      AppLocale.en: 'Personal API key saved locally.',
+      AppLocale.kk: 'Жеке API кілті жергілікті сақталды.',
+    },
+    'ai_api_key_removed': {
+      AppLocale.ru: 'Персональный API ключ удалён.',
+      AppLocale.en: 'Personal API key removed.',
+      AppLocale.kk: 'Жеке API кілті жойылды.',
+    },
+    'ai_api_key_section_title': {
+      AppLocale.ru: 'Персональный AI ключ',
+      AppLocale.en: 'Personal AI key',
+      AppLocale.kk: 'Жеке AI кілті',
+    },
+    'ai_api_key_active': {
+      AppLocale.ru: 'Используется ваш сохранённый ключ: {key}',
+      AppLocale.en: 'Using your saved provider key: {key}',
+      AppLocale.kk: 'Сіздің сақтаған кілтіңіз қолданылуда: {key}',
+    },
+    'ai_api_key_default': {
+      AppLocale.ru:
+          'Используется ключ по умолчанию. Добавьте свой ключ, чтобы запросы списывались с вашего аккаунта провайдера.',
+      AppLocale.en:
+          'Using the app default AI key. Add your own key if you want requests billed to your provider account.',
+      AppLocale.kk:
+          'Қосымшаның стандартты AI кілті қолданылуда. Сұраныстар провайдер есепшотыңызға жазылуы үшін өз кілтіңізді қосыңыз.',
+    },
+    'ai_api_key_change': {
+      AppLocale.ru: 'Изменить ключ',
+      AppLocale.en: 'Change key',
+      AppLocale.kk: 'Кілтті өзгерту',
+    },
+    'ai_api_key_add': {
+      AppLocale.ru: 'Добавить ключ',
+      AppLocale.en: 'Add key',
+      AppLocale.kk: 'Кілтті қосу',
+    },
+    'ai_api_key_clear': {
+      AppLocale.ru: 'Удалить',
+      AppLocale.en: 'Clear',
+      AppLocale.kk: 'Жою',
+    },
+    'cancel': {
+      AppLocale.ru: 'Отмена',
+      AppLocale.en: 'Cancel',
+      AppLocale.kk: 'Болдырмау',
+    },
+    'confirm_reset_title': {
+      AppLocale.ru: 'Сбросить историю?',
+      AppLocale.en: 'Clear history?',
+      AppLocale.kk: 'Тарихты тазалау керек пе?',
+    },
+    'confirm_reset_body': {
+      AppLocale.ru:
+          'Все данные обучения будут удалены. Это действие необратимо.',
+      AppLocale.en:
+          'All learning data will be deleted. This action cannot be undone.',
+      AppLocale.kk:
+          'Барлық оқу деректері жойылады. Бұл әрекетті кері қайтару мүмкін емес.',
+    },
+    'confirm_reset_action': {
+      AppLocale.ru: 'Сбросить',
+      AppLocale.en: 'Clear',
+      AppLocale.kk: 'Тазалау',
+    },
   };
 }
 

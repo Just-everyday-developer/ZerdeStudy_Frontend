@@ -449,30 +449,37 @@ void main() {
             brief:
                 'Create a base learner class, extend it with a bootcamp-specific student, override the summary method, and print the final sentence.',
             starterCode: '''class StudentProfile {
-  StudentProfile(this.name);
+    public final String name;
 
-  final String name;
+    public StudentProfile(String name) {
+        this.name = name;
+    }
 
-  String summary() {
-    return 'Student: \$name';
-  }
+    public String summary() {
+        return "Student: " + name;
+    }
 }
 
 class BootcampStudent extends StudentProfile {
-  BootcampStudent(super.name, this.points);
+    public final int points;
 
-  final int points;
+    public BootcampStudent(String name, int points) {
+        super(name);
+        this.points = points;
+    }
 
-  @override
-  String summary() {
-    // TODO: return the final midterm sentence
-  }
+    @Override
+    public String summary() {
+        // TODO: return the final midterm sentence
+        return "";
+    }
 }
 
-void main() {
-  final student = BootcampStudent('Aida', 86);
-
-  // TODO: print the overridden summary
+class Main {
+    public static void main(String[] args) {
+        BootcampStudent student = new BootcampStudent("Aida", 86);
+        // TODO: print the overridden summary
+    }
 }''',
             successCriteria: <String>[
               'Keep the base and child classes readable and separated.',
@@ -487,23 +494,23 @@ void main() {
                 'Help me explain why this OOP midterm solution uses inheritance and method overriding.',
             xpReward: 120,
             codeChallenge: DemoPracticeCodeChallengeSeed(
-              title: 'Interactive code lab',
+              title: 'Interactive Java lab',
               instructions:
-                  'Finish the OOP task, run the code as a draft, then submit it for review. The checker looks for the base class, the child class, the override, and the final print.',
+                  'Finish the OOP task, run the Java code as a draft, then submit it for review. The checker looks for the base class, the child class, the override, and the final print.',
               expectedOutput: 'Aida finished OOP Midterm with 86 points.',
               requiredSnippets: <String>[
                 'class StudentProfile',
                 'class BootcampStudent extends StudentProfile',
-                '@override',
+                '@Override',
                 'String summary()',
                 'finished OOP Midterm',
                 'student.summary()',
-                'print(',
+                'System.out.println(',
               ],
               successMessage:
-                  'Midterm passed. The OOP structure, override, and final output all match the review rules.',
+                  'Midterm passed. The Java OOP structure, override, and final output all match the review rules.',
               retryMessage:
-                  'The midterm is not ready yet. Check the inheritance structure, overridden summary(), and final print statement.',
+                  'The midterm is not ready yet. Check the inheritance structure, overridden summary(), and final System.out.print statement.',
             ),
             comments: <DemoPracticeCommentSeed>[
               DemoPracticeCommentSeed(

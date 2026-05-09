@@ -639,7 +639,27 @@ class ProfilePage extends ConsumerWidget {
           AppButton.secondary(
             label: l10n.text('delete_history'),
             icon: Icons.restart_alt_rounded,
-            onPressed: () {
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text(l10n.text('confirm_reset_title')),
+                  content: Text(l10n.text('confirm_reset_body')),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: Text(l10n.text('cancel')),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: Text(l10n.text('confirm_reset_action')),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed != true || !context.mounted) {
+                return;
+              }
               controller.resetDemo();
               AppNotice.show(
                 context,
