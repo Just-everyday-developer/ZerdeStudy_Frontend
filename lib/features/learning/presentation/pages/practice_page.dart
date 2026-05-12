@@ -190,6 +190,9 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             icon: Icons.smart_toy_rounded,
             onPressed: () {
               controller.focusPractice(widget.practiceId);
+              ref.read(aiChatControllerProvider.notifier).createNewChat(
+                practice.title.resolve(locale),
+              );
               context.go(AppRoutes.ai);
               unawaited(
                 ref

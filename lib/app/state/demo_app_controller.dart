@@ -300,6 +300,30 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
+  void completeDiagnostics({required int score}) {
+    final completedLessonIds = Set<String>.from(state.completedLessonIds);
+    final completedPracticeIds = Set<String>.from(state.completedPracticeIds);
+
+    final Set<String> recommended;
+    if (score < 6) {
+      recommended = {'mathematics', 'discrete_math', 'oop'};
+    } else if (score < 11) {
+      recommended = {'algorithms_data_structures', 'database_systems', 'frontend'};
+    } else {
+      recommended = {'operating_systems', 'system_design', 'ai'};
+    }
+
+    state = _withDerived(
+      state.copyWith(
+        completedLessonIds: completedLessonIds,
+        completedPracticeIds: completedPracticeIds,
+        recommendedTrackIds: recommended,
+        xp: state.xp + (score * 15),
+      ),
+    );
+    _persist();
+  }
+
   void completeLesson(String lessonId) {
     if (state.completedLessonIds.contains(lessonId)) {
       return;
@@ -1009,6 +1033,7 @@ class DemoAppController extends Notifier<DemoAppState> {
       },
       xp: 468,
       streak: 7,
+      maxStreak: 12,
       dailyMissionDone: false,
       weeklyActivity: <int>[2, 4, 3, 5, 4, 6, 2],
       aiMessages: <AiMessage>[
@@ -1021,6 +1046,7 @@ class DemoAppController extends Notifier<DemoAppState> {
         ),
       ],
       unlockedAchievementIds: <String>{'first_step'},
+      recommendedTrackIds: const <String>{},
     );
   }
 

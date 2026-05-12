@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
@@ -200,19 +201,63 @@ class TrackPage extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    ...module.lessons.map(
-                      (lesson) => ListTile(
+                    ...module.lessons.map((lesson) {
+                      final isCompleted = state.completedLessonIds.contains(lesson.id);
+                      final isFocused = state.focusedLessonId == lesson.id;
+                      final statusLabel = isCompleted
+                          ? (state.locale == AppLocale.ru ? 'Пройдено' : (state.locale == AppLocale.kk ? 'Аяқталды' : 'Completed'))
+                          : isFocused
+                              ? (state.locale == AppLocale.ru ? 'В процессе' : (state.locale == AppLocale.kk ? 'Орындалуда' : 'In Progress'))
+                              : '';
+
+                      return ListTile(
                         onTap: () {
                           controller.focusLesson(lesson.id);
                           context.push(AppRoutes.lessonById(lesson.id));
                         },
                         contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          lesson.title.resolve(state.locale),
-                          style: TextStyle(
-                            color: context.appColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        title: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              lesson.title.resolve(state.locale),
+                              style: TextStyle(
+                                color: context.appColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (statusLabel.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isCompleted
+                                      ? context.appColors.success.withValues(alpha: 0.12)
+                                      : context.appColors.accent.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isCompleted ? Icons.check_circle_outline_rounded : Icons.pending_actions_rounded,
+                                      size: 11,
+                                      color: isCompleted ? context.appColors.success : context.appColors.accent,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      statusLabel,
+                                      style: TextStyle(
+                                        color: isCompleted ? context.appColors.success : context.appColors.accent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 9,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                         subtitle: Text(
                           lesson.summary.resolve(state.locale),
@@ -225,36 +270,82 @@ class TrackPage extends ConsumerWidget {
                           Icons.chevron_right_rounded,
                           color: context.appColors.textSecondary,
                         ),
-                      ),
-                    ),
-                    if (module.practice != null)
-                      ListTile(
-                        onTap: () {
-                          controller.focusPractice(module.practice!.id);
-                          context.push(
-                            AppRoutes.practiceById(module.practice!.id),
-                          );
-                        },
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          module.practice!.title.resolve(state.locale),
-                          style: TextStyle(
-                            color: context.appColors.textPrimary,
-                            fontWeight: FontWeight.w700,
+                      );
+                    }),
+                    if (module.practice != null) ...[
+                      (() {
+                        final practice = module.practice!;
+                        final isCompleted = state.completedPracticeIds.contains(practice.id);
+                        final isFocused = state.focusedPracticeId == practice.id;
+                        final statusLabel = isCompleted
+                            ? (state.locale == AppLocale.ru ? 'Пройдено' : (state.locale == AppLocale.kk ? 'Аяқталды' : 'Completed'))
+                            : isFocused
+                                ? (state.locale == AppLocale.ru ? 'В процессе' : (state.locale == AppLocale.kk ? 'Орындалуда' : 'In Progress'))
+                                : '';
+
+                        return ListTile(
+                          onTap: () {
+                            controller.focusPractice(practice.id);
+                            context.push(AppRoutes.practiceById(practice.id));
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          title: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                practice.title.resolve(state.locale),
+                                style: TextStyle(
+                                  color: context.appColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (statusLabel.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isCompleted
+                                        ? context.appColors.success.withValues(alpha: 0.12)
+                                        : context.appColors.accent.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isCompleted ? Icons.check_circle_outline_rounded : Icons.pending_actions_rounded,
+                                        size: 11,
+                                        color: isCompleted ? context.appColors.success : context.appColors.accent,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        statusLabel,
+                                        style: TextStyle(
+                                          color: isCompleted ? context.appColors.success : context.appColors.accent,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 9,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
-                        ),
-                        subtitle: Text(
-                          module.practice!.summary.resolve(state.locale),
-                          style: TextStyle(
+                          subtitle: Text(
+                            practice.summary.resolve(state.locale),
+                            style: TextStyle(
+                              color: context.appColors.textSecondary,
+                              height: 1.35,
+                            ),
+                          ),
+                          trailing: Icon(
+                            Icons.chevron_right_rounded,
                             color: context.appColors.textSecondary,
-                            height: 1.35,
                           ),
-                        ),
-                        trailing: Icon(
-                          Icons.chevron_right_rounded,
-                          color: context.appColors.textSecondary,
-                        ),
-                      ),
+                        );
+                      })(),
+                    ],
                   ],
                 ),
               ),

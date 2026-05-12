@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/routing/app_routes.dart';
 import '../../app/state/app_theme_mode.dart';
 import '../../app/state/demo_app_controller.dart';
+import '../../features/ai/presentation/providers/ai_user_api_key_controller.dart';
 import '../../features/app_guide/presentation/app_guide_controller.dart';
 import '../../features/app_guide/presentation/app_guide_copy.dart';
 import '../localization/app_localizations.dart';
@@ -12,6 +13,7 @@ import '../notifications/local_notification_service.dart';
 import '../theme/app_theme_colors.dart';
 import 'adaptive_panel.dart';
 import 'app_notice.dart';
+import 'glow_card.dart';
 import 'locale_selector.dart';
 
 Future<void> showAppSettingsPanel(BuildContext context) {
@@ -88,6 +90,118 @@ class _AppSettingsPanelContentState
     }
   }
 
+  String? _maskApiKey(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    if (trimmed.length <= 8) {
+      return '${trimmed.substring(0, 2)}***${trimmed.substring(trimmed.length - 2)}';
+    }
+    return '${trimmed.substring(0, 4)}***${trimmed.substring(trimmed.length - 4)}';
+  }
+
+  Future<void> _showApiKeyDialog() async {
+    final currentKey = ref.read(aiUserApiKeyProvider) ?? '';
+    final controller = TextEditingController(text: currentKey);
+    var obscureText = true;
+
+    final l10n = context.l10n;
+
+    final submittedKey = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setState) {
+            return AlertDialog(
+              title: Text(l10n.text('ai_api_key_title')),
+              content: SizedBox(
+                width: 440,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.text('ai_api_key_description'),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      obscureText: obscureText,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      decoration: InputDecoration(
+                        labelText: l10n.text('ai_api_key_label'),
+                        hintText: l10n.text('ai_api_key_hint'),
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              obscureText = !obscureText;
+                            });
+                          },
+                          icon: Icon(
+                            obscureText
+                                ? Icons.visibility_rounded
+                                : Icons.visibility_off_rounded,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(l10n.text('cancel')),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(controller.text);
+                  },
+                  child: Text(l10n.text('ai_api_key_save')),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (submittedKey == null) {
+      return;
+    }
+
+    await ref.read(aiUserApiKeyProvider.notifier).saveKey(submittedKey);
+    if (!mounted) {
+      return;
+    }
+
+    final hasKey = (submittedKey.trim().isNotEmpty);
+    AppNotice.show(
+      context,
+      message: hasKey
+          ? context.l10n.text('ai_api_key_saved')
+          : context.l10n.text('ai_api_key_removed'),
+      type: AppNoticeType.success,
+    );
+  }
+
+  Future<void> _clearApiKey() async {
+    await ref.read(aiUserApiKeyProvider.notifier).clearKey();
+    if (!mounted) {
+      return;
+    }
+
+    AppNotice.show(
+      context,
+      message: context.l10n.text('ai_api_key_removed'),
+      type: AppNoticeType.success,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
@@ -148,6 +262,59 @@ class _AppSettingsPanelContentState
                 })
                 .toList(growable: false),
           ),
+          const SizedBox(height: 18),
+          (() {
+            final userApiKey = ref.watch(aiUserApiKeyProvider);
+            final hasCustomKey = (userApiKey ?? '').trim().isNotEmpty;
+            final maskedKey = _maskApiKey(userApiKey);
+            return GlowCard(
+              accent: hasCustomKey ? colors.primary : colors.divider,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.vpn_key_rounded, color: colors.primary, size: 20),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Personal AI Key',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    hasCustomKey
+                        ? 'Using your saved provider key: $maskedKey'
+                        : 'Using the app default AI key. Add your own key if you want requests billed to your provider account.',
+                    style: TextStyle(color: colors.textSecondary, height: 1.45),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _showApiKeyDialog,
+                        icon: const Icon(Icons.edit_rounded, size: 16),
+                        label: Text(l10n.text('ai_api_key_save')),
+                      ),
+                      if (hasCustomKey)
+                        OutlinedButton.icon(
+                          onPressed: _clearApiKey,
+                          icon: const Icon(Icons.delete_rounded, size: 16),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colors.danger,
+                            side: BorderSide(color: colors.danger.withValues(alpha: 0.5)),
+                          ),
+                          label: Text(l10n.text('clear_filters')),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          })(),
           const SizedBox(height: 18),
           Text(
             AppGuideCopy.settingsSectionTitle(context),

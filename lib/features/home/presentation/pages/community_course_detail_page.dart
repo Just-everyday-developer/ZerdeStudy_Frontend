@@ -1284,7 +1284,7 @@ class _DesktopHeroCard extends StatelessWidget {
   }
 }
 
-class _MobileHeroCard extends StatelessWidget {
+class _MobileHeroCard extends ConsumerWidget {
   const _MobileHeroCard({
     required this.course,
     required this.saved,
@@ -1306,7 +1306,7 @@ class _MobileHeroCard extends StatelessWidget {
   final VoidCallback onPrimaryTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final titleStyle = Theme.of(
       context,
@@ -1373,6 +1373,25 @@ class _MobileHeroCard extends StatelessWidget {
             icon: Icons.play_circle_fill_rounded,
             maxWidth: null,
             onPressed: onPrimaryTap,
+          ),
+          const SizedBox(height: 10),
+          AppButton.secondary(
+            label: switch (context.l10n.locale) {
+              AppLocale.ru => 'Топ учеников',
+              AppLocale.kk => 'Топ оқушылар',
+              _ => 'Leaderboard',
+            },
+            icon: Icons.leaderboard_rounded,
+            maxWidth: null,
+            onPressed: () {
+              _showLeaderboardModal(
+                context,
+                ref,
+                course.id,
+                course.title.resolve(context.l10n.locale),
+                course.color,
+              );
+            },
           ),
           const SizedBox(height: 14),
           Text(
@@ -1480,7 +1499,7 @@ class _CompactTabHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-class _CourseSidebar extends StatelessWidget {
+class _CourseSidebar extends ConsumerWidget {
   const _CourseSidebar({
     required this.course,
     required this.saved,
@@ -1502,7 +1521,7 @@ class _CourseSidebar extends StatelessWidget {
   final VoidCallback onPrimaryTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final colors = context.appColors;
 
@@ -1552,6 +1571,25 @@ class _CourseSidebar extends StatelessWidget {
             icon: Icons.play_circle_fill_rounded,
             maxWidth: 260,
             onPressed: onPrimaryTap,
+          ),
+          const SizedBox(height: 12),
+          AppButton.secondary(
+            label: switch (l10n.locale) {
+              AppLocale.ru => 'Топ учеников',
+              AppLocale.kk => 'Топ оқушылар',
+              _ => 'Leaderboard',
+            },
+            icon: Icons.leaderboard_rounded,
+            maxWidth: 260,
+            onPressed: () {
+              _showLeaderboardModal(
+                context,
+                ref,
+                course.id,
+                course.title.resolve(l10n.locale),
+                course.color,
+              );
+            },
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
@@ -2749,6 +2787,316 @@ class _GlowOrb extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+void _showLeaderboardModal(
+  BuildContext context,
+  WidgetRef ref,
+  String courseId,
+  String courseTitle,
+  Color courseColor,
+) {
+  showAdaptivePanel<void>(
+    context: context,
+    wideMaxWidth: 540,
+    builder: (context) {
+      return _CourseLeaderboardPanel(
+        courseId: courseId,
+        courseTitle: courseTitle,
+        courseColor: courseColor,
+      );
+    },
+  );
+}
+
+class _CourseLeaderboardPanel extends ConsumerWidget {
+  const _CourseLeaderboardPanel({
+    required this.courseId,
+    required this.courseTitle,
+    required this.courseColor,
+  });
+
+  final String courseId;
+  final String courseTitle;
+  final Color courseColor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final l10n = context.l10n;
+    final state = ref.watch(demoAppControllerProvider);
+    final catalog = ref.watch(demoCatalogProvider);
+
+    final backendLeaderboardAsync = ref.watch(backendCourseLeaderboardProvider(courseId));
+    final leaderboard = backendLeaderboardAsync.maybeWhen(
+      data: (list) => list.isNotEmpty ? list : catalog.leaderboardFor(state),
+      orElse: () => catalog.leaderboardFor(state),
+    );
+
+    final top3 = leaderboard.take(3).toList(growable: false);
+    final rest = leaderboard.skip(3).toList(growable: false);
+    final myRank = leaderboard.indexWhere((e) => e.isCurrentUser) + 1;
+    final myEntry = leaderboard.firstWhere(
+      (e) => e.isCurrentUser,
+      orElse: () => leaderboard.isNotEmpty
+          ? leaderboard.last
+          : const LeaderboardEntry(
+              id: 'me',
+              name: 'Me',
+              xp: 0,
+              level: 1,
+              role: '',
+              focus: '',
+              isCurrentUser: true,
+            ),
+    );
+    final nextEntry = myRank > 1 ? leaderboard[myRank - 2] : null;
+    final xpToNext = nextEntry != null ? nextEntry.xp - myEntry.xp : 0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      color: colors.background,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.leaderboard_rounded, color: courseColor, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      switch (l10n.locale) {
+                        AppLocale.ru => 'Топ учеников',
+                        AppLocale.kk => 'Топ оқушылар',
+                        _ => 'Top Students',
+                      },
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      courseTitle,
+                      style: TextStyle(color: colors.textSecondary, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (leaderboard.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: CircularProgressIndicator(color: courseColor),
+              ),
+            )
+          else ...[
+            _ModalLeaderboardPodium(
+              top3: top3,
+              rest: rest.take(4).toList(),
+              myRank: myRank,
+              myEntry: myEntry,
+              xpToNext: xpToNext,
+              colors: colors,
+              accentColor: courseColor,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ModalLeaderboardPodium extends StatelessWidget {
+  const _ModalLeaderboardPodium({
+    required this.top3,
+    required this.rest,
+    required this.myRank,
+    required this.myEntry,
+    required this.xpToNext,
+    required this.colors,
+    required this.accentColor,
+  });
+
+  final List<LeaderboardEntry> top3;
+  final List<LeaderboardEntry> rest;
+  final int myRank;
+  final LeaderboardEntry myEntry;
+  final int xpToNext;
+  final AppThemeColors colors;
+  final Color accentColor;
+
+  static const _medals = ['🥇', '🥈', '🥉'];
+  static const _podiumColors = [
+    Color(0xFFFFD700),
+    Color(0xFFB0C4DE),
+    Color(0xFFCD7F32),
+  ];
+  static const _heights = [90.0, 70.0, 55.0];
+  static const _order = [1, 0, 2];
+
+  @override
+  Widget build(BuildContext context) {
+    if (top3.isEmpty) return const SizedBox.shrink();
+
+    return GlowCard(
+      accent: accentColor,
+      child: Column(
+        children: [
+          if (top3.length >= 3)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: _order.map((i) {
+                final entry = top3[i];
+                final medal = _medals[i];
+                final mc = _podiumColors[i];
+                final h = _heights[i];
+                return Expanded(
+                  child: Column(
+                    children: [
+                      Text(medal, style: const TextStyle(fontSize: 22)),
+                      const SizedBox(height: 4),
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: mc.withValues(alpha: 0.2),
+                        child: Text(
+                          entry.name.isEmpty ? '?' : entry.name[0],
+                          style: TextStyle(
+                            color: mc,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        entry.name,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        '${entry.xp} XP',
+                        style: TextStyle(
+                          color: mc,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        height: h,
+                        decoration: BoxDecoration(
+                          color: mc.withValues(alpha: 0.15),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(8),
+                          ),
+                          border: Border.all(
+                            color: mc.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${i + 1}',
+                            style: TextStyle(
+                              color: mc,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          if (rest.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Divider(height: 1, color: colors.divider),
+            const SizedBox(height: 10),
+            ...rest.map((entry) {
+              final rank = top3.length + rest.indexOf(entry) + 1;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 28,
+                      child: Text(
+                        '$rank',
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: (entry.isCurrentUser
+                              ? colors.primary
+                              : colors.surfaceSoft)
+                          .withValues(alpha: 0.2),
+                      child: Text(
+                        entry.name.isEmpty ? '?' : entry.name[0].toUpperCase(),
+                        style: TextStyle(
+                          color: entry.isCurrentUser
+                              ? colors.primary
+                              : colors.textSecondary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        entry.name,
+                        style: TextStyle(
+                          color: entry.isCurrentUser
+                              ? colors.primary
+                              : colors.textPrimary,
+                          fontWeight: entry.isCurrentUser
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${entry.xp} XP',
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
       ),
     );
   }

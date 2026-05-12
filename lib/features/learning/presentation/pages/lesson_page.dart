@@ -266,6 +266,9 @@ class _LessonPageState extends ConsumerState<LessonPage> {
             icon: Icons.smart_toy_rounded,
             onPressed: () {
               controller.focusLesson(widget.lessonId);
+              ref.read(aiChatControllerProvider.notifier).createNewChat(
+                lesson.title.resolve(state.locale),
+              );
               context.go(AppRoutes.ai);
               unawaited(
                 ref

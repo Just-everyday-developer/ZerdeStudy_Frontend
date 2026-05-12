@@ -420,8 +420,8 @@ class _ShellDestination {
 
 String _communityTabLabel(AppLocale locale) {
   return switch (locale) {
-    AppLocale.ru => 'Community',
+    AppLocale.ru => 'Сообщество',
     AppLocale.en => 'Community',
-    AppLocale.kk => 'Community',
+    AppLocale.kk => 'Қауымдастық',
   };
 }

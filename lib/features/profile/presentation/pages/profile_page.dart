@@ -5,12 +5,13 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as img;
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
-import '../../../../app/state/app_theme_mode.dart';
+
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_app_state.dart';
 import '../../../../app/state/demo_catalog.dart';
@@ -22,7 +23,7 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/app_settings_panel.dart';
 import '../../../../core/common_widgets/app_user_avatar.dart';
 import '../../../../core/common_widgets/glow_card.dart';
-import '../../../../core/common_widgets/locale_selector.dart';
+
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
@@ -80,6 +81,44 @@ class ProfilePage extends ConsumerWidget {
     }
 
     return AppPageScaffold(
+      title: l10n.text('profile'),
+      actions: [
+        IconButton(
+          tooltip: l10n.text('view_stats'),
+          icon: Icon(Icons.insights_rounded, color: colors.primary),
+          onPressed: () => context.push(AppRoutes.stats),
+        ),
+        AppGuideTarget(
+          id: AppGuideTargetIds.profileSettings,
+          child: IconButton(
+            tooltip: AppGuideCopy.openSettingsLabel(context),
+            icon: Icon(Icons.settings_rounded, color: colors.textSecondary),
+            onPressed: () => showAppSettingsPanel(context),
+          ),
+        ),
+        IconButton(
+          tooltip: l10n.text('logout'),
+          icon: Icon(Icons.logout_rounded, color: colors.danger),
+          onPressed: () async {
+            final error = await ref
+                .read(authControllerProvider.notifier)
+                .logout();
+            if (!context.mounted) {
+              return;
+            }
+            if (error != null) {
+              AppNotice.show(
+                context,
+                message: error,
+                type: AppNoticeType.error,
+              );
+              return;
+            }
+            context.go(AppRoutes.welcome);
+          },
+        ),
+        const SizedBox(width: 8),
+      ],
       horizontalPadding: compact ? 0 : null,
       child: ListView(
         padding: EdgeInsets.fromLTRB(
@@ -146,14 +185,32 @@ class ProfilePage extends ConsumerWidget {
                                     ),
                                   ),
                                   if (user != null && user.bio.isNotEmpty) ...[
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      user.bio,
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: colors.textSecondary,
-                                        height: 1.35,
+                                    const SizedBox(height: 10),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: colors.surfaceSoft,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: colors.divider.withValues(alpha: 0.6)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.format_quote_rounded, color: colors.primary.withValues(alpha: 0.6), size: 16),
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              user.bio,
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: colors.textPrimary,
+                                                fontStyle: FontStyle.italic,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -189,56 +246,16 @@ class ProfilePage extends ConsumerWidget {
                                 value: '${state.streak}d',
                               ),
                             ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _Pill(
+                                label: l10n.locale == AppLocale.ru ? 'Макс. серия' : (l10n.locale == AppLocale.kk ? 'Макс. серия' : 'Max Streak'),
+                                value: '${state.maxStreak}d',
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 18),
-                        Text(
-                          l10n.text('locale'),
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: colors.textSecondary),
-                        ),
-                        const SizedBox(height: 8),
-                        LocaleSelector(
-                          currentLocale: state.locale,
-                          onChanged: controller.changeLocale,
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          l10n.text('theme'),
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: colors.textSecondary),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: AppThemeMode.values
-                              .map((mode) {
-                                final selected = mode == state.themeMode;
-                                return ChoiceChip(
-                                  label: Text(_themeModeLabel(l10n, mode)),
-                                  selected: selected,
-                                  onSelected: (_) =>
-                                      controller.changeThemeMode(mode),
-                                  selectedColor: colors.primary.withValues(
-                                    alpha: 0.16,
-                                  ),
-                                  backgroundColor: colors.surfaceSoft,
-                                  side: BorderSide(
-                                    color: selected
-                                        ? colors.primary
-                                        : colors.divider,
-                                  ),
-                                  labelStyle: TextStyle(
-                                    color: selected
-                                        ? colors.primary
-                                        : colors.textSecondary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                );
-                              })
-                              .toList(growable: false),
-                        ),
+
                       ],
                     );
                   }
@@ -267,10 +284,31 @@ class ProfilePage extends ConsumerWidget {
                               style: TextStyle(color: colors.textSecondary),
                             ),
                             if (user != null && user.bio.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                user.bio,
-                                style: TextStyle(color: colors.textSecondary),
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: colors.surfaceSoft,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: colors.divider.withValues(alpha: 0.6)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.format_quote_rounded, color: colors.primary.withValues(alpha: 0.6), size: 16),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        user.bio,
+                                        style: TextStyle(
+                                          color: colors.textPrimary,
+                                          fontStyle: FontStyle.italic,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                             const SizedBox(height: 14),
@@ -294,68 +332,16 @@ class ProfilePage extends ConsumerWidget {
                                   label: l10n.text('streak'),
                                   value: '${state.streak}d',
                                 ),
+                                _Pill(
+                                  label: l10n.locale == AppLocale.ru ? 'Макс. серия' : (l10n.locale == AppLocale.kk ? 'Макс. серия' : 'Max Streak'),
+                                  value: '${state.maxStreak}d',
+                                ),
                               ],
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 24),
-                      SizedBox(
-                        width: 238,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              l10n.text('locale'),
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(color: colors.textSecondary),
-                            ),
-                            const SizedBox(height: 8),
-                            LocaleSelector(
-                              currentLocale: state.locale,
-                              onChanged: controller.changeLocale,
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              l10n.text('theme'),
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(color: colors.textSecondary),
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: AppThemeMode.values
-                                  .map((mode) {
-                                    final selected = mode == state.themeMode;
-                                    return ChoiceChip(
-                                      label: Text(_themeModeLabel(l10n, mode)),
-                                      selected: selected,
-                                      onSelected: (_) =>
-                                          controller.changeThemeMode(mode),
-                                      selectedColor: colors.primary.withValues(
-                                        alpha: 0.16,
-                                      ),
-                                      backgroundColor: colors.surfaceSoft,
-                                      side: BorderSide(
-                                        color: selected
-                                            ? colors.primary
-                                            : colors.divider,
-                                      ),
-                                      labelStyle: TextStyle(
-                                        color: selected
-                                            ? colors.primary
-                                            : colors.textSecondary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    );
-                                  })
-                                  .toList(growable: false),
-                            ),
-                          ],
-                        ),
-                      ),
+
                     ],
                   );
                 },
@@ -431,9 +417,26 @@ class ProfilePage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 14),
                 if (certificates.isEmpty)
-                  Text(
-                    l10n.text('no_items_yet'),
-                    style: TextStyle(color: colors.textSecondary),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SvgPicture.asset(
+                            'assets/svgs/empty_box.svg',
+                            width: 64,
+                            height: 64,
+                            colorFilter: ColorFilter.mode(colors.textSecondary.withValues(alpha: 0.5), BlendMode.srcIn),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n.text('no_items_yet'),
+                            style: TextStyle(color: colors.textSecondary, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
                   )
                 else
                   SizedBox(
@@ -490,9 +493,27 @@ class ProfilePage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 14),
                 if (favorites.isEmpty)
-                  Text(
-                    l10n.text('favorites_empty'),
-                    style: TextStyle(color: colors.textSecondary, height: 1.4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SvgPicture.asset(
+                            'assets/svgs/empty_box.svg',
+                            width: 64,
+                            height: 64,
+                            colorFilter: ColorFilter.mode(colors.textSecondary.withValues(alpha: 0.5), BlendMode.srcIn),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n.text('favorites_empty'),
+                            style: TextStyle(color: colors.textSecondary, fontSize: 13, height: 1.4),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
                   )
                 else
                   SizedBox(
@@ -614,27 +635,7 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          AppButton.secondary(
-            label: l10n.text('view_stats'),
-            icon: Icons.insights_rounded,
-            onPressed: () => context.push(AppRoutes.stats),
-          ),
-          const SizedBox(height: 12),
-          AppButton.secondary(
-            label: l10n.text('view_leaderboard'),
-            icon: Icons.leaderboard_rounded,
-            onPressed: () => context.push(AppRoutes.leaderboard),
-          ),
-          const SizedBox(height: 12),
-          AppGuideTarget(
-            id: AppGuideTargetIds.profileSettings,
-            child: AppButton.secondary(
-              label: AppGuideCopy.openSettingsLabel(context),
-              icon: Icons.settings_rounded,
-              onPressed: () => showAppSettingsPanel(context),
-            ),
-          ),
+
           const SizedBox(height: 12),
           AppButton.secondary(
             label: l10n.text('delete_history'),
@@ -668,28 +669,7 @@ class ProfilePage extends ConsumerWidget {
               );
             },
           ),
-          const SizedBox(height: 12),
-          AppButton.secondary(
-            label: l10n.text('logout'),
-            icon: Icons.logout_rounded,
-            onPressed: () async {
-              final error = await ref
-                  .read(authControllerProvider.notifier)
-                  .logout();
-              if (!context.mounted) {
-                return;
-              }
-              if (error != null) {
-                AppNotice.show(
-                  context,
-                  message: error,
-                  type: AppNoticeType.error,
-                );
-                return;
-              }
-              context.go(AppRoutes.welcome);
-            },
-          ),
+
         ],
       ),
     );
@@ -958,9 +938,25 @@ class _AchievementSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (achievements.isEmpty)
-            Text(
-              l10n.text('no_items_yet'),
-              style: TextStyle(color: colors.textSecondary),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/svgs/trophy.svg',
+                      width: 80,
+                      height: 80,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.text('no_items_yet'),
+                      style: TextStyle(color: colors.textSecondary, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
             )
           else
             GridView.builder(
@@ -1887,9 +1883,4 @@ class _HistoryTile extends StatelessWidget {
   }
 }
 
-String _themeModeLabel(AppLocalizations l10n, AppThemeMode mode) {
-  return switch (mode) {
-    AppThemeMode.dark => l10n.text('theme_dark'),
-    AppThemeMode.light => l10n.text('theme_light'),
-  };
-}
+

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +12,7 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_app_state.dart';
 import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
+import '../../../../app/state/app_locale.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -110,7 +112,12 @@ class _KnowledgeTreeViewportState
             0.0,
             (viewport.width - (knowledgeTreeCanvasSize.width * scale)) / 2,
           );
-    final offsetY = windowsFixedViewport ? 24.0 : 12.0;
+    final offsetY = windowsFixedViewport
+        ? 24.0
+        : math.max(
+            12.0,
+            (viewport.height - (knowledgeTreeCanvasSize.height * scale)) / 2,
+          );
     final matrix = Matrix4.identity()
       ..setEntry(0, 0, scale)
       ..setEntry(1, 1, scale);
@@ -188,12 +195,17 @@ class _KnowledgeTreeViewportState
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFF03111D),
-                    const Color(0xFF051A28),
-                    Color.lerp(const Color(0xFF071F31), colors.surface, 0.35) ??
-                        colors.surface,
-                  ],
+                  colors: colors.textPrimary == Colors.white
+                      ? [
+                          const Color(0xFF03111D),
+                          const Color(0xFF051A28),
+                          Color.lerp(const Color(0xFF071F31), colors.surface, 0.35) ?? colors.surface,
+                        ]
+                      : [
+                          colors.background,
+                          colors.surfaceSoft,
+                          Color.lerp(colors.surfaceSoft, colors.surface, 0.35) ?? colors.surface,
+                        ],
                 ),
               ),
               child: Stack(
@@ -259,16 +271,35 @@ class _KnowledgeTreeViewportState
                                               PointerDeviceKind.touch) {
                                         return;
                                       }
-                                      final delta =
-                                          (-event.scrollDelta.dy / 240).clamp(
-                                            -0.18,
-                                            0.18,
-                                          );
-                                      _setScale(
-                                        _currentScale + delta,
-                                        focalPoint: event.localPosition,
-                                        compact: compact,
-                                      );
+                                      
+                                      final isCtrlPressed = HardwareKeyboard.instance.isControlPressed;
+                                      final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+
+                                      if (isCtrlPressed) {
+                                        // Zoom on Ctrl + Scroll
+                                        final delta = (-event.scrollDelta.dy / 240).clamp(
+                                          -0.18,
+                                          0.18,
+                                        );
+                                        _setScale(
+                                          _currentScale + delta,
+                                          focalPoint: event.localPosition,
+                                          compact: compact,
+                                        );
+                                      } else {
+                                        // Pan / scroll canvas on mouse wheel
+                                        final dx = isShiftPressed ? -event.scrollDelta.dy : -event.scrollDelta.dx;
+                                        final dy = isShiftPressed ? 0.0 : -event.scrollDelta.dy;
+                                        
+                                        final matrix = _controller.value.clone();
+                                        final translation = matrix.getTranslation();
+                                        matrix.setTranslationRaw(
+                                          translation.x + dx / _currentScale,
+                                          translation.y + dy / _currentScale,
+                                          translation.z,
+                                        );
+                                        _controller.value = matrix;
+                                      }
                                     },
                                     child: InteractiveViewer(
                                       transformationController: _controller,
@@ -455,33 +486,41 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                 height: orbSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: progress != null && progress.fraction > 0 ? LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    stops: [
-                      0.0,
-                      progress.fraction,
-                      progress.fraction,
-                      1.0,
-                    ],
-                    colors: [
-                      accent.withValues(alpha: 0.5),
-                      accent.withValues(alpha: 0.5),
-                      const Color(0xFF071C2A).withValues(alpha: node.isHub ? 0.98 : 0.94),
-                      const Color(0xFF05121D).withValues(alpha: node.isHub ? 0.98 : 0.92),
-                    ],
-                  ) : LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(
-                        0xFF071C2A,
-                      ).withValues(alpha: node.isHub ? 0.98 : 0.94),
-                      const Color(
-                        0xFF05121D,
-                      ).withValues(alpha: node.isHub ? 0.98 : 0.92),
-                    ],
-                  ),
+                  gradient: (() {
+                    final isDark = colors.textPrimary == Colors.white;
+                    final nodeBgStart = isDark
+                        ? const Color(0xFF071C2A).withValues(alpha: node.isHub ? 0.98 : 0.94)
+                        : colors.surface.withValues(alpha: node.isHub ? 0.98 : 0.94);
+                    final nodeBgEnd = isDark
+                        ? const Color(0xFF05121D).withValues(alpha: node.isHub ? 0.98 : 0.92)
+                        : colors.surfaceSoft.withValues(alpha: node.isHub ? 0.98 : 0.92);
+
+                    return progress != null && progress.fraction > 0
+                        ? LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            stops: [
+                              0.0,
+                              progress.fraction,
+                              progress.fraction,
+                              1.0,
+                            ],
+                            colors: [
+                              accent.withValues(alpha: isDark ? 0.5 : 0.28),
+                              accent.withValues(alpha: isDark ? 0.5 : 0.28),
+                              nodeBgStart,
+                              nodeBgEnd,
+                            ],
+                          )
+                        : LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              nodeBgStart,
+                              nodeBgEnd,
+                            ],
+                          );
+                  })(),
                   border: Border.all(
                     color: accent.withValues(alpha: 0.96),
                     width: node.isHub ? 3.1 : 2.2,
@@ -604,7 +643,10 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                         ),
                       ),
               ),
-            if (track != null && bestPercent == 0)
+            if (track != null &&
+                bestPercent == 0 &&
+                availability != TrackAvailability.available &&
+                availability != TrackAvailability.inProgress)
               Positioned(
                 left: 8,
                 bottom: 6,
@@ -624,6 +666,50 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                       color: accent,
                       fontWeight: FontWeight.w700,
                       fontSize: 9,
+                    ),
+                  ),
+                ),
+              ),
+            if (track != null && state.recommendedTrackIds.contains(track.id))
+              Positioned(
+                bottom: -4,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          colors.accent,
+                          colors.accent.withValues(alpha: 0.85),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.accent.withValues(alpha: 0.45),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2.5),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      switch (state.locale) {
+                        AppLocale.ru => 'Рекомендовано',
+                        AppLocale.kk => 'Ұсынылады',
+                        _ => 'Recommended',
+                      },
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),

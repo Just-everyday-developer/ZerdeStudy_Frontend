@@ -1,21 +1,33 @@
 import 'dart:math' as math;
 
+import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_app_state.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/common_widgets/bubble_progress_bar.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
-class StatsPage extends ConsumerWidget {
+class StatsPage extends ConsumerStatefulWidget {
   const StatsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StatsPage> createState() => _StatsPageState();
+}
+
+enum ActivityInterval { week, month, threeMonths, year }
+
+class _StatsPageState extends ConsumerState<StatsPage> {
+  ActivityInterval _selectedInterval = ActivityInterval.week;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
     final catalog = ref.watch(demoCatalogProvider);
     final unlockedAchievements = catalog
@@ -36,62 +48,15 @@ class StatsPage extends ConsumerWidget {
         children: [
           GlowCard(
             accent: colors.primary,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 540;
-                final columns = compact ? 2 : 3;
-                final itemWidth =
-                    (constraints.maxWidth - (12 * (columns - 1))) / columns;
-
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _MetricTile(
-                      label: 'XP',
-                      value: '${state.xp}',
-                      width: itemWidth,
-                    ),
-                    _MetricTile(
-                      label: 'Level',
-                      value: '${state.level}',
-                      width: itemWidth,
-                    ),
-                    _MetricTile(
-                      label: 'To next',
-                      value: '${state.xpToNextLevel} XP',
-                      width: itemWidth,
-                    ),
-                    _MetricTile(
-                      label: 'Streak',
-                      value: '${state.streak}d',
-                      width: itemWidth,
-                    ),
-                    _MetricTile(
-                      label: 'Units',
-                      value:
-                          '${catalog.totalCompletedUnits(state)}/${catalog.totalUnits()}',
-                      width: itemWidth,
-                    ),
-                    _MetricTile(
-                      label: 'Achievements',
-                      value: '$unlockedAchievements',
-                      width: itemWidth,
-                    ),
-                    _MetricTile(
-                      label: 'Assessments',
-                      value:
-                          '$passedAssessments/${state.assessmentResultsByTrackId.length}',
-                      width: itemWidth,
-                    ),
-                    _MetricTile(
-                      label: 'AI sessions',
-                      value: '$aiSessions',
-                      width: itemWidth,
-                    ),
-                  ],
-                );
-              },
+            child: _MetricsCarousel(
+              xp: '${state.xp}',
+              level: '${state.level}',
+              xpToNextLevel: '${state.xpToNextLevel} XP',
+              streak: '${state.streak}d',
+              completedUnits: '${catalog.totalCompletedUnits(state)}/${catalog.totalUnits()}',
+              unlockedAchievements: '$unlockedAchievements',
+              passedAssessments: '$passedAssessments/${state.assessmentResultsByTrackId.length}',
+              aiSessions: '$aiSessions',
             ),
           ),
           const SizedBox(height: 16),
@@ -110,14 +75,11 @@ class StatsPage extends ConsumerWidget {
                   style: TextStyle(color: colors.textSecondary, height: 1.4),
                 ),
                 const SizedBox(height: 14),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: state.xpIntoLevel / DemoAppState.xpPerLevel,
-                    minHeight: 10,
-                    backgroundColor: colors.backgroundElevated,
-                    color: colors.primary,
-                  ),
+                BubbleProgressBar(
+                  value: state.xpIntoLevel / DemoAppState.xpPerLevel,
+                  color: colors.primary,
+                  backgroundColor: colors.backgroundElevated,
+                  bubbleText: '${state.xpIntoLevel}/${DemoAppState.xpPerLevel} XP',
                 ),
               ],
             ),
@@ -126,14 +88,38 @@ class StatsPage extends ConsumerWidget {
           GlowCard(
             accent: colors.accent,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  context.l10n.text('weekly_activity'),
-                  style: Theme.of(context).textTheme.titleLarge,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      context.l10n.locale == AppLocale.ru ? 'Активность' : (context.l10n.locale == AppLocale.kk ? 'Белсенділік' : 'Activity'),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    SegmentedButton<ActivityInterval>(
+                      segments: [
+                        ButtonSegment(value: ActivityInterval.week, label: Text(context.l10n.locale == AppLocale.ru ? 'Неделя' : 'Week')),
+                        ButtonSegment(value: ActivityInterval.month, label: Text(context.l10n.locale == AppLocale.ru ? 'Месяц' : 'Month')),
+                        ButtonSegment(value: ActivityInterval.threeMonths, label: Text('3 мес.')),
+                        ButtonSegment(value: ActivityInterval.year, label: Text(context.l10n.locale == AppLocale.ru ? 'Год' : 'Year')),
+                      ],
+                      selected: {_selectedInterval},
+                      onSelectionChanged: (set) {
+                        setState(() {
+                          _selectedInterval = set.first;
+                        });
+                      },
+                      style: SegmentedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                _WeeklyActivityChart(values: state.weeklyActivity),
+                const SizedBox(height: 20),
+                _ActivityChart(interval: _selectedInterval, colors: colors),
               ],
             ),
           ),
@@ -270,14 +256,11 @@ class StatsPage extends ConsumerWidget {
                           style: TextStyle(color: colors.textSecondary),
                         ),
                         const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: progress.fraction,
-                            minHeight: 6,
-                            backgroundColor: colors.backgroundElevated,
-                            color: track.color,
-                          ),
+                        BubbleProgressBar(
+                          value: progress.fraction,
+                          color: track.color,
+                          backgroundColor: colors.backgroundElevated,
+                          height: 8,
                         ),
                       ],
                     ),
@@ -336,6 +319,154 @@ class StatsPage extends ConsumerWidget {
   }
 }
 
+class _MetricsCarousel extends StatefulWidget {
+  const _MetricsCarousel({
+    required this.xp,
+    required this.level,
+    required this.xpToNextLevel,
+    required this.streak,
+    required this.completedUnits,
+    required this.unlockedAchievements,
+    required this.passedAssessments,
+    required this.aiSessions,
+  });
+
+  final String xp;
+  final String level;
+  final String xpToNextLevel;
+  final String streak;
+  final String completedUnits;
+  final String unlockedAchievements;
+  final String passedAssessments;
+  final String aiSessions;
+
+  @override
+  State<_MetricsCarousel> createState() => _MetricsCarouselState();
+}
+
+class _MetricsCarouselState extends State<_MetricsCarousel> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    final List<List<Map<String, String>>> pagesData = [
+      [
+        {'label': 'XP', 'value': widget.xp},
+        {'label': 'Level', 'value': widget.level},
+      ],
+      [
+        {'label': 'To next', 'value': widget.xpToNextLevel},
+        {'label': 'Streak', 'value': widget.streak},
+      ],
+      [
+        {'label': 'Units', 'value': widget.completedUnits},
+        {'label': 'Achievements', 'value': widget.unlockedAchievements},
+      ],
+      [
+        {'label': 'Assessments', 'value': widget.passedAssessments},
+        {'label': 'AI sessions', 'value': widget.aiSessions},
+      ],
+    ];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.chevron_left_rounded, color: colors.textSecondary),
+              onPressed: _currentPage > 0
+                  ? () {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  : null,
+            ),
+            Expanded(
+              child: SizedBox(
+                height: 110,
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (int page) {
+                    setState(() {
+                      _currentPage = page;
+                    });
+                  },
+                  itemCount: pagesData.length,
+                  itemBuilder: (context, index) {
+                    final pair = pagesData[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _MetricTile(
+                              label: pair[0]['label']!,
+                              value: pair[0]['value']!,
+                              width: double.infinity,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _MetricTile(
+                              label: pair[1]['label']!,
+                              value: pair[1]['value']!,
+                              width: double.infinity,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+              onPressed: _currentPage < pagesData.length - 1
+                  ? () {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            pagesData.length,
+            (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              height: 6,
+              width: _currentPage == index ? 16 : 6,
+              decoration: BoxDecoration(
+                color: _currentPage == index ? colors.primary : colors.divider,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _MetricTile extends StatelessWidget {
   const _MetricTile({
     required this.label,
@@ -353,85 +484,168 @@ class _MetricTile extends StatelessWidget {
 
     return Container(
       width: width,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: colors.surfaceSoft,
-        border: Border.all(color: colors.divider),
+        borderRadius: BorderRadius.circular(24),
+        color: colors.backgroundElevated.withValues(alpha: 0.5),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.15), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: colors.primary.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(label, style: TextStyle(color: colors.textSecondary)),
-          const SizedBox(height: 8),
-          Text(value, style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
   }
 }
 
-class _WeeklyActivityChart extends StatelessWidget {
-  const _WeeklyActivityChart({required this.values});
+class _ActivityChart extends StatelessWidget {
+  const _ActivityChart({
+    required this.interval,
+    required this.colors,
+  });
 
-  final List<int> values;
+  final ActivityInterval interval;
+  final AppThemeColors colors;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final normalizedValues = values.length >= 7
-        ? values.take(7).toList(growable: false)
-        : <int>[...values, ...List<int>.filled(7 - values.length, 0)];
-    final maxValue = math.max(1, normalizedValues.fold<int>(0, math.max));
-    const days = <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final List<_ChartData> chartData = [];
+    final double maxY;
+
+    switch (interval) {
+      case ActivityInterval.week:
+        final mock = [2, 4, 3, 5, 4, 6, 2];
+        final labels = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        for (int i = 0; i < 7; i++) {
+          chartData.add(_ChartData(labels[i], mock[i].toDouble()));
+        }
+        maxY = 10;
+        break;
+      case ActivityInterval.month:
+        for (int i = 0; i < 30; i++) {
+          final label = '${i + 1}';
+          chartData.add(_ChartData(label, 2.0 + math.Random(i).nextInt(10)));
+        }
+        maxY = 15;
+        break;
+      case ActivityInterval.threeMonths:
+        for (int i = 0; i < 12; i++) {
+          final label = 'W${i + 1}';
+          chartData.add(_ChartData(label, 10.0 + math.Random(i).nextInt(25)));
+        }
+        maxY = 40;
+        break;
+      case ActivityInterval.year:
+        final labels = const ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        for (int i = 0; i < 12; i++) {
+          chartData.add(_ChartData(labels[i], 40.0 + math.Random(i).nextInt(100)));
+        }
+        maxY = 150;
+        break;
+    }
 
     return SizedBox(
       height: 220,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: List<Widget>.generate(days.length, (index) {
-          final value = normalizedValues[index];
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Column(
-                children: [
-                  Text('$value', style: TextStyle(color: colors.textSecondary)),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: FractionallySizedBox(
-                        heightFactor: value == 0 ? 0.12 : value / maxValue,
-                        child: Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            color: colors.primary.withValues(alpha: 0.88),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 16,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        days[index],
-                        style: TextStyle(color: colors.textSecondary),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      child: SfCartesianChart(
+        plotAreaBorderWidth: 0,
+        margin: EdgeInsets.zero,
+        zoomPanBehavior: ZoomPanBehavior(
+          enablePinching: true,
+          enableDoubleTapZooming: true,
+          enablePanning: true,
+          enableSelectionZooming: true,
+        ),
+        primaryXAxis: CategoryAxis(
+          majorGridLines: const MajorGridLines(width: 0),
+          axisLine: const AxisLine(width: 0),
+          labelStyle: TextStyle(color: colors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold),
+          labelIntersectAction: AxisLabelIntersectAction.hide,
+        ),
+        primaryYAxis: NumericAxis(
+          isVisible: false,
+          minimum: 0,
+          maximum: maxY,
+          majorGridLines: const MajorGridLines(width: 0),
+          axisLine: const AxisLine(width: 0),
+        ),
+        tooltipBehavior: TooltipBehavior(
+          enable: true,
+          header: '',
+          canShowMarker: false,
+          format: 'point.y',
+          textStyle: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold),
+        ),
+        series: <CartesianSeries<_ChartData, String>>[
+          SplineAreaSeries<_ChartData, String>(
+            dataSource: chartData,
+            xValueMapper: (_ChartData data, _) => data.x,
+            yValueMapper: (_ChartData data, _) => data.y,
+            gradient: LinearGradient(
+              colors: [
+                colors.primary.withValues(alpha: 0.28),
+                colors.primary.withValues(alpha: 0.0),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-          );
-        }),
+          ),
+          SplineSeries<_ChartData, String>(
+            dataSource: chartData,
+            xValueMapper: (_ChartData data, _) => data.x,
+            yValueMapper: (_ChartData data, _) => data.y,
+            color: colors.primary,
+            width: 3.5,
+            markerSettings: const MarkerSettings(
+              isVisible: true,
+              height: 6,
+              width: 6,
+              shape: DataMarkerType.circle,
+            ),
+            dataLabelSettings: DataLabelSettings(
+              isVisible: interval == ActivityInterval.week || interval == ActivityInterval.year,
+              textStyle: TextStyle(color: colors.textPrimary, fontSize: 9, fontWeight: FontWeight.bold),
+              labelAlignment: ChartDataLabelAlignment.outer,
+            ),
+          )
+        ],
       ),
     );
   }
+}
+
+class _ChartData {
+  _ChartData(this.x, this.y);
+  final String x;
+  final double y;
 }
 
 class _BreakdownRow extends StatelessWidget {

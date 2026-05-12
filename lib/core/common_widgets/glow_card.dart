@@ -9,12 +9,14 @@ class GlowCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(20),
     this.accent,
     this.showBorder = true,
+    this.onTap,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final Color? accent;
   final bool showBorder;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +24,6 @@ class GlowCard extends StatelessWidget {
     final color = accent ?? palette.primary;
 
     return Container(
-      padding: padding,
       decoration: BoxDecoration(
         color: palette.surface.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(28),
@@ -37,7 +38,17 @@ class GlowCard extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(28),
+          child: Padding(
+            padding: padding,
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }

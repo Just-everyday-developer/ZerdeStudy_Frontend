@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
@@ -65,107 +67,6 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
     return _submitMessage(_controller.text, clearComposer: true);
   }
 
-  Future<void> _showApiKeyDialog() async {
-    final currentKey = ref.read(aiUserApiKeyProvider) ?? '';
-    final controller = TextEditingController(text: currentKey);
-    var obscureText = true;
-
-    final l10n = context.l10n;
-
-    final submittedKey = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setState) {
-            return AlertDialog(
-              title: Text(l10n.text('ai_api_key_title')),
-              content: SizedBox(
-                width: 440,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.text('ai_api_key_description'),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: controller,
-                      obscureText: obscureText,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      decoration: InputDecoration(
-                        labelText: l10n.text('ai_api_key_label'),
-                        hintText: l10n.text('ai_api_key_hint'),
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              obscureText = !obscureText;
-                            });
-                          },
-                          icon: Icon(
-                            obscureText
-                                ? Icons.visibility_rounded
-                                : Icons.visibility_off_rounded,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(l10n.text('cancel')),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(controller.text);
-                  },
-                  child: Text(l10n.text('ai_api_key_save')),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    controller.dispose();
-
-    if (submittedKey == null) {
-      return;
-    }
-
-    await ref.read(aiUserApiKeyProvider.notifier).saveKey(submittedKey);
-    if (!mounted) {
-      return;
-    }
-
-    final hasKey = (submittedKey.trim().isNotEmpty);
-    AppNotice.show(
-      context,
-      message: hasKey
-          ? context.l10n.text('ai_api_key_saved')
-          : context.l10n.text('ai_api_key_removed'),
-      type: AppNoticeType.success,
-    );
-  }
-
-  Future<void> _clearApiKey() async {
-    await ref.read(aiUserApiKeyProvider.notifier).clearKey();
-    if (!mounted) {
-      return;
-    }
-
-    AppNotice.show(
-      context,
-      message: context.l10n.text('ai_api_key_removed'),
-      type: AppNoticeType.success,
-    );
-  }
-
   void _scrollToBottom() {
     if (!_scrollController.hasClients) {
       return;
@@ -175,6 +76,480 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
       _scrollController.position.maxScrollExtent,
       duration: const Duration(milliseconds: 240),
       curve: Curves.easeOutCubic,
+    );
+  }
+
+  bool _isTextFieldFocused() {
+    final primary = FocusManager.instance.primaryFocus;
+    if (primary == null || primary.context == null) return false;
+    bool found = false;
+    primary.context!.visitAncestorElements((element) {
+      if (element.widget is EditableText || element.widget is TextField) {
+        found = true;
+        return false;
+      }
+      return true;
+    });
+    return found || primary.context!.widget is EditableText || primary.context!.widget is TextField;
+  }
+
+  void _showRenameDialog(BuildContext context, String chatId, String currentTitle) {
+    final controller = TextEditingController(text: currentTitle);
+    final colors = context.appColors;
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          title: const Text('Rename Chat'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Chat Title',
+            ),
+            autofocus: true,
+            onSubmitted: (val) {
+              if (val.trim().isNotEmpty) {
+                ref.read(aiChatControllerProvider.notifier).renameChat(chatId, val.trim());
+                Navigator.pop(dialogCtx);
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
+            ),
+            FilledButton(
+              onPressed: () {
+                ref.read(aiChatControllerProvider.notifier).renameChat(chatId, controller.text);
+                Navigator.pop(dialogCtx);
+              },
+              style: FilledButton.styleFrom(backgroundColor: colors.primary),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDeleteChat(BuildContext context, String chatId) async {
+    final colors = context.appColors;
+    final l10n = context.l10n;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
+            Navigator.pop(ctx, true);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: AlertDialog(
+          title: Text(l10n.locale == AppLocale.ru ? 'Удалить чат?' : (l10n.locale == AppLocale.kk ? 'Чатты өшіру?' : 'Delete Chat?')),
+          content: Text(l10n.locale == AppLocale.ru ? 'Вы уверены, что хотите удалить этот чат? Это действие нельзя отменить.' : (l10n.locale == AppLocale.kk ? 'Бұл чатты өшіргіңіз келетініне сенімдісіз бе? Бұл әрекетті қайтару мүмкін емес.' : 'Are you sure you want to delete this chat? This action cannot be undone.')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.text('cancel'), style: TextStyle(color: colors.textSecondary)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: colors.danger),
+              child: Text(l10n.locale == AppLocale.ru ? 'Удалить' : (l10n.locale == AppLocale.kk ? 'Өшіру' : 'Delete')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirm == true) {
+      ref.read(aiChatControllerProvider.notifier).deleteChat(chatId);
+    }
+  }
+
+  void _showChatSwitcherBottomSheet(
+    BuildContext context,
+    AiChatState chatState,
+    AppThemeColors colors,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: colors.backgroundElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'AI Conversations',
+                        style: Theme.of(sheetCtx).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          ref.read(aiChatControllerProvider.notifier).createNewChat();
+                          Navigator.pop(sheetCtx);
+                        },
+                        icon: Icon(Icons.add_circle_outline_rounded, color: colors.primary, size: 28),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: chatState.chatTitles.keys.map((chatId) {
+                      final title = chatState.chatTitles[chatId] ?? '';
+                      final isSelected = chatId == chatState.activeChatId;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: InkWell(
+                          onTap: () {
+                            ref.read(aiChatControllerProvider.notifier).selectChat(chatId);
+                            Navigator.pop(sheetCtx);
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isSelected ? colors.primary.withValues(alpha: 0.12) : colors.surfaceSoft,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected ? colors.primary.withValues(alpha: 0.3) : colors.divider,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  color: isSelected ? colors.primary : colors.textSecondary,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? colors.textPrimary : colors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected) ...[
+                                  IconButton(
+                                    icon: Icon(Icons.edit_outlined, size: 18, color: colors.textSecondary),
+                                    onPressed: () {
+                                      Navigator.pop(sheetCtx);
+                                      _showRenameDialog(context, chatId, title);
+                                    },
+                                    constraints: const BoxConstraints(),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                                    onPressed: () {
+                                      ref.read(aiChatControllerProvider.notifier).deleteChat(chatId);
+                                      Navigator.pop(sheetCtx);
+                                    },
+                                    constraints: const BoxConstraints(),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSidebar(BuildContext context, AppThemeColors colors, AiChatState chatState) {
+    return Container(
+      width: 250,
+      decoration: BoxDecoration(
+        color: colors.backgroundElevated.withValues(alpha: 0.6),
+        border: Border(right: BorderSide(color: colors.divider)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                ref.read(aiChatControllerProvider.notifier).createNewChat();
+              },
+              icon: const Icon(Icons.add_rounded),
+              label: const Text(
+                'New Chat',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: colors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+          Divider(color: colors.divider, height: 1),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: chatState.chatTitles.keys.map((chatId) {
+                final title = chatState.chatTitles[chatId] ?? '';
+                final isSelected = chatId == chatState.activeChatId;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  child: InkWell(
+                    onTap: () {
+                      ref.read(aiChatControllerProvider.notifier).selectChat(chatId);
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? colors.primary.withValues(alpha: 0.12) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? colors.primary.withValues(alpha: 0.24) : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 16,
+                            color: isSelected ? colors.primary : colors.textSecondary,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isSelected ? colors.textPrimary : colors.textSecondary,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          if (isSelected) ...[
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 14),
+                              onPressed: () => _showRenameDialog(context, chatId, title),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              color: colors.textSecondary,
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, size: 14),
+                              onPressed: () {
+                                ref.read(aiChatControllerProvider.notifier).deleteChat(chatId);
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              color: colors.danger,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatPane(
+    BuildContext context,
+    AppThemeColors colors,
+    AiChatState chatState,
+    bool compact,
+    String? userApiKey,
+    AppLocale locale,
+  ) {
+    return Column(
+      children: [
+        if (compact) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: colors.backgroundElevated,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colors.divider),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.chat_bubble_outline_rounded, color: colors.primary, size: 16),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      chatState.chatTitles[chatState.activeChatId] ?? 'AI Assistant',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => _showChatSwitcherBottomSheet(context, chatState, colors),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Chats', style: TextStyle(color: colors.primary, fontSize: 13, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 2),
+                          Icon(Icons.arrow_drop_down_rounded, color: colors.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        Expanded(
+          child: ListView(
+            controller: _scrollController,
+            padding: EdgeInsets.fromLTRB(
+              compact ? 16 : 0,
+              compact ? 6 : 8,
+              compact ? 16 : 0,
+              18,
+            ),
+            children: [
+              (() {
+                final hasCustomKey = (userApiKey ?? '').trim().isNotEmpty;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: (hasCustomKey ? colors.success : colors.primary).withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: (hasCustomKey ? colors.success : colors.primary).withValues(alpha: 0.16),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        hasCustomKey ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+                        color: hasCustomKey ? colors.success : colors.primary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          hasCustomKey
+                              ? (locale == AppLocale.ru 
+                                  ? 'Используется ваш сохраненный ключ API. Изменить его можно в настройках профиля.' 
+                                  : locale == AppLocale.kk 
+                                      ? 'Сіздің сақталған API кілтіңіз қолданылуда. Оны профиль баптауларында өзгертуге болады.'
+                                      : 'Using your saved custom API key. You can modify it in profile settings.')
+                              : (locale == AppLocale.ru 
+                                  ? 'Используется стандартный ключ. Вы можете вставить свой API-ключ в настройках профиля.' 
+                                  : locale == AppLocale.kk 
+                                      ? 'Стандартты кілт қолданылуда. Профиль баптауларында өз жеке API кілтіңізді қоя аласыз.'
+                                      : 'Using the default API key. You can insert your custom API key in profile settings.'),
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              })(),
+              if (chatState.messages.isEmpty) ...[
+                const SizedBox(height: 20),
+                const Center(
+                  child: _GlowingSparkAnimator(),
+                ),
+                const SizedBox(height: 30),
+              ],
+              _FaqSection(
+                locale: locale,
+                onAsk: (question) {
+                  _submitMessage(question);
+                },
+              ),
+              const SizedBox(height: 16),
+              ...chatState.messages.map(
+                  (message) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _MessageBubble(message: message),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            compact ? 16 : 0,
+            0,
+            compact ? 16 : 0,
+            compact ? 16 : 20,
+          ),
+          child: AppGuideTarget(
+            id: AppGuideTargetIds.aiComposer,
+            child: _AiComposer(
+              controller: _controller,
+              onSubmitted: (_) => _send(),
+              onSend: _send,
+              isSending: chatState.isSending,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -213,85 +588,94 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
 
     return AppPageScaffold(
       horizontalPadding: compact ? 0 : null,
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              controller: _scrollController,
-              padding: EdgeInsets.fromLTRB(
-                compact ? 16 : 0,
-                compact ? 6 : 8,
-                compact ? 16 : 0,
-                18,
-              ),
-              children: [
-                _ApiKeyStatusCard(
-                  hasCustomKey: (userApiKey ?? '').trim().isNotEmpty,
-                  maskedKey: _maskApiKey(userApiKey),
-                  onEdit: _showApiKeyDialog,
-                  onClear: _clearApiKey,
-                ),
-                const SizedBox(height: 16),
-                _FaqSection(
-                  locale: locale,
-                  onAsk: (question) {
-                    _submitMessage(question);
-                  },
-                ),
-                const SizedBox(height: 16),
-                if (chatState.messages.isEmpty)
-                  GlowCard(
-                    accent: colors.success,
-                    child: Text(
-                      context.l10n.text('empty_chat'),
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        height: 1.45,
-                      ),
-                    ),
-                  )
-                else
-                  ...chatState.messages.map(
-                    (message) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _MessageBubble(message: message),
+      expandContent: !compact,
+      child: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            final isControlPressed = HardwareKeyboard.instance.isControlPressed;
+            
+            // Ctrl + W
+            if (isControlPressed && event.logicalKey == LogicalKeyboardKey.keyW) {
+              _confirmDeleteChat(context, chatState.activeChatId);
+              return KeyEventResult.handled;
+            }
+            
+            // Delete
+            if (event.logicalKey == LogicalKeyboardKey.delete) {
+              if (!_isTextFieldFocused()) {
+                _confirmDeleteChat(context, chatState.activeChatId);
+                return KeyEventResult.handled;
+              }
+            }
+            
+            // Ctrl + E
+            if (isControlPressed && event.logicalKey == LogicalKeyboardKey.keyE) {
+              final activeId = chatState.activeChatId;
+              final title = chatState.chatTitles[activeId] ?? '';
+              _showRenameDialog(context, activeId, title);
+              return KeyEventResult.handled;
+            }
+            
+            // Ctrl + T
+            if (isControlPressed && event.logicalKey == LogicalKeyboardKey.keyT) {
+              ref.read(aiChatControllerProvider.notifier).createNewChat();
+              return KeyEventResult.handled;
+            }
+          }
+          return KeyEventResult.ignored;
+        },
+        child: compact
+        ? AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+            child: KeyedSubtree(
+              key: ValueKey(chatState.activeChatId),
+              child: _buildChatPane(context, colors, chatState, true, userApiKey, locale),
+            ),
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildSidebar(context, colors, chatState),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 20),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0.04, 0.0),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: KeyedSubtree(
+                      key: ValueKey(chatState.activeChatId),
+                      child: _buildChatPane(context, colors, chatState, false, userApiKey, locale),
                     ),
                   ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              compact ? 16 : 0,
-              0,
-              compact ? 16 : 0,
-              compact ? 16 : 20,
-            ),
-            child: AppGuideTarget(
-              id: AppGuideTargetIds.aiComposer,
-              child: _AiComposer(
-                controller: _controller,
-                onSubmitted: (_) => _send(),
-                onSend: _send,
-                isSending: chatState.isSending,
+                ),
               ),
-            ),
+            ],
           ),
-        ],
       ),
     );
   }
-}
-
-String? _maskApiKey(String? value) {
-  final trimmed = value?.trim() ?? '';
-  if (trimmed.isEmpty) {
-    return null;
-  }
-  if (trimmed.length <= 8) {
-    return '${trimmed.substring(0, 2)}***${trimmed.substring(trimmed.length - 2)}';
-  }
-  return '${trimmed.substring(0, 4)}***${trimmed.substring(trimmed.length - 4)}';
 }
 
 class _AiComposer extends StatelessWidget {
@@ -320,21 +704,46 @@ class _AiComposer extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: !isSending,
-              minLines: 1,
-              maxLines: 3,
-              textInputAction: TextInputAction.send,
-              onSubmitted: onSubmitted,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: _askQuestionLabel(context.l10n.locale),
-                hintStyle: TextStyle(color: colors.textSecondary),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            child: Focus(
+              onKeyEvent: (node, event) {
+                if (event is! KeyUpEvent && event.logicalKey == LogicalKeyboardKey.enter) {
+                  final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+                  if (isShiftPressed) {
+                    // Explicitly insert a newline at the current cursor position
+                    final text = controller.text;
+                    final selection = controller.selection;
+                    final newText = text.replaceRange(selection.start, selection.end, '\n');
+                    controller.value = TextEditingValue(
+                      text: newText,
+                      selection: TextSelection.collapsed(offset: selection.start + 1),
+                    );
+                    return KeyEventResult.handled;
+                  } else {
+                    // Submit the message without adding a newline
+                    if (!isSending) {
+                      onSend();
+                    }
+                    return KeyEventResult.handled;
+                  }
+                }
+                return KeyEventResult.ignored;
+              },
+              child: TextField(
+                controller: controller,
+                enabled: !isSending,
+                minLines: 1,
+                maxLines: 4,
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  hintText: _askQuestionLabel(context.l10n.locale),
+                  hintStyle: TextStyle(color: colors.textSecondary),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                style: TextStyle(color: colors.textPrimary, height: 1.25),
               ),
-              style: TextStyle(color: colors.textPrimary, height: 1.25),
             ),
           ),
           const SizedBox(width: 12),
@@ -367,124 +776,103 @@ class _AiComposer extends StatelessWidget {
   }
 }
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends StatefulWidget {
   const _MessageBubble({required this.message});
 
   final AiChatMessage message;
 
   @override
+  State<_MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<_MessageBubble> with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOut,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutBack,
+    ));
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final compact = context.isCompactLayout;
-    final isMentor = message.author == AiChatAuthor.mentor;
+    final isMentor = widget.message.author == AiChatAuthor.mentor;
     final accent = isMentor ? colors.primary : colors.accent;
     final label = isMentor
         ? context.l10n.text('mentor_label')
         : context.l10n.text('you_label');
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth;
-        final bubbleMaxWidth = compact
-            ? availableWidth
-            : isMentor
-            ? availableWidth
-            : math.min(availableWidth * 0.62, 680.0);
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final availableWidth = constraints.maxWidth;
+            final bubbleMaxWidth = compact
+                ? availableWidth
+                : isMentor
+                ? availableWidth
+                : math.min(availableWidth * 0.62, 680.0);
 
-        return Align(
-          alignment: isMentor ? Alignment.centerLeft : Alignment.centerRight,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
-            child: GlowCard(
-              accent: accent,
-              child: Column(
-                crossAxisAlignment: isMentor
-                    ? CrossAxisAlignment.start
-                    : CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: accent,
-                      fontWeight: FontWeight.w700,
-                    ),
+            return Align(
+              alignment: isMentor ? Alignment.centerLeft : Alignment.centerRight,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
+                child: GlowCard(
+                  accent: accent,
+                  child: Column(
+                    crossAxisAlignment: isMentor
+                        ? CrossAxisAlignment.start
+                        : CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: accent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (widget.message.isPending)
+                        _ThinkingText(locale: context.l10n.locale)
+                      else
+                        InlineMarkdownText(
+                          text: widget.message.text,
+                          style: TextStyle(color: colors.textPrimary, height: 1.45),
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  if (message.isPending)
-                    _ThinkingText(locale: context.l10n.locale)
-                  else
-                    InlineMarkdownText(
-                      text: message.text,
-                      style: TextStyle(color: colors.textPrimary, height: 1.45),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ApiKeyStatusCard extends StatelessWidget {
-  const _ApiKeyStatusCard({
-    required this.hasCustomKey,
-    required this.maskedKey,
-    required this.onEdit,
-    required this.onClear,
-  });
-
-  final bool hasCustomKey;
-  final String? maskedKey;
-  final Future<void> Function() onEdit;
-  final Future<void> Function() onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return GlowCard(
-      accent: hasCustomKey ? colors.primary : colors.divider,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.vpn_key_rounded, color: colors.primary, size: 20),
-              const SizedBox(width: 10),
-              Text(
-                'Personal AI key',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            hasCustomKey
-                ? 'Using your saved provider key: $maskedKey'
-                : 'Using the app default AI key. Add your own key if you want requests billed to your provider account.',
-            style: TextStyle(color: colors.textSecondary, height: 1.45),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => onEdit(),
-                icon: const Icon(Icons.edit_rounded, size: 16),
-                label: Text(hasCustomKey ? 'Change key' : 'Add key'),
-              ),
-              if (hasCustomKey)
-                TextButton.icon(
-                  onPressed: () => onClear(),
-                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                  label: const Text('Clear'),
                 ),
-            ],
-          ),
-        ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -498,7 +886,7 @@ class _FaqSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _faqItemsFor(locale);
+    final items = _faqItemsFor(locale).take(3).toList();
     final colors = context.appColors;
 
     return GlowCard(
@@ -771,4 +1159,47 @@ class _FaqItem {
 
   final String question;
   final String answer;
+}
+
+class _GlowingSparkAnimator extends StatefulWidget {
+  const _GlowingSparkAnimator();
+
+  @override
+  State<_GlowingSparkAnimator> createState() => _GlowingSparkAnimatorState();
+}
+
+class _GlowingSparkAnimatorState extends State<_GlowingSparkAnimator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+    _scaleAnimation = Tween<double>(begin: 0.92, end: 1.08).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: SvgPicture.asset(
+        'assets/svgs/ai_spark.svg',
+        width: 140,
+        height: 140,
+      ),
+    );
+  }
 }

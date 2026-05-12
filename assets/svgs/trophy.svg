@@ -1,0 +1,13 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="200" y2="200">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <path d="M50 40 L150 40 L140 100 C130 140, 70 140, 60 100 Z" fill="url(#goldGrad)"/>
+  <path d="M30 50 C20 50, 20 80, 50 80 M170 50 C180 50, 180 80, 150 80" stroke="url(#goldGrad)" stroke-width="12" stroke-linecap="round"/>
+  <rect x="80" y="130" width="40" height="40" fill="url(#goldGrad)"/>
+  <path d="M60 170 L140 170 L150 190 L50 190 Z" fill="url(#goldGrad)"/>
+  <circle cx="100" cy="70" r="15" fill="#FEF3C7" opacity="0.6"/>
+</svg>

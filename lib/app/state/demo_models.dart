@@ -755,6 +755,8 @@ class LearningTarget {
 
   LocalizedText get title => isPractice ? practice!.title : lesson!.title;
 
+  LocalizedText get summary => isPractice ? practice!.summary : lesson!.summary;
+
   String get trackId => isPractice ? practice!.trackId : lesson!.trackId;
 }
 

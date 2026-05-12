@@ -197,6 +197,44 @@ final backendCourseDetailProvider =
       }
     });
 
+final backendCourseLeaderboardProvider = FutureProvider.family<List<LeaderboardEntry>, String>((ref, courseId) async {
+  final normalizedCourseId = courseId.trim();
+  if (normalizedCourseId.isEmpty) {
+    return const <LeaderboardEntry>[];
+  }
+
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) {
+    return const <LeaderboardEntry>[];
+  }
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+  try {
+    final response = await remote.getCoursePointByCourseId(
+      accessToken: accessToken,
+      courseId: normalizedCourseId,
+    );
+
+    return response.map((json) {
+      final xp = (json['xp'] as num?)?.toInt() ?? 0;
+      final userId = json['user_id'] as String? ?? 'Unknown';
+      
+      return LeaderboardEntry(
+        id: userId,
+        name: 'Learner ${userId.substring(0, 4)}',
+        xp: xp,
+        level: (xp / 100).floor() + 1,
+        role: 'Learner',
+        focus: 'Course',
+        isCurrentUser: false, 
+      );
+    }).toList(growable: false);
+  } catch (_) {
+    return const <LeaderboardEntry>[];
+  }
+});
+
 CommunityCourse adaptBackendCourseToCommunityCourse(BackendCourseDto course) {
   final topicKeys = _topicKeysForCourse(course);
   final topicKey = topicKeys.first;

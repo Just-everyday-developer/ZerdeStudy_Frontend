@@ -45,13 +45,78 @@ final aiChatControllerProvider =
 
 class AiChatController extends Notifier<AiChatState> {
   static const _storageKey = 'zerdestudy_ai_chat_history_v1';
+  static const _multichatStorageKey = 'zerdestudy_ai_multichat_history_v2';
 
   late final SharedPreferences _preferences;
 
   @override
   AiChatState build() {
     _preferences = ref.watch(sharedPreferencesProvider);
-    return AiChatState(messages: _restoreMessages());
+    return _restoreState();
+  }
+
+  void createNewChat([String? title]) {
+    final chatId = 'chat-${DateTime.now().microsecondsSinceEpoch}';
+    final chatTitle = title ?? 'Chat #${state.chatTitles.length + 1}';
+
+    final updatedTitles = Map<String, String>.from(state.chatTitles)..[chatId] = chatTitle;
+    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[chatId] = <AiChatMessage>[];
+
+    state = state.copyWith(
+      activeChatId: chatId,
+      chatTitles: updatedTitles,
+      allChats: updatedChats,
+      messages: <AiChatMessage>[],
+      errorMessage: null,
+    );
+    _persistState();
+  }
+
+  void selectChat(String chatId) {
+    if (!state.allChats.containsKey(chatId)) {
+      return;
+    }
+    state = state.copyWith(
+      activeChatId: chatId,
+      messages: state.allChats[chatId] ?? <AiChatMessage>[],
+      errorMessage: null,
+    );
+    _persistState();
+  }
+
+  void deleteChat(String chatId) {
+    final updatedTitles = Map<String, String>.from(state.chatTitles)..remove(chatId);
+    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..remove(chatId);
+
+    if (updatedChats.isEmpty) {
+      // Always keep at least one chat
+      final newId = 'chat-${DateTime.now().microsecondsSinceEpoch}';
+      updatedTitles[newId] = 'AI Assistant';
+      updatedChats[newId] = <AiChatMessage>[];
+    }
+
+    String nextActiveId = state.activeChatId;
+    if (chatId == state.activeChatId) {
+      nextActiveId = updatedChats.keys.first;
+    }
+
+    state = state.copyWith(
+      activeChatId: nextActiveId,
+      chatTitles: updatedTitles,
+      allChats: updatedChats,
+      messages: updatedChats[nextActiveId] ?? <AiChatMessage>[],
+      errorMessage: null,
+    );
+    _persistState();
+  }
+
+  void renameChat(String chatId, String newTitle) {
+    if (newTitle.trim().isEmpty) return;
+    final updatedTitles = Map<String, String>.from(state.chatTitles)..[chatId] = newTitle.trim();
+    state = state.copyWith(
+      chatTitles: updatedTitles,
+    );
+    _persistState();
   }
 
   Future<String?> sendMessage(String rawMessage) async {
@@ -76,12 +141,26 @@ class AiChatController extends Notifier<AiChatState> {
       isPending: true,
     );
 
+    final updatedMessages = <AiChatMessage>[...previousMessages, userMessage, pendingReply];
+    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[state.activeChatId] = updatedMessages;
+
+    // Auto-rename chat if it is the default title and this is the first message
+    var updatedTitles = Map<String, String>.from(state.chatTitles);
+    if (previousMessages.isEmpty &&
+        (updatedTitles[state.activeChatId] == 'AI Assistant' ||
+            updatedTitles[state.activeChatId]?.startsWith('Chat #') == true)) {
+      final summary = message.length > 24 ? '${message.substring(0, 24)}...' : message;
+      updatedTitles[state.activeChatId] = summary;
+    }
+
     state = state.copyWith(
-      messages: <AiChatMessage>[...previousMessages, userMessage, pendingReply],
+      messages: updatedMessages,
+      allChats: updatedChats,
+      chatTitles: updatedTitles,
       isSending: true,
       errorMessage: null,
     );
-    _persistMessages(state.messages);
+    _persistState();
 
     try {
       final authUser = ref.read(authControllerProvider).user;
@@ -107,33 +186,43 @@ class AiChatController extends Notifier<AiChatState> {
             xpDelta: 2,
           );
 
+      final finalMessages = _replacePendingMessage(
+        pendingMessageId: pendingReply.id,
+        replyText: reply.text,
+      );
+      final finalChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[state.activeChatId] = finalMessages;
+
       state = state.copyWith(
-        messages: _replacePendingMessage(
-          pendingMessageId: pendingReply.id,
-          replyText: reply.text,
-        ),
+        messages: finalMessages,
+        allChats: finalChats,
         isSending: false,
         errorMessage: null,
       );
-      _persistMessages(state.messages);
+      _persistState();
       return null;
     } on ApiException catch (error) {
+      final finalMessages = _removeMessageById(pendingReply.id);
+      final finalChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[state.activeChatId] = finalMessages;
       state = state.copyWith(
-        messages: _removeMessageById(pendingReply.id),
+        messages: finalMessages,
+        allChats: finalChats,
         isSending: false,
         errorMessage: error.message,
       );
-      _persistMessages(state.messages);
+      _persistState();
       return error.message;
     } catch (_) {
-      const message = 'Unable to get an AI response right now.';
+      const errorMsg = 'Unable to get an AI response right now.';
+      final finalMessages = _removeMessageById(pendingReply.id);
+      final finalChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[state.activeChatId] = finalMessages;
       state = state.copyWith(
-        messages: _removeMessageById(pendingReply.id),
+        messages: finalMessages,
+        allChats: finalChats,
         isSending: false,
-        errorMessage: message,
+        errorMessage: errorMsg,
       );
-      _persistMessages(state.messages);
-      return message;
+      _persistState();
+      return errorMsg;
     }
   }
 
@@ -180,38 +269,90 @@ class AiChatController extends Notifier<AiChatState> {
         .toList(growable: false);
   }
 
-  List<AiChatMessage> _restoreMessages() {
-    final raw = _preferences.getString(_storageKey);
-    if (raw == null || raw.trim().isEmpty) {
-      return const <AiChatMessage>[];
-    }
+  AiChatState _restoreState() {
+    // 1. Try restoring multi-chat history (v2)
+    final rawMultichat = _preferences.getString(_multichatStorageKey);
+    if (rawMultichat != null && rawMultichat.trim().isNotEmpty) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(rawMultichat);
+        final activeChatId = decoded['activeChatId'] as String? ?? 'default';
+        final rawTitles = decoded['chatTitles'] as Map<String, dynamic>? ?? {};
+        final rawChats = decoded['allChats'] as Map<String, dynamic>? ?? {};
 
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! List) {
-        return const <AiChatMessage>[];
+        final chatTitles = <String, String>{};
+        rawTitles.forEach((key, value) {
+          chatTitles[key] = value.toString();
+        });
+
+        final allChats = <String, List<AiChatMessage>>{};
+        rawChats.forEach((key, value) {
+          if (value is List) {
+            allChats[key] = value
+                .whereType<Map>()
+                .map((msg) => AiChatMessage.fromJson(Map<String, dynamic>.from(msg)))
+                .where((msg) => !msg.isPending)
+                .toList();
+          }
+        });
+
+        if (chatTitles.isEmpty || allChats.isEmpty) {
+          throw Exception('Empty database loaded');
+        }
+
+        return AiChatState(
+          activeChatId: activeChatId,
+          chatTitles: chatTitles,
+          allChats: allChats,
+          messages: allChats[activeChatId] ?? <AiChatMessage>[],
+        );
+      } catch (_) {
+        // Fall through to v1 restore or default
       }
-
-      return decoded
-          .whereType<Map>()
-          .map(
-            (message) =>
-                AiChatMessage.fromJson(Map<String, dynamic>.from(message)),
-          )
-          .where((message) => !message.isPending)
-          .toList(growable: false);
-    } catch (_) {
-      return const <AiChatMessage>[];
     }
+
+    // 2. Try restoring old single chat history (v1) and convert to v2
+    final rawV1 = _preferences.getString(_storageKey);
+    if (rawV1 != null && rawV1.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawV1);
+        if (decoded is List) {
+          final messages = decoded
+              .whereType<Map>()
+              .map((message) => AiChatMessage.fromJson(Map<String, dynamic>.from(message)))
+              .where((message) => !message.isPending)
+              .toList();
+
+          return AiChatState(
+            activeChatId: 'default',
+            chatTitles: const <String, String>{'default': 'AI Assistant'},
+            allChats: <String, List<AiChatMessage>>{'default': messages},
+            messages: messages,
+          );
+        }
+      } catch (_) {
+        // Fall through to default
+      }
+    }
+
+    // 3. Fallback to default empty chat
+    return const AiChatState();
   }
 
-  void _persistMessages(List<AiChatMessage> messages) {
-    final persistedMessages = messages
-        .where((message) => !message.isPending)
-        .toList(growable: false);
-    final payload = jsonEncode(
-      persistedMessages.map((message) => message.toJson()).toList(),
-    );
-    unawaited(_preferences.setString(_storageKey, payload));
+  void _persistState() {
+    final Map<String, dynamic> serializedChats = {};
+    state.allChats.forEach((chatId, list) {
+      final persistedMessages = list
+          .where((message) => !message.isPending)
+          .map((message) => message.toJson())
+          .toList();
+      serializedChats[chatId] = persistedMessages;
+    });
+
+    final payload = jsonEncode({
+      'activeChatId': state.activeChatId,
+      'chatTitles': state.chatTitles,
+      'allChats': serializedChats,
+    });
+    unawaited(_preferences.setString(_multichatStorageKey, payload));
   }
 }

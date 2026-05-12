@@ -5,7 +5,7 @@ import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
-class CourseDiscoverySearchBar extends StatelessWidget {
+class CourseDiscoverySearchBar extends StatefulWidget {
   const CourseDiscoverySearchBar({
     super.key,
     required this.controller,
@@ -24,10 +24,54 @@ class CourseDiscoverySearchBar extends StatelessWidget {
   final FocusNode? focusNode;
 
   @override
+  State<CourseDiscoverySearchBar> createState() => _CourseDiscoverySearchBarState();
+}
+
+class _CourseDiscoverySearchBarState extends State<CourseDiscoverySearchBar> {
+  late final FocusNode _effectiveFocusNode;
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _effectiveFocusNode = widget.focusNode ?? FocusNode();
+    _effectiveFocusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(CourseDiscoverySearchBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusNode != oldWidget.focusNode) {
+      oldWidget.focusNode?.removeListener(_onFocusChange);
+      _effectiveFocusNode = widget.focusNode ?? FocusNode();
+      _effectiveFocusNode.addListener(_onFocusChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.focusNode == null) {
+      _effectiveFocusNode.dispose();
+    } else {
+      _effectiveFocusNode.removeListener(_onFocusChange);
+    }
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (mounted) {
+      setState(() {
+        _isFocused = _effectiveFocusNode.hasFocus;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       clipBehavior: Clip.hardEdge,
       padding: EdgeInsets.symmetric(
         horizontal: 16,
@@ -36,11 +80,16 @@ class CourseDiscoverySearchBar extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         color: colors.surface,
-        border: Border.all(color: colors.divider),
+        border: Border.all(
+          color: _isFocused ? colors.primary : colors.divider,
+          width: _isFocused ? 1.6 : 1.0,
+        ),
         boxShadow: [
           BoxShadow(
-            color: colors.primary.withValues(alpha: 0.08),
-            blurRadius: 18,
+            color: _isFocused
+                ? colors.primary.withValues(alpha: 0.14)
+                : colors.primary.withValues(alpha: 0.08),
+            blurRadius: _isFocused ? 24 : 18,
             offset: const Offset(0, 8),
           ),
         ],
@@ -48,16 +97,19 @@ class CourseDiscoverySearchBar extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.search_rounded, color: colors.textSecondary),
+          Icon(
+            Icons.search_rounded,
+            color: _isFocused ? colors.primary : colors.textSecondary,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: SizedBox(
               height: context.isCompactLayout ? 24 : 26,
               child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                onChanged: onChanged,
-                onSubmitted: onSubmitted,
+                controller: widget.controller,
+                focusNode: _effectiveFocusNode,
+                onChanged: widget.onChanged,
+                onSubmitted: widget.onSubmitted,
                 scrollPadding: EdgeInsets.zero,
                 textAlignVertical: TextAlignVertical.center,
                 maxLines: 1,
@@ -73,9 +125,15 @@ class CourseDiscoverySearchBar extends StatelessWidget {
                 cursorRadius: const Radius.circular(1.2),
                 decoration: InputDecoration(
                   isDense: true,
+                  filled: false,
+                  fillColor: Colors.transparent,
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 2),
-                  hintText: hintText,
+                  hintText: widget.hintText,
                   hintStyle: TextStyle(
                     color: colors.textSecondary,
                     fontSize: context.isCompactLayout ? 16 : 17,
@@ -86,7 +144,7 @@ class CourseDiscoverySearchBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           InkWell(
-            onTap: onFilterTap,
+            onTap: widget.onFilterTap,
             borderRadius: BorderRadius.circular(18),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

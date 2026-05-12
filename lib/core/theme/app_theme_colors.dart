@@ -63,29 +63,29 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
   );
 
   static const AppThemeColors light = AppThemeColors(
-    background: Color(0xFFFFF8FC),
-    backgroundElevated: Color(0xFFF8EAF1),
-    surface: Color(0xFFFFFCFE),
-    surfaceSoft: Color(0xFFFCEEF5),
-    primary: Color(0xFFE66BA1),
-    accent: Color(0xFFFFB3C7),
-    success: Color(0xFF5DBA88),
-    danger: Color(0xFFE16376),
-    textPrimary: Color(0xFF392434),
-    textSecondary: Color(0xFF8E6C7E),
-    divider: Color(0xFFE5C7D5),
+    background: Color(0xFFF9F9FB),
+    backgroundElevated: Color(0xFFF1F1F5),
+    surface: Color(0xFFFFFFFF),
+    surfaceSoft: Color(0xFFECECEF),
+    primary: Color(0xFF4F46E5),
+    accent: Color(0xFFF59E0B),
+    success: Color(0xFF10B981),
+    danger: Color(0xFFEF4444),
+    textPrimary: Color(0xFF1F2937),
+    textSecondary: Color(0xFF6B7280),
+    divider: Color(0xFFE5E7EB),
     pageGradient: <Color>[
-      Color(0xFFFFFCFE),
-      Color(0xFFFFF4F9),
-      Color(0xFFFBEAF2),
+      Color(0xFFF9F9FB),
+      Color(0xFFF3F4F6),
+      Color(0xFFECECEF),
     ],
     authGradient: <Color>[
-      Color(0xFFFFFCFE),
-      Color(0xFFFFF1F7),
-      Color(0xFFFBEAF2),
+      Color(0xFFF9F9FB),
+      Color(0xFFF3F4F6),
+      Color(0xFFF9F9FB),
     ],
-    treeTrunk: Color(0xFF9F7059),
-    treeTrunkGlow: Color(0xFFD7B19C),
+    treeTrunk: Color(0xFF8B5A2B),
+    treeTrunkGlow: Color(0xFFA0522D),
   );
 
   @override

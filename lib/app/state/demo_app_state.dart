@@ -29,10 +29,12 @@ class DemoAppState {
     required this.coursePlayerProgressByCourseId,
     required this.xp,
     required this.streak,
+    required this.maxStreak,
     required this.dailyMissionDone,
     required this.weeklyActivity,
     required this.aiMessages,
     required this.unlockedAchievementIds,
+    required this.recommendedTrackIds,
   });
 
   static const Object _sentinel = Object();
@@ -62,10 +64,12 @@ class DemoAppState {
   final Map<String, CoursePlayerProgress> coursePlayerProgressByCourseId;
   final int xp;
   final int streak;
+  final int maxStreak;
   final bool dailyMissionDone;
   final List<int> weeklyActivity;
   final List<AiMessage> aiMessages;
   final Set<String> unlockedAchievementIds;
+  final Set<String> recommendedTrackIds;
 
   int get level => 1 + (xp ~/ xpPerLevel);
 
@@ -122,10 +126,12 @@ class DemoAppState {
     Map<String, CoursePlayerProgress>? coursePlayerProgressByCourseId,
     int? xp,
     int? streak,
+    int? maxStreak,
     bool? dailyMissionDone,
     List<int>? weeklyActivity,
     List<AiMessage>? aiMessages,
     Set<String>? unlockedAchievementIds,
+    Set<String>? recommendedTrackIds,
   }) {
     return DemoAppState(
       locale: locale ?? this.locale,
@@ -182,12 +188,15 @@ class DemoAppState {
           ),
       xp: xp ?? this.xp,
       streak: streak ?? this.streak,
+      maxStreak: maxStreak ?? this.maxStreak,
       dailyMissionDone: dailyMissionDone ?? this.dailyMissionDone,
       weeklyActivity: weeklyActivity ?? List<int>.from(this.weeklyActivity),
       aiMessages: aiMessages ?? List<AiMessage>.from(this.aiMessages),
       unlockedAchievementIds:
           unlockedAchievementIds ??
           Set<String>.from(this.unlockedAchievementIds),
+      recommendedTrackIds:
+          recommendedTrackIds ?? Set<String>.from(this.recommendedTrackIds),
     );
   }
 
@@ -229,10 +238,12 @@ class DemoAppState {
           ),
       'xp': xp,
       'streak': streak,
+      'maxStreak': maxStreak,
       'dailyMissionDone': dailyMissionDone,
       'weeklyActivity': weeklyActivity,
       'aiMessages': aiMessages.map((message) => message.toJson()).toList(),
       'unlockedAchievementIds': unlockedAchievementIds.toList(),
+      'recommendedTrackIds': recommendedTrackIds.toList(),
     };
   }
 
@@ -334,6 +345,7 @@ class DemoAppState {
               ),
       xp: json['xp'] as int? ?? 240,
       streak: json['streak'] as int? ?? 4,
+      maxStreak: json['maxStreak'] as int? ?? 4,
       dailyMissionDone: json['dailyMissionDone'] as bool? ?? false,
       weeklyActivity: List<int>.from(
         (json['weeklyActivity'] as List<dynamic>? ??
@@ -345,6 +357,10 @@ class DemoAppState {
           .toList(),
       unlockedAchievementIds: Set<String>.from(
         (json['unlockedAchievementIds'] as List<dynamic>? ?? <dynamic>[])
+            .cast<String>(),
+      ),
+      recommendedTrackIds: Set<String>.from(
+        (json['recommendedTrackIds'] as List<dynamic>? ?? <dynamic>[])
             .cast<String>(),
       ),
     );

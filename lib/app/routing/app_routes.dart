@@ -35,6 +35,7 @@ class AppRoutes {
   static const String moderatorComments = '/moderator/comments';
   static const String moderatorCommunity = '/moderator/community';
   static const String moderatorFaq = '/moderator/faq';
+  static const String diagnostics = '/diagnostics';
 
   static String trackById(String trackId) => '$track/$trackId';
 

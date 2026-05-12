@@ -4,10 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_theme_colors.dart';
 
 class AppTheme {
-  static ThemeData get darkTheme =>
+  static final ThemeData darkTheme =
       _buildTheme(brightness: Brightness.dark, palette: AppThemeColors.dark);
 
-  static ThemeData get lightTheme =>
+  static final ThemeData lightTheme =
       _buildTheme(brightness: Brightness.light, palette: AppThemeColors.light);
 
   static ThemeData _buildTheme({

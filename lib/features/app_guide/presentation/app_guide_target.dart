@@ -15,6 +15,16 @@ class AppGuideTargetRegistry {
     );
   }
 
+  void register(String id, GlobalKey key) {
+    _keys[id] = key;
+  }
+
+  void unregister(String id, GlobalKey key) {
+    if (_keys[id] == key) {
+      _keys.remove(id);
+    }
+  }
+
   Rect? globalRectFor(String id) {
     final context = _keys[id]?.currentContext;
     final renderObject = context?.findRenderObject();
@@ -29,15 +39,45 @@ class AppGuideTargetRegistry {
   }
 }
 
-class AppGuideTarget extends ConsumerWidget {
+class AppGuideTarget extends ConsumerStatefulWidget {
   const AppGuideTarget({super.key, required this.id, required this.child});
 
   final String id;
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final key = ref.read(appGuideTargetRegistryProvider).keyFor(id);
-    return KeyedSubtree(key: key, child: child);
+  ConsumerState<AppGuideTarget> createState() => _AppGuideTargetState();
+}
+
+class _AppGuideTargetState extends ConsumerState<AppGuideTarget> {
+  late final GlobalKey _key;
+  late final AppGuideTargetRegistry _registry;
+
+  @override
+  void initState() {
+    super.initState();
+    _key = GlobalKey(debugLabel: 'app-guide-target-${widget.id}-${identityHashCode(this)}');
+    _registry = ref.read(appGuideTargetRegistryProvider);
+    _registry.register(widget.id, _key);
+  }
+
+  @override
+  void didUpdateWidget(AppGuideTarget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id) {
+      _registry.unregister(oldWidget.id, _key);
+      _registry.register(widget.id, _key);
+    }
+  }
+
+  @override
+  void dispose() {
+    _registry.unregister(widget.id, _key);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyedSubtree(key: _key, child: widget.child);
   }
 }
