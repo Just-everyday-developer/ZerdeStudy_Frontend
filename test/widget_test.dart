@@ -974,9 +974,31 @@ class FakeAiChatRemoteDataSource extends AiChatRemoteDataSource {
       );
 
   @override
+  Future<List<Map<String, dynamic>>> fetchChats(String userId) async {
+    return <Map<String, dynamic>>[];
+  }
+
+  @override
+  Future<Map<String, dynamic>> createChat(String userId, String chatId, {String title = 'Новый чат'}) async {
+    return <String, dynamic>{'chatId': chatId, 'title': title};
+  }
+
+  @override
+  Future<void> renameChat(String chatId, String title) async {}
+
+  @override
+  Future<void> deleteChat(String chatId) async {}
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchChatMessages(String chatId) async {
+    return <Map<String, dynamic>>[];
+  }
+
+  @override
   Future<AiChatReplyDto> sendMessage({
     required String conversation,
     required String appContext,
+    String? chatId,
     String? userApiKey,
     String? userId,
   }) async {

@@ -222,7 +222,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                   child: ListView(
                     shrinkWrap: true,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: chatState.chatTitles.keys.map((chatId) {
+                    children: chatState.sortedChatIds.map((chatId) {
                       final title = chatState.chatTitles[chatId] ?? '';
                       final isSelected = chatId == chatState.activeChatId;
                       return Padding(
@@ -299,6 +299,10 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
   }
 
   Widget _buildSidebar(BuildContext context, AppThemeColors colors, AiChatState chatState) {
+    final locale = ref.watch(
+      demoAppControllerProvider.select((state) => state.locale),
+    );
+
     return Container(
       width: 250,
       decoration: BoxDecoration(
@@ -308,7 +312,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: ElevatedButton.icon(
               onPressed: () {
                 ref.read(aiChatControllerProvider.notifier).createNewChat();
@@ -327,11 +331,84 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    locale == AppLocale.ru 
+                        ? 'Сортировка:' 
+                        : locale == AppLocale.kk 
+                            ? 'Сұрыптау:' 
+                            : 'Sorting:',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<AiChatSortOrder>(
+                      value: chatState.sortOrder,
+                      dropdownColor: colors.backgroundElevated,
+                      icon: Icon(Icons.sort_rounded, size: 14, color: colors.primary),
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      onChanged: (order) {
+                        if (order != null) {
+                          ref.read(aiChatControllerProvider.notifier).changeSortOrder(order);
+                        }
+                      },
+                      items: [
+                        DropdownMenuItem(
+                          value: AiChatSortOrder.newestFirst,
+                          child: Text(
+                            locale == AppLocale.ru 
+                                ? 'Сначала новые' 
+                                : locale == AppLocale.kk 
+                                    ? 'Алдымен жаңа' 
+                                    : 'Newest first',
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: AiChatSortOrder.oldestFirst,
+                          child: Text(
+                            locale == AppLocale.ru 
+                                ? 'Сначала старые' 
+                                : locale == AppLocale.kk 
+                                    ? 'Алдымен ескі' 
+                                    : 'Oldest first',
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: AiChatSortOrder.alphabetical,
+                          child: Text(
+                            locale == AppLocale.ru 
+                                ? 'По алфавиту' 
+                                : locale == AppLocale.kk 
+                                    ? 'Әліпби бойынша' 
+                                    : 'Alphabetical',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           Divider(color: colors.divider, height: 1),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              children: chatState.chatTitles.keys.map((chatId) {
+              children: chatState.sortedChatIds.map((chatId) {
                 final title = chatState.chatTitles[chatId] ?? '';
                 final isSelected = chatId == chatState.activeChatId;
                 return Padding(
@@ -1136,14 +1213,23 @@ class _FaqCard extends StatelessWidget {
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(
+            child: TextButton(
               onPressed: onAsk,
-              icon: Icon(Icons.send_rounded, size: 16, color: colors.primary),
-              label: Text(
-                askLabel,
-                style: TextStyle(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w700,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.send_rounded, size: 16, color: colors.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      askLabel,
+                      style: TextStyle(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

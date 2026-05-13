@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -15,6 +16,17 @@ import '../../domain/entities/ai_chat_message.dart';
 import 'ai_app_context_provider.dart';
 import 'ai_chat_state.dart';
 import 'ai_user_api_key_controller.dart';
+
+// Safe & standard UUID v4 Generator without external dependencies
+String generateUuidV4() {
+  final random = math.Random.secure();
+  final hex = List<String>.generate(32, (i) {
+    if (i == 12) return '4';
+    if (i == 16) return (random.nextInt(4) + 8).toRadixString(16);
+    return random.nextInt(16).toRadixString(16);
+  });
+  return '${hex.sublist(0, 8).join()}-${hex.sublist(8, 12).join()}-${hex.sublist(12, 16).join()}-${hex.sublist(16, 20).join()}-${hex.sublist(20, 32).join()}';
+}
 
 final aiHttpClientProvider = Provider<http.Client>((ref) {
   final client = http.Client();
@@ -52,27 +64,108 @@ class AiChatController extends Notifier<AiChatState> {
   @override
   AiChatState build() {
     _preferences = ref.watch(sharedPreferencesProvider);
+    // Queue asynchronous background sync to backend
+    Future.microtask(_syncWithBackend);
     return _restoreState();
   }
 
-  void createNewChat([String? title]) {
-    final chatId = 'chat-${DateTime.now().microsecondsSinceEpoch}';
+  // Trigger background sync to load user's real chats stored in Postgres
+  Future<void> _syncWithBackend() async {
+    final authUser = ref.read(authControllerProvider).user;
+    if (authUser == null) return;
+
+    try {
+      final remoteChats = await ref.read(aiChatRemoteDataSourceProvider).fetchChats(authUser.id);
+      if (remoteChats.isEmpty) {
+        // Safe check: If no chats exist on backend but we have active local history, upload it
+        if (state.messages.isNotEmpty) {
+          final title = state.chatTitles[state.activeChatId] ?? 'AI Assistant';
+          await ref.read(aiChatRemoteDataSourceProvider).createChat(
+            authUser.id,
+            state.activeChatId,
+            title: title,
+          );
+        }
+        return;
+      }
+
+      final chatTitles = <String, String>{};
+      final allChats = <String, List<AiChatMessage>>{};
+
+      for (final rc in remoteChats) {
+        final id = rc['chatId'] as String;
+        final title = rc['title'] as String? ?? 'AI Assistant';
+        chatTitles[id] = title;
+        allChats[id] = <AiChatMessage>[]; // Loaded on demand/select or merged
+      }
+
+      String activeId = state.activeChatId;
+      if (!chatTitles.containsKey(activeId)) {
+        activeId = chatTitles.keys.first;
+      }
+
+      // Pre-load messages of active chat
+      final remoteMsgs = await ref.read(aiChatRemoteDataSourceProvider).fetchChatMessages(activeId);
+      final messages = remoteMsgs.map((m) {
+        final role = m['role'] as String;
+        return AiChatMessage(
+          id: m['messageId'] as String,
+          author: role == 'user' ? AiChatAuthor.user : AiChatAuthor.mentor,
+          text: m['content'] as String? ?? '',
+          createdAt: DateTime.tryParse(m['createdAt'] as String? ?? '') ?? DateTime.now(),
+        );
+      }).toList();
+
+      allChats[activeId] = messages;
+
+      state = state.copyWith(
+        activeChatId: activeId,
+        chatTitles: chatTitles,
+        allChats: allChats,
+        messages: messages,
+      );
+
+      _persistState();
+    } catch (_) {
+      // Graceful degradation: Fail silently and fallback to local cache
+    }
+  }
+
+  void changeSortOrder(AiChatSortOrder newOrder) {
+    state = state.copyWith(sortOrder: newOrder);
+    _persistState();
+  }
+
+  void createNewChat([String? title]) async {
+    final finalChatId = generateUuidV4();
+
     final chatTitle = title ?? 'Chat #${state.chatTitles.length + 1}';
 
-    final updatedTitles = Map<String, String>.from(state.chatTitles)..[chatId] = chatTitle;
-    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[chatId] = <AiChatMessage>[];
+    final updatedTitles = Map<String, String>.from(state.chatTitles)..[finalChatId] = chatTitle;
+    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[finalChatId] = <AiChatMessage>[];
 
     state = state.copyWith(
-      activeChatId: chatId,
+      activeChatId: finalChatId,
       chatTitles: updatedTitles,
       allChats: updatedChats,
       messages: <AiChatMessage>[],
       errorMessage: null,
     );
     _persistState();
+
+    final authUser = ref.read(authControllerProvider).user;
+    if (authUser != null) {
+      try {
+        await ref.read(aiChatRemoteDataSourceProvider).createChat(
+          authUser.id,
+          finalChatId,
+          title: chatTitle,
+        );
+      } catch (_) {}
+    }
   }
 
-  void selectChat(String chatId) {
+  void selectChat(String chatId) async {
     if (!state.allChats.containsKey(chatId)) {
       return;
     }
@@ -82,17 +175,53 @@ class AiChatController extends Notifier<AiChatState> {
       errorMessage: null,
     );
     _persistState();
+
+    final authUser = ref.read(authControllerProvider).user;
+    if (authUser != null) {
+      try {
+        final remoteMsgs = await ref.read(aiChatRemoteDataSourceProvider).fetchChatMessages(chatId);
+        final messages = remoteMsgs.map((m) {
+          final role = m['role'] as String;
+          return AiChatMessage(
+            id: m['messageId'] as String,
+            author: role == 'user' ? AiChatAuthor.user : AiChatAuthor.mentor,
+            text: m['content'] as String? ?? '',
+            createdAt: DateTime.tryParse(m['createdAt'] as String? ?? '') ?? DateTime.now(),
+          );
+        }).toList();
+
+        final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[chatId] = messages;
+
+        if (state.activeChatId == chatId) {
+          state = state.copyWith(
+            messages: messages,
+            allChats: updatedChats,
+          );
+          _persistState();
+        }
+      } catch (_) {}
+    }
   }
 
-  void deleteChat(String chatId) {
+  void deleteChat(String chatId) async {
     final updatedTitles = Map<String, String>.from(state.chatTitles)..remove(chatId);
     final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..remove(chatId);
 
     if (updatedChats.isEmpty) {
-      // Always keep at least one chat
-      final newId = 'chat-${DateTime.now().microsecondsSinceEpoch}';
+      final newId = generateUuidV4();
       updatedTitles[newId] = 'AI Assistant';
       updatedChats[newId] = <AiChatMessage>[];
+
+      final authUser = ref.read(authControllerProvider).user;
+      if (authUser != null) {
+        try {
+          await ref.read(aiChatRemoteDataSourceProvider).createChat(
+            authUser.id,
+            newId,
+            title: 'AI Assistant',
+          );
+        } catch (_) {}
+      }
     }
 
     String nextActiveId = state.activeChatId;
@@ -108,15 +237,32 @@ class AiChatController extends Notifier<AiChatState> {
       errorMessage: null,
     );
     _persistState();
+
+    // Load active chat messages from remote
+    selectChat(nextActiveId);
+
+    final authUser = ref.read(authControllerProvider).user;
+    if (authUser != null) {
+      try {
+        await ref.read(aiChatRemoteDataSourceProvider).deleteChat(chatId);
+      } catch (_) {}
+    }
   }
 
-  void renameChat(String chatId, String newTitle) {
+  void renameChat(String chatId, String newTitle) async {
     if (newTitle.trim().isEmpty) return;
     final updatedTitles = Map<String, String>.from(state.chatTitles)..[chatId] = newTitle.trim();
     state = state.copyWith(
       chatTitles: updatedTitles,
     );
     _persistState();
+
+    final authUser = ref.read(authControllerProvider).user;
+    if (authUser != null) {
+      try {
+        await ref.read(aiChatRemoteDataSourceProvider).renameChat(chatId, newTitle.trim());
+      } catch (_) {}
+    }
   }
 
   Future<String?> sendMessage(String rawMessage) async {
@@ -128,13 +274,13 @@ class AiChatController extends Notifier<AiChatState> {
     final previousMessages = state.messages;
     final now = DateTime.now();
     final userMessage = AiChatMessage(
-      id: 'user-${now.microsecondsSinceEpoch}',
+      id: generateUuidV4(),
       author: AiChatAuthor.user,
       text: message,
       createdAt: now,
     );
     final pendingReply = AiChatMessage(
-      id: 'mentor-${now.microsecondsSinceEpoch}',
+      id: 'pending-${generateUuidV4()}',
       author: AiChatAuthor.mentor,
       text: '',
       createdAt: now.add(const Duration(milliseconds: 1)),
@@ -144,13 +290,13 @@ class AiChatController extends Notifier<AiChatState> {
     final updatedMessages = <AiChatMessage>[...previousMessages, userMessage, pendingReply];
     final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[state.activeChatId] = updatedMessages;
 
-    // Auto-rename chat if it is the default title and this is the first message
     var updatedTitles = Map<String, String>.from(state.chatTitles);
     if (previousMessages.isEmpty &&
         (updatedTitles[state.activeChatId] == 'AI Assistant' ||
             updatedTitles[state.activeChatId]?.startsWith('Chat #') == true)) {
       final summary = message.length > 24 ? '${message.substring(0, 24)}...' : message;
       updatedTitles[state.activeChatId] = summary;
+      renameChat(state.activeChatId, summary);
     }
 
     state = state.copyWith(
@@ -175,6 +321,7 @@ class AiChatController extends Notifier<AiChatState> {
             ),
             appContext: appContext,
             userId: authUser?.id,
+            chatId: state.activeChatId,
             userApiKey: userApiKey,
           );
 
@@ -270,7 +417,6 @@ class AiChatController extends Notifier<AiChatState> {
   }
 
   AiChatState _restoreState() {
-    // 1. Try restoring multi-chat history (v2)
     final rawMultichat = _preferences.getString(_multichatStorageKey);
     if (rawMultichat != null && rawMultichat.trim().isNotEmpty) {
       try {
@@ -295,6 +441,12 @@ class AiChatController extends Notifier<AiChatState> {
           }
         });
 
+        final sortOrderName = decoded['sortOrder'] as String?;
+        final sortOrder = AiChatSortOrder.values.firstWhere(
+          (e) => e.name == sortOrderName,
+          orElse: () => AiChatSortOrder.newestFirst,
+        );
+
         if (chatTitles.isEmpty || allChats.isEmpty) {
           throw Exception('Empty database loaded');
         }
@@ -304,13 +456,11 @@ class AiChatController extends Notifier<AiChatState> {
           chatTitles: chatTitles,
           allChats: allChats,
           messages: allChats[activeChatId] ?? <AiChatMessage>[],
+          sortOrder: sortOrder,
         );
-      } catch (_) {
-        // Fall through to v1 restore or default
-      }
+      } catch (_) {}
     }
 
-    // 2. Try restoring old single chat history (v1) and convert to v2
     final rawV1 = _preferences.getString(_storageKey);
     if (rawV1 != null && rawV1.trim().isNotEmpty) {
       try {
@@ -329,12 +479,9 @@ class AiChatController extends Notifier<AiChatState> {
             messages: messages,
           );
         }
-      } catch (_) {
-        // Fall through to default
-      }
+      } catch (_) {}
     }
 
-    // 3. Fallback to default empty chat
     return const AiChatState();
   }
 
@@ -352,6 +499,7 @@ class AiChatController extends Notifier<AiChatState> {
       'activeChatId': state.activeChatId,
       'chatTitles': state.chatTitles,
       'allChats': serializedChats,
+      'sortOrder': state.sortOrder.name,
     });
     unawaited(_preferences.setString(_multichatStorageKey, payload));
   }

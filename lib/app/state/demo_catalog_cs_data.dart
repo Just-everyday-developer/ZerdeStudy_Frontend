@@ -32,7 +32,8 @@ List<LearningTrack> buildComputerScienceTracks() {
       id: 'oop',
       title: 'OOP',
       subtitle: 'Classes, inheritance, encapsulation, and polymorphism',
-      description: 'Изучите основы синтаксиса Java, принципы объектно-ориентированного программирования (ООП), SOLID и основные шаблоны проектирования на практических примерах.',
+      description:
+          'Изучите основы синтаксиса Java, принципы объектно-ориентированного программирования (ООП), SOLID и основные шаблоны проектирования на практических примерах.',
       teaser:
           'Useful for backend services, app architecture, domain modeling, and interview-style coding tasks.',
       outcome:
@@ -42,484 +43,7 @@ List<LearningTrack> buildComputerScienceTracks() {
       order: 12,
       nodeId: 'cs-oop',
       connections: <String>['algorithms_data_structures', 'backend', 'mobile'],
-      modules: <DemoModuleSeed>[
-        _module(
-          id: 'oop_module_1',
-          title: 'Java Syntax',
-          titleRu: 'Синтаксис Java',
-          summary: 'Базовый синтаксис языка Java: ввод-вывод, переменные, циклы, массивы и методы.',
-          lessons: <DemoLessonSeed>[
-            _lesson(
-              id: 'oop_lesson_1_1',
-              title: 'Input, Output, and Comments',
-              titleRu: 'Ввод и вывод, комментарии',
-              trackTitle: 'OOP',
-              codeSnippet: '''// Однострочный комментарий
-/* Многострочный
-   комментарий */
-System.out.print("Hello, ");
-System.out.println("Zerde!");''',
-              output: 'Hello, Zerde!',
-              quizOptions: <String>[
-                'System.out.print переводит строку',
-                'System.out.println переводит строку после вывода',
-                'Оба метода не переводят строку',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Метод вывода с переводом строки',
-                instruction: 'Допишите имя метода, который выводит текст и переводит курсор на новую строку.',
-                prompt: 'Какое ключевое слово используется для вывода с новой строки?',
-                options: <String>['println', 'print', 'write'],
-                correctIndex: 0,
-                template: 'System.out.____("Test");',
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_1_2',
-              title: 'Variables and Data Types',
-              titleRu: 'Переменные и типы данных',
-              trackTitle: 'OOP',
-              codeSnippet: '''int age = 20;
-double score = 4.8;
-boolean isActive = true;
-System.out.println(age + " - " + score);''',
-              output: '20 - 4.8',
-              quizOptions: <String>[
-                'int используется для вещественных чисел',
-                'double используется для вещественных чисел',
-                'boolean может хранить произвольный текст',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.matching(
-                title: 'Сопоставление типов данных',
-                instruction: 'Сопоставьте типы данных Java с их описанием.',
-                prompt: 'Свяжите ключевые слова типов с их назначением.',
-                options: <String>['int', 'double', 'boolean'],
-                orderedLines: <String>[
-                  'Целое число (например, 42)',
-                  'Число с плавающей точкой (например, 3.14)',
-                  'Логическое значение (true/false)',
-                ],
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_1_3',
-              title: 'Arithmetic and Logical Operations',
-              titleRu: 'Арифметические и логические операции',
-              trackTitle: 'OOP',
-              codeSnippet: '''int a = 10;
-int b = 3;
-boolean res = (a % b == 1) && (a > 5);
-System.out.println(res);''',
-              output: 'true',
-              quizOptions: <String>[
-                'Оператор % возвращает остаток от деления',
-                'Оператор % возвращает частное',
-                'Оператор && означает логическое ИЛИ',
-              ],
-              correctQuizIndex: 0,
-              trainer: const DemoTrainerSeed.matchOutput(
-                title: 'Результат остатка от деления',
-                instruction: 'Что будет выведено в консоль при делении по модулю?',
-                prompt: '''int x = 14;
-int y = 5;
-System.out.println(x % y);''',
-                options: <String>['2', '4', '0'],
-                correctIndex: 1,
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_1_4',
-              title: 'Conditionals, Ternary Operator, and Switch',
-              titleRu: 'Условные конструкции, тернарный оператор, switch',
-              trackTitle: 'OOP',
-              codeSnippet: '''int temp = 25;
-String weather = (temp > 20) ? "Warm" : "Cold";
-System.out.println(weather);''',
-              output: 'Warm',
-              quizOptions: <String>[
-                'Тернарный оператор возвращает void',
-                'Тернарный оператор — это сокращенная форма if-else',
-                'Switch-case работает только со строками',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Тернарный оператор',
-                instruction: 'Заполните символ-разделитель в тернарном операторе.',
-                prompt: 'Какой символ разделяет условие и возвращаемое значение?',
-                options: <String>['?', ':', 'if'],
-                correctIndex: 0,
-                template: 'String res = (x > 0) ____ "Yes" : "No";',
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_1_5',
-              title: 'Loops, break and continue',
-              titleRu: 'Циклы (Loops), break/continue',
-              trackTitle: 'OOP',
-              codeSnippet: '''int sum = 0;
-for (int i = 1; i <= 4; i++) {
-    if (i == 3) continue;
-    sum += i;
-}
-System.out.println(sum);''',
-              output: '7',
-              quizOptions: <String>[
-                'continue полностью прерывает цикл',
-                'continue пропускает текущую итерацию цикла',
-                'break просто переходит на следующий шаг',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.reorder(
-                title: 'Порядок сборки цикла for',
-                instruction: 'Расположите строки так, чтобы получился корректный цикл.',
-                prompt: 'Соберите простейший цикл вывода чисел.',
-                orderedLines: <String>[
-                  'for (int i = 0; i < 3; i++) {',
-                  '    System.out.println(i);',
-                  '}',
-                ],
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_1_6',
-              title: 'Arrays',
-              titleRu: 'Массивы (Arrays)',
-              trackTitle: 'OOP',
-              codeSnippet: '''int[] numbers = {10, 20, 30};
-System.out.println(numbers[1]);''',
-              output: '20',
-              quizOptions: <String>[
-                'Индексация массивов начинается с 1',
-                'Индексация массивов начинается с 0',
-                'Размер массива можно изменить после создания',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.matchOutput(
-                title: 'Доступ по индексу',
-                instruction: 'Что вернет этот код при обращении к первому элементу массива?',
-                prompt: '''String[] names = {"Java", "Python", "C++"};
-System.out.println(names[0]);''',
-                options: <String>['Java', 'Python', 'Ошибка компиляции'],
-                correctIndex: 0,
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_1_7',
-              title: 'Methods',
-              titleRu: 'Методы',
-              trackTitle: 'OOP',
-              codeSnippet: '''public static int multiply(int x, int y) {
-    return x * y;
-}
-// Вызов: multiply(3, 4) вернет 12''',
-              output: 'Возвращает произведение',
-              quizOptions: <String>[
-                'void методы должны обязательно возвращать значение',
-                'Методы позволяют повторно использовать блоки кода',
-                'Метод не может принимать аргументы',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Тип возвращаемого значения',
-                instruction: 'Какое ключевое слово пишется, если метод ничего не возвращает?',
-                prompt: 'Укажите тип возвращаемого значения для пустых методов.',
-                options: <String>['void', 'null', 'int'],
-                correctIndex: 0,
-                template: 'public static ____ printHello() {}',
-              ),
-            ),
-          ],
-          practice: _practice(
-            id: 'oop_practice_1',
-            title: 'Базовый синтаксис',
-            starterCode: '''// Напишите метод, принимающий число n 
-// и возвращающий сумму чисел от 1 до n''',
-          ),
-        ),
-        _module(
-          id: 'oop_module_2',
-          title: 'Introduction to OOP',
-          titleRu: 'Введение в ООП',
-          summary: 'Понятия классов, объектов, конструкторов, ключевого слова this, а также модификаторов final и static.',
-          lessons: <DemoLessonSeed>[
-            _lesson(
-              id: 'oop_lesson_2_1',
-              title: 'Why OOP?',
-              titleRu: 'Зачем нужен ООП',
-              trackTitle: 'OOP',
-              codeSnippet: '''// Объединение состояния и поведения в единую сущность
-class User {
-    String name;
-    void sayHello() {
-        System.out.println("Hello from " + name);
-    }
-}''',
-              output: 'Инкапсуляция логики и данных',
-              quizOptions: <String>[
-                'ООП усложняет чтение кода без преимуществ',
-                'ООП позволяет разбивать сложные системы на понятные модули-объекты',
-                'ООП запрещает использовать переменные',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.matching(
-                title: 'Базовые концепции ООП',
-                instruction: 'Сопоставьте термины с их интуитивными определениями.',
-                prompt: 'Свяжите понятия ООП.',
-                options: <String>['Класс', 'Объект', 'Поле класса'],
-                orderedLines: <String>[
-                  'Чертеж или шаблон для создания объектов',
-                  'Конкретный экземпляр, созданный по чертежу класса',
-                  'Переменная состояния внутри класса',
-                ],
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_2_2',
-              title: 'Classes and Objects',
-              titleRu: 'Классы и объекты, поля объекта',
-              trackTitle: 'OOP',
-              codeSnippet: '''class Car {
-    String brand = "Toyota";
-    int speed = 120;
-}
-Car myCar = new Car();
-System.out.println(myCar.brand);''',
-              output: 'Toyota',
-              quizOptions: <String>[
-                'Класс Car — это конкретный объект',
-                'myCar — это экземпляр (объект) класса Car',
-                'Доступ к полям объекта осуществляется через двоеточие',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.matchOutput(
-                title: 'Чтение полей объекта',
-                instruction: 'Что выведет код при создании нового объекта?',
-                prompt: '''class Person {
-    String name = "Nurlan";
-}
-Person p = new Person();
-System.out.println(p.name);''',
-                options: <String>['Nurlan', 'null', 'Car'],
-                correctIndex: 0,
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_2_3',
-              title: 'Constructors and operator new',
-              titleRu: 'Конструкторы, работа с методами, создание объектов, оператор new',
-              trackTitle: 'OOP',
-              codeSnippet: '''class Dog {
-    String name;
-    Dog(String dogName) {
-        name = dogName;
-    }
-}
-Dog d = new Dog("Rex");
-System.out.println(d.name);''',
-              output: 'Rex',
-              quizOptions: <String>[
-                'Конструктор возвращает void тип',
-                'Конструктор инициализирует объект при создании оператором new',
-                'Конструктор вызывается вручную в любой момент программы',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Создание объекта',
-                instruction: 'Какое ключевое слово используется для выделения памяти под новый объект?',
-                prompt: 'Укажите оператор создания нового объекта.',
-                options: <String>['new', 'create', 'make'],
-                correctIndex: 0,
-                template: 'Dog myDog = ____ Dog("Sharik");',
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_2_4',
-              title: 'this and Method Overloading',
-              titleRu: 'this, перегрузка методов и конструкторов',
-              trackTitle: 'OOP',
-              codeSnippet: '''class Printer {
-    void print(String s) { System.out.println(s); }
-    void print(int i) { System.out.println(i); }
-}''',
-              output: 'Перегрузка методов по типу параметров',
-              quizOptions: <String>[
-                'Перегрузка требует изменения имени метода',
-                'Перегрузка позволяет методам иметь одинаковые имена, но разные сигнатуры',
-                'this ссылается на статический контекст класса',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Ссылка на текущий объект',
-                instruction: 'Какое ключевое слово используется для обращения к текущему экземпляру класса?',
-                prompt: 'Укажите ключевое слово.',
-                options: <String>['this', 'self', 'current'],
-                correctIndex: 0,
-                template: 'this.name = ____.name;',
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_2_5',
-              title: 'Modifiers final and static',
-              titleRu: 'Модификаторы final, static. Понятие константа',
-              trackTitle: 'OOP',
-              codeSnippet: '''class Settings {
-    static final double VERSION = 1.0;
-}
-System.out.println(Settings.VERSION);''',
-              output: '1.0',
-              quizOptions: <String>[
-                'static поле принадлежит конкретному объекту',
-                'static поле принадлежит самому классу, а final делает его неизменяемым константой',
-                'final разрешает менять значение переменной',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.reorder(
-                title: 'Объявление константы',
-                instruction: 'Расположите модификаторы в правильном порядке.',
-                prompt: 'Создайте глобальную константу.',
-                orderedLines: <String>[
-                  'public static final',
-                  'double PI =',
-                  '3.14159;',
-                ],
-              ),
-            ),
-          ],
-          practice: _practice(
-            id: 'oop_practice_2',
-            title: 'Создание класса и объектов',
-            starterCode: '''// Создайте класс Student с полями name и age.
-// Напишите конструктор и метод для вывода информации.''',
-          ),
-        ),
-        _module(
-          id: 'oop_module_3',
-          title: 'Encapsulation',
-          titleRu: 'Инкапсуляция',
-          summary: 'Сокрытие внутренней реализации, модификаторы доступа private/public/protected, геттеры/сеттеры и Immutable объекты.',
-          lessons: <DemoLessonSeed>[
-            _lesson(
-              id: 'oop_lesson_3_1',
-              title: 'Why Encapsulation?',
-              titleRu: 'Зачем нужна инкапсуляция',
-              trackTitle: 'OOP',
-              codeSnippet: '''class BankAccount {
-    private double balance;
-    public void deposit(double amount) {
-        if (amount > 0) balance += amount;
-    }
-}''',
-              output: 'Контролируемый доступ к балансу',
-              quizOptions: <String>[
-                'Инкапсуляция нужна, чтобы убрать все методы',
-                'Инкапсуляция защищает состояние объекта от некорректного прямого вмешательства',
-                'Инкапсуляция делает все поля общедоступными',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.matching(
-                title: 'Суть инкапсуляции',
-                instruction: 'Сопоставьте концепты с их целями.',
-                prompt: 'Свяжите цели сокрытия.',
-                options: <String>['Сокрытие данных', 'Интерфейс доступа', 'Валидация'],
-                orderedLines: <String>[
-                  'Объявление полей как private',
-                  'Предоставление публичных геттеров/сеттеров',
-                  'Проверка корректности данных внутри методов сеттера',
-                ],
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_3_2',
-              title: 'Access Modifiers',
-              titleRu: 'private vs public vs protected',
-              trackTitle: 'OOP',
-              codeSnippet: '''class Data {
-    private int secret = 42;
-    public int publicVal = 100;
-}''',
-              output: 'secret скрыт извне класса',
-              quizOptions: <String>[
-                'private поля видны везде в проекте',
-                'private поля видны только внутри своего класса',
-                'protected поля закрыты даже для наследников',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Закрытый модификатор',
-                instruction: 'Какой модификатор доступа полностью скрывает поле от внешнего мира?',
-                prompt: 'Укажите модификатор.',
-                options: <String>['private', 'public', 'protected'],
-                correctIndex: 0,
-                template: '____ String password;',
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_3_3',
-              title: 'Getters and Setters',
-              titleRu: 'геттеры и сеттеры',
-              trackTitle: 'OOP',
-              codeSnippet: '''class Person {
-    private String name;
-    public String getName() { return name; }
-    public void setName(String n) { name = n; }
-}''',
-              output: 'Безопасный доступ к полю name',
-              quizOptions: <String>[
-                'Геттеры используются для изменения данных',
-                'Геттеры и сеттеры позволяют контролировать чтение и запись приватных полей',
-                'Сеттер не может содержать условные конструкции',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.matchOutput(
-                title: 'Использование геттера',
-                instruction: 'Что выведет вызов getName() после установки значения?',
-                prompt: '''Person p = new Person();
-p.setName("Zerde");
-System.out.println(p.getName());''',
-                options: <String>['Zerde', 'null', 'p.name'],
-                correctIndex: 0,
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_3_4',
-              title: 'Immutable Objects',
-              titleRu: 'Immutable объекты',
-              trackTitle: 'OOP',
-              codeSnippet: '''public final class ImmutablePoint {
-    private final int x;
-    private final int y;
-    public ImmutablePoint(int x, int y) {
-        this.x = x;
-        this.y = y;
-    }
-}''',
-              output: 'Состояние объекта нельзя изменить после создания',
-              quizOptions: <String>[
-                'Immutable объекты позволяют менять свои поля в любое время',
-                'Immutable объекты полностью защищены от изменений состояния после конструирования',
-                'Для Immutable объектов нужны сеттеры',
-              ],
-              correctQuizIndex: 1,
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Модификатор неизменяемости полей',
-                instruction: 'Какое ключевое слово гарантирует, что переменной нельзя присвоить новое значение после инициализации?',
-                prompt: 'Укажите модификатор неизменяемости.',
-                options: <String>['final', 'static', 'const'],
-                correctIndex: 0,
-                template: 'private ____ int id;',
-              ),
-            ),
-          ],
-          practice: _practice(
-            id: 'oop_practice_3',
-            title: 'Создание инкапсулированного класса',
-            starterCode: '''// Создайте класс User с приватными полями email и password.
-// Напишите сеттер для пароля с проверкой длины (не менее 6 символов).''',
-          ),
-        ),
-      ],
+      modules: _oopModules(),
     ),
     _track(
       id: 'mathematical_analysis',
@@ -3432,6 +2956,320 @@ print('[\${(mean - margin).toStringAsFixed(1)}, \${(mean + margin).toStringAsFix
       modules: const <DemoModuleSeed>[],
     ),
   ];
+}
+
+class _OopModuleDraft {
+  const _OopModuleDraft({
+    required this.title,
+    required this.titleRu,
+    required this.lessons,
+  });
+
+  final String title;
+  final String titleRu;
+  final List<_OopLessonDraft> lessons;
+}
+
+class _OopLessonDraft {
+  const _OopLessonDraft({required this.title, required this.titleRu});
+
+  final String title;
+  final String titleRu;
+}
+
+List<DemoModuleSeed> _oopModules() {
+  const moduleDrafts = <_OopModuleDraft>[
+    _OopModuleDraft(
+      title: 'Java Syntax',
+      titleRu: 'Синтаксис Java',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(
+          title: 'Input and output, comments',
+          titleRu: 'Ввод и вывод, комментарии',
+        ),
+        _OopLessonDraft(
+          title: 'Variables and data types',
+          titleRu: 'Переменные и типы данных',
+        ),
+        _OopLessonDraft(
+          title: 'Arithmetic and logical operations',
+          titleRu: 'Арифметические и логические операции',
+        ),
+        _OopLessonDraft(
+          title: 'Conditionals, ternary operator, switch',
+          titleRu: 'Условные конструкции, тернарный оператор, switch',
+        ),
+        _OopLessonDraft(
+          title: 'Loops, break/continue',
+          titleRu: 'Циклы (Loops), break/continue',
+        ),
+        _OopLessonDraft(title: 'Arrays', titleRu: 'Массивы (Arrays)'),
+        _OopLessonDraft(title: 'Methods', titleRu: 'Методы'),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Introduction to OOP',
+      titleRu: 'Введение в ООП',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(title: 'Why OOP is needed', titleRu: 'Зачем нужен ООП'),
+        _OopLessonDraft(
+          title: 'Classes and objects, object fields',
+          titleRu: 'Классы и объекты, поля объекта',
+        ),
+        _OopLessonDraft(
+          title: 'Constructors, methods, objects, new',
+          titleRu:
+              'Конструкторы, работа с методами, создание объектов, оператор new',
+        ),
+        _OopLessonDraft(
+          title: 'this, method and constructor overloading',
+          titleRu: 'this, перегрузка методов и конструкторов',
+        ),
+        _OopLessonDraft(
+          title: 'final and static modifiers, constants',
+          titleRu: 'Модификаторы final, static. Понятие константа',
+        ),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Encapsulation',
+      titleRu: 'Инкапсуляция',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(
+          title: 'Why encapsulation is needed',
+          titleRu: 'Зачем нужна инкапсуляция',
+        ),
+        _OopLessonDraft(
+          title: 'private vs public vs protected',
+          titleRu: 'private vs public vs protected',
+        ),
+        _OopLessonDraft(
+          title: 'Getters and setters',
+          titleRu: 'геттеры и сеттеры',
+        ),
+        _OopLessonDraft(
+          title: 'Immutable objects',
+          titleRu: 'Immutable объекты',
+        ),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Inheritance',
+      titleRu: 'Наследование',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(
+          title: 'super and extends keywords',
+          titleRu: 'Ключевые слова super, extends',
+        ),
+        _OopLessonDraft(
+          title: 'Method overriding',
+          titleRu: 'Переопределние методов',
+        ),
+        _OopLessonDraft(
+          title: 'When inheritance is bad',
+          titleRu: 'Когда наследование плохо',
+        ),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Polymorphism',
+      titleRu: 'Полиморфизм',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(
+          title: 'Why polymorphism is needed',
+          titleRu: 'Зачем нужен полиморфизм',
+        ),
+        _OopLessonDraft(
+          title: 'Interfaces, why they are needed, implements',
+          titleRu: 'Интерфейсы, что это и зачем они нужны, оператор implements',
+        ),
+        _OopLessonDraft(
+          title: 'instanceof operator',
+          titleRu: 'Оператор instanceof',
+        ),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Abstraction',
+      titleRu: 'Абстракция',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(
+          title: 'What abstraction is',
+          titleRu: 'Что такое абстракция',
+        ),
+        _OopLessonDraft(title: 'abstract class', titleRu: 'abstract class'),
+        _OopLessonDraft(
+          title: 'interface vs abstract class',
+          titleRu: 'interface vs abstract class',
+        ),
+        _OopLessonDraft(
+          title: 'Dependency Inversion',
+          titleRu: 'Dependency Inversion',
+        ),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Composition',
+      titleRu: 'Композиция',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(
+          title: 'Composition concept',
+          titleRu: 'Понятие композиции',
+        ),
+        _OopLessonDraft(title: 'has-a vs is-a', titleRu: 'has-a vs is-a'),
+        _OopLessonDraft(title: 'Delegation', titleRu: 'Делегирование'),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Introduction to Design Patterns',
+      titleRu: 'Введение в паттерны проектирования',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(
+          title: 'SOLID, KISS, YAGNI, DRY, god object',
+          titleRu: 'Принципы SOLID, KISS, YAGNI, DRY. god object',
+        ),
+        _OopLessonDraft(
+          title: 'Patterns, antipatterns, code style, pattern types',
+          titleRu:
+              'Что такое паттерны. Разница между паттерном, антипаттерном и просто хорошим стилем кода. Типы паттернов (Порождающие , Структурные , Поведенческие )',
+        ),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Creational Patterns',
+      titleRu: 'Порождающие паттерны',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(title: 'Singleton', titleRu: 'Singleton'),
+        _OopLessonDraft(title: 'Factory Method', titleRu: 'Factory Method'),
+        _OopLessonDraft(title: 'Abstract Factory', titleRu: 'Abstract Factory'),
+        _OopLessonDraft(title: 'Builder', titleRu: 'Builder'),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Structural Patterns',
+      titleRu: 'Структурные паттерны',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(title: 'Adapter', titleRu: 'Adapter'),
+        _OopLessonDraft(title: 'Decorator', titleRu: 'Decorator'),
+        _OopLessonDraft(title: 'Facade', titleRu: 'Facade'),
+        _OopLessonDraft(title: 'Proxy', titleRu: 'Proxy'),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Behavioral Patterns',
+      titleRu: 'Поведенческие паттерны',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(title: 'Strategy', titleRu: 'Strategy'),
+        _OopLessonDraft(title: 'Observer', titleRu: 'Observer'),
+        _OopLessonDraft(title: 'Command', titleRu: 'Command'),
+        _OopLessonDraft(title: 'State', titleRu: 'State'),
+        _OopLessonDraft(title: 'Template Method', titleRu: 'Template Method'),
+      ],
+    ),
+    _OopModuleDraft(
+      title: 'Additional Patterns',
+      titleRu: 'Дополнительные паттерны',
+      lessons: <_OopLessonDraft>[
+        _OopLessonDraft(
+          title: 'Chain of Responsibility',
+          titleRu: 'Chain of Responsibility',
+        ),
+        _OopLessonDraft(title: 'Mediator', titleRu: 'Mediator'),
+        _OopLessonDraft(title: 'Iterator', titleRu: 'Iterator'),
+        _OopLessonDraft(title: 'Composite', titleRu: 'Composite'),
+        _OopLessonDraft(title: 'Memento', titleRu: 'Memento'),
+      ],
+    ),
+  ];
+
+  return moduleDrafts
+      .asMap()
+      .entries
+      .map((moduleEntry) {
+        final moduleNumber = moduleEntry.key + 1;
+        final module = moduleEntry.value;
+
+        return _module(
+          id: 'oop_module_$moduleNumber',
+          title: module.title,
+          titleRu: module.titleRu,
+          summary: 'Roadmap module for ${module.title}.',
+          summaryRu:
+              'Модуль содержит темы: ${module.lessons.map((lesson) => lesson.titleRu).join(', ')}.',
+          lessons: module.lessons
+              .asMap()
+              .entries
+              .map((lessonEntry) {
+                return _oopLesson(
+                  moduleNumber: moduleNumber,
+                  lessonNumber: lessonEntry.key + 1,
+                  moduleTitle: module.title,
+                  moduleTitleRu: module.titleRu,
+                  lesson: lessonEntry.value,
+                );
+              })
+              .toList(growable: false),
+          practice: _practice(
+            id: 'oop_practice_$moduleNumber',
+            title: 'Практика: ${module.titleRu}',
+            starterCode:
+                '// Закрепите модуль "${module.titleRu}" коротким примером на Java.\n'
+                '// Выведите название темы и объясните, где она применяется.',
+          ),
+        );
+      })
+      .toList(growable: false);
+}
+
+DemoLessonSeed _oopLesson({
+  required int moduleNumber,
+  required int lessonNumber,
+  required String moduleTitle,
+  required String moduleTitleRu,
+  required _OopLessonDraft lesson,
+}) {
+  final lessonCode =
+      '// Тема: ${lesson.titleRu}\nSystem.out.println("${lesson.titleRu}");';
+
+  return _lesson(
+    id: 'oop_lesson_${moduleNumber}_$lessonNumber',
+    title: lesson.title,
+    titleRu: lesson.titleRu,
+    trackTitle: 'OOP',
+    summary: 'Clean roadmap lesson for ${lesson.title}.',
+    summaryRu: 'Урок из дорожной карты OOP: ${lesson.titleRu}.',
+    outcome: 'You can explain where ${lesson.title} fits in Java OOP.',
+    outcomeRu:
+        'Вы можете объяснить место темы "${lesson.titleRu}" в дорожной карте Java OOP.',
+    keyPoints: <String>[
+      'Connect the topic to Java syntax and object design.',
+      'Name the purpose of the concept before writing code.',
+      'Use a short example to check understanding.',
+    ],
+    keyPointsRu: <String>[
+      'Связать тему с синтаксисом Java и проектированием объектов.',
+      'Назвать назначение концепции до написания кода.',
+      'Закрепить понимание коротким примером.',
+    ],
+    codeSnippet: lessonCode,
+    output: lesson.titleRu,
+    quizPrompt: 'Which lesson topic does the example print?',
+    quizPromptRu: 'Какую тему урока выводит пример?',
+    quizOptions: <String>[lesson.titleRu, moduleTitleRu, 'OOP'],
+    correctQuizIndex: 0,
+    quizExplanation: 'The example prints the current lesson title.',
+    quizExplanationRu: 'Пример выводит название текущего урока.',
+    promptSuggestion: 'Create a short Java explanation for ${lesson.title}.',
+    promptSuggestionRu:
+        'Составь короткое объяснение по теме "${lesson.titleRu}" на Java.',
+    trainer: DemoTrainerSeed.matchOutput(
+      title: 'Проверка темы урока',
+      instruction: 'Выберите строку, которую напечатает пример.',
+      prompt: lessonCode,
+      options: <String>[lesson.titleRu, moduleTitleRu, 'OOP'],
+      correctIndex: 0,
+    ),
+  );
 }
 
 LearningTrack _track({

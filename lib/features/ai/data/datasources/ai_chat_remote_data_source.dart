@@ -27,11 +27,13 @@ Use **bold** only for short emphasis and `code` for commands, code identifiers, 
     required String conversation,
     required String appContext,
     String? userId,
+    String? chatId,
     String? userApiKey,
   }) async {
     final metadata = <String, dynamic>{
       'source': 'frontend_flutter',
       if (userId != null && userId.trim().isNotEmpty) 'userId': userId.trim(),
+      if (chatId != null && chatId.trim().isNotEmpty) 'chatId': chatId.trim(),
     };
 
     final headers = <String, String>{
@@ -72,6 +74,70 @@ Use **bold** only for short emphasis and `code` for commands, code identifiers, 
     }
 
     return AiChatReplyDto.fromJson(json);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchChats(String userId) async {
+    final headers = <String, String>{
+      if (authToken.trim().isNotEmpty)
+        'Authorization': 'Bearer ${authToken.trim()}',
+    };
+    final list = await _client.getJsonList(
+      '/v1/chats',
+      headers: headers,
+      queryParameters: {'userId': userId},
+    );
+    return list;
+  }
+
+  Future<Map<String, dynamic>> createChat(String userId, String chatId, {String title = 'Новый чат'}) async {
+    final headers = <String, String>{
+      if (authToken.trim().isNotEmpty)
+        'Authorization': 'Bearer ${authToken.trim()}',
+    };
+    return _client.postJson(
+      '/v1/chats',
+      headers: headers,
+      body: {
+        'chatId': chatId,
+        'userId': userId,
+        'title': title,
+        'model': 'gemini-2.5-flash',
+      },
+    );
+  }
+
+  Future<void> renameChat(String chatId, String title) async {
+    final headers = <String, String>{
+      if (authToken.trim().isNotEmpty)
+        'Authorization': 'Bearer ${authToken.trim()}',
+    };
+    await _client.putJson(
+      '/v1/chats/$chatId',
+      headers: headers,
+      body: {'title': title},
+    );
+  }
+
+  Future<void> deleteChat(String chatId) async {
+    final headers = <String, String>{
+      if (authToken.trim().isNotEmpty)
+        'Authorization': 'Bearer ${authToken.trim()}',
+    };
+    await _client.deleteEmpty(
+      '/v1/chats/$chatId',
+      headers: headers,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> fetchChatMessages(String chatId) async {
+    final headers = <String, String>{
+      if (authToken.trim().isNotEmpty)
+        'Authorization': 'Bearer ${authToken.trim()}',
+    };
+    return _client.getJsonList(
+      '/v1/chats/$chatId/messages',
+      headers: headers,
+    );
   }
 
   bool _isLegacyContextMismatch(ApiException error) {
