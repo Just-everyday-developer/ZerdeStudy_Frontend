@@ -32,8 +32,7 @@ List<LearningTrack> buildComputerScienceTracks() {
       id: 'oop',
       title: 'OOP',
       subtitle: 'Classes, inheritance, encapsulation, and polymorphism',
-      description:
-          'Build a practical object-oriented mental model for reusable program structure and small system design.',
+      description: 'Изучите основы синтаксиса Java, принципы объектно-ориентированного программирования (ООП), SOLID и основные шаблоны проектирования на практических примерах.',
       teaser:
           'Useful for backend services, app architecture, domain modeling, and interview-style coding tasks.',
       outcome:
@@ -46,488 +45,478 @@ List<LearningTrack> buildComputerScienceTracks() {
       modules: <DemoModuleSeed>[
         _module(
           id: 'oop_module_1',
-          title: 'Classes and Objects',
-          summary:
-              'Fields, constructors, methods, and the basic object model behind small learning entities.',
+          title: 'Java Syntax',
+          titleRu: 'Синтаксис Java',
+          summary: 'Базовый синтаксис языка Java: ввод-вывод, переменные, циклы, массивы и методы.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'oop_lesson_1_1',
-              title: 'Classes, fields, and constructors',
+              title: 'Input, Output, and Comments',
+              titleRu: 'Ввод и вывод, комментарии',
               trackTitle: 'OOP',
-              summary:
-                  'Create a class, initialize it with a constructor, and read values from a real object instance.',
-              outcome:
-                  'You can define a small class and instantiate it with clear field values.',
-              codeSnippet: '''class Course {
-  Course(this.title);
-
-  final String title;
-}
-
-void main() {
-  final course = Course('OOP Basics');
-  print(course.title);
-}''',
-              output: 'OOP Basics',
-              quizOptions: <String>['Course', 'OOP Basics', 'title'],
+              codeSnippet: '''// Однострочный комментарий
+/* Многострочный
+   комментарий */
+System.out.print("Hello, ");
+System.out.println("Zerde!");''',
+              output: 'Hello, Zerde!',
+              quizOptions: <String>[
+                'System.out.print переводит строку',
+                'System.out.println переводит строку после вывода',
+                'Оба метода не переводят строку',
+              ],
               correctQuizIndex: 1,
-              quizPrompt:
-                  'What does the object print after the Course instance is created?',
               trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Complete the constructor field',
-                instruction:
-                    'Choose the property that stores the course name inside the object.',
-                prompt: 'Course(this.____);',
-                options: <String>['title', 'modules', 'summary'],
+                title: 'Метод вывода с переводом строки',
+                instruction: 'Допишите имя метода, который выводит текст и переводит курсор на новую строку.',
+                prompt: 'Какое ключевое слово используется для вывода с новой строки?',
+                options: <String>['println', 'print', 'write'],
                 correctIndex: 0,
-                template: 'Course(this.____);',
+                template: 'System.out.____("Test");',
               ),
             ),
             _lesson(
               id: 'oop_lesson_1_2',
-              title: 'Methods and encapsulation',
+              title: 'Variables and Data Types',
+              titleRu: 'Переменные и типы данных',
               trackTitle: 'OOP',
-              summary:
-                  'Group object behavior with methods and keep the object response readable from the outside.',
-              outcome:
-                  'You can place a method on a class and use it to expose a clean result.',
-              codeSnippet: '''class StudentProgress {
-  StudentProgress(this.completedLessons);
-
-  final int completedLessons;
-
-  String badge() => completedLessons >= 5 ? 'Ready' : 'Warming up';
-}
-
-void main() {
-  final progress = StudentProgress(6);
-  print(progress.badge());
-}''',
-              output: 'Ready',
-              quizOptions: <String>['Ready', '6', 'badge'],
+              codeSnippet: '''int age = 20;
+double score = 4.8;
+boolean isActive = true;
+System.out.println(age + " - " + score);''',
+              output: '20 - 4.8',
+              quizOptions: <String>[
+                'int используется для вещественных чисел',
+                'double используется для вещественных чисел',
+                'boolean может хранить произвольный текст',
+              ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.matching(
+                title: 'Сопоставление типов данных',
+                instruction: 'Сопоставьте типы данных Java с их описанием.',
+                prompt: 'Свяжите ключевые слова типов с их назначением.',
+                options: <String>['int', 'double', 'boolean'],
+                orderedLines: <String>[
+                  'Целое число (например, 42)',
+                  'Число с плавающей точкой (например, 3.14)',
+                  'Логическое значение (true/false)',
+                ],
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_1_3',
+              title: 'Arithmetic and Logical Operations',
+              titleRu: 'Арифметические и логические операции',
+              trackTitle: 'OOP',
+              codeSnippet: '''int a = 10;
+int b = 3;
+boolean res = (a % b == 1) && (a > 5);
+System.out.println(res);''',
+              output: 'true',
+              quizOptions: <String>[
+                'Оператор % возвращает остаток от деления',
+                'Оператор % возвращает частное',
+                'Оператор && означает логическое ИЛИ',
+              ],
               correctQuizIndex: 0,
-              quizPrompt:
-                  'What does the badge() method return for a learner with 6 completed lessons?',
               trainer: const DemoTrainerSeed.matchOutput(
-                title: 'Match the method output',
-                instruction:
-                    'Choose the string returned by the method for the current object state.',
-                prompt: '''class StudentProgress {
-  StudentProgress(this.completedLessons);
-  final int completedLessons;
-  String badge() => completedLessons >= 3 ? 'On track' : 'Starting';
-}
-
-void main() {
-  final progress = StudentProgress(4);
-  print(progress.badge());
-}''',
-                options: <String>['Starting', 'On track', '4'],
+                title: 'Результат остатка от деления',
+                instruction: 'Что будет выведено в консоль при делении по модулю?',
+                prompt: '''int x = 14;
+int y = 5;
+System.out.println(x % y);''',
+                options: <String>['2', '4', '0'],
                 correctIndex: 1,
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_1_4',
+              title: 'Conditionals, Ternary Operator, and Switch',
+              titleRu: 'Условные конструкции, тернарный оператор, switch',
+              trackTitle: 'OOP',
+              codeSnippet: '''int temp = 25;
+String weather = (temp > 20) ? "Warm" : "Cold";
+System.out.println(weather);''',
+              output: 'Warm',
+              quizOptions: <String>[
+                'Тернарный оператор возвращает void',
+                'Тернарный оператор — это сокращенная форма if-else',
+                'Switch-case работает только со строками',
+              ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Тернарный оператор',
+                instruction: 'Заполните символ-разделитель в тернарном операторе.',
+                prompt: 'Какой символ разделяет условие и возвращаемое значение?',
+                options: <String>['?', ':', 'if'],
+                correctIndex: 0,
+                template: 'String res = (x > 0) ____ "Yes" : "No";',
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_1_5',
+              title: 'Loops, break and continue',
+              titleRu: 'Циклы (Loops), break/continue',
+              trackTitle: 'OOP',
+              codeSnippet: '''int sum = 0;
+for (int i = 1; i <= 4; i++) {
+    if (i == 3) continue;
+    sum += i;
+}
+System.out.println(sum);''',
+              output: '7',
+              quizOptions: <String>[
+                'continue полностью прерывает цикл',
+                'continue пропускает текущую итерацию цикла',
+                'break просто переходит на следующий шаг',
+              ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.reorder(
+                title: 'Порядок сборки цикла for',
+                instruction: 'Расположите строки так, чтобы получился корректный цикл.',
+                prompt: 'Соберите простейший цикл вывода чисел.',
+                orderedLines: <String>[
+                  'for (int i = 0; i < 3; i++) {',
+                  '    System.out.println(i);',
+                  '}',
+                ],
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_1_6',
+              title: 'Arrays',
+              titleRu: 'Массивы (Arrays)',
+              trackTitle: 'OOP',
+              codeSnippet: '''int[] numbers = {10, 20, 30};
+System.out.println(numbers[1]);''',
+              output: '20',
+              quizOptions: <String>[
+                'Индексация массивов начинается с 1',
+                'Индексация массивов начинается с 0',
+                'Размер массива можно изменить после создания',
+              ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.matchOutput(
+                title: 'Доступ по индексу',
+                instruction: 'Что вернет этот код при обращении к первому элементу массива?',
+                prompt: '''String[] names = {"Java", "Python", "C++"};
+System.out.println(names[0]);''',
+                options: <String>['Java', 'Python', 'Ошибка компиляции'],
+                correctIndex: 0,
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_1_7',
+              title: 'Methods',
+              titleRu: 'Методы',
+              trackTitle: 'OOP',
+              codeSnippet: '''public static int multiply(int x, int y) {
+    return x * y;
+}
+// Вызов: multiply(3, 4) вернет 12''',
+              output: 'Возвращает произведение',
+              quizOptions: <String>[
+                'void методы должны обязательно возвращать значение',
+                'Методы позволяют повторно использовать блоки кода',
+                'Метод не может принимать аргументы',
+              ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Тип возвращаемого значения',
+                instruction: 'Какое ключевое слово пишется, если метод ничего не возвращает?',
+                prompt: 'Укажите тип возвращаемого значения для пустых методов.',
+                options: <String>['void', 'null', 'int'],
+                correctIndex: 0,
+                template: 'public static ____ printHello() {}',
               ),
             ),
           ],
           practice: _practice(
             id: 'oop_practice_1',
-            title: 'Model a course object',
-            starterCode: '''class LessonCard {
-  LessonCard(this.title, this.minutes);
-
-  final String title;
-  final int minutes;
-}
-
-void main() {
-  final card = LessonCard('Encapsulation', 18);
-
-  // print one short summary for the card
-}''',
+            title: 'Базовый синтаксис',
+            starterCode: '''// Напишите метод, принимающий число n 
+// и возвращающий сумму чисел от 1 до n''',
           ),
         ),
         _module(
           id: 'oop_module_2',
-          title: 'Inheritance and Polymorphism',
-          summary:
-              'Extend a base type, override behavior, and compare the output of parent and child objects.',
+          title: 'Introduction to OOP',
+          titleRu: 'Введение в ООП',
+          summary: 'Понятия классов, объектов, конструкторов, ключевого слова this, а также модификаторов final и static.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'oop_lesson_2_1',
-              title: 'Inheritance with extends',
+              title: 'Why OOP?',
+              titleRu: 'Зачем нужен ООП',
               trackTitle: 'OOP',
-              summary:
-                  'Reuse a base class and add specialized data in a derived object.',
-              outcome:
-                  'You can create a child class that extends a parent model with one extra field.',
-              codeSnippet: '''class Person {
-  Person(this.name);
-
-  final String name;
-}
-
-class Mentor extends Person {
-  Mentor(super.name, this.track);
-
-  final String track;
-}
-
-void main() {
-  final mentor = Mentor('Dana', 'OOP');
-  print('\${mentor.name} -> \${mentor.track}');
+              codeSnippet: '''// Объединение состояния и поведения в единую сущность
+class User {
+    String name;
+    void sayHello() {
+        System.out.println("Hello from " + name);
+    }
 }''',
-              output: 'Dana -> OOP',
+              output: 'Инкапсуляция логики и данных',
               quizOptions: <String>[
-                'Dana -> OOP',
-                'Mentor -> Dana',
-                'OOP -> Dana',
+                'ООП усложняет чтение кода без преимуществ',
+                'ООП позволяет разбивать сложные системы на понятные модули-объекты',
+                'ООП запрещает использовать переменные',
               ],
-              correctQuizIndex: 0,
-              quizPrompt:
-                  'What is printed after the Mentor object inherits the name field and adds track?',
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Complete the inheritance keyword',
-                instruction:
-                    'Choose the keyword used when one class derives from another in Dart.',
-                prompt: 'class Mentor ____ Person { ... }',
-                options: <String>['extends', 'implements', 'mixes'],
-                correctIndex: 0,
-                template: 'class Mentor ____ Person {',
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.matching(
+                title: 'Базовые концепции ООП',
+                instruction: 'Сопоставьте термины с их интуитивными определениями.',
+                prompt: 'Свяжите понятия ООП.',
+                options: <String>['Класс', 'Объект', 'Поле класса'],
+                orderedLines: <String>[
+                  'Чертеж или шаблон для создания объектов',
+                  'Конкретный экземпляр, созданный по чертежу класса',
+                  'Переменная состояния внутри класса',
+                ],
               ),
             ),
             _lesson(
               id: 'oop_lesson_2_2',
-              title: 'Override and dynamic dispatch',
+              title: 'Classes and Objects',
+              titleRu: 'Классы и объекты, поля объекта',
               trackTitle: 'OOP',
-              summary:
-                  'Replace a parent method with more specific child behavior and read the updated output.',
-              outcome:
-                  'You can override a method and explain why the child implementation runs.',
-              codeSnippet: '''class CourseItem {
-  String label() => 'Base course';
+              codeSnippet: '''class Car {
+    String brand = "Toyota";
+    int speed = 120;
 }
-
-class MidtermCourse extends CourseItem {
-  @override
-  String label() => 'OOP midterm';
-}
-
-void main() {
-  final item = MidtermCourse();
-  print(item.label());
-}''',
-              output: 'OOP midterm',
+Car myCar = new Car();
+System.out.println(myCar.brand);''',
+              output: 'Toyota',
               quizOptions: <String>[
-                'Base course',
-                'OOP midterm',
-                'MidtermCourse',
+                'Класс Car — это конкретный объект',
+                'myCar — это экземпляр (объект) класса Car',
+                'Доступ к полям объекта осуществляется через двоеточие',
               ],
               correctQuizIndex: 1,
-              quizPrompt:
-                  'Which label is printed after the child class overrides the base method?',
+              trainer: const DemoTrainerSeed.matchOutput(
+                title: 'Чтение полей объекта',
+                instruction: 'Что выведет код при создании нового объекта?',
+                prompt: '''class Person {
+    String name = "Nurlan";
+}
+Person p = new Person();
+System.out.println(p.name);''',
+                options: <String>['Nurlan', 'null', 'Car'],
+                correctIndex: 0,
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_2_3',
+              title: 'Constructors and operator new',
+              titleRu: 'Конструкторы, работа с методами, создание объектов, оператор new',
+              trackTitle: 'OOP',
+              codeSnippet: '''class Dog {
+    String name;
+    Dog(String dogName) {
+        name = dogName;
+    }
+}
+Dog d = new Dog("Rex");
+System.out.println(d.name);''',
+              output: 'Rex',
+              quizOptions: <String>[
+                'Конструктор возвращает void тип',
+                'Конструктор инициализирует объект при создании оператором new',
+                'Конструктор вызывается вручную в любой момент программы',
+              ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Создание объекта',
+                instruction: 'Какое ключевое слово используется для выделения памяти под новый объект?',
+                prompt: 'Укажите оператор создания нового объекта.',
+                options: <String>['new', 'create', 'make'],
+                correctIndex: 0,
+                template: 'Dog myDog = ____ Dog("Sharik");',
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_2_4',
+              title: 'this and Method Overloading',
+              titleRu: 'this, перегрузка методов и конструкторов',
+              trackTitle: 'OOP',
+              codeSnippet: '''class Printer {
+    void print(String s) { System.out.println(s); }
+    void print(int i) { System.out.println(i); }
+}''',
+              output: 'Перегрузка методов по типу параметров',
+              quizOptions: <String>[
+                'Перегрузка требует изменения имени метода',
+                'Перегрузка позволяет методам иметь одинаковые имена, но разные сигнатуры',
+                'this ссылается на статический контекст класса',
+              ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Ссылка на текущий объект',
+                instruction: 'Какое ключевое слово используется для обращения к текущему экземпляру класса?',
+                prompt: 'Укажите ключевое слово.',
+                options: <String>['this', 'self', 'current'],
+                correctIndex: 0,
+                template: 'this.name = ____.name;',
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_2_5',
+              title: 'Modifiers final and static',
+              titleRu: 'Модификаторы final, static. Понятие константа',
+              trackTitle: 'OOP',
+              codeSnippet: '''class Settings {
+    static final double VERSION = 1.0;
+}
+System.out.println(Settings.VERSION);''',
+              output: '1.0',
+              quizOptions: <String>[
+                'static поле принадлежит конкретному объекту',
+                'static поле принадлежит самому классу, а final делает его неизменяемым константой',
+                'final разрешает менять значение переменной',
+              ],
+              correctQuizIndex: 1,
               trainer: const DemoTrainerSeed.reorder(
-                title: 'Rebuild the override flow',
-                instruction:
-                    'Arrange the lines so the child class prints its own implementation.',
-                prompt:
-                    'Put the overridden method example back in a working order.',
+                title: 'Объявление константы',
+                instruction: 'Расположите модификаторы в правильном порядке.',
+                prompt: 'Создайте глобальную константу.',
                 orderedLines: <String>[
-                  'class BaseItem { String label() => \'base\'; }',
-                  'class ChildItem extends BaseItem { @override String label() => \'child\'; }',
-                  'final item = ChildItem();',
-                  'print(item.label());',
+                  'public static final',
+                  'double PI =',
+                  '3.14159;',
                 ],
               ),
             ),
           ],
           practice: _practice(
             id: 'oop_practice_2',
-            title: 'Compare parent and child behavior',
-            starterCode: '''class LearningUnit {
-  String status() => 'generic';
-}
-
-class QuizUnit extends LearningUnit {
-  @override
-  String status() => 'quiz ready';
-}
-
-void main() {
-  final item = QuizUnit();
-
-  // print the specialized status
-}''',
+            title: 'Создание класса и объектов',
+            starterCode: '''// Создайте класс Student с полями name и age.
+// Напишите конструктор и метод для вывода информации.''',
           ),
         ),
         _module(
           id: 'oop_module_3',
-          title: 'Encapsulation and Interfaces',
-          summary:
-              'Control access to fields and enforce consistent behavior across multiple object types using interfaces.',
+          title: 'Encapsulation',
+          titleRu: 'Инкапсуляция',
+          summary: 'Сокрытие внутренней реализации, модификаторы доступа private/public/protected, геттеры/сеттеры и Immutable объекты.',
           lessons: <DemoLessonSeed>[
             _lesson(
               id: 'oop_lesson_3_1',
-              title: 'Private fields and Getters',
+              title: 'Why Encapsulation?',
+              titleRu: 'Зачем нужна инкапсуляция',
               trackTitle: 'OOP',
-              summary:
-                  'Hide internal object state and expose safe read-only data.',
-              outcome:
-                  'You can protect object variables from unintended external modifications.',
               codeSnippet: '''class BankAccount {
-  BankAccount(this._balance);
-
-  final double _balance; // private field
-
-  double get balance => _balance;
-}
-
-void main() {
-  final account = BankAccount(100.0);
-  print(account.balance);
+    private double balance;
+    public void deposit(double amount) {
+        if (amount > 0) balance += amount;
+    }
 }''',
-              output: '100.0',
+              output: 'Контролируемый доступ к балансу',
               quizOptions: <String>[
-                '_balance',
-                'balance',
-                'BankAccount',
+                'Инкапсуляция нужна, чтобы убрать все методы',
+                'Инкапсуляция защищает состояние объекта от некорректного прямого вмешательства',
+                'Инкапсуляция делает все поля общедоступными',
               ],
-              correctQuizIndex: 0,
-              quizPrompt:
-                  'Which field is kept private inside the class?',
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Hide the internal state',
-                instruction:
-                    'Choose the prefix used in Dart to make a field private.',
-                prompt: 'class User { final String ____password; }',
-                options: <String>['_', 'private ', 'hidden '],
-                correctIndex: 0,
-                template: 'class User { final String ____password; }',
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.matching(
+                title: 'Суть инкапсуляции',
+                instruction: 'Сопоставьте концепты с их целями.',
+                prompt: 'Свяжите цели сокрытия.',
+                options: <String>['Сокрытие данных', 'Интерфейс доступа', 'Валидация'],
+                orderedLines: <String>[
+                  'Объявление полей как private',
+                  'Предоставление публичных геттеров/сеттеров',
+                  'Проверка корректности данных внутри методов сеттера',
+                ],
               ),
             ),
             _lesson(
               id: 'oop_lesson_3_2',
-              title: 'Interfaces with implements',
+              title: 'Access Modifiers',
+              titleRu: 'private vs public vs protected',
               trackTitle: 'OOP',
-              summary:
-                  'Define a strict contract that multiple unrelated classes must follow.',
-              outcome:
-                  'You can force different objects to provide the same method signatures.',
-              codeSnippet: '''abstract class Printable {
-  String printDetails();
-}
-
-class Invoice implements Printable {
-  @override
-  String printDetails() => 'Invoice data';
-}
-
-void main() {
-  final doc = Invoice();
-  print(doc.printDetails());
+              codeSnippet: '''class Data {
+    private int secret = 42;
+    public int publicVal = 100;
 }''',
-              output: 'Invoice data',
+              output: 'secret скрыт извне класса',
               quizOptions: <String>[
-                'implements',
-                'extends',
-                'abstract',
+                'private поля видны везде в проекте',
+                'private поля видны только внутри своего класса',
+                'protected поля закрыты даже для наследников',
               ],
-              correctQuizIndex: 0,
-              quizPrompt:
-                  'Which keyword forces a class to follow an interface contract?',
-              trainer: const DemoTrainerSeed.reorder(
-                title: 'Rebuild the interface flow',
-                instruction:
-                    'Arrange the lines so the class implements the required contract.',
-                prompt:
-                    'Put the interface example back in a working order.',
-                orderedLines: <String>[
-                  'abstract class Logger { void log(); }',
-                  'class FileLogger implements Logger {',
-                  '  @override void log() => print(\'file\');',
-                  '}',
-                ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Закрытый модификатор',
+                instruction: 'Какой модификатор доступа полностью скрывает поле от внешнего мира?',
+                prompt: 'Укажите модификатор.',
+                options: <String>['private', 'public', 'protected'],
+                correctIndex: 0,
+                template: '____ String password;',
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_3_3',
+              title: 'Getters and Setters',
+              titleRu: 'геттеры и сеттеры',
+              trackTitle: 'OOP',
+              codeSnippet: '''class Person {
+    private String name;
+    public String getName() { return name; }
+    public void setName(String n) { name = n; }
+}''',
+              output: 'Безопасный доступ к полю name',
+              quizOptions: <String>[
+                'Геттеры используются для изменения данных',
+                'Геттеры и сеттеры позволяют контролировать чтение и запись приватных полей',
+                'Сеттер не может содержать условные конструкции',
+              ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.matchOutput(
+                title: 'Использование геттера',
+                instruction: 'Что выведет вызов getName() после установки значения?',
+                prompt: '''Person p = new Person();
+p.setName("Zerde");
+System.out.println(p.getName());''',
+                options: <String>['Zerde', 'null', 'p.name'],
+                correctIndex: 0,
+              ),
+            ),
+            _lesson(
+              id: 'oop_lesson_3_4',
+              title: 'Immutable Objects',
+              titleRu: 'Immutable объекты',
+              trackTitle: 'OOP',
+              codeSnippet: '''public final class ImmutablePoint {
+    private final int x;
+    private final int y;
+    public ImmutablePoint(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+}''',
+              output: 'Состояние объекта нельзя изменить после создания',
+              quizOptions: <String>[
+                'Immutable объекты позволяют менять свои поля в любое время',
+                'Immutable объекты полностью защищены от изменений состояния после конструирования',
+                'Для Immutable объектов нужны сеттеры',
+              ],
+              correctQuizIndex: 1,
+              trainer: const DemoTrainerSeed.fillBlank(
+                title: 'Модификатор неизменяемости полей',
+                instruction: 'Какое ключевое слово гарантирует, что переменной нельзя присвоить новое значение после инициализации?',
+                prompt: 'Укажите модификатор неизменяемости.',
+                options: <String>['final', 'static', 'const'],
+                correctIndex: 0,
+                template: 'private ____ int id;',
               ),
             ),
           ],
           practice: _practice(
             id: 'oop_practice_3',
-            title: 'Build a secure model',
-            starterCode: '''class Vault {
-  Vault(this._secret);
-
-  final String _secret;
-}
-
-void main() {
-  final vault = Vault('hidden code');
-
-  // use a getter to print the secret securely
-}''',
-          ),
-        ),
-        _module(
-          id: 'oop_module_4_midterm',
-          title: 'Midterm',
-          summary:
-              'A temporary OOP checkpoint with a draft code runner, final submission, and a review thread.',
-          lessons: <DemoLessonSeed>[
-            _lesson(
-              id: 'oop_lesson_4_1',
-              title: 'Midterm brief',
-              trackTitle: 'OOP',
-              summary:
-                  'Read the task, identify the base class, the child class, and the overridden method before typing.',
-              outcome:
-                  'You can plan the final object model before touching the code editor.',
-              codeSnippet: '''// Midterm idea:
-// 1. Create StudentProfile
-// 2. Extend it with BootcampStudent
-// 3. Override summary()
-// 4. Print the final result''',
-              output: 'Plan the object model before writing the final code.',
-              quizOptions: <String>[
-                'Start from inheritance and final output',
-                'Delete the base class',
-                'Avoid overriding methods',
-              ],
-              correctQuizIndex: 0,
-              quizPrompt:
-                  'Which approach gives the cleanest start before solving the OOP midterm?',
-              trainer: const DemoTrainerSeed.matching(
-                title: 'Map the midterm pieces',
-                instruction: 'Match each OOP element to its role in the task.',
-                prompt: 'Connect the structural parts of the midterm.',
-                options: <String>[
-                  'Base class',
-                  'Child class',
-                  'Overridden method',
-                ],
-                orderedLines: <String>[
-                  'Stores shared state for every learner object',
-                  'Adds points and specialized behavior',
-                  'Returns the final customized summary',
-                ],
-              ),
-            ),
-            _lesson(
-              id: 'oop_lesson_4_2',
-              title: 'Submission checklist',
-              trackTitle: 'OOP',
-              summary:
-                  'Review the required snippets so the draft run and final review can recognize the OOP solution.',
-              outcome:
-                  'You can verify your own code against the core OOP requirements before submitting.',
-              codeSnippet: '''// Required pieces:
-// class StudentProfile
-// class BootcampStudent extends StudentProfile
-// @override
-// String summary()
-// print(student.summary())''',
-              output: 'Check the required snippets before submission.',
-              quizOptions: <String>[
-                '@override',
-                'print("done") only',
-                'No child class',
-              ],
-              correctQuizIndex: 0,
-              quizPrompt:
-                  'Which snippet is required for the final midterm review?',
-              trainer: const DemoTrainerSeed.fillBlank(
-                title: 'Complete the child class declaration',
-                instruction:
-                    'Choose the inheritance keyword used by the review checklist.',
-                prompt: 'class BootcampStudent ____ StudentProfile { ... }',
-                options: <String>['extends', 'with', 'typedef'],
-                correctIndex: 0,
-                template: 'class BootcampStudent ____ StudentProfile { ... }',
-              ),
-            ),
-          ],
-          practice: const DemoPracticeSeed(
-            id: 'oop_midterm',
-            title: 'OOP Midterm',
-            summary:
-                'Solve a small OOP modeling task in the editor, run a draft console output, then submit the result for review.',
-            brief:
-                'Create a base learner class, extend it with a bootcamp-specific student, override the summary method, and print the final sentence.',
-            starterCode: '''class StudentProfile {
-    public final String name;
-
-    public StudentProfile(String name) {
-        this.name = name;
-    }
-
-    public String summary() {
-        return "Student: " + name;
-    }
-}
-
-class BootcampStudent extends StudentProfile {
-    public final int points;
-
-    public BootcampStudent(String name, int points) {
-        super(name);
-        this.points = points;
-    }
-
-    @Override
-    public String summary() {
-        // TODO: return the final midterm sentence
-        return "";
-    }
-}
-
-class Main {
-    public static void main(String[] args) {
-        BootcampStudent student = new BootcampStudent("Aida", 86);
-        // TODO: print the overridden summary
-    }
-}''',
-            successCriteria: <String>[
-              'Keep the base and child classes readable and separated.',
-              'Override summary() in the child class.',
-              'Print the final result from main().',
-            ],
-            knowledgeChecks: <String>[
-              'Which field belongs to the base class and which one belongs to the child class?',
-              'Why does the child implementation of summary() run instead of the base one?',
-            ],
-            promptSuggestion:
-                'Help me explain why this OOP midterm solution uses inheritance and method overriding.',
-            xpReward: 120,
-            codeChallenge: DemoPracticeCodeChallengeSeed(
-              title: 'Interactive Java lab',
-              instructions:
-                  'Finish the OOP task, run the Java code as a draft, then submit it for review. The checker looks for the base class, the child class, the override, and the final print.',
-              expectedOutput: 'Aida finished OOP Midterm with 86 points.',
-              requiredSnippets: <String>[
-                'class StudentProfile',
-                'class BootcampStudent extends StudentProfile',
-                '@Override',
-                'String summary()',
-                'finished OOP Midterm',
-                'student.summary()',
-                'System.out.println(',
-              ],
-              successMessage:
-                  'Midterm passed. The Java OOP structure, override, and final output all match the review rules.',
-              retryMessage:
-                  'The midterm is not ready yet. Check the inheritance structure, overridden summary(), and final System.out.print statement.',
-            ),
-            comments: <DemoPracticeCommentSeed>[
-              DemoPracticeCommentSeed(
-                id: 'oop_midterm_comment_1',
-                authorName: 'Dana Mentor',
-                role: 'Teacher',
-                message:
-                    'Start from the shared field in StudentProfile, then keep the custom points logic inside BootcampStudent.',
-              ),
-              DemoPracticeCommentSeed(
-                id: 'oop_midterm_comment_2',
-                authorName: 'Aruzhan',
-                role: 'Student',
-                message:
-                    'I forgot to print student.summary() on the first try, so the draft run helped me catch it quickly.',
-              ),
-            ],
+            title: 'Создание инкапсулированного класса',
+            starterCode: '''// Создайте класс User с приватными полями email и password.
+// Напишите сеттер для пароля с проверкой длины (не менее 6 символов).''',
           ),
         ),
       ],

@@ -58,14 +58,16 @@ class TrackPage extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  track.description.resolve(state.locale),
-                  style: TextStyle(
-                    color: context.appColors.textSecondary,
-                    height: 1.45,
+                if (track.description.resolve(state.locale).isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    track.description.resolve(state.locale),
+                    style: TextStyle(
+                      color: context.appColors.textSecondary,
+                      height: 1.45,
+                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 16),
                 Text(
                   track.heroMetric.resolve(state.locale),

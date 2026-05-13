@@ -143,11 +143,13 @@ class HomePage extends ConsumerWidget {
                 userName: state.user?.name ?? 'Talgat',
                 locale: state.locale,
               ),
-              const SizedBox(height: 10),
-              Text(
-                currentTrack.description.resolve(state.locale),
-                style: TextStyle(color: colors.textSecondary, height: 1.45),
-              ),
+              if (currentTrack.description.resolve(state.locale).isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  currentTrack.description.resolve(state.locale),
+                  style: TextStyle(color: colors.textSecondary, height: 1.45),
+                ),
+              ],
               const SizedBox(height: 18),
               _AssessmentDiagnosticCard(
                 colors: colors,
