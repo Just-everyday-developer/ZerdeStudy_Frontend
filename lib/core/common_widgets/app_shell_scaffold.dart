@@ -100,12 +100,6 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
         selectedIcon: Icons.auto_stories_rounded,
       ),
       _ShellDestination(
-        label: _communityTabLabel(state.locale),
-        route: AppRoutes.community,
-        icon: Icons.groups_2_outlined,
-        selectedIcon: Icons.groups_2_rounded,
-      ),
-      _ShellDestination(
         label: l10n.text('tab_ai'),
         route: AppRoutes.ai,
         icon: Icons.smart_toy_outlined,
@@ -140,7 +134,7 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                   children: [
                     _DesktopShellBar(
                       destinations: destinations
-                          .take(5)
+                          .take(4)
                           .toList(growable: false),
                       currentIndex: widget.navigationShell.currentIndex,
                       currentUserName: state.user?.name ?? 'Talgat',
@@ -418,10 +412,3 @@ class _ShellDestination {
   final IconData selectedIcon;
 }
 
-String _communityTabLabel(AppLocale locale) {
-  return switch (locale) {
-    AppLocale.ru => 'Сообщество',
-    AppLocale.en => 'Community',
-    AppLocale.kk => 'Қауымдастық',
-  };
-}

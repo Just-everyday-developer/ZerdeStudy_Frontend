@@ -158,23 +158,6 @@ class HomePage extends ConsumerWidget {
                   context.push(AppRoutes.diagnostics);
                 },
               ),
-              if (mistakesCount > 0) ...[
-                const SizedBox(height: 18),
-                _MistakesLabCard(
-                  mistakesCount: mistakesCount,
-                  colors: colors,
-                  onTap: () {
-                    final target = currentProgress.nextTarget;
-                    if (target != null) {
-                      context.push(
-                        target.isPractice
-                            ? AppRoutes.practiceById(target.id)
-                            : AppRoutes.lessonById(target.id),
-                      );
-                    }
-                  },
-                ),
-              ],
               if (currentProgress.nextTarget != null) ...[
                 const SizedBox(height: 18),
                 _NextTargetCTACard(
@@ -766,68 +749,6 @@ class _CircularProgressCard extends StatelessWidget {
   }
 }
 
-class _MistakesLabCard extends StatelessWidget {
-  const _MistakesLabCard({
-    required this.mistakesCount,
-    required this.colors,
-    required this.onTap,
-  });
-
-  final int mistakesCount;
-  final AppThemeColors colors;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: GlowCard(
-        accent: colors.danger,
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colors.danger.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.build_rounded, color: colors.danger, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Лаборатория ошибок',
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$mistakesCount нерешённых заданий ждут исправления',
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: colors.danger),
-          ],
-        ),
-      ),
-    ));
-  }
-}
 
 class _AssessmentDiagnosticCard extends StatelessWidget {
   const _AssessmentDiagnosticCard({

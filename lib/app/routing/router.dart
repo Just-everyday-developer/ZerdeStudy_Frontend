@@ -45,8 +45,6 @@ final GlobalKey<NavigatorState> _treeNavigatorKey = GlobalKey<NavigatorState>(
 final GlobalKey<NavigatorState> _learnNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'learn',
 );
-final GlobalKey<NavigatorState> _communityNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'community');
 final GlobalKey<NavigatorState> _aiNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'ai',
 );
@@ -182,7 +180,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               _homeNavigatorKey,
               _treeNavigatorKey,
               _learnNavigatorKey,
-              _communityNavigatorKey,
               _aiNavigatorKey,
               _profileNavigatorKey,
             ],
@@ -213,15 +210,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.learn,
                 builder: (context, state) => const LearnPage(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            navigatorKey: _communityNavigatorKey,
-            routes: [
-              GoRoute(
-                path: AppRoutes.community,
-                builder: (context, state) => const CommunityPage(),
               ),
             ],
           ),

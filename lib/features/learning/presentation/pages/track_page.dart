@@ -58,16 +58,6 @@ class TrackPage extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (track.description.resolve(state.locale).isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    track.description.resolve(state.locale),
-                    style: TextStyle(
-                      color: context.appColors.textSecondary,
-                      height: 1.45,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 16),
                 Text(
                   track.heroMetric.resolve(state.locale),
@@ -92,66 +82,6 @@ class TrackPage extends ConsumerWidget {
                   style: TextStyle(color: context.appColors.textSecondary),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    color: context.appColors.surfaceSoft,
-                    border: compact
-                        ? null
-                        : Border.all(color: context.appColors.divider),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Track assessment',
-                              style: TextStyle(
-                                color: context.appColors.textPrimary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            assessmentResult == null
-                                ? 'Not started'
-                                : '${assessmentResult.bestPercent}% best',
-                            style: TextStyle(
-                              color: assessmentResult == null
-                                  ? context.appColors.textSecondary
-                                  : track.color,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        assessmentResult == null
-                            ? 'Complete the 10-question branch assessment to store your result in the tree, profile, and statistics.'
-                            : 'Last result: ${assessmentResult.lastPercent}% - Attempts: ${assessmentResult.attemptCount}',
-                        style: TextStyle(
-                          color: context.appColors.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      AppButton.secondary(
-                        label: assessmentResult == null
-                            ? 'Start assessment'
-                            : 'Retake assessment',
-                        icon: Icons.assignment_turned_in_rounded,
-                        onPressed: () => context.push(
-                          AppRoutes.assessmentByTrackId(track.id),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 const SizedBox(height: 18),
                 AppButton.primary(
                   label: context.l10n.text('start_track'),

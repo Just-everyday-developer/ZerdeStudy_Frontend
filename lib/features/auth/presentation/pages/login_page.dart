@@ -158,11 +158,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 alignment: WrapAlignment.end,
                 children: [
-                  TextButton.icon(
-                    onPressed: _startGuide,
-                    icon: const Icon(Icons.explore_rounded),
-                    label: Text(AppGuideCopy.loginEntryLabel(context)),
-                  ),
                   LocaleSelector(
                     currentLocale: demoState.locale,
                     onChanged: demoController.changeLocale,

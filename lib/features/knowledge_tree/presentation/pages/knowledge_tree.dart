@@ -103,18 +103,15 @@ class _KnowledgeTreeViewportState
       webDesktopViewport: webDesktopViewport,
     );
     _fitScale = scale;
-    final offsetX = windowsFixedViewport
-        ? 24.0
-        : math.max(
-            0.0,
-            (viewport.width - (knowledgeTreeCanvasSize.width * scale)) / 2,
-          );
-    final offsetY = windowsFixedViewport
-        ? 24.0
-        : math.max(
-            12.0,
-            (viewport.height - (knowledgeTreeCanvasSize.height * scale)) / 2,
-          );
+
+    final offsetX = math.max(
+      0.0,
+      (viewport.width - (knowledgeTreeCanvasSize.width * scale)) / 2,
+    );
+    final offsetY = math.max(
+      0.0,
+      (viewport.height - (knowledgeTreeCanvasSize.height * scale)) / 2,
+    );
     final matrix = Matrix4.identity()
       ..setEntry(0, 0, scale)
       ..setEntry(1, 1, scale);
@@ -258,14 +255,14 @@ class _KnowledgeTreeViewportState
                                   trackpadScrollCausesScale: true,
                                   boundaryMargin: EdgeInsets.symmetric(
                                     horizontal: windowsFixedViewport
-                                        ? 36
+                                        ? viewportSize.width * 0.4
                                         : webDesktopViewport
                                         ? viewportSize.width
                                         : desktopLike
                                         ? 8
                                         : 44,
                                     vertical: windowsFixedViewport
-                                        ? 80
+                                        ? viewportSize.height * 0.4
                                         : desktopLike
                                         ? 24
                                         : 64,
