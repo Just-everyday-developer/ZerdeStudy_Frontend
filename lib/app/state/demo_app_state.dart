@@ -18,6 +18,8 @@ class DemoAppState {
     required this.completedPracticeIds,
     required this.completedQuizIds,
     required this.completedTrainerIds,
+    required this.completedTheoryIds,
+    required this.completedCodeStepIds,
     required this.quizAnswerStats,
     required this.assessmentResultsByTrackId,
     required this.assessmentAttemptHistory,
@@ -53,6 +55,8 @@ class DemoAppState {
   final Set<String> completedPracticeIds;
   final Set<String> completedQuizIds;
   final Set<String> completedTrainerIds;
+  final Set<String> completedTheoryIds;
+  final Set<String> completedCodeStepIds;
   final Map<String, QuizAnswerStat> quizAnswerStats;
   final Map<String, TrackAssessmentResult> assessmentResultsByTrackId;
   final List<AssessmentAttemptEntry> assessmentAttemptHistory;
@@ -115,6 +119,8 @@ class DemoAppState {
     Set<String>? completedPracticeIds,
     Set<String>? completedQuizIds,
     Set<String>? completedTrainerIds,
+    Set<String>? completedTheoryIds,
+    Set<String>? completedCodeStepIds,
     Map<String, QuizAnswerStat>? quizAnswerStats,
     Map<String, TrackAssessmentResult>? assessmentResultsByTrackId,
     List<AssessmentAttemptEntry>? assessmentAttemptHistory,
@@ -155,6 +161,10 @@ class DemoAppState {
           completedQuizIds ?? Set<String>.from(this.completedQuizIds),
       completedTrainerIds:
           completedTrainerIds ?? Set<String>.from(this.completedTrainerIds),
+      completedTheoryIds:
+          completedTheoryIds ?? Set<String>.from(this.completedTheoryIds),
+      completedCodeStepIds:
+          completedCodeStepIds ?? Set<String>.from(this.completedCodeStepIds),
       quizAnswerStats:
           quizAnswerStats ??
           Map<String, QuizAnswerStat>.from(this.quizAnswerStats),
@@ -215,6 +225,8 @@ class DemoAppState {
       'completedPracticeIds': completedPracticeIds.toList(),
       'completedQuizIds': completedQuizIds.toList(),
       'completedTrainerIds': completedTrainerIds.toList(),
+      'completedTheoryIds': completedTheoryIds.toList(),
+      'completedCodeStepIds': completedCodeStepIds.toList(),
       'quizAnswerStats': quizAnswerStats.map<String, dynamic>(
         (key, value) => MapEntry<String, dynamic>(key, value.toJson()),
       ),
@@ -280,6 +292,14 @@ class DemoAppState {
       ),
       completedTrainerIds: Set<String>.from(
         (json['completedTrainerIds'] as List<dynamic>? ?? <dynamic>[])
+            .cast<String>(),
+      ),
+      completedTheoryIds: Set<String>.from(
+        (json['completedTheoryIds'] as List<dynamic>? ?? <dynamic>[])
+            .cast<String>(),
+      ),
+      completedCodeStepIds: Set<String>.from(
+        (json['completedCodeStepIds'] as List<dynamic>? ?? <dynamic>[])
             .cast<String>(),
       ),
       quizAnswerStats:

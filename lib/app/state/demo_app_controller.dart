@@ -300,6 +300,28 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
+  void completeTheoryStep(String stepId) {
+    if (state.completedTheoryIds.contains(stepId)) return;
+    state = _withDerived(
+      state.copyWith(
+        completedTheoryIds: Set<String>.from(state.completedTheoryIds)..add(stepId),
+        xp: state.xp + 2,
+      ),
+    );
+    _persist();
+  }
+
+  void completeCodeStep(String stepId) {
+    if (state.completedCodeStepIds.contains(stepId)) return;
+    state = _withDerived(
+      state.copyWith(
+        completedCodeStepIds: Set<String>.from(state.completedCodeStepIds)..add(stepId),
+        xp: state.xp + 10,
+      ),
+    );
+    _persist();
+  }
+
   void completeDiagnostics({required int score}) {
     final completedLessonIds = Set<String>.from(state.completedLessonIds);
     final completedPracticeIds = Set<String>.from(state.completedPracticeIds);
@@ -863,6 +885,8 @@ class DemoAppController extends Notifier<DemoAppState> {
         'frontend_lesson_1_1_trainer_1',
         'operating_systems_lesson_1_1_trainer_1',
       },
+      completedTheoryIds: const <String>{},
+      completedCodeStepIds: const <String>{},
       quizAnswerStats: <String, QuizAnswerStat>{
         'fundamentals_lesson_1_1_quiz_1': const QuizAnswerStat(
           attempts: 1,

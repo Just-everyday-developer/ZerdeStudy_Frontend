@@ -643,25 +643,34 @@ class _SandboxCardState extends State<_SandboxCard> {
               child: Scrollbar(
                 controller: widget.codeScrollController,
                 thumbVisibility: true,
-                child: TextField(
-                  controller: widget.codeController,
-                  scrollController: widget.codeScrollController,
-                  keyboardType: TextInputType.multiline,
-                  maxLines: null,
-                  expands: true,
-                  textAlignVertical: TextAlignVertical.top,
-                  style: const TextStyle(
-                    color: Color(0xFFD4D4D4), // Editor light text
-                    fontFamily: 'monospace',
-                    height: 1.5,
-                    fontSize: 14,
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    textSelectionTheme: TextSelectionThemeData(
+                      cursorColor: colors.primary,
+                      selectionColor: const Color(0xFF264F78).withValues(alpha: 0.5),
+                      selectionHandleColor: colors.primary,
+                    ),
                   ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isCollapsed: true,
-                    contentPadding: EdgeInsets.all(16), // Padding inside the scroll area
+                  child: TextField(
+                    controller: widget.codeController,
+                    scrollController: widget.codeScrollController,
+                    keyboardType: TextInputType.multiline,
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    style: const TextStyle(
+                      color: Color(0xFFD4D4D4), // Editor light text
+                      fontFamily: 'monospace',
+                      height: 1.5,
+                      fontSize: 14,
+                    ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isCollapsed: true,
+                      contentPadding: EdgeInsets.all(16), // Padding inside the scroll area
+                    ),
+                    cursorColor: colors.primary,
                   ),
-                  cursorColor: colors.primary,
                 ),
               ),
             ),
