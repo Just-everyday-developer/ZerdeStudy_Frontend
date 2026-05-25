@@ -8,6 +8,8 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_catalog_support.dart';
 import '../../../../app/state/demo_models.dart';
+import '../../../../app/state/oop_code_tasks.dart';
+import '../../../../app/state/oop_quiz_data.dart';
 import '../../../../core/config/app_environment.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/json_http_client.dart';
@@ -17,6 +19,10 @@ import '../../data/models/backend_course_dto.dart';
 import '../../data/models/backend_lesson_dto.dart';
 import '../../data/models/backend_module_dto.dart';
 import '../../data/models/backend_course_query.dart';
+import '../../data/models/backend_practice_dto.dart';
+import '../../data/models/backend_quiz_dto.dart';
+import '../../data/models/backend_review_dto.dart';
+import '../../data/models/backend_streak_dto.dart';
 
 final backendCourseAccessTokenProvider = Provider<String?>((ref) {
   return ref.watch(
@@ -141,6 +147,26 @@ final backendCourseCatalogProvider =
       }
     });
 
+final teacherBackendCoursesProvider = FutureProvider<List<BackendCourseDto>>((
+  ref,
+) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) {
+    return const <BackendCourseDto>[];
+  }
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+  try {
+    return await remote.fetchCourses(
+      accessToken: accessToken,
+      query: const BackendCourseQuery(statusCode: '', limit: 100),
+    );
+  } catch (_) {
+    return const <BackendCourseDto>[];
+  }
+});
+
 final backendCourseDetailProvider =
     FutureProvider.family<CommunityCourse?, String>((ref, courseId) async {
       final normalizedCourseId = courseId.trim();
@@ -161,26 +187,33 @@ final backendCourseDetailProvider =
           accessToken: accessToken,
           courseId: normalizedCourseId,
         );
-        final modules = (await remote.fetchModules(
-          accessToken: accessToken,
-          localeCode: localeCode,
-        ))
-            .where((module) => module.courseId == course.id)
-            .toList(growable: true)
-          ..sort((left, right) => left.createdAt.compareTo(right.createdAt));
+        final modules =
+            (await remote.fetchModules(
+                  accessToken: accessToken,
+                  localeCode: localeCode,
+                ))
+                .where((module) => module.courseId == course.id)
+                .toList(growable: true)
+              ..sort(
+                (left, right) => left.createdAt.compareTo(right.createdAt),
+              );
 
-        final lessonResponses = await Future.wait<MapEntry<String, List<BackendLessonDto>>>(
-          modules.map((module) async {
-            final lessons = (await remote.fetchLessonsForModule(
-              accessToken: accessToken,
-              moduleId: module.id,
-            )).toList(growable: true);
-            lessons.sort(
-              (left, right) => left.createdAt.compareTo(right.createdAt),
+        final lessonResponses =
+            await Future.wait<MapEntry<String, List<BackendLessonDto>>>(
+              modules.map((module) async {
+                final lessons = (await remote.fetchLessonsForModule(
+                  accessToken: accessToken,
+                  moduleId: module.id,
+                )).toList(growable: true);
+                lessons.sort(
+                  (left, right) => left.createdAt.compareTo(right.createdAt),
+                );
+                return MapEntry<String, List<BackendLessonDto>>(
+                  module.id,
+                  lessons,
+                );
+              }),
             );
-            return MapEntry<String, List<BackendLessonDto>>(module.id, lessons);
-          }),
-        );
 
         final lessonsByModule = <String, List<BackendLessonDto>>{
           for (final entry in lessonResponses) entry.key: entry.value,
@@ -197,43 +230,49 @@ final backendCourseDetailProvider =
       }
     });
 
-final backendCourseLeaderboardProvider = FutureProvider.family<List<LeaderboardEntry>, String>((ref, courseId) async {
-  final normalizedCourseId = courseId.trim();
-  if (normalizedCourseId.isEmpty) {
-    return const <LeaderboardEntry>[];
-  }
+final backendCourseLeaderboardProvider =
+    FutureProvider.family<List<LeaderboardEntry>, String>((
+      ref,
+      courseId,
+    ) async {
+      final normalizedCourseId = courseId.trim();
+      if (normalizedCourseId.isEmpty) {
+        return const <LeaderboardEntry>[];
+      }
 
-  final accessToken = ref.watch(backendCourseAccessTokenProvider);
-  if (accessToken == null || accessToken.trim().isEmpty) {
-    return const <LeaderboardEntry>[];
-  }
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return const <LeaderboardEntry>[];
+      }
 
-  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
 
-  try {
-    final response = await remote.getCoursePointByCourseId(
-      accessToken: accessToken,
-      courseId: normalizedCourseId,
-    );
+      try {
+        final response = await remote.getCoursePointByCourseId(
+          accessToken: accessToken,
+          courseId: normalizedCourseId,
+        );
 
-    return response.map((json) {
-      final xp = (json['xp'] as num?)?.toInt() ?? 0;
-      final userId = json['user_id'] as String? ?? 'Unknown';
-      
-      return LeaderboardEntry(
-        id: userId,
-        name: 'Learner ${userId.substring(0, 4)}',
-        xp: xp,
-        level: (xp / 100).floor() + 1,
-        role: 'Learner',
-        focus: 'Course',
-        isCurrentUser: false, 
-      );
-    }).toList(growable: false);
-  } catch (_) {
-    return const <LeaderboardEntry>[];
-  }
-});
+        return response
+            .map((json) {
+              final xp = (json['xp'] as num?)?.toInt() ?? 0;
+              final userId = json['user_id'] as String? ?? 'Unknown';
+
+              return LeaderboardEntry(
+                id: userId,
+                name: 'Learner ${userId.substring(0, 4)}',
+                xp: xp,
+                level: (xp / 100).floor() + 1,
+                role: 'Learner',
+                focus: 'Course',
+                isCurrentUser: false,
+              );
+            })
+            .toList(growable: false);
+      } catch (_) {
+        return const <LeaderboardEntry>[];
+      }
+    });
 
 CommunityCourse adaptBackendCourseToCommunityCourse(BackendCourseDto course) {
   final topicKeys = _topicKeysForCourse(course);
@@ -307,7 +346,9 @@ CommunityCourse adaptBackendCourseToDetailedCommunityCourse(
       .map(
         (module) => CoursePlayerModule(
           id: module.id,
-          title: sameText(module.title.trim().isEmpty ? 'Module' : module.title),
+          title: sameText(
+            module.title.trim().isEmpty ? 'Module' : module.title,
+          ),
           summary: sameText(
             module.summary.trim().isEmpty
                 ? 'Lessons for this module are available in the live curriculum.'
@@ -346,7 +387,8 @@ CommunityCourse adaptBackendCourseToDetailedCommunityCourse(
                   imageCaption: _displayBackendText(
                     lesson.summary,
                     localeCode: localeCode,
-                    fallback: 'Read the lesson summary and continue through the module.',
+                    fallback:
+                        'Read the lesson summary and continue through the module.',
                   ),
                   codeSnippet: lesson.codeSnippet.trim().isEmpty
                       ? '// Code snippet is not available for this lesson yet.'
@@ -415,7 +457,9 @@ CommunityCourse adaptBackendCourseToDetailedCommunityCourse(
     lessons: lessonPreviews.isEmpty
         ? _lessonPreviewsForCourse(course, title)
         : lessonPreviews,
-    supportsCoursePlayer: localizedModules.any((module) => module.lessons.isNotEmpty),
+    supportsCoursePlayer: localizedModules.any(
+      (module) => module.lessons.isNotEmpty,
+    ),
     learningOutcomes: learningOutcomes,
     moduleSections: moduleSections,
     coursePlayerModules: localizedModules,
@@ -819,7 +863,8 @@ List<String> _learningOutcomesFromModules(
   return modules
       .expand((module) => module.lessons)
       .map(
-        (lesson) => lesson.objective.resolve(_localeFromCode(localeCode)).trim(),
+        (lesson) =>
+            lesson.objective.resolve(_localeFromCode(localeCode)).trim(),
       )
       .where((item) => item.isNotEmpty)
       .take(6)
@@ -845,7 +890,8 @@ List<CommunityCourseUpdate> _updatesForCourse(
       CommunityCourseUpdate(
         id: '${course.id}_published',
         title: 'Published in curriculum',
-        summary: 'The course became available in the shared curriculum catalog.',
+        summary:
+            'The course became available in the shared curriculum catalog.',
         timeLabel: _relativeTimeLabel(course.publishedAt),
       ),
     );
@@ -989,4 +1035,448 @@ Color _accentColorForCourse(String courseId) {
     hash = ((hash * 31) + codeUnit) & 0x7fffffff;
   }
   return palette[hash % palette.length];
+}
+
+final backendLessonByIdProvider =
+    FutureProvider.family<BackendLessonDto?, String>((ref, lessonId) async {
+      final normalizedLessonId = lessonId.trim();
+      if (normalizedLessonId.isEmpty) {
+        return null;
+      }
+
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return null;
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchLessonById(
+          accessToken: accessToken,
+          lessonId: normalizedLessonId,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
+
+final backendPracticeByIdProvider =
+    FutureProvider.family<BackendPracticeDto?, String>((ref, practiceId) async {
+      final normalizedPracticeId = practiceId.trim();
+      if (normalizedPracticeId.isEmpty ||
+          !_looksLikeUuid(normalizedPracticeId)) {
+        return null;
+      }
+
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return null;
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchPracticeById(
+          accessToken: accessToken,
+          practiceId: normalizedPracticeId,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
+
+final backendPracticeByLessonIdProvider =
+    FutureProvider.family<BackendPracticeDto?, String>((ref, lessonId) async {
+      final normalizedLessonId = lessonId.trim();
+      if (normalizedLessonId.isEmpty || !_looksLikeUuid(normalizedLessonId)) {
+        return null;
+      }
+
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return null;
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchPracticeByLessonId(
+          accessToken: accessToken,
+          lessonId: normalizedLessonId,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
+
+final backendQuizzesByLessonIdProvider =
+    FutureProvider.family<List<BackendQuizDto>, String>((ref, lessonId) async {
+      final normalizedLessonId = lessonId.trim();
+      if (normalizedLessonId.isEmpty || !_looksLikeUuid(normalizedLessonId)) {
+        return const <BackendQuizDto>[];
+      }
+
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return const <BackendQuizDto>[];
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchQuizzesByLessonId(
+          accessToken: accessToken,
+          lessonId: normalizedLessonId,
+        );
+      } catch (_) {
+        return const <BackendQuizDto>[];
+      }
+    });
+
+final backendReviewsByCourseIdProvider =
+    FutureProvider.family<List<BackendReviewDto>, String>((
+      ref,
+      courseId,
+    ) async {
+      final normalizedCourseId = courseId.trim();
+      if (normalizedCourseId.isEmpty) {
+        return const <BackendReviewDto>[];
+      }
+
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return const <BackendReviewDto>[];
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchReviewsByCourseId(
+          accessToken: accessToken,
+          courseId: normalizedCourseId,
+        );
+      } catch (_) {
+        return const <BackendReviewDto>[];
+      }
+    });
+
+final backendReviewByIdProvider =
+    FutureProvider.family<BackendReviewDto?, String>((ref, reviewId) async {
+      final normalizedReviewId = reviewId.trim();
+      if (normalizedReviewId.isEmpty) {
+        return null;
+      }
+
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return null;
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchReviewById(
+          accessToken: accessToken,
+          reviewId: normalizedReviewId,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
+
+final backendStreakProvider = FutureProvider<BackendStreakDto?>((ref) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) {
+    return null;
+  }
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+  try {
+    return await remote.fetchStreak(accessToken: accessToken);
+  } catch (_) {
+    return null;
+  }
+});
+
+PracticeTask mergePracticeWithBackend({
+  required PracticeTask mockPractice,
+  required BackendPracticeDto backendPractice,
+  required String localeCode,
+}) {
+  return PracticeTask(
+    id: backendPractice.id.isNotEmpty ? backendPractice.id : mockPractice.id,
+    trackId: mockPractice.trackId,
+    moduleId: mockPractice.moduleId,
+    title: _localizedTextFromBackend(
+      backendPractice.title,
+      fallback: mockPractice.title.en,
+    ),
+    summary: _localizedTextFromBackend(
+      backendPractice.summary,
+      fallback: mockPractice.summary.en,
+    ),
+    brief: _localizedTextFromBackend(
+      backendPractice.brief,
+      fallback: mockPractice.brief.en,
+    ),
+    starterCode: backendPractice.starterCode.trim().isEmpty
+        ? mockPractice.starterCode
+        : backendPractice.starterCode,
+    successCriteria: backendPractice.successCriteria.isEmpty
+        ? mockPractice.successCriteria
+        : backendPractice.successCriteria
+              .map(
+                (item) => _localizedTextFromBackend(
+                  item,
+                  fallback: mockPractice.successCriteria.first.en,
+                ),
+              )
+              .toList(growable: false),
+    knowledgeChecks: backendPractice.knowledgeChecks.isEmpty
+        ? mockPractice.knowledgeChecks
+        : backendPractice.knowledgeChecks
+              .map(
+                (item) => _localizedTextFromBackend(
+                  item,
+                  fallback: mockPractice.knowledgeChecks.first.en,
+                ),
+              )
+              .toList(growable: false),
+    promptSuggestion: _localizedTextFromBackend(
+      backendPractice.promptSuggestion,
+      fallback: mockPractice.promptSuggestion.en,
+    ),
+    xpReward: backendPractice.xpReward > 0
+        ? backendPractice.xpReward
+        : mockPractice.xpReward,
+    codeChallenge: mockPractice.codeChallenge,
+    comments: mockPractice.comments,
+  );
+}
+
+bool _looksLikeUuid(String value) {
+  final pattern = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+  return pattern.hasMatch(value);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OOP Track — backend integration
+// ─────────────────────────────────────────────────────────────────────────────
+
+const String _oopCourseBackendId = '00000000-0000-0000-0000-000000000200';
+
+/// Full OOP learning track loaded from the curriculum-service.
+/// Returns null when unauthenticated or the course has no modules.
+final backendOopTrackProvider = FutureProvider<LearningTrack?>((ref) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) return null;
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+  try {
+    final allModules = await remote.fetchModules(
+      accessToken: accessToken,
+      localeCode: 'en',
+    );
+    final modules =
+        allModules
+            .where((m) => m.courseId == _oopCourseBackendId)
+            .toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    if (modules.isEmpty) return null;
+
+    final learningModules = await Future.wait(
+      modules.indexed.map((e) => _fetchOopModule(remote, e.$2, accessToken, moduleIndex: e.$1)),
+    );
+    return _buildOopLearningTrack(learningModules);
+  } catch (_) {
+    return null;
+  }
+});
+
+/// Finds a LessonItem by UUID inside the loaded OOP track.
+final backendOopLessonItemProvider =
+    FutureProvider.family<LessonItem?, String>((ref, lessonId) async {
+      if (!_looksLikeUuid(lessonId)) return null;
+      final track = await ref.watch(backendOopTrackProvider.future);
+      if (track == null) return null;
+      for (final module in track.modules) {
+        for (final lesson in module.lessons) {
+          if (lesson.id == lessonId) return lesson;
+        }
+      }
+      return null;
+    });
+
+Future<LearningModule> _fetchOopModule(
+  BackendCourseRemoteDataSource remote,
+  BackendModuleDto module,
+  String accessToken, {
+  int moduleIndex = 0,
+}) async {
+  final lessons =
+      (await remote.fetchLessonsForModule(
+            accessToken: accessToken,
+            moduleId: module.id,
+          ))
+          .toList()
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+  final practice = lessons.isNotEmpty
+      ? await _safeFetchPracticeDto(
+          remote,
+          accessToken: accessToken,
+          lessonId: lessons.last.id,
+        )
+      : null;
+
+  final lessonItems = List.generate(
+    lessons.length,
+    (i) => _adaptBackendLessonDto(
+      lessons[i],
+      moduleId: module.id,
+      moduleIndex: moduleIndex,
+      lessonIndex: i,
+    ),
+  );
+
+  return LearningModule(
+    id: module.id,
+    trackId: 'oop',
+    title: LocalizedText(ru: module.title, en: module.title, kk: module.title),
+    summary: LocalizedText(
+      ru: module.summary,
+      en: module.summary,
+      kk: module.summary,
+    ),
+    lessons: lessonItems,
+    practice:
+        practice != null
+            ? _adaptBackendPracticeDto(practice, moduleId: module.id)
+            : null,
+  );
+}
+
+
+Future<BackendPracticeDto?> _safeFetchPracticeDto(
+  BackendCourseRemoteDataSource remote, {
+  required String accessToken,
+  required String lessonId,
+}) async {
+  try {
+    return await remote.fetchPracticeByLessonId(
+      accessToken: accessToken,
+      lessonId: lessonId,
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+LessonItem _adaptBackendLessonDto(
+  BackendLessonDto dto, {
+  required String moduleId,
+  int moduleIndex = 0,
+  int lessonIndex = 0,
+}) {
+  final quizItems = OopQuizData.forModule(moduleIndex);
+  final codeTask = getOopCodeTask(moduleIndex, lessonIndex);
+  return LessonItem(
+    id: dto.id,
+    trackId: 'oop',
+    moduleId: moduleId,
+    title: _localizedTextFromBackend(dto.title),
+    summary: _localizedTextFromBackend(dto.summary),
+    durationMinutes: dto.durationMinutes > 0 ? dto.durationMinutes : 15,
+    outcome: _localizedTextFromBackend(dto.outcome),
+    codeSnippet: codeTask.starterCode,
+    exampleOutput: codeTask.expectedOutput,
+    keyPoints: dto.keyPoints
+        .map((kp) => _localizedTextFromBackend(kp))
+        .toList(growable: false),
+    quizzes: quizItems,
+    codeTrainers: const <CodeTrainer>[],
+    completionRequirements:
+        quizItems.map((q) => q.id).toList(growable: false),
+    promptSuggestion: _localizedTextFromBackend(
+      dto.theoryContent,
+      fallback: 'Explain the key concepts in ${dto.title.en}',
+    ),
+    xpReward: dto.xpReward > 0 ? dto.xpReward : 50,
+    theoryContent: _localizedTextFromBackend(dto.theoryContent),
+  );
+}
+
+
+PracticeTask _adaptBackendPracticeDto(
+  BackendPracticeDto dto, {
+  required String moduleId,
+}) {
+  return PracticeTask(
+    id: dto.id,
+    trackId: 'oop',
+    moduleId: moduleId,
+    title: _localizedTextFromBackend(dto.title),
+    summary: _localizedTextFromBackend(dto.summary),
+    brief: _localizedTextFromBackend(dto.brief),
+    starterCode: dto.starterCode,
+    successCriteria: dto.successCriteria
+        .map((sc) => _localizedTextFromBackend(sc))
+        .toList(growable: false),
+    knowledgeChecks: dto.knowledgeChecks
+        .map((kc) => _localizedTextFromBackend(kc))
+        .toList(growable: false),
+    promptSuggestion: _localizedTextFromBackend(dto.promptSuggestion),
+    xpReward: dto.xpReward > 0 ? dto.xpReward : 80,
+  );
+}
+
+LearningTrack _buildOopLearningTrack(List<LearningModule> modules) {
+  final totalLessons = modules.fold(0, (sum, m) => sum + m.lessons.length);
+  return LearningTrack(
+    id: 'oop',
+    title: const LocalizedText(
+      ru: 'ООП на Java',
+      en: 'OOP in Java',
+      kk: 'Java-да ООП',
+    ),
+    subtitle: const LocalizedText(
+      ru: 'Классы, наследование, инкапсуляция и полиморфизм',
+      en: 'Classes, inheritance, encapsulation, and polymorphism',
+      kk: 'Класстар, мұрагерлік, инкапсуляция және полиморфизм',
+    ),
+    description: const LocalizedText(
+      ru: 'Изучите основы синтаксиса Java, принципы ООП, SOLID и шаблоны проектирования.',
+      en: 'Learn Java syntax basics, OOP principles, SOLID and design patterns.',
+      kk: 'Java синтаксисін, ООП принциптерін, SOLID және жобалау паттерндерін үйреніңіз.',
+    ),
+    teaser: const LocalizedText(
+      ru: 'Полезно для backend-сервисов и архитектуры приложений.',
+      en: 'Useful for backend services, app architecture, and domain modeling.',
+      kk: 'Backend қызметтері мен қолданба архитектурасы үшін пайдалы.',
+    ),
+    outcome: const LocalizedText(
+      ru: 'Вы сможете проектировать классы с наследованием и GoF-паттернами.',
+      en: 'You can design classes with inheritance and GoF design patterns.',
+      kk: 'Мұрагерлік пен GoF паттерндерін қолданып класстар жасай аласыз.',
+    ),
+    heroMetric: LocalizedText(
+      ru: '${modules.length} модулей · $totalLessons уроков · GoF паттерны',
+      en: '${modules.length} modules · $totalLessons lessons · GoF patterns',
+      kk: '${modules.length} модуль · $totalLessons сабақ · GoF паттерндері',
+    ),
+    icon: Icons.account_tree_rounded,
+    color: const Color(0xFF6FD8FF),
+    zone: TrackZone.computerScienceCore,
+    availability: TrackAvailability.available,
+    order: 12,
+    nodeId: 'cs-oop',
+    connections: const <String>['algorithms_data_structures', 'backend', 'mobile'],
+    modules: modules,
+  );
 }

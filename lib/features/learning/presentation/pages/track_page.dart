@@ -5,12 +5,16 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
+import '../../../../app/state/demo_app_state.dart';
+import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../../core/common_widgets/bubble_progress_bar.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 
 class TrackPage extends ConsumerWidget {
   const TrackPage({super.key, required this.trackId});
@@ -22,10 +26,25 @@ class TrackPage extends ConsumerWidget {
     final state = ref.watch(demoAppControllerProvider);
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
-    final track = catalog.trackById(trackId);
-    final progress = catalog.progressForTrack(state, trackId);
-    final assessmentResult = catalog.assessmentResultFor(state, trackId);
     final compact = context.isCompactLayout;
+
+    final LearningTrack track;
+    final TrackProgress progress;
+
+    if (trackId == 'oop') {
+      final backendTrackAsync = ref.watch(backendOopTrackProvider);
+      final backendTrack = backendTrackAsync.maybeWhen(
+        data: (t) => t,
+        orElse: () => null,
+      );
+      track = backendTrack ?? catalog.trackById(trackId);
+      progress = backendTrack != null
+          ? _computeTrackProgress(state, backendTrack)
+          : catalog.progressForTrack(state, trackId);
+    } else {
+      track = catalog.trackById(trackId);
+      progress = catalog.progressForTrack(state, trackId);
+    }
 
     return AppPageScaffold(
       title: context.l10n.text('track_overview'),
@@ -67,14 +86,11 @@ class TrackPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: progress.fraction,
-                    minHeight: 10,
-                    backgroundColor: context.appColors.backgroundElevated,
-                    color: track.color,
-                  ),
+                BubbleProgressBar(
+                  value: progress.fraction,
+                  color: track.color,
+                  backgroundColor: context.appColors.backgroundElevated,
+                  height: 10,
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -135,10 +151,10 @@ class TrackPage extends ConsumerWidget {
                     const SizedBox(height: 14),
                     ...module.lessons.map((lesson) {
                       final isCompleted = state.completedLessonIds.contains(lesson.id);
-                      final isFocused = state.focusedLessonId == lesson.id;
+                      final isStarted = state.startedLessonIds.contains(lesson.id);
                       final statusLabel = isCompleted
                           ? (state.locale == AppLocale.ru ? 'Пройдено' : (state.locale == AppLocale.kk ? 'Аяқталды' : 'Completed'))
-                          : isFocused
+                          : isStarted
                               ? (state.locale == AppLocale.ru ? 'В процессе' : (state.locale == AppLocale.kk ? 'Орындалуда' : 'In Progress'))
                               : '';
 
@@ -287,6 +303,53 @@ class TrackPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+TrackProgress _computeTrackProgress(DemoAppState state, LearningTrack track) {
+  var completedUnits = 0;
+  LearningTarget? nextTarget;
+
+  for (final module in track.modules) {
+    for (final lesson in module.lessons) {
+      if (state.completedLessonIds.contains(lesson.id)) {
+        completedUnits += 1;
+      } else {
+        nextTarget ??= LearningTarget.lesson(lesson);
+      }
+    }
+    final practice = module.practice;
+    if (practice != null) {
+      if (state.completedPracticeIds.contains(practice.id)) {
+        completedUnits += 1;
+      } else {
+        nextTarget ??= LearningTarget.practice(practice);
+      }
+    }
+  }
+
+  final quizIds = <String>[
+    for (final module in track.modules)
+      for (final lesson in module.lessons)
+        for (final quiz in lesson.quizzes) quiz.id,
+  ];
+
+  final availability = completedUnits == 0
+      ? TrackAvailability.available
+      : completedUnits < track.totalUnits
+          ? TrackAvailability.inProgress
+          : TrackAvailability.completed;
+
+  return TrackProgress(
+    state: availability,
+    completedUnits: completedUnits,
+    totalUnits: track.totalUnits,
+    completedQuizzes:
+        quizIds.where(state.completedQuizIds.contains).length,
+    totalQuizzes: quizIds.length,
+    completedTrainers: 0,
+    totalTrainers: 0,
+    nextTarget: nextTarget,
+  );
 }
 
 class _TrackSurface extends StatelessWidget {

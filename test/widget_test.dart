@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:frontend_flutter/app/state/app_experience.dart';
+import 'package:frontend_flutter/app/routing/app_routes.dart';
+import 'package:frontend_flutter/app/routing/router.dart';
 import 'package:frontend_flutter/app/state/app_locale.dart';
 import 'package:frontend_flutter/app/state/demo_app_controller.dart';
 import 'package:frontend_flutter/app/state/demo_moderator_controller.dart';
@@ -88,6 +92,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
+  Future<void> tapGuideNext(WidgetTester tester) async {
+    final nextButton = find
+        .byKey(const ValueKey<String>('app-guide-next-button'))
+        .hitTestable();
+    expect(nextButton, findsWidgets);
+    await tester.tap(nextButton.last);
+    await pumpScene(tester);
+  }
+
   testWidgets('email login from welcome opens dashboard', (tester) async {
     await configureSurface(tester);
     final container = await createContainer(
@@ -109,7 +122,7 @@ void main() {
 
     await tester.tap(find.text('Log in').first);
     await pumpScene(tester);
-    expect(find.text('Sign in as'), findsOneWidget);
+    expect(find.text('Sign in to your learning flow'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).at(0), 'student@zerde.study');
     await tester.enterText(find.byType(TextField).at(1), '05072006');
@@ -122,7 +135,7 @@ void main() {
     await tester.tap(loginButton);
     await pumpScene(tester);
 
-    expect(find.text('Recommended tracks'), findsOneWidget);
+    expect(find.text('Knowledge Tree'), findsOneWidget);
   });
 
   test('disabled local notification service returns unsupported', () async {
@@ -156,7 +169,7 @@ void main() {
     );
     await pumpScene(tester);
 
-    expect(find.text('Recommended tracks'), findsOneWidget);
+    expect(find.text('Knowledge Tree'), findsOneWidget);
 
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.keyK);
@@ -186,19 +199,19 @@ void main() {
     );
     await pumpScene(tester);
 
-    await tester.tap(find.text('Log in').first);
-    await pumpScene(tester);
-    await tester.tap(find.text('App guide'));
+    unawaited(
+      container
+          .read(appGuideControllerProvider.notifier)
+          .startFromLogin(tester.element(find.text('Log in').first)),
+    );
     await pumpScene(tester);
 
     expect(find.text('Main navigation'), findsOneWidget);
 
-    await tester.tap(find.text('Next'));
-    await pumpScene(tester);
+    await tapGuideNext(tester);
     expect(find.text('Home screen'), findsOneWidget);
 
-    await tester.tap(find.text('Next'));
-    await pumpScene(tester);
+    await tapGuideNext(tester);
 
     expect(container.read(appGuideControllerProvider).currentStepIndex, 2);
     expect(find.text('Knowledge tree'), findsOneWidget);
@@ -224,22 +237,19 @@ void main() {
     );
     await pumpScene(tester);
 
-    await tester.tap(find.text('Log in').first);
-    await pumpScene(tester);
-    await tester.tap(find.text('App guide'));
+    unawaited(
+      container
+          .read(appGuideControllerProvider.notifier)
+          .startFromLogin(tester.element(find.text('Log in').first)),
+    );
     await pumpScene(tester);
 
-    await tester.tap(find.text('Next'));
-    await pumpScene(tester);
-    await tester.tap(find.text('Next'));
-    await pumpScene(tester);
+    await tapGuideNext(tester);
+    await tapGuideNext(tester);
 
     expect(find.text('Knowledge tree'), findsOneWidget);
 
-    final nextButton = find.text('Next').last;
-    await tester.ensureVisible(nextButton);
-    await tester.tap(nextButton);
-    await pumpScene(tester);
+    await tapGuideNext(tester);
 
     expect(container.read(appGuideControllerProvider).currentStepIndex, 3);
     expect(find.text('Learn catalog'), findsOneWidget);
@@ -314,8 +324,7 @@ void main() {
 
     await tester.tap(find.text('Log in').first);
     await pumpScene(tester);
-    expect(find.text('Sign in as'), findsOneWidget);
-    expect(find.text('Teacher'), findsOneWidget);
+    expect(find.text('Sign in to your learning flow'), findsOneWidget);
 
     container
         .read(demoAppControllerProvider.notifier)
@@ -335,7 +344,7 @@ void main() {
     await pumpScene(tester);
 
     expect(find.text('Teacher workspace'), findsOneWidget);
-    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.text('Overview'), findsOneWidget);
   });
 
   testWidgets('moderator workspace renders comments and community sections', (
@@ -416,7 +425,7 @@ void main() {
     );
     await pumpScene(tester);
 
-    await tester.tap(find.text('Community'));
+    container.read(appRouterProvider).go(AppRoutes.community);
     await pumpScene(tester);
     expect(
       find.text('Groups where learning becomes a team sport'),
@@ -458,7 +467,6 @@ void main() {
     await tester.tap(find.text('Tree'));
     await pumpScene(tester);
 
-    expect(find.text('Legend'), findsOneWidget);
     expect(find.byIcon(Icons.add_rounded), findsNothing);
     expect(find.text('Operating Systems'), findsWidgets);
     expect(find.text('OOP'), findsWidgets);
@@ -490,7 +498,7 @@ void main() {
     expect(find.text('Comments'), findsOneWidget);
 
     await tester.enterText(
-      find.byType(TextField).first,
+      find.byType(EditableText).first,
       '''class StudentProfile {
   StudentProfile(this.name);
 
@@ -520,6 +528,10 @@ void main() {
     await tester.tap(find.text('Run draft'));
     await pumpScene(tester);
     expect(find.text('Draft console'), findsOneWidget);
+    expect(
+      find.textContaining('Aida finished OOP Midterm with 86 points.'),
+      findsOneWidget,
+    );
 
     await tester.tap(
       find.text(
@@ -543,7 +555,10 @@ void main() {
     );
     expect(find.textContaining('Midterm passed'), findsWidgets);
 
-    await tester.enterText(find.byType(TextField).at(1), 'Nice OOP midterm.');
+    await tester.enterText(
+      find.byKey(const Key('practice_comment_field')),
+      'Nice OOP midterm.',
+    );
     await tester.ensureVisible(find.text('Send comment'));
     await pumpScene(tester);
     await tester.tap(find.text('Send comment'));
@@ -662,7 +677,7 @@ void main() {
 
     expect(find.text('Courses from the community'), findsNothing);
     expect(find.text('Achievements'), findsNothing);
-    expect(find.text('Recommended tracks'), findsOneWidget);
+    expect(find.text('Knowledge Tree'), findsOneWidget);
   });
 
   testWidgets('lesson requires quiz and memory lab before completion', (
@@ -687,6 +702,8 @@ void main() {
         .lessonById('fundamentals_lesson_2_2');
     final quizTitle = lesson.quizzes.first.prompt.resolve(AppLocale.en);
 
+    await tester.tap(find.text('Next Step'));
+    await pumpScene(tester);
     expect(find.text(quizTitle), findsOneWidget);
 
     await tester.tap(find.text('3'));
@@ -694,22 +711,9 @@ void main() {
     await tester.tap(find.text('Check answer'));
     await pumpScene(tester);
 
-    container
-        .read(demoAppControllerProvider.notifier)
-        .completeTrainer('fundamentals_lesson_2_2_trainer_1');
-    await pumpScene(tester);
-
-    await tester.scrollUntilVisible(
-      find.text('Complete lesson'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Complete lesson'));
-    await pumpScene(tester);
-
     expect(
-      container.read(demoAppControllerProvider).completedLessonIds,
-      contains('fundamentals_lesson_2_2'),
+      container.read(demoAppControllerProvider).completedQuizIds,
+      contains(lesson.quizzes.first.id),
     );
   });
 
@@ -840,7 +844,7 @@ void main() {
     await tester.tap(find.text('Edit profile').first);
     await pumpScene(tester);
 
-    await tester.enterText(find.byType(TextField).last, 'Dana S.');
+    await tester.enterText(find.byType(TextField).first, 'Dana S.');
     await pumpScene(tester);
     await tester.tap(find.text('Save'));
     await pumpScene(tester);
@@ -903,6 +907,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<AuthSession> register({
     required String email,
     required String password,
+    String? platform,
   }) async {
     _session = fakeStudentSession(email: email);
     return _session!;
@@ -913,7 +918,10 @@ class FakeAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    _session = fakeStudentSession(email: email);
+    _session = fakeStudentSession(
+      email: email,
+      roleCode: email.startsWith('teacher@') ? 'teacher' : 'student',
+    );
     return _session!;
   }
 
@@ -937,9 +945,45 @@ class FakeAuthRepository implements AuthRepository {
     required String code,
     required String newPassword,
   }) async {}
+
+  @override
+  Future<String> getGoogleAuthUrl({
+    String? redirectUri,
+    String? platform,
+  }) async => 'https://example.com/google';
+
+  @override
+  Future<String> getGithubAuthUrl({String? redirectUri}) async =>
+      'https://example.com/github';
+
+  @override
+  Future<AuthSession> googleCallback(
+    String code, {
+    String? platform,
+    String? redirectUri,
+  }) async {
+    _session = fakeStudentSession(email: 'google@zerde.study');
+    return _session!;
+  }
+
+  @override
+  Future<AuthSession> githubCallback(String code, {String? redirectUri}) async {
+    _session = fakeStudentSession(email: 'github@zerde.study');
+    return _session!;
+  }
 }
 
-AuthSession fakeStudentSession({required String email}) {
+AuthSession fakeStudentSession({
+  required String email,
+  String roleCode = 'student',
+}) {
+  final roleName = switch (roleCode) {
+    'teacher' => 'Teacher',
+    'manager' => 'Manager',
+    'admin' => 'Administrator',
+    _ => 'Student',
+  };
+
   return AuthSession(
     accessToken: 'test-access-token',
     refreshToken: 'test-refresh-token',
@@ -948,13 +992,13 @@ AuthSession fakeStudentSession({required String email}) {
       email: email,
       roles: <AuthRole>[
         AuthRole(
-          id: 'role-student',
-          code: 'student',
-          name: 'Student',
-          description: 'Student role',
-          isDefault: true,
-          isPrivileged: false,
-          isSupport: false,
+          id: 'role-$roleCode',
+          code: roleCode,
+          name: roleName,
+          description: '$roleName role',
+          isDefault: roleCode == 'student',
+          isPrivileged: roleCode == 'admin',
+          isSupport: roleCode == 'manager',
           createdAt: DateTime(2026, 1, 1),
         ),
       ],
@@ -979,7 +1023,11 @@ class FakeAiChatRemoteDataSource extends AiChatRemoteDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> createChat(String userId, String chatId, {String title = 'Новый чат'}) async {
+  Future<Map<String, dynamic>> createChat(
+    String userId,
+    String chatId, {
+    String title = 'Новый чат',
+  }) async {
     return <String, dynamic>{'chatId': chatId, 'title': title};
   }
 

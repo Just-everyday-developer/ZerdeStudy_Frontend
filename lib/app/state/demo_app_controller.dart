@@ -232,6 +232,17 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
+  void startLesson(String lessonId) {
+    if (!state.startedLessonIds.contains(lessonId)) {
+      state = _withDerived(
+        state.copyWith(
+          startedLessonIds: Set<String>.from(state.startedLessonIds)..add(lessonId),
+        ),
+      );
+      _persist();
+    }
+  }
+
   void focusLesson(String lessonId) {
     final lesson = _catalog.lessonById(lessonId);
     state = _withDerived(
@@ -869,6 +880,11 @@ class DemoAppController extends Notifier<DemoAppState> {
       currentTrackId: 'discrete_math',
       focusedLessonId: 'discrete_math_lesson_1_1',
       focusedPracticeId: null,
+      startedLessonIds: <String>{
+        'fundamentals_lesson_1_1',
+        'frontend_lesson_1_1',
+        'operating_systems_lesson_1_1',
+      },
       completedLessonIds: <String>{
         'fundamentals_lesson_1_1',
         'frontend_lesson_1_1',

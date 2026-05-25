@@ -22,41 +22,16 @@ class AuthExperienceSelector extends StatelessWidget {
       experience: AppExperience.student,
       icon: Icons.school_rounded,
       title: LocalizedText(ru: 'Студент', en: 'Student', kk: 'Студент'),
-      description: LocalizedText(
-        ru: 'Текущий учебный интерфейс, прогресс и каталог курсов.',
-        en: 'Current learning app, progress flow, and course catalog.',
-        kk: 'Ағымдағы оқу интерфейсі, прогресс және курс каталогы.',
-      ),
     ),
     _ExperienceOption(
       experience: AppExperience.teacher,
       icon: Icons.auto_stories_rounded,
       title: LocalizedText(ru: 'Преподаватель', en: 'Teacher', kk: 'Оқытушы'),
-      description: LocalizedText(
-        ru: 'Панель преподавателя: генерация курсов, конструктор и аналитика.',
-        en: 'Teacher workspace with generation, builder, and analytics.',
-        kk: 'Курс генерациясы, конструктор және аналитикасы бар оқытушы панелі.',
-      ),
-    ),
-    _ExperienceOption(
-      experience: AppExperience.moderator,
-      icon: Icons.verified_user_rounded,
-      title: LocalizedText(ru: 'Модератор', en: 'Moderator', kk: 'Модератор'),
-      description: LocalizedText(
-        ru: 'Доступ к существующей панели модерации и ревью.',
-        en: 'Open the existing moderation and review workspace.',
-        kk: 'Қолданыстағы модерация және ревью панеліне өту.',
-      ),
     ),
     _ExperienceOption(
       experience: AppExperience.admin,
       icon: Icons.admin_panel_settings_rounded,
       title: LocalizedText(ru: 'Админ', en: 'Admin', kk: 'Админ'),
-      description: LocalizedText(
-        ru: 'Панель администратора еще не готова, роль пока недоступна.',
-        en: 'The admin panel is not ready yet and remains unavailable.',
-        kk: 'Әкімші панелі әлі дайын емес, бұл рөл әзірге қолжетімсіз.',
-      ),
       isAvailable: false,
     ),
   ];
@@ -66,7 +41,7 @@ class AuthExperienceSelector extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = switch (constraints.maxWidth) {
-          >= 1320 => 4,
+          >= 1320 => 3,
           >= 760 => 2,
           _ => 1,
         };
@@ -77,9 +52,9 @@ class AuthExperienceSelector extends StatelessWidget {
           itemCount: _options.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            mainAxisExtent: crossAxisCount == 1 ? 176 : 208,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            mainAxisExtent: crossAxisCount == 1 ? 84 : 100,
           ),
           itemBuilder: (context, index) {
             final option = _options[index];
@@ -127,58 +102,51 @@ class _ExperienceCard extends StatelessWidget {
               : colors.surfaceSoft.withValues(alpha: 0.92),
           border: Border.all(color: selected ? accent : colors.divider),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(option.icon, color: accent),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(option.icon, color: accent),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                option.title.resolve(locale),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: selected ? accent : colors.textPrimary,
                 ),
-                const Spacer(),
-                if (!option.isAvailable)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: colors.divider),
-                    ),
-                    child: Text(
-                      _comingSoon(locale),
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              option.title.resolve(locale),
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              option.description.resolve(locale),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colors.textSecondary,
-                height: 1.4,
               ),
             ),
+            if (!option.isAvailable)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: colors.divider),
+                ),
+                child: Text(
+                  _comingSoon(locale),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            if (selected)
+              Icon(Icons.check_circle_rounded, color: accent, size: 20),
           ],
         ),
       ),
@@ -191,14 +159,12 @@ class _ExperienceOption {
     required this.experience,
     required this.icon,
     required this.title,
-    required this.description,
     this.isAvailable = true,
   });
 
   final AppExperience experience;
   final IconData icon;
   final LocalizedText title;
-  final LocalizedText description;
   final bool isAvailable;
 }
 

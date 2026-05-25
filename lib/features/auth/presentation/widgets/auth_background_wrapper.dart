@@ -41,40 +41,8 @@ class AuthBackgroundWrapper extends StatelessWidget {
               },
             ),
           ),
-          Positioned(
-            left: -40,
-            top: 80,
-            child: _GlowOrb(color: colors.primary.withValues(alpha: 0.22)),
-          ),
-          Positioned(
-            right: -50,
-            bottom: 140,
-            child: _GlowOrb(color: colors.accent.withValues(alpha: 0.18)),
-          ),
           child,
         ],
-      ),
-    );
-  }
-}
-
-class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: 180,
-        height: 180,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [color, color.withValues(alpha: 0.08), Colors.transparent],
-          ),
-        ),
       ),
     );
   }

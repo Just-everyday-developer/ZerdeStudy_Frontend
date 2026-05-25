@@ -100,11 +100,11 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(
-          title: const Text('Rename Chat'),
+          title: Text(context.l10n.text('ai_chat_rename')),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'Chat Title',
+            decoration: InputDecoration(
+              labelText: context.l10n.text('ai_chat_title_label'),
             ),
             autofocus: true,
             onSubmitted: (val) {
@@ -117,7 +117,10 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogCtx),
-              child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
+              child: Text(
+                context.l10n.text('profile_cancel'),
+                style: TextStyle(color: colors.textSecondary),
+              ),
             ),
             FilledButton(
               onPressed: () {
@@ -125,7 +128,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                 Navigator.pop(dialogCtx);
               },
               style: FilledButton.styleFrom(backgroundColor: colors.primary),
-              child: const Text('Save'),
+              child: Text(context.l10n.text('profile_save')),
             ),
           ],
         );

@@ -9,12 +9,16 @@ class TechTextField extends StatelessWidget {
     required this.icon,
     required this.controller,
     this.isObscure = false,
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   final String hint;
   final IconData icon;
   final TextEditingController controller;
   final bool isObscure;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +26,8 @@ class TechTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: isObscure,
+      textInputAction: textInputAction,
+      onSubmitted: onSubmitted,
       style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         hintText: hint,

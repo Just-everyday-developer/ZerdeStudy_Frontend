@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
+import '../../../../app/state/app_experience.dart';
+import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_moderator_controller.dart';
 import '../../../../app/state/demo_moderator_data.dart';
 import '../../../../core/theme/app_theme_colors.dart';
@@ -15,10 +17,6 @@ class ModeratorDashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
-    final unansweredFaqCount = ref
-        .watch(demoModeratorFaqProvider)
-        .where((question) => question.answer.isEmpty)
-        .length;
     final pendingCommentCount = ref
         .watch(demoModeratorCommentsProvider)
         .where((item) => item.status == ModCommentStatus.needsReview)
@@ -83,6 +81,9 @@ class ModeratorDashboardPage extends ConsumerWidget {
             const SizedBox(height: 32),
             LayoutBuilder(
               builder: (context, constraints) {
+                final isAdmin =
+                    ref.read(demoAppControllerProvider).activeExperience ==
+                    AppExperience.admin;
                 final columnCount = constraints.maxWidth >= 1450
                     ? 3
                     : constraints.maxWidth >= 1080
@@ -96,6 +97,30 @@ class ModeratorDashboardPage extends ConsumerWidget {
                   spacing: 16,
                   runSpacing: 16,
                   children: [
+                    if (isAdmin) ...[
+                      SizedBox(
+                        width: width,
+                        child: _StatCard(
+                          icon: Icons.memory_rounded,
+                          label: 'CPU & Memory Usage',
+                          value: '14% / 2.4GB',
+                          color: const Color(0xFF9C27B0),
+                          colors: colors,
+                          onTap: () => context.go(AppRoutes.moderatorSystem),
+                        ),
+                      ),
+                      SizedBox(
+                        width: width,
+                        child: _StatCard(
+                          icon: Icons.people_outline_rounded,
+                          label: 'Active Users (Live)',
+                          value: '1,240',
+                          color: const Color(0xFF3F51B5),
+                          colors: colors,
+                          onTap: () => context.go(AppRoutes.moderatorUsers),
+                        ),
+                      ),
+                    ],
                     SizedBox(
                       width: width,
                       child: _StatCard(
@@ -138,28 +163,6 @@ class ModeratorDashboardPage extends ConsumerWidget {
                         color: const Color(0xFF00BCD4),
                         colors: colors,
                         onTap: () => context.go(AppRoutes.moderatorCommunity),
-                      ),
-                    ),
-                    SizedBox(
-                      width: width,
-                      child: _StatCard(
-                        icon: Icons.help_outline_rounded,
-                        label: 'Вопросов в FAQ',
-                        value: '$unansweredFaqCount',
-                        color: const Color(0xFF2196F3),
-                        colors: colors,
-                        onTap: () => context.go(AppRoutes.moderatorFaq),
-                      ),
-                    ),
-                    SizedBox(
-                      width: width,
-                      child: _StatCard(
-                        icon: Icons.check_circle_outline_rounded,
-                        label: 'Решено сегодня',
-                        value: '7',
-                        color: const Color(0xFF4CAF50),
-                        colors: colors,
-                        onTap: null,
                       ),
                     ),
                   ],

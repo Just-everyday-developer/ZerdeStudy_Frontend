@@ -1,10 +1,10 @@
-import '../../../../core/network/api_exception.dart';
-import '../../domain/entities/auth_session.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../datasources/auth_local_data_source.dart';
-import '../datasources/auth_remote_data_source.dart';
-import '../models/auth_tokens_dto.dart';
-import '../models/stored_auth_session_dto.dart';
+import 'package:frontend_flutter/core/network/api_exception.dart';
+import 'package:frontend_flutter/features/auth/domain/entities/auth_session.dart';
+import 'package:frontend_flutter/features/auth/domain/repositories/auth_repository.dart';
+import 'package:frontend_flutter/features/auth/data/datasources/auth_local_data_source.dart';
+import 'package:frontend_flutter/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:frontend_flutter/features/auth/data/models/auth_tokens_dto.dart';
+import 'package:frontend_flutter/features/auth/data/models/stored_auth_session_dto.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
@@ -50,8 +50,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<AuthSession> register({
     required String email,
     required String password,
+    String? platform,
   }) async {
-    final tokens = await _remote.register(email: email, password: password);
+    final tokens = await _remote.register(
+      email: email,
+      password: password,
+      platform: platform,
+    );
     return _storeAndBuildSession(tokens);
   }
 
@@ -109,6 +114,37 @@ class AuthRepositoryImpl implements AuthRepository {
       code: code,
       newPassword: newPassword,
     );
+  }
+
+  @override
+  Future<String> getGoogleAuthUrl({String? redirectUri, String? platform}) =>
+      _remote.getGoogleAuthUrl(redirectUri: redirectUri, platform: platform);
+
+  @override
+  Future<String> getGithubAuthUrl({String? redirectUri}) =>
+      _remote.getGithubAuthUrl(redirectUri: redirectUri);
+
+  @override
+  Future<AuthSession> googleCallback(
+    String code, {
+    String? platform,
+    String? redirectUri,
+  }) async {
+    final tokens = await _remote.googleCallback(
+      code,
+      platform: platform,
+      redirectUri: redirectUri,
+    );
+    return _storeAndBuildSession(tokens);
+  }
+
+  @override
+  Future<AuthSession> githubCallback(String code, {String? redirectUri}) async {
+    final tokens = await _remote.githubCallback(
+      code,
+      redirectUri: redirectUri,
+    );
+    return _storeAndBuildSession(tokens);
   }
 
   Future<AuthSession> _storeAndBuildSession(AuthTokensDto tokens) async {

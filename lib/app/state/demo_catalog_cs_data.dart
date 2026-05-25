@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'demo_catalog_oop_midterm.dart';
 import 'demo_catalog_support.dart';
 import 'demo_models.dart';
 
@@ -2971,10 +2972,23 @@ class _OopModuleDraft {
 }
 
 class _OopLessonDraft {
-  const _OopLessonDraft({required this.title, required this.titleRu});
+  const _OopLessonDraft({
+    required this.title,
+    required this.titleRu,
+    this.theoryContentRu,
+    this.quizPromptRu,
+    this.quizOptions = const <String>[''],
+    this.correctQuizIndex = 0,
+    this.quizExplanationRu,
+  });
 
   final String title;
   final String titleRu;
+  final String? theoryContentRu;
+  final String? quizPromptRu;
+  final List<String> quizOptions;
+  final int correctQuizIndex;
+  final String? quizExplanationRu;
 }
 
 List<DemoModuleSeed> _oopModules() {
@@ -2986,25 +3000,215 @@ List<DemoModuleSeed> _oopModules() {
         _OopLessonDraft(
           title: 'Input and output, comments',
           titleRu: 'Ввод и вывод, комментарии',
+          theoryContentRu: 'Любая программа на Java начинается с вывода информации. '
+              'Самый простой способ — использовать System.out.println(). '
+              'Эта команда выводит текст в консоль и переходит на новую строку.\n\n'
+              '► Пример:\n'
+              'System.out.println("Привет, мир!");\n'
+              'System.out.print("Без новой строки");\n\n'
+              'Комментарии — это текст, который игнорируется компилятором. '
+              'Они нужны, чтобы пояснять код.\n\n'
+              '► Три вида комментариев в Java:\n'
+              '// Однострочный комментарий\n'
+              '/* Многострочный\n'
+              '   комментарий */\n'
+              '/** Javadoc-комментарий */\n\n'
+              'Javadoc используется для автоматической генерации документации. '
+              'Откройте любую среду разработки (IDE), создайте класс и попробуйте сами!',
+          quizPromptRu: 'Какая команда выводит текст в Java и переходит на новую строку?',
+          quizOptions: <String>['System.out.print()', 'System.out.println()', 'console.log()'],
+          correctQuizIndex: 1,
+          quizExplanationRu: 'System.out.println() выводит текст и переводит курсор на новую строку. print() оставляет курсор на той же строке.',
         ),
         _OopLessonDraft(
           title: 'Variables and data types',
           titleRu: 'Переменные и типы данных',
+          theoryContentRu: 'Переменная — это контейнер для хранения данных. '
+              'У каждой переменной есть имя и тип.\n\n'
+              '► Примитивные типы в Java:\n'
+              '• int — целые числа (1, -5, 100)\n'
+              '• double — дробные числа (3.14, -0.5)\n'
+              '• boolean — true/false\n'
+              '• char — один символ (\'A\', \'\$\')\n\n'
+              '► Объявление переменной:\n'
+              'int age = 25;\n'
+              'double price = 99.99;\n'
+              'boolean isReady = true;\n'
+              'char grade = \'A\';\n\n'
+              'String — это ссылочный тип для строк (последовательностей символов):\n'
+              'String name = "Алматы";\n\n'
+              'Названия переменных должны быть осмысленными. '
+              'Используйте camelCase: studentAge, totalScore.',
+          quizPromptRu: 'Какой тип данных используется для целых чисел в Java?',
+          quizOptions: <String>['float', 'int', 'double'],
+          correctQuizIndex: 1,
+          quizExplanationRu: 'int — это примитивный тип для целых чисел (..., -2, -1, 0, 1, 2, ...). double — для дробных, float — тоже для дробных, но менее точный.',
         ),
         _OopLessonDraft(
           title: 'Arithmetic and logical operations',
           titleRu: 'Арифметические и логические операции',
+          theoryContentRu: 'Java поддерживает все базовые арифметические операции:\n\n'
+              '► Арифметика:\n'
+              '+  сложение\n'
+              '-  вычитание\n'
+              '*  умножение\n'
+              '/  деление\n'
+              '%  остаток от деления (модуль)\n\n'
+              'int a = 10;\n'
+              'int b = 3;\n'
+              'System.out.println(a + b); // 13\n'
+              'System.out.println(a - b); // 7\n'
+              'System.out.println(a * b); // 30\n'
+              'System.out.println(a / b); // 3 (целочисленное!)\n'
+              'System.out.println(a % b); // 1\n\n'
+              'Важно: при делении двух целых чисел результат — тоже целое число. '
+              'Если нужно дробное — используйте double.\n\n'
+              '► Логические операции (результат — boolean):\n'
+              '&& — И (true если оба true)\n'
+              '|| — ИЛИ (true если хотя бы один true)\n'
+              '!  — НЕ (инвертирует)\n\n'
+              'boolean x = true;\n'
+              'boolean y = false;\n'
+              'System.out.println(x && y); // false\n'
+              'System.out.println(x || y); // true\n'
+              'System.out.println(!x);     // false',
+          quizPromptRu: 'Чему равно 10 % 3 в Java?',
+          quizOptions: <String>['3', '1', '0'],
+          correctQuizIndex: 1,
+          quizExplanationRu: '10 % 3 = 1, потому что 10 = 3*3 + 1. Остаток от деления — это то, что остаётся после целочисленного деления.',
         ),
         _OopLessonDraft(
           title: 'Conditionals, ternary operator, switch',
           titleRu: 'Условные конструкции, тернарный оператор, switch',
+          theoryContentRu: 'Условные конструкции позволяют выполнять код в зависимости от условий.\n\n'
+              '► if-else:\n'
+              'int age = 18;\n'
+              'if (age >= 18) {\n'
+              '    System.out.println("Взрослый");\n'
+              '} else {\n'
+              '    System.out.println("Несовершеннолетний");\n'
+              '}\n\n'
+              '► Тернарный оператор — сокращённая запись if-else:\n'
+              'String result = (age >= 18) ? "Взрослый" : "Несовершеннолетний";\n\n'
+              '► switch — для множественного выбора:\n'
+              'int day = 3;\n'
+              'switch (day) {\n'
+              '    case 1:\n'
+              '        System.out.println("Понедельник");\n'
+              '        break;\n'
+              '    case 2:\n'
+              '        System.out.println("Вторник");\n'
+              '        break;\n'
+              '    case 3:\n'
+              '        System.out.println("Среда");\n'
+              '        break;\n'
+              '    default:\n'
+              '        System.out.println("Другой день");\n'
+              '}\n\n'
+              'Оператор break обязательно ставить после каждого case, '
+              'иначе выполнение "провалится" в следующий case.',
+          quizPromptRu: 'Какой оператор используется для сокращённой записи if-else?',
+          quizOptions: <String>['switch', 'Тернарный оператор (?:)', 'for'],
+          correctQuizIndex: 1,
+          quizExplanationRu: 'Тернарный оператор (условие) ? значение1 : значение2 — это краткая форма if-else, которая возвращает значение.',
         ),
         _OopLessonDraft(
           title: 'Loops, break/continue',
           titleRu: 'Циклы (Loops), break/continue',
+          theoryContentRu: 'Циклы позволяют повторять код несколько раз.\n\n'
+              '► Цикл for — когда известно количество повторений:\n'
+              'for (int i = 0; i < 5; i++) {\n'
+              '    System.out.println("Итерация " + i);\n'
+              '}\n\n'
+              'Части цикла for:\n'
+              '• инициализация (int i = 0)\n'
+              '• условие (i < 5)\n'
+              '• шаг (i++ — увеличение на 1)\n\n'
+              '► Цикл while — когда условие проверяется перед выполнением:\n'
+              'int i = 0;\n'
+              'while (i < 5) {\n'
+              '    System.out.println(i);\n'
+              '    i++;\n'
+              '}\n\n'
+              '► Цикл do-while — выполняется хотя бы один раз:\n'
+              'int i = 0;\n'
+              'do {\n'
+              '    System.out.println(i);\n'
+              '    i++;\n'
+              '} while (i < 5);\n\n'
+              '► break — немедленно выходит из цикла.\n'
+              '► continue — переходит к следующей итерации.\n\n'
+              'for (int i = 0; i < 10; i++) {\n'
+              '    if (i == 3) continue; // пропускаем 3\n'
+              '    if (i == 7) break;    // выходим на 7\n'
+              '    System.out.print(i + " ");\n'
+              '}\n'
+              '// Вывод: 0 1 2 4 5 6',
+          quizPromptRu: 'Что делает оператор break внутри цикла?',
+          quizOptions: <String>['Пропускает одну итерацию', 'Немедленно завершает цикл', 'Начинает цикл заново'],
+          correctQuizIndex: 1,
+          quizExplanationRu: 'break немедленно завершает выполнение цикла, и программа продолжает выполнение с кода после цикла.',
         ),
-        _OopLessonDraft(title: 'Arrays', titleRu: 'Массивы (Arrays)'),
-        _OopLessonDraft(title: 'Methods', titleRu: 'Методы'),
+        _OopLessonDraft(
+          title: 'Arrays',
+          titleRu: 'Массивы (Arrays)',
+          theoryContentRu: 'Массив — это набор элементов одного типа, хранящихся в памяти последовательно.\n\n'
+              '► Объявление и инициализация:\n'
+              'int[] numbers = new int[5]; // массив из 5 целых чисел\n'
+              'int[] scores = {90, 85, 78, 92, 88}; // с значениями\n\n'
+              'Индексация начинается с 0:\n'
+              'scores[0] = 90;  // первый элемент\n'
+              'scores[4] = 88;  // последний элемент\n\n'
+              '► Длина массива:\n'
+              'System.out.println(scores.length); // 5\n\n'
+              '► Перебор массива:\n'
+              'for (int i = 0; i < scores.length; i++) {\n'
+              '    System.out.println(scores[i]);\n'
+              '}\n\n'
+              '► Улучшенный for (for-each):\n'
+              'for (int score : scores) {\n'
+              '    System.out.println(score);\n'
+              '}\n\n'
+              'Многомерные массивы:\n'
+              'int[][] matrix = {{1, 2}, {3, 4}};\n'
+              'System.out.println(matrix[0][1]); // 2',
+          quizPromptRu: 'Какой индекс у первого элемента массива в Java?',
+          quizOptions: <String>['1', '0', '-1'],
+          correctQuizIndex: 1,
+          quizExplanationRu: 'В Java (и многих других языках) индексация массива начинается с 0. Первый элемент — array[0].',
+        ),
+        _OopLessonDraft(
+          title: 'Methods',
+          titleRu: 'Методы',
+          theoryContentRu: 'Метод — это блок кода, который выполняет определённую задачу. '
+              'Методы позволяют переиспользовать код и делают программу более структурированной.\n\n'
+              '► Структура метода:\n'
+              'public static тип_возврата имяМетода(параметры) {\n'
+              '    // тело метода\n'
+              '    return значение;\n'
+              '}\n\n'
+              '► Пример метода, который складывает два числа:\n'
+              'public static int sum(int a, int b) {\n'
+              '    return a + b;\n'
+              '}\n\n'
+              'Вызов метода:\n'
+              'int result = sum(5, 3);\n'
+              'System.out.println(result); // 8\n\n'
+              '► Метод может не возвращать значение (тип void):\n'
+              'public static void greet(String name) {\n'
+              '    System.out.println("Привет, " + name + "!");\n'
+              '}\n\n'
+              '► Параметры — это входные данные, которые метод принимает.\n'
+              '► Аргументы — это конкретные значения, передаваемые при вызове.\n\n'
+              'Методы делают код:\n'
+              '• Более читаемым — имя метода объясняет, что он делает\n'
+              '• Переиспользуемым — вызвали метод, не копируя код\n'
+              '• Тестируемым — каждый метод можно проверить отдельно',
+          quizPromptRu: 'Какое ключевое слово указывает, что метод ничего не возвращает?',
+          quizOptions: <String>['null', 'void', 'empty'],
+          correctQuizIndex: 1,
+          quizExplanationRu: 'void означает, что метод не возвращает значение. Если метод возвращает значение, указывается его тип (int, double, String и т.д.).',
+        ),
       ],
     ),
     _OopModuleDraft(
@@ -3182,7 +3386,7 @@ List<DemoModuleSeed> _oopModules() {
     ),
   ];
 
-  return moduleDrafts
+  final modules = moduleDrafts
       .asMap()
       .entries
       .map((moduleEntry) {
@@ -3218,7 +3422,10 @@ List<DemoModuleSeed> _oopModules() {
           ),
         );
       })
-      .toList(growable: false);
+      .toList(growable: true);
+
+  modules.add(oopMidtermModuleSeed());
+  return modules;
 }
 
 DemoLessonSeed _oopLesson({
@@ -3228,6 +3435,59 @@ DemoLessonSeed _oopLesson({
   required String moduleTitleRu,
   required _OopLessonDraft lesson,
 }) {
+  final hasRichContent = lesson.theoryContentRu != null;
+
+  if (hasRichContent) {
+    final lessonCode =
+        '// Тема: ${lesson.titleRu}\nSystem.out.println("${lesson.titleRu}");\nSystem.out.println("Учим Java!");';
+
+    return _lesson(
+      id: 'oop_lesson_${moduleNumber}_$lessonNumber',
+      title: lesson.title,
+      titleRu: lesson.titleRu,
+      trackTitle: 'OOP',
+      summary: 'Урок: ${lesson.titleRu}.',
+      summaryRu: 'Урок: ${lesson.titleRu}.',
+      outcome: 'You can explain ${lesson.title} in Java.',
+      outcomeRu:
+          'Вы можете объяснить тему "${lesson.titleRu}" на Java.',
+      theoryContentRu: lesson.theoryContentRu,
+      codeSnippet: lessonCode,
+      output: '${lesson.titleRu}\nУчим Java!',
+      quizPrompt: 'Which lesson topic does the example print?',
+      quizPromptRu: lesson.quizPromptRu ?? 'Какую тему урока выводит пример?',
+      quizOptions: lesson.quizOptions.length > 1
+          ? lesson.quizOptions
+          : <String>[lesson.titleRu, moduleTitleRu, 'OOP'],
+      correctQuizIndex: lesson.quizOptions.length > 1
+          ? lesson.correctQuizIndex
+          : 0,
+      quizExplanation: 'The example prints the current lesson title.',
+      quizExplanationRu: lesson.quizExplanationRu ?? 'Пример выводит название текущего урока.',
+      keyPoints: <String>[
+        'Connect the topic to Java syntax and object design.',
+        'Name the purpose of the concept before writing code.',
+        'Use a short example to check understanding.',
+      ],
+      keyPointsRu: <String>[
+        'Связать тему с синтаксисом Java и проектированием объектов.',
+        'Назвать назначение концепции до написания кода.',
+        'Закрепить понимание коротким примером.',
+      ],
+      promptSuggestion: 'Create a short Java explanation for ${lesson.title}.',
+      promptSuggestionRu:
+          'Составь короткое объяснение по теме "${lesson.titleRu}" на Java.',
+      trainer: DemoTrainerSeed.matchOutput(
+        title: 'Проверка темы урока',
+        instruction: 'Выберите строку, которую напечатает пример.',
+        prompt: lessonCode,
+        options: <String>[lesson.titleRu, moduleTitleRu, 'OOP'],
+        correctIndex: 0,
+      ),
+    );
+  }
+
+  // Fallback for lessons without rich content
   final lessonCode =
       '// Тема: ${lesson.titleRu}\nSystem.out.println("${lesson.titleRu}");';
 
@@ -3254,11 +3514,15 @@ DemoLessonSeed _oopLesson({
     codeSnippet: lessonCode,
     output: lesson.titleRu,
     quizPrompt: 'Which lesson topic does the example print?',
-    quizPromptRu: 'Какую тему урока выводит пример?',
-    quizOptions: <String>[lesson.titleRu, moduleTitleRu, 'OOP'],
-    correctQuizIndex: 0,
+    quizPromptRu: lesson.quizPromptRu ?? 'Какую тему урока выводит пример?',
+    quizOptions: lesson.quizOptions.length > 1
+        ? lesson.quizOptions
+        : <String>[lesson.titleRu, moduleTitleRu, 'OOP'],
+    correctQuizIndex: lesson.quizOptions.length > 1
+        ? lesson.correctQuizIndex
+        : 0,
     quizExplanation: 'The example prints the current lesson title.',
-    quizExplanationRu: 'Пример выводит название текущего урока.',
+    quizExplanationRu: lesson.quizExplanationRu ?? 'Пример выводит название текущего урока.',
     promptSuggestion: 'Create a short Java explanation for ${lesson.title}.',
     promptSuggestionRu:
         'Составь короткое объяснение по теме "${lesson.titleRu}" на Java.',

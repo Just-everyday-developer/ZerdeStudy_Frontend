@@ -26,6 +26,7 @@ class _AppGuideOverlayHostState extends ConsumerState<AppGuideOverlayHost> {
     final step = guideState.currentStep;
 
     return Stack(
+      fit: StackFit.expand,
       children: [
         widget.child,
         if (guideState.isActive && step != null)
@@ -142,6 +143,10 @@ class _GuideOverlaySurfaceState extends ConsumerState<_GuideOverlaySurface> {
     final colors = context.appColors;
     final mediaQuery = MediaQuery.of(context);
     final overlayBox = context.findRenderObject() as RenderBox?;
+    final overlaySize =
+        overlayBox != null && overlayBox.hasSize && !overlayBox.size.isEmpty
+        ? overlayBox.size
+        : mediaQuery.size;
     final targetRect = _resolveTargetRect(overlayBox);
     final spotlightRect = _inflateRect(
       targetRect,
@@ -173,6 +178,7 @@ class _GuideOverlaySurfaceState extends ConsumerState<_GuideOverlaySurface> {
               _buildPositionedCard(
                 context: context,
                 mediaQuery: mediaQuery,
+                overlaySize: overlaySize,
                 spotlightRect: spotlightRect,
                 copy: copy,
               ),
@@ -215,10 +221,11 @@ class _GuideOverlaySurfaceState extends ConsumerState<_GuideOverlaySurface> {
   Widget _buildPositionedCard({
     required BuildContext context,
     required MediaQueryData mediaQuery,
+    required Size overlaySize,
     required Rect? spotlightRect,
     required AppGuidePanelCopy copy,
   }) {
-    final size = mediaQuery.size;
+    final size = overlaySize;
     final safePadding = mediaQuery.padding;
     final isCompletion = widget.step.id == AppGuideStepId.completion;
     final compactCard = size.width < 640;
@@ -226,26 +233,48 @@ class _GuideOverlaySurfaceState extends ConsumerState<_GuideOverlaySurface> {
     final cardWidth = compactCard
         ? size.width - (horizontalMargin * 2)
         : math.min(392.0, size.width * 0.42);
+    final maxCardHeight = math.max(
+      240.0,
+      size.height - safePadding.top - safePadding.bottom - 32,
+    );
+    final compactCardHeight = math.min(
+      maxCardHeight,
+      math.max(320.0, size.height * 0.58),
+    );
     final largeSpotlight =
         spotlightRect != null &&
         (spotlightRect.height >= size.height * 0.58 ||
             spotlightRect.width >= size.width * 0.8);
 
-    final card = Hero(
-      tag: 'app-guide-card',
-      child: Material(
-        color: Colors.transparent,
-        child: _GuideCard(
-          copy: copy,
-          currentIndex: widget.currentIndex,
-          totalSteps: widget.totalSteps,
-          isCompletion: isCompletion,
-          onNext: ref.read(appGuideControllerProvider.notifier).next,
-          onClose: ref.read(appGuideControllerProvider.notifier).dismiss,
-        ),
+    final card = Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        width: cardWidth,
+        height: compactCard ? compactCardHeight : null,
+        child: compactCard
+            ? _GuideCard(
+                copy: copy,
+                currentIndex: widget.currentIndex,
+                totalSteps: widget.totalSteps,
+                isCompletion: isCompletion,
+                bodyScrolls: true,
+                onNext: ref.read(appGuideControllerProvider.notifier).next,
+                onClose: ref.read(appGuideControllerProvider.notifier).dismiss,
+              )
+            : SingleChildScrollView(
+                child: _GuideCard(
+                  copy: copy,
+                  currentIndex: widget.currentIndex,
+                  totalSteps: widget.totalSteps,
+                  isCompletion: isCompletion,
+                  onNext: ref.read(appGuideControllerProvider.notifier).next,
+                  onClose: ref
+                      .read(appGuideControllerProvider.notifier)
+                      .dismiss,
+                ),
+              ),
       ),
     );
-
     if (isCompletion ||
         widget.step.panelSide == AppGuidePanelSide.center ||
         largeSpotlight ||
@@ -253,12 +282,7 @@ class _GuideOverlaySurfaceState extends ConsumerState<_GuideOverlaySurface> {
       return Positioned.fill(
         child: SafeArea(
           minimum: const EdgeInsets.all(16),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: cardWidth),
-              child: card,
-            ),
-          ),
+          child: Center(child: card),
         ),
       );
     }
@@ -289,27 +313,40 @@ class _GuideOverlaySurfaceState extends ConsumerState<_GuideOverlaySurface> {
         spotlightRect.bottom -
         safePadding.bottom -
         horizontalMargin;
-    final showBelow = switch (widget.step.panelSide) {
+    const minComfortablePanelSpace = 440.0;
+    var showBelow = switch (widget.step.panelSide) {
       AppGuidePanelSide.below => true,
       AppGuidePanelSide.above => false,
       AppGuidePanelSide.auto => availableBelow >= availableAbove,
       AppGuidePanelSide.center => true,
     };
 
+    if (!showBelow &&
+        availableAbove < minComfortablePanelSpace &&
+        availableBelow > availableAbove) {
+      showBelow = true;
+    } else if (showBelow &&
+        availableBelow < minComfortablePanelSpace &&
+        availableAbove > availableBelow) {
+      showBelow = false;
+    }
+
     if (showBelow) {
       return Positioned(
         left: clampedLeft,
         width: cardWidth,
         top: spotlightRect.bottom + 18,
-        child: card,
+        bottom: math.max(16.0, safePadding.bottom) + 16,
+        child: Align(alignment: Alignment.topCenter, child: card),
       );
     }
 
     return Positioned(
       left: clampedLeft,
       width: cardWidth,
+      top: safePadding.top + 16,
       bottom: size.height - spotlightRect.top + 18,
-      child: card,
+      child: Align(alignment: Alignment.bottomCenter, child: card),
     );
   }
 }
@@ -320,6 +357,7 @@ class _GuideCard extends StatelessWidget {
     required this.currentIndex,
     required this.totalSteps,
     required this.isCompletion,
+    this.bodyScrolls = false,
     required this.onNext,
     required this.onClose,
   });
@@ -328,12 +366,146 @@ class _GuideCard extends StatelessWidget {
   final int currentIndex;
   final int totalSteps;
   final bool isCompletion;
+  final bool bodyScrolls;
   final Future<void> Function() onNext;
   final Future<void> Function() onClose;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final header = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            color: colors.primary.withValues(alpha: 0.14),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.28)),
+          ),
+          child: Text(
+            AppGuideCopy.stepCounter(
+              context,
+              current: currentIndex,
+              total: totalSteps,
+              isCompletion: isCompletion,
+            ),
+            style: TextStyle(
+              color: colors.primary,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        const Spacer(),
+        Semantics(
+          label: AppGuideCopy.closeTooltip(context),
+          button: true,
+          child: IconButton(
+            onPressed: onClose,
+            icon: Icon(Icons.close_rounded, color: colors.textSecondary),
+          ),
+        ),
+      ],
+    );
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 6),
+        Text(
+          copy.title,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w900,
+            height: 1.15,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          copy.body,
+          style: TextStyle(color: colors.textSecondary, height: 1.45),
+        ),
+        if (copy.tips.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Text(
+            AppGuideCopy.tipsTitle(context),
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...copy.tips.map(
+            (tip) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.bolt_rounded, color: colors.primary, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      tip,
+                      style: TextStyle(color: colors.textPrimary, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (copy.hotkeys.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            AppGuideCopy.hotkeysTitle(context),
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: copy.hotkeys
+                .map(
+                  (hotkey) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      color: colors.backgroundElevated,
+                      border: Border.all(color: colors.divider),
+                    ),
+                    child: Text(
+                      hotkey,
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+      ],
+    );
+    final footer = Align(
+      alignment: Alignment.centerRight,
+      child: FilledButton.icon(
+        key: const ValueKey<String>('app-guide-next-button'),
+        onPressed: onNext,
+        icon: Icon(
+          isCompletion
+              ? Icons.rocket_launch_rounded
+              : Icons.arrow_forward_rounded,
+        ),
+        label: Text(copy.actionLabel ?? AppGuideCopy.nextLabel(context)),
+      ),
+    );
 
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
@@ -349,143 +521,22 @@ class _GuideCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  color: colors.primary.withValues(alpha: 0.14),
-                  border: Border.all(
-                    color: colors.primary.withValues(alpha: 0.28),
-                  ),
-                ),
-                child: Text(
-                  AppGuideCopy.stepCounter(
-                    context,
-                    current: currentIndex,
-                    total: totalSteps,
-                    isCompletion: isCompletion,
-                  ),
-                  style: TextStyle(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                onPressed: onClose,
-                icon: Icon(Icons.close_rounded, color: colors.textSecondary),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            copy.title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-              height: 1.15,
+      child: bodyScrolls
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                header,
+                const SizedBox(height: 8),
+                Expanded(child: SingleChildScrollView(child: body)),
+                const SizedBox(height: 14),
+                footer,
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [header, body, const SizedBox(height: 18), footer],
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            copy.body,
-            style: TextStyle(color: colors.textSecondary, height: 1.45),
-          ),
-          if (copy.tips.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(
-              AppGuideCopy.tipsTitle(context),
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            ...copy.tips.map(
-              (tip) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.bolt_rounded, color: colors.primary, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        tip,
-                        style: TextStyle(
-                          color: colors.textPrimary,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          if (copy.hotkeys.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              AppGuideCopy.hotkeysTitle(context),
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: copy.hotkeys
-                  .map(
-                    (hotkey) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        color: colors.backgroundElevated,
-                        border: Border.all(color: colors.divider),
-                      ),
-                      child: Text(
-                        hotkey,
-                        style: TextStyle(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-          ],
-          const SizedBox(height: 18),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              onPressed: onNext,
-              icon: Icon(
-                isCompletion
-                    ? Icons.rocket_launch_rounded
-                    : Icons.arrow_forward_rounded,
-              ),
-              label: Text(copy.actionLabel ?? AppGuideCopy.nextLabel(context)),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

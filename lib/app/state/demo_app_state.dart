@@ -15,6 +15,7 @@ class DemoAppState {
     required this.focusedLessonId,
     required this.focusedPracticeId,
     required this.completedLessonIds,
+    required this.startedLessonIds,
     required this.completedPracticeIds,
     required this.completedQuizIds,
     required this.completedTrainerIds,
@@ -51,6 +52,7 @@ class DemoAppState {
   final String currentTrackId;
   final String? focusedLessonId;
   final String? focusedPracticeId;
+  final Set<String> startedLessonIds;
   final Set<String> completedLessonIds;
   final Set<String> completedPracticeIds;
   final Set<String> completedQuizIds;
@@ -116,6 +118,7 @@ class DemoAppState {
     Object? focusedLessonId = _sentinel,
     Object? focusedPracticeId = _sentinel,
     Set<String>? completedLessonIds,
+    Set<String>? startedLessonIds,
     Set<String>? completedPracticeIds,
     Set<String>? completedQuizIds,
     Set<String>? completedTrainerIds,
@@ -153,6 +156,8 @@ class DemoAppState {
       focusedPracticeId: identical(focusedPracticeId, _sentinel)
           ? this.focusedPracticeId
           : focusedPracticeId as String?,
+      startedLessonIds:
+          startedLessonIds ?? Set<String>.from(this.startedLessonIds),
       completedLessonIds:
           completedLessonIds ?? Set<String>.from(this.completedLessonIds),
       completedPracticeIds:
@@ -278,6 +283,10 @@ class DemoAppState {
       currentTrackId: json['currentTrackId'] as String? ?? 'fundamentals',
       focusedLessonId: json['focusedLessonId'] as String?,
       focusedPracticeId: json['focusedPracticeId'] as String?,
+      startedLessonIds: Set<String>.from(
+        (json['startedLessonIds'] as List<dynamic>? ?? <dynamic>[])
+            .cast<String>(),
+      ),
       completedLessonIds: Set<String>.from(
         (json['completedLessonIds'] as List<dynamic>? ?? <dynamic>[])
             .cast<String>(),
@@ -364,8 +373,8 @@ class DemoAppState {
                 ),
               ),
       xp: json['xp'] as int? ?? 240,
-      streak: json['streak'] as int? ?? 4,
-      maxStreak: json['maxStreak'] as int? ?? 4,
+      streak: json['streak'] as int? ?? 0,
+      maxStreak: json['maxStreak'] as int? ?? 0,
       dailyMissionDone: json['dailyMissionDone'] as bool? ?? false,
       weeklyActivity: List<int>.from(
         (json['weeklyActivity'] as List<dynamic>? ??

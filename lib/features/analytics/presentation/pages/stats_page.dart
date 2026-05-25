@@ -12,6 +12,7 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/common_widgets/bubble_progress_bar.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 
 enum StatsTab { analytics, progress }
 
@@ -59,6 +60,9 @@ class _StatsPageState extends ConsumerState<StatsPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
+    final backendStreak = ref
+        .watch(backendStreakProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
     final catalog = ref.watch(demoCatalogProvider);
     final colors = context.appColors;
     final locale = state.locale;
@@ -97,7 +101,8 @@ class _StatsPageState extends ConsumerState<StatsPage> {
     final liveXpVal = state.xp > 0 ? state.xp : 1450;
     final solvedTasksVal = totalSolvedTasks > 0 ? totalSolvedTasks : 87;
     final aiTopicsVal = aiQueries > 0 ? aiQueries : 24;
-    final streakDaysVal = state.streak > 0 ? state.streak : 12;
+    final effectiveStreak = backendStreak?.streak ?? state.streak;
+    final streakDaysVal = effectiveStreak > 0 ? effectiveStreak : 12;
 
     // 100% REAL LIVE GRAPH HISTORIES
     final List<double> quizAccuracyHistory = [
@@ -593,7 +598,7 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                 xp: '${state.xp}',
                 level: '${state.level}',
                 xpToNextLevel: '${state.xpToNextLevel} XP',
-                streak: '${state.streak}d',
+                streak: '${effectiveStreak}d',
                 completedUnits: '${catalog.totalCompletedUnits(state)}/${catalog.totalUnits()}',
                 unlockedAchievements: '$unlockedAchievements',
                 passedAssessments: '$passedAssessments/${state.assessmentResultsByTrackId.length}',
@@ -708,16 +713,13 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                             style: TextStyle(color: colors.textSecondary),
                           ),
                           const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: LinearProgressIndicator(
-                              value: total == 0 ? 0 : completed / total,
-                              minHeight: 8,
-                              backgroundColor: colors.backgroundElevated,
-                              color: zone == TrackZone.computerScienceCore
-                                  ? colors.primary
-                                  : colors.accent,
-                            ),
+                          BubbleProgressBar(
+                            value: total == 0 ? 0 : completed / total,
+                            height: 8,
+                            backgroundColor: colors.backgroundElevated,
+                            color: zone == TrackZone.computerScienceCore
+                                ? colors.primary
+                                : colors.accent,
                           ),
                         ],
                       ),

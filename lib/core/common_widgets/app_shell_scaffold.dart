@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/routing/app_routes.dart';
@@ -75,6 +76,23 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
   void _requestSearchFocus() {
     ref.read(courseSearchFocusRequestProvider.notifier).ping();
   }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is KeyDownEvent &&
+        HardwareKeyboard.instance.isControlPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyK) {
+      _onDestinationSelected(2);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _requestSearchFocus();
+        }
+      });
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -113,81 +131,85 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
       ),
     ];
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) {
-          return;
-        }
-        await _handleBack();
-      },
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 700;
-          final currentNavigator = widget
-              .navigatorKeys[widget.navigationShell.currentIndex]
-              .currentState;
-          final canGoBack = currentNavigator?.canPop() ?? false;
-          final shellBody = compact
-              ? widget.navigationShell
-              : Column(
-                  children: [
-                    _DesktopShellBar(
-                      destinations: destinations
-                          .take(4)
-                          .toList(growable: false),
-                      currentIndex: widget.navigationShell.currentIndex,
-                      currentUserName: state.user?.name ?? 'Talgat',
-                      currentUserAvatarBase64: state.user?.avatarBase64,
-                      onDestinationSelected: _onDestinationSelected,
-                      onBackTap: () => _handleBack(),
-                      onSearchTap: () {
-                        _onDestinationSelected(2);
-                        _requestSearchFocus();
-                      },
-                      onProfileTap: () =>
-                          context.push(AppRoutes.profilePreview),
-                      onSettingsTap: () => showAppSettingsPanel(context),
-                      onLocaleSelected: ref
-                          .read(demoAppControllerProvider.notifier)
-                          .changeLocale,
-                      currentLocale: state.locale,
-                      canGoBack: canGoBack,
-                    ),
-                    Divider(height: 1, color: colors.divider),
-                    Expanded(
-                      child: MediaQuery.removePadding(
-                        context: context,
-                        removeTop: true,
-                        child: widget.navigationShell,
-                      ),
-                    ),
-                  ],
-                );
-
-          return Scaffold(
-            backgroundColor: colors.background,
-            body: shellBody,
-            bottomNavigationBar: compact
-                ? AppGuideTarget(
-                    id: AppGuideTargetIds.shellNavigation,
-                    child: NavigationBar(
-                      selectedIndex: widget.navigationShell.currentIndex,
-                      onDestinationSelected: _onDestinationSelected,
-                      destinations: destinations
-                          .map(
-                            (destination) => NavigationDestination(
-                              icon: Icon(destination.icon),
-                              selectedIcon: Icon(destination.selectedIcon),
-                              label: destination.label,
-                            ),
-                          )
-                          .toList(growable: false),
-                    ),
-                  )
-                : null,
-          );
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) {
+            return;
+          }
+          await _handleBack();
         },
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 700;
+            final currentNavigator = widget
+                .navigatorKeys[widget.navigationShell.currentIndex]
+                .currentState;
+            final canGoBack = currentNavigator?.canPop() ?? false;
+            final shellBody = compact
+                ? widget.navigationShell
+                : Column(
+                    children: [
+                      _DesktopShellBar(
+                        destinations: destinations
+                            .take(4)
+                            .toList(growable: false),
+                        currentIndex: widget.navigationShell.currentIndex,
+                        currentUserName: state.user?.name ?? 'Talgat',
+                        currentUserAvatarBase64: state.user?.avatarBase64,
+                        onDestinationSelected: _onDestinationSelected,
+                        onBackTap: () => _handleBack(),
+                        onSearchTap: () {
+                          _onDestinationSelected(2);
+                          _requestSearchFocus();
+                        },
+                        onProfileTap: () =>
+                            context.push(AppRoutes.profilePreview),
+                        onSettingsTap: () => showAppSettingsPanel(context),
+                        onLocaleSelected: ref
+                            .read(demoAppControllerProvider.notifier)
+                            .changeLocale,
+                        currentLocale: state.locale,
+                        canGoBack: canGoBack,
+                      ),
+                      Divider(height: 1, color: colors.divider),
+                      Expanded(
+                        child: MediaQuery.removePadding(
+                          context: context,
+                          removeTop: true,
+                          child: widget.navigationShell,
+                        ),
+                      ),
+                    ],
+                  );
+
+            return Scaffold(
+              backgroundColor: colors.background,
+              body: shellBody,
+              bottomNavigationBar: compact
+                  ? AppGuideTarget(
+                      id: AppGuideTargetIds.shellNavigation,
+                      child: NavigationBar(
+                        selectedIndex: widget.navigationShell.currentIndex,
+                        onDestinationSelected: _onDestinationSelected,
+                        destinations: destinations
+                            .map(
+                              (destination) => NavigationDestination(
+                                icon: Icon(destination.icon),
+                                selectedIcon: Icon(destination.selectedIcon),
+                                label: destination.label,
+                              ),
+                            )
+                            .toList(growable: false),
+                      ),
+                    )
+                  : null,
+            );
+          },
+        ),
       ),
     );
   }
@@ -411,4 +433,3 @@ class _ShellDestination {
   final IconData icon;
   final IconData selectedIcon;
 }
-

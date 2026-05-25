@@ -160,8 +160,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          const SizedBox(height: 16),
           TechTextField(
             hint: l10n.text('password'),
             icon: Icons.lock_outline_rounded,

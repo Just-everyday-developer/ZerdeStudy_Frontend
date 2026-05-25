@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/state/demo_moderator_data.dart';
+import '../../../../core/common_widgets/bubble_progress_bar.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
 class ModeratorCoursesPage extends ConsumerStatefulWidget {
@@ -453,14 +454,11 @@ class _CourseReviewPanel extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              backgroundColor: colors.surfaceSoft,
-                              valueColor: const AlwaysStoppedAnimation(_kGreen),
-                              minHeight: 6,
-                            ),
+                          child: BubbleProgressBar(
+                            value: progress,
+                            height: 6,
+                            backgroundColor: colors.surfaceSoft,
+                            color: _kGreen,
                           ),
                         ),
                         const SizedBox(width: 10),

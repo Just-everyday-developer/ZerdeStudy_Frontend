@@ -458,6 +458,16 @@ class AppLocalizations {
       AppLocale.en: 'Presentation-ready clickable MVP',
       AppLocale.kk: 'Презентацияға дайын кликабельді MVP',
     },
+    'ai_chat_rename': {
+      AppLocale.ru: 'Переименовать чат',
+      AppLocale.en: 'Rename Chat',
+      AppLocale.kk: 'Чат атын өзгерту',
+    },
+    'ai_chat_title_label': {
+      AppLocale.ru: 'Название чата',
+      AppLocale.en: 'Chat Title',
+      AppLocale.kk: 'Чат атауы',
+    },
     'continue_learning': {
       AppLocale.ru: 'Продолжить обучение',
       AppLocale.en: 'Continue learning',
@@ -517,6 +527,11 @@ class AppLocalizations {
       AppLocale.ru: 'Войти через',
       AppLocale.en: 'Continue with',
       AppLocale.kk: 'Мына арқылы кіру',
+    },
+    'signup_with': {
+      AppLocale.ru: 'Создать аккаунт через',
+      AppLocale.en: 'Sign up with',
+      AppLocale.kk: 'Мына арқылы тіркелу',
     },
     'invalid_email': {
       AppLocale.ru: 'Введите корректный email',
@@ -654,6 +669,11 @@ class AppLocalizations {
       AppLocale.ru: 'Завершить урок',
       AppLocale.en: 'Complete lesson',
       AppLocale.kk: 'Сабақты аяқтау',
+    },
+    'previous_lesson': {
+      AppLocale.ru: 'Предыдущий урок',
+      AppLocale.en: 'Previous lesson',
+      AppLocale.kk: 'Алдыңғы сабақ',
     },
     'complete_practice': {
       AppLocale.ru: 'Завершить практику',
@@ -1468,6 +1488,16 @@ class AppLocalizations {
       AppLocale.ru: 'Открыть курс',
       AppLocale.en: 'Open course',
       AppLocale.kk: 'Курсты ашу',
+    },
+    'course_price_free': {
+      AppLocale.ru: 'Бесплатно',
+      AppLocale.en: 'Free',
+      AppLocale.kk: 'Тегін',
+    },
+    'course_price_loading': {
+      AppLocale.ru: 'Цена загружается…',
+      AppLocale.en: 'Loading price…',
+      AppLocale.kk: 'Баға жүктелуде…',
     },
     'course_rate_prompt': {
       AppLocale.ru: 'Оцените курс',

@@ -1,26 +1,31 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../core/config/app_environment.dart';
-import '../../../../core/network/api_exception.dart';
-import '../../../../core/network/json_http_client.dart';
-import '../../application/usecases/request_password_reset.dart';
-import '../../application/usecases/login_with_email.dart';
-import '../../application/usecases/logout_current_session.dart';
-import '../../application/usecases/refresh_auth_session.dart';
-import '../../application/usecases/register_with_email.dart';
-import '../../application/usecases/reset_password.dart';
-import '../../application/usecases/restore_auth_session.dart';
-import '../../data/datasources/auth_local_data_source.dart';
-import '../../data/datasources/auth_remote_data_source.dart';
-import '../../data/repositories/auth_repository_impl.dart';
-import '../../domain/entities/auth_role.dart';
-import '../../domain/entities/auth_session.dart';
-import '../../domain/entities/auth_user.dart';
-import '../../domain/repositories/auth_repository.dart';
+import 'package:frontend_flutter/core/auth/oauth_redirect.dart';
+import 'package:frontend_flutter/core/config/app_environment.dart';
+import 'package:frontend_flutter/core/network/api_exception.dart';
+import 'package:frontend_flutter/core/network/json_http_client.dart';
+import 'package:frontend_flutter/app/state/app_experience.dart';
+import 'package:frontend_flutter/app/state/demo_app_controller.dart';
+import 'package:frontend_flutter/features/auth/application/usecases/request_password_reset.dart';
+import 'package:frontend_flutter/features/auth/application/usecases/login_with_email.dart';
+import 'package:frontend_flutter/features/auth/application/usecases/logout_current_session.dart';
+import 'package:frontend_flutter/features/auth/application/usecases/refresh_auth_session.dart';
+import 'package:frontend_flutter/features/auth/application/usecases/register_with_email.dart';
+import 'package:frontend_flutter/features/auth/application/usecases/reset_password.dart';
+import 'package:frontend_flutter/features/auth/application/usecases/restore_auth_session.dart';
+import 'package:frontend_flutter/features/auth/data/datasources/auth_local_data_source.dart';
+import 'package:frontend_flutter/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:frontend_flutter/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:frontend_flutter/features/auth/domain/entities/auth_role.dart';
+import 'package:frontend_flutter/features/auth/domain/entities/auth_session.dart';
+import 'package:frontend_flutter/features/auth/domain/entities/auth_user.dart';
+import 'package:frontend_flutter/features/auth/domain/repositories/auth_repository.dart';
 import 'auth_state.dart';
 
 final authSharedPreferencesProvider = Provider<SharedPreferences>((ref) {
@@ -109,8 +114,11 @@ class AuthController extends Notifier<AuthState> {
   Future<String?> register({required String email, required String password}) {
     return _runSessionAction(
       status: AuthStatus.submitting,
-      operation: () =>
-          ref.read(registerWithEmailProvider)(email: email, password: password),
+      operation: () => ref.read(registerWithEmailProvider)(
+        email: email,
+        password: password,
+        platform: _getPlatform(),
+      ),
     );
   }
 
@@ -153,6 +161,76 @@ class AuthController extends Notifier<AuthState> {
     );
 
     state = AuthState.authenticated(session);
+  }
+
+  Future<String?> signInWithGoogle() async {
+    state = state.copyWith(status: AuthStatus.submitting, errorMessage: null);
+    try {
+      final platform = _getPlatform();
+      final redirectUri = OAuthRedirectConfig.google();
+      final url = await ref.read(authRepositoryProvider).getGoogleAuthUrl(
+            redirectUri: redirectUri,
+            platform: platform,
+          );
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        // User continues in the system browser; keep UI usable until deep link / web callback.
+        state = const AuthState.unauthenticated();
+        return null;
+      } else {
+        throw Exception('Could not launch Google Auth URL');
+      }
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: e.toString(),
+      );
+      return e.toString();
+    }
+  }
+
+  Future<String?> signInWithGithub() async {
+    state = state.copyWith(status: AuthStatus.submitting, errorMessage: null);
+    try {
+      final redirectUri = OAuthRedirectConfig.github();
+      final url = await ref.read(authRepositoryProvider).getGithubAuthUrl(redirectUri: redirectUri);
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        state = const AuthState.unauthenticated();
+        return null;
+      } else {
+        throw Exception('Could not launch Github Auth URL');
+      }
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: e.toString(),
+      );
+      return e.toString();
+    }
+  }
+
+  Future<String?> handleGoogleCallback(String code) {
+    return _runSessionAction(
+      status: AuthStatus.submitting,
+      operation: () => ref.read(authRepositoryProvider).googleCallback(
+            code,
+            platform: _getPlatform(),
+            redirectUri: OAuthRedirectConfig.google(),
+          ),
+    );
+  }
+
+  Future<String?> handleGithubCallback(String code) {
+    return _runSessionAction(
+      status: AuthStatus.submitting,
+      operation: () => ref.read(authRepositoryProvider).githubCallback(
+            code,
+            redirectUri: OAuthRedirectConfig.github(),
+          ),
+    );
   }
 
   Future<String?> refreshSession() {
@@ -216,6 +294,19 @@ class AuthController extends Notifier<AuthState> {
         state = const AuthState.unauthenticated();
         return;
       }
+
+      // Update active experience based on user's primary role
+      final role = session.user.roles.firstOrNull?.code;
+      if (role != null) {
+        final experience = switch (role) {
+          'teacher' => AppExperience.teacher,
+          'manager' => AppExperience.moderator,
+          'admin' => AppExperience.admin,
+          _ => AppExperience.student,
+        };
+        ref.read(demoAppControllerProvider.notifier).setActiveExperience(experience);
+      }
+
       state = AuthState.authenticated(session);
     } on ApiException catch (error) {
       state = AuthState.unauthenticated(errorMessage: error.message);
@@ -235,6 +326,19 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final session = await operation();
+      
+      // Update active experience based on user's primary role
+      final role = session.user.roles.firstOrNull?.code;
+      if (role != null) {
+        final experience = switch (role) {
+          'teacher' => AppExperience.teacher,
+          'manager' => AppExperience.moderator,
+          'admin' => AppExperience.admin,
+          _ => AppExperience.student,
+        };
+        ref.read(demoAppControllerProvider.notifier).setActiveExperience(experience);
+      }
+
       state = AuthState.authenticated(session);
       return null;
     } on ApiException catch (error) {
@@ -281,6 +385,20 @@ class AuthController extends Notifier<AuthState> {
           ? const AuthState.unauthenticated(errorMessage: message)
           : AuthState.authenticated(previousSession, errorMessage: message);
       return message;
+    }
+  }
+  String _getPlatform() {
+    if (kIsWeb) return 'web';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'android';
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+        return 'desktop';
+      default:
+        return 'web';
     }
   }
 }

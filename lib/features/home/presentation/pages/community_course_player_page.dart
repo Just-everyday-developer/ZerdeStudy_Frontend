@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
@@ -109,6 +111,8 @@ class _CommunityCoursePlayerPageState
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
           children: [
+            _courseBackButton(context),
+            const SizedBox(height: 12),
             _heroCard(
               course,
               lesson,
@@ -185,6 +189,8 @@ class _CommunityCoursePlayerPageState
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 40),
       children: [
+        _courseBackButton(context),
+        const SizedBox(height: 12),
         _heroCard(course, lesson, earnedPoints, totalPoints, percent),
         const SizedBox(height: 16),
         _objectiveCard(lesson),
@@ -246,6 +252,24 @@ class _CommunityCoursePlayerPageState
         ),
       ],
     );
+  }
+
+  Widget _courseBackButton(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton.icon(
+        onPressed: _goBackFromCoursePlayer,
+        icon: const Icon(Icons.arrow_back_rounded),
+        label: Text(MaterialLocalizations.of(context).backButtonTooltip),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        ),
+      ),
+    );
+  }
+
+  void _goBackFromCoursePlayer() {
+    context.go(AppRoutes.learn);
   }
 
   Widget _sidebar(

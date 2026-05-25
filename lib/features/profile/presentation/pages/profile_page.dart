@@ -22,7 +22,8 @@ import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/app_settings_panel.dart';
 import '../../../../core/common_widgets/app_user_avatar.dart';
-import '../../../../core/common_widgets/glow_card.dart';
+import '../../../../core/common_widgets/bubble_progress_bar.dart';
+
 
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -41,6 +42,10 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
+    final backendStreak = ref
+        .watch(backendStreakProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
+    final effectiveStreak = backendStreak?.streak ?? state.streak;
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
     final l10n = context.l10n;
@@ -227,31 +232,22 @@ class ProfilePage extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 18),
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            Expanded(
-                              child: _Pill(label: 'XP', value: '${state.xp}'),
+                            _Pill(label: 'XP', value: '${state.xp}'),
+                            _Pill(
+                              label: l10n.text('level'),
+                              value: '${state.level}',
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _Pill(
-                                label: l10n.text('level'),
-                                value: '${state.level}',
-                              ),
+                            _Pill(
+                              label: l10n.text('streak'),
+                              value: '${effectiveStreak}d',
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _Pill(
-                                label: l10n.text('streak'),
-                                value: '${state.streak}d',
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _Pill(
-                                label: l10n.locale == AppLocale.ru ? 'Макс. серия' : (l10n.locale == AppLocale.kk ? 'Макс. серия' : 'Max Streak'),
-                                value: '${state.maxStreak}d',
-                              ),
+                            _Pill(
+                              label: l10n.locale == AppLocale.ru ? 'Макс. серия' : (l10n.locale == AppLocale.kk ? 'Макс. серия' : 'Max Streak'),
+                              value: '${state.maxStreak}d',
                             ),
                           ],
                         ),
@@ -330,7 +326,7 @@ class ProfilePage extends ConsumerWidget {
                                 ),
                                 _Pill(
                                   label: l10n.text('streak'),
-                                  value: '${state.streak}d',
+                                  value: '${effectiveStreak}d',
                                 ),
                                 _Pill(
                                   label: l10n.locale == AppLocale.ru ? 'Макс. серия' : (l10n.locale == AppLocale.kk ? 'Макс. серия' : 'Max Streak'),
@@ -341,7 +337,6 @@ class ProfilePage extends ConsumerWidget {
                           ],
                         ),
                       ),
-
                     ],
                   );
                 },
@@ -349,8 +344,14 @@ class ProfilePage extends ConsumerWidget {
             ),
           ),
           SizedBox(height: compact ? 14 : 16),
-          GlowCard(
-            accent: colors.success,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
+            ),
+            clipBehavior: Clip.hardEdge,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -369,11 +370,12 @@ class ProfilePage extends ConsumerWidget {
                 const SizedBox(height: 14),
                 SizedBox(
                   height: compact
-                      ? 198
+                      ? 220
                       : context.isWideLayout
-                      ? 168
-                      : 190,
+                      ? 210
+                      : 215,
                   child: ListView.separated(
+
                     scrollDirection: Axis.horizontal,
                     itemCount: previewAchievements.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 12),
@@ -400,12 +402,19 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
+
           SizedBox(height: compact ? 14 : 16),
-          GlowCard(
-            accent: colors.primary,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+
                 _SectionPanelHeader(
                   title: l10n.text('certificates'),
                   subtitle: l10n.text('certificates_hint'),
@@ -471,8 +480,13 @@ class ProfilePage extends ConsumerWidget {
             ),
           ),
           SizedBox(height: compact ? 14 : 16),
-          GlowCard(
-            accent: colors.primary,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -544,9 +558,15 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
+
           SizedBox(height: compact ? 14 : 16),
-          GlowCard(
-            accent: colors.accent,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -607,9 +627,15 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
+
           SizedBox(height: compact ? 14 : 16),
-          GlowCard(
-            accent: colors.success,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -635,6 +661,7 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
+
 
           const SizedBox(height: 12),
           AppButton.secondary(
@@ -925,10 +952,15 @@ class _AchievementSection extends StatelessWidget {
     final colors = context.appColors;
     final l10n = context.l10n;
     final gridColumns = context.isWideLayout ? 4 : 2;
-    final gridAspectRatio = context.isWideLayout ? 0.96 : 0.8;
+    final gridAspectRatio = context.isWideLayout ? 0.82 : 0.75;
 
-    return GlowCard(
-      accent: accent,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -979,6 +1011,7 @@ class _AchievementSection extends StatelessWidget {
         ],
       ),
     );
+
   }
 }
 
@@ -1042,7 +1075,7 @@ class _AchievementPreviewCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: isWide ? 6 : 8),
+          SizedBox(height: isWide ? 4 : 6),
           Text(
             achievement.title.resolve(locale),
             maxLines: 2,
@@ -1054,31 +1087,32 @@ class _AchievementPreviewCard extends StatelessWidget {
               fontSize: isWide ? 15 : 16,
             ),
           ),
-          SizedBox(height: isWide ? 4 : 6),
+          SizedBox(height: isWide ? 3 : 4),
           Text(
             achievement.description.resolve(locale),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: colors.textSecondary,
-              fontSize: 11.5,
-              height: 1.25,
+              fontSize: isWide ? 11 : 11.5,
+              height: 1.2,
             ),
           ),
           const Spacer(),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: achievement.fraction,
-              minHeight: 6,
-              backgroundColor: colors.backgroundElevated,
-              color: accent,
-            ),
+          BubbleProgressBar(
+            value: achievement.fraction,
+            height: 6,
+            backgroundColor: colors.backgroundElevated,
+            color: accent,
           ),
-          SizedBox(height: isWide ? 6 : 8),
+          SizedBox(height: isWide ? 4 : 6),
           Text(
             '${achievement.progress}/${achievement.goal}',
-            style: TextStyle(color: accent, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: accent, 
+              fontWeight: FontWeight.w700,
+              fontSize: isWide ? 12 : 13,
+            ),
           ),
         ],
       ),
@@ -1258,11 +1292,11 @@ class _AchievementGridItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 18,
+            radius: 16,
             backgroundColor: accent.withValues(alpha: 0.16),
-            child: Icon(achievement.icon, color: accent, size: 18),
+            child: Icon(achievement.icon, color: accent, size: 16),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             achievement.title.resolve(locale),
             maxLines: 2,
@@ -1270,7 +1304,7 @@ class _AchievementGridItem extends StatelessWidget {
             style: TextStyle(
               color: colors.textPrimary,
               fontWeight: FontWeight.w800,
-              height: 1.2,
+              height: 1.15,
               fontSize: 13,
             ),
           ),
@@ -1282,23 +1316,24 @@ class _AchievementGridItem extends StatelessWidget {
             style: TextStyle(
               color: colors.textSecondary,
               fontSize: 11,
-              height: 1.35,
+              height: 1.3,
             ),
           ),
           const Spacer(),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: achievement.fraction,
-              minHeight: 6,
-              backgroundColor: colors.backgroundElevated,
-              color: accent,
-            ),
+          BubbleProgressBar(
+            value: achievement.fraction,
+            height: 6,
+            backgroundColor: colors.backgroundElevated,
+            color: accent,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             '${achievement.progress}/${achievement.goal}',
-            style: TextStyle(color: accent, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: accent, 
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -1882,5 +1917,4 @@ class _HistoryTile extends StatelessWidget {
     return '$day.$month.${timestamp.year}  $hour:$minute';
   }
 }
-
 

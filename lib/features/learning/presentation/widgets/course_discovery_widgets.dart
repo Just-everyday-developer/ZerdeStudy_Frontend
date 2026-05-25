@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../payment/presentation/providers/payment_providers.dart';
 
 class CourseDiscoverySearchBar extends StatefulWidget {
   const CourseDiscoverySearchBar({
@@ -898,6 +900,224 @@ class CatalogFilterCard extends StatelessWidget {
           const SizedBox(height: 14),
           child,
         ],
+      ),
+    );
+  }
+}
+
+/// Compact, list-tile style course card used on the "See all" catalog page.
+/// Avoids the oversized hero panels that the discovery rails use.
+class DiscoveryCatalogCompactCard extends ConsumerWidget {
+  const DiscoveryCatalogCompactCard({
+    super.key,
+    required this.course,
+    required this.saved,
+    required this.levelLabel,
+    required this.savedLabel,
+    required this.rating,
+    required this.reviewCount,
+    required this.onTap,
+  });
+
+  final CommunityCourse course;
+  final bool saved;
+  final String levelLabel;
+  final String savedLabel;
+  final double rating;
+  final int reviewCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final l10n = context.l10n;
+    final accent = course.color;
+    final priceAsync = ref.watch(coursePriceProvider(course.id));
+    final priceLabel = priceAsync.when(
+      data: (price) {
+        if (price == null || price.amount <= 0) {
+          return l10n.text('course_price_free');
+        }
+        return '${price.amount} ${price.currency}';
+      },
+      loading: () => '…',
+      error: (_, __) => l10n.text('course_price_free'),
+    );
+    final isFree = priceAsync.maybeWhen(
+      data: (price) => price == null || price.amount <= 0,
+      orElse: () => false,
+    );
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: colors.surface,
+          border: Border.all(color: accent.withValues(alpha: 0.22)),
+          boxShadow: [
+            BoxShadow(
+              color: accent.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    accent.withValues(alpha: 0.85),
+                    accent.withValues(alpha: 0.45),
+                  ],
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                course.title.en.isEmpty
+                    ? '?'
+                    : course.title.en.substring(0, 1).toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    course.title.en,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    course.author.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: 12.5,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.star_rounded, size: 13, color: accent),
+                      const SizedBox(width: 2),
+                      Text(
+                        rating.toStringAsFixed(1),
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11.5,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 12,
+                        color: colors.textSecondary,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${course.estimatedHours}h',
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11.5,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(999),
+                            color: accent.withValues(alpha: 0.14),
+                          ),
+                          child: Text(
+                            saved ? savedLabel : levelLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: accent,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 10.5,
+                              height: 1.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: isFree
+                        ? colors.success.withValues(alpha: 0.14)
+                        : accent.withValues(alpha: 0.14),
+                  ),
+                  child: Text(
+                    priceLabel,
+                    style: TextStyle(
+                      color: isFree ? colors.success : accent,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.textSecondary,
+                  size: 20,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

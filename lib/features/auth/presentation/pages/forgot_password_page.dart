@@ -95,8 +95,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          const SizedBox(height: 16),
           TechTextField(
             hint: l10n.text('email'),
             icon: Icons.alternate_email_rounded,
@@ -110,14 +111,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             onTap: authState.isBusy ? null : _sendCode,
           ),
           const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: _goBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-              label: Text(l10n.text('back_to_login')),
-            ),
-          ),
         ],
       ),
     );

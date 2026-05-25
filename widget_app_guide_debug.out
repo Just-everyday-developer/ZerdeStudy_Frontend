@@ -1,0 +1,18 @@
+00:00 +0: loading C:/Users/User/Diploma-Work/frontend_flutter/test/widget_test.dart
+00:00 +0 -1: loading C:/Users/User/Diploma-Work/frontend_flutter/guide [E]
+  Failed to load "C:/Users/User/Diploma-Work/frontend_flutter/guide": Does not exist.
+00:00 +0 -2: loading C:/Users/User/Diploma-Work/frontend_flutter/moves [E]
+  Failed to load "C:/Users/User/Diploma-Work/frontend_flutter/moves": Does not exist.
+00:00 +0 -3: loading C:/Users/User/Diploma-Work/frontend_flutter/from [E]
+  Failed to load "C:/Users/User/Diploma-Work/frontend_flutter/from": Does not exist.
+00:00 +0 -4: loading C:/Users/User/Diploma-Work/frontend_flutter/home [E]
+  Failed to load "C:/Users/User/Diploma-Work/frontend_flutter/home": Does not exist.
+00:00 +0 -5: loading C:/Users/User/Diploma-Work/frontend_flutter/step [E]
+  Failed to load "C:/Users/User/Diploma-Work/frontend_flutter/step": Does not exist.
+00:00 +0 -6: loading C:/Users/User/Diploma-Work/frontend_flutter/to [E]
+  Failed to load "C:/Users/User/Diploma-Work/frontend_flutter/to": Does not exist.
+00:00 +0 -7: loading C:/Users/User/Diploma-Work/frontend_flutter/knowledge [E]
+  Failed to load "C:/Users/User/Diploma-Work/frontend_flutter/knowledge": Does not exist.
+00:00 +0 -8: loading C:/Users/User/Diploma-Work/frontend_flutter/tree [E]
+  Failed to load "C:/Users/User/Diploma-Work/frontend_flutter/tree": Does not exist.
+00:00 +0 -8: C:/Users/User/Diploma-Work/frontend_flutter/test/widget_test.dart: app guide moves from home step to knowledge tree

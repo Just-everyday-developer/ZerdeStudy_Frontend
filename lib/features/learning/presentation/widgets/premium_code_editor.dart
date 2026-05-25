@@ -15,11 +15,13 @@ class PremiumCodeEditor extends ConsumerStatefulWidget {
     required this.initialCode,
     this.language = 'java',
     this.onResult,
+    this.onCodeChanged,
   });
 
   final String initialCode;
   final String language;
   final ValueChanged<CodeExecutionResult>? onResult;
+  final ValueChanged<String>? onCodeChanged;
 
   @override
   ConsumerState<PremiumCodeEditor> createState() => _PremiumCodeEditorState();
@@ -27,6 +29,7 @@ class PremiumCodeEditor extends ConsumerStatefulWidget {
 
 class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
   late CodeController _codeController;
+  final FocusNode _focusNode = FocusNode();
   bool _isRunning = false;
   CodeExecutionResult? _lastResult;
 
@@ -35,17 +38,29 @@ class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
     super.initState();
     String code = widget.initialCode;
     if (code.isEmpty || !code.contains('class')) {
-      code = 'public class Main {\n    public static void main(String[] args) {\n        // Напишите ваш код здесь\n        System.out.println("Hello World");\n    }\n}';
+      code =
+          'public class Main {\n    public static void main(String[] args) {\n        // Напишите ваш код здесь\n        System.out.println("Hello World");\n    }\n}';
     }
     _codeController = CodeController(
       text: code,
       language: widget.language == 'java' ? java : python,
     );
+    _codeController.addListener(() {
+      widget.onCodeChanged?.call(_codeController.text);
+    });
+    // Force selection to start so the editor aligns content at top immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _codeController.selection = TextSelection.collapsed(offset: 0);
+        _focusNode.requestFocus();
+      }
+    });
   }
 
   @override
   void dispose() {
     _codeController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -56,20 +71,18 @@ class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
     });
 
     final service = ref.read(codeRunnerServiceProvider);
-    
+
     String finalCode = _codeController.text;
     // Auto-wrap with Main class if missing (basic check)
     if (widget.language == 'java' && !finalCode.contains('class Main')) {
       if (!finalCode.contains('public class')) {
-        finalCode = 'public class Main {\n    public static void main(String[] args) {\n        $finalCode\n    }\n}';
+        finalCode =
+            'public class Main {\n    public static void main(String[] args) {\n        $finalCode\n    }\n}';
       }
     }
 
     final result = await service.runCode(
-      CodeExecutionRequest(
-        language: widget.language,
-        code: finalCode,
-      ),
+      CodeExecutionRequest(language: widget.language, code: finalCode),
     );
 
     if (mounted) {
@@ -77,6 +90,7 @@ class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
         _isRunning = false;
         _lastResult = result;
       });
+      widget.onCodeChanged?.call(finalCode);
       widget.onResult?.call(result);
     }
   }
@@ -87,182 +101,249 @@ class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
       height: 450, // Slightly increased but stable height
       child: Column(
         children: [
-        // Editor Header (Window-like)
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF282C34),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            border: Border.all(color: Colors.white10),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              // Mac-style window buttons
-              Row(
-                children: [
-                  _windowButton(Colors.redAccent),
-                  const SizedBox(width: 8),
-                  _windowButton(Colors.orangeAccent),
-                  const SizedBox(width: 8),
-                  _windowButton(Colors.greenAccent),
-                ],
+          // Editor Header (Window-like)
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF282C34),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
               ),
-              const Spacer(),
-              // Run Button
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _isRunning ? null : _runCode,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          _isRunning
-                              ? Colors.white10
-                              : Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: Row(
+              border: Border.all(color: Colors.white10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compactHeader = constraints.maxWidth < 340;
+                return Row(
+                  children: [
+                    // Mac-style window buttons
+                    Row(
                       children: [
-                        if (_isRunning)
-                          const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                        else
-                          const Icon(
-                            Icons.play_arrow_rounded,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _isRunning ? 'Running...' : 'Run Code',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        _windowButton(Colors.redAccent),
+                        const SizedBox(width: 8),
+                        _windowButton(Colors.orangeAccent),
+                        const SizedBox(width: 8),
+                        _windowButton(Colors.greenAccent),
                       ],
                     ),
-                  ),
+                    const Spacer(),
+                    // Run Button
+                    Tooltip(
+                      message: _isRunning ? 'Running...' : 'Run Code',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _isRunning ? null : _runCode,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: compactHeader ? 9 : 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _isRunning
+                                  ? Colors.white10
+                                  : Colors.white.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (_isRunning)
+                                  const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  const Icon(
+                                    Icons.play_arrow_rounded,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                if (!compactHeader) ...[
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _isRunning ? 'Running...' : 'Run Code',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Submit Button
+                    Tooltip(
+                      message: 'Submit',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _isRunning ? null : _runCode,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: compactHeader ? 9 : 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.green.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.send_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                if (!compactHeader) ...[
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Submit',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFF282C34),
+                border: Border.symmetric(
+                  vertical: BorderSide(color: Colors.white10),
                 ),
               ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFF282C34),
-              border: Border.symmetric(vertical: BorderSide(color: Colors.white10)),
-            ),
-            child: CodeTheme(
-              data: const CodeThemeData(styles: atomOneDarkTheme),
-              child: CodeField(
-                controller: _codeController,
-                expands: true,
-                textStyle: GoogleFonts.firaCode(fontSize: 13, height: 1.5),
-                cursorColor: const Color(0xFF569CD6),
-                textSelectionTheme: TextSelectionThemeData(
+              child: CodeTheme(
+                data: const CodeThemeData(styles: atomOneDarkTheme),
+                child: CodeField(
+                  controller: _codeController,
+                  expands: true,
+                  textStyle: GoogleFonts.firaCode(fontSize: 13, height: 1.5),
+                  focusNode: _focusNode,
                   cursorColor: const Color(0xFF569CD6),
-                  selectionColor: const Color(0xFF264F78).withValues(alpha: 0.5),
-                  selectionHandleColor: const Color(0xFF569CD6),
+                  textSelectionTheme: TextSelectionThemeData(
+                    cursorColor: const Color(0xFF569CD6),
+                    selectionColor: const Color(
+                      0xFF264F78,
+                    ).withValues(alpha: 0.5),
+                    selectionHandleColor: const Color(0xFF569CD6),
+                  ),
+                  lineNumberStyle: const LineNumberStyle(
+                    width: 65,
+                    textAlign: TextAlign.right,
+                    margin: 15,
+                    textStyle: TextStyle(color: Colors.white30, fontSize: 12),
+                  ),
+                  background: const Color(0xFF282C34),
                 ),
-                lineNumberStyle: const LineNumberStyle(
-                  width: 65,
-                  textAlign: TextAlign.right,
-                  margin: 15,
-                  textStyle: TextStyle(color: Colors.white30, fontSize: 12),
-                ),
-                background: const Color(0xFF282C34),
               ),
             ),
           ),
-        ),
-        // Console Output
-        Container(
-          height: 120, // Fixed height for terminal to ensure overall 400px height is respected
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E2127),
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(16),
+          // Console Output
+          Container(
+            height:
+                120, // Fixed height for terminal to ensure overall 400px height is respected
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E2127),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(16),
+              ),
+              border: Border.all(color: Colors.white10),
             ),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Terminal Output:',
-                  style: GoogleFonts.firaCode(
-                    color: Colors.white38,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                if (_lastResult != null) ...[
-                  if (_lastResult!.stdout.isNotEmpty)
-                    Text(
-                      _lastResult!.stdout,
-                      style: GoogleFonts.firaCode(
-                        color: Colors.greenAccent,
-                        fontSize: 12,
-                      ),
-                    ),
-                  if (_lastResult!.stderr.isNotEmpty)
-                    Text(
-                      _lastResult!.stderr,
-                      style: GoogleFonts.firaCode(
-                        color: Colors.redAccent,
-                        fontSize: 12,
-                      ),
-                    ),
-                  if (_lastResult!.error.isNotEmpty)
-                    Text(
-                      _lastResult!.error,
-                      style: GoogleFonts.firaCode(
-                        color: Colors.orangeAccent,
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                ] else if (_isRunning)
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    'Compiling and running...',
+                    'Terminal Output:',
                     style: GoogleFonts.firaCode(
                       color: Colors.white38,
-                      fontSize: 12,
-                    ),
-                  )
-                else
-                  Text(
-                    'Click "Run Code" to see execution results.',
-                    style: GoogleFonts.firaCode(
-                      color: Colors.white24,
-                      fontSize: 12,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-              ],
+                  const SizedBox(height: 6),
+                  if (_lastResult != null) ...[
+                    if (_lastResult!.stdout.isNotEmpty)
+                      Text(
+                        _lastResult!.stdout,
+                        style: GoogleFonts.firaCode(
+                          color: Colors.greenAccent,
+                          fontSize: 12,
+                        ),
+                      ),
+                    if (_lastResult!.stderr.isNotEmpty)
+                      Text(
+                        _lastResult!.stderr,
+                        style: GoogleFonts.firaCode(
+                          color: Colors.redAccent,
+                          fontSize: 12,
+                        ),
+                      ),
+                    if (_lastResult!.error.isNotEmpty)
+                      Text(
+                        _lastResult!.error,
+                        style: GoogleFonts.firaCode(
+                          color: Colors.orangeAccent,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                  ] else if (_isRunning)
+                    Text(
+                      'Compiling and running...',
+                      style: GoogleFonts.firaCode(
+                        color: Colors.white38,
+                        fontSize: 12,
+                      ),
+                    )
+                  else
+                    Text(
+                      'Click "Run Code" to see execution results.',
+                      style: GoogleFonts.firaCode(
+                        color: Colors.white24,
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 

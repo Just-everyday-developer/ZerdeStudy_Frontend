@@ -29,7 +29,7 @@ class AppNotice {
     BuildContext context, {
     required String message,
     AppNoticeType type = AppNoticeType.info,
-    Duration duration = const Duration(seconds: 2),
+    Duration duration = const Duration(seconds: 5),
   }) {
     final overlay = Overlay.of(context, rootOverlay: true);
     if (_overlayEntry == null) {

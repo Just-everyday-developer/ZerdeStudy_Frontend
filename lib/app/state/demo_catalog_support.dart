@@ -794,12 +794,14 @@ CommunityCourseOffer _defaultOffer({
   required int estimatedHours,
   required String level,
 }) {
-  final price = 1800 + (estimatedHours * 140) + (level == 'Advanced' ? 700 : 0);
-  final split = (price / 4).round();
-  return CommunityCourseOffer(
-    priceLabel: '$price ₸',
-    installmentLabel: '$split ₸ x 4 Split',
-    secondaryInstallmentLabel: '$split ₸ x 4 Milestone',
+  // Pricing is sourced from the payment-service via coursePriceProvider; the
+  // CommunityCourseOffer model is kept only for installment/preview UI copy and
+  // no longer carries a mock price. The detail page renders "Free" until the
+  // backend resolves an actual price.
+  return const CommunityCourseOffer(
+    priceLabel: '',
+    installmentLabel: '',
+    secondaryInstallmentLabel: '',
     previewLabel: 'Open preview',
     favoriteLabel: 'Save course',
   );

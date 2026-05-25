@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/platform/url_strategy.dart';
 import 'app/routing/router.dart';
 import 'app/state/app_locale.dart';
 import 'app/state/auth_demo_bridge.dart';
@@ -12,6 +13,7 @@ import 'core/notifications/local_notification_service.dart';
 import 'core/providers/background_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'core/window/app_window.dart';
+import 'core/services/deep_link_service.dart';
 import 'features/app_guide/presentation/app_guide_overlay_host.dart';
 import 'features/auth/presentation/providers/auth_controller.dart';
 import 'features/auth/presentation/providers/auth_state.dart';
@@ -20,6 +22,7 @@ final backgroundController = BackgroundController();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  configureAppUrlStrategy();
   await configureAppWindow();
   final preferences = await SharedPreferences.getInstance();
   final localNotificationService = await LocalNotificationService.create();
@@ -57,6 +60,10 @@ class _MyAppState extends ConsumerState<MyApp>
       if (!mounted) {
         return;
       }
+      
+      // Initialize Deep Link Service
+      ref.read(deepLinkServiceProvider).initialize();
+
       _authBridgeSubscription = ref.listenManual<AuthState>(
         authControllerProvider,
         (_, next) => syncDemoAuthFromUser(ref, next.user),

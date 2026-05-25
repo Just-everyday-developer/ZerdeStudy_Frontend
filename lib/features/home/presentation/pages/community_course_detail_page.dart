@@ -8,13 +8,20 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
+import '../../../../features/auth/presentation/providers/auth_controller.dart';
 import '../../../../core/common_widgets/app_button.dart';
 import '../../../../core/common_widgets/app_notice.dart';
+import '../../../../core/common_widgets/bubble_progress_bar.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../courses_backend/data/models/backend_lesson_dto.dart';
+import '../../../courses_backend/data/models/backend_practice_dto.dart';
+import '../../../courses_backend/data/models/backend_quiz_dto.dart';
+import '../../../courses_backend/data/models/backend_review_dto.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
+import '../../../payment/presentation/providers/payment_providers.dart';
 
 class CommunityCourseDetailPage extends ConsumerStatefulWidget {
   const CommunityCourseDetailPage({super.key, required this.courseId});
@@ -93,9 +100,26 @@ class _CommunityCourseDetailPageState
     );
     final backendPreviewEnabled =
         detailedBackendCourse?.supportsCoursePlayer ?? false;
+    final backendReviewsAsync = ref.watch(
+      backendReviewsByCourseIdProvider(widget.courseId),
+    );
+    final backendReviews = backendReviewsAsync.maybeWhen(
+      data: (reviews) => reviews,
+      orElse: () => const <BackendReviewDto>[],
+    );
+    final backendMappedReviews = backendReviews.map(
+      (r) => CommunityCourseReview(
+        id: r.id,
+        authorName: r.userId,
+        timeLabel: r.createdAt.toIso8601String(),
+        rating: r.rating,
+        text: r.comment,
+      ),
+    );
     final reviews = <CommunityCourseReview>[
       ..._localReviews,
-      ...course.reviews,
+      ...backendMappedReviews,
+      if (backendReviews.isEmpty) ...course.reviews,
     ];
     final colors = context.appColors;
 
@@ -125,11 +149,15 @@ class _CommunityCourseDetailPageState
                     ),
                     onSubmitComment: () =>
                         _submitReview(state.user?.name ?? 'Talgat', userRating),
+                    canManageReview: _canManageReview,
+                    onUpdateReview: _handleUpdateReviewFromCard,
+                    onDeleteReview: _handleDeleteReview,
                     onPrimaryTap: () => _handlePrimaryTap(
                       context,
                       course,
                       controller,
                       useBackendPreview: backendPreviewEnabled,
+                      alreadyEnrolled: enrolled,
                     ),
                   )
                 : _WideCourseDetailLayout(
@@ -151,11 +179,15 @@ class _CommunityCourseDetailPageState
                     ),
                     onSubmitComment: () =>
                         _submitReview(state.user?.name ?? 'Talgat', userRating),
+                    canManageReview: _canManageReview,
+                    onUpdateReview: _handleUpdateReviewFromCard,
+                    onDeleteReview: _handleDeleteReview,
                     onPrimaryTap: () => _handlePrimaryTap(
                       context,
                       course,
                       controller,
                       useBackendPreview: backendPreviewEnabled,
+                      alreadyEnrolled: enrolled,
                     ),
                   ),
           ),
@@ -182,25 +214,242 @@ class _CommunityCourseDetailPageState
     return catalog.maybeCourseById(widget.courseId);
   }
 
-  void _submitReview(String authorName, int? userRating) {
+  String? get _authUserId => ref.read(
+    authControllerProvider.select((state) => state.session?.user.id),
+  );
+
+  bool _canManageReview(CommunityCourseReview review) {
+    final user = ref.read(authControllerProvider).session?.user;
+    if (user == null || !_looksLikeUuid(review.id)) {
+      return false;
+    }
+
+    final roleCodes = user.roleCodes.toSet();
+    return review.authorName == user.id ||
+        roleCodes.contains('admin') ||
+        roleCodes.contains('manager');
+  }
+
+  void _handleUpdateReviewFromCard(CommunityCourseReview review) {
+    _handleUpdateReview(review.id, review.text, review.rating);
+  }
+
+  Future<void> _submitReview(String authorName, int? userRating) async {
     final text = _reviewController.text.trim();
     if (text.isEmpty) {
       return;
     }
 
-    setState(() {
-      _localReviews.insert(
-        0,
-        CommunityCourseReview(
-          id: 'local_review_${DateTime.now().microsecondsSinceEpoch}',
-          authorName: authorName,
-          timeLabel: 'now',
-          rating: userRating ?? 5,
-          text: text,
+    final rating = userRating?.clamp(1, 5) ?? 5;
+    final authUserId = _authUserId;
+    var storedOnBackend = false;
+
+    try {
+      final accessToken = ref.read(backendCourseAccessTokenProvider);
+      if (accessToken != null &&
+          accessToken.trim().isNotEmpty &&
+          authUserId != null &&
+          _looksLikeUuid(authUserId) &&
+          _looksLikeUuid(widget.courseId)) {
+        final remote = ref.read(backendCourseRemoteDataSourceProvider);
+        final createdReview = await remote.createReview(
+          accessToken: accessToken,
+          request: BackendCreateReviewRequest(
+            courseId: widget.courseId,
+            userId: authUserId,
+            rating: rating,
+            comment: text,
+          ),
+        );
+        storedOnBackend = true;
+        ref.invalidate(backendReviewsByCourseIdProvider(widget.courseId));
+        ref.invalidate(backendReviewByIdProvider(createdReview.id));
+      }
+    } catch (_) {
+      storedOnBackend = false;
+      // Backend unavailable — fallback to local-only review
+    }
+    if (!mounted) {
+      return;
+    }
+
+    if (!storedOnBackend) {
+      setState(() {
+        _localReviews.insert(
+          0,
+          CommunityCourseReview(
+            id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+            authorName: authUserId ?? authorName,
+            timeLabel: 'Just now',
+            rating: rating,
+            text: text,
+          ),
+        );
+      });
+    }
+
+    _reviewController.clear();
+    AppNotice.show(
+      context,
+      message: 'Review sent',
+      type: AppNoticeType.success,
+    );
+  }
+
+  Future<void> _handleUpdateReview(
+    String reviewId,
+    String currentComment,
+    int currentRating,
+  ) async {
+    final latestReview = _looksLikeUuid(reviewId)
+        ? await ref.read(backendReviewByIdProvider(reviewId).future)
+        : null;
+    if (!mounted) {
+      return;
+    }
+
+    final controller = TextEditingController(
+      text: latestReview?.comment ?? currentComment,
+    );
+    int newRating = latestReview?.rating ?? currentRating;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit review'),
+        content: StatefulBuilder(
+          builder: (ctx, setDialogState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) {
+                  final star = i + 1;
+                  return IconButton(
+                    icon: Icon(
+                      star <= newRating
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: star <= newRating ? Colors.amber : Colors.grey,
+                    ),
+                    onPressed: () => setDialogState(() => newRating = star),
+                  );
+                }),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  hintText: 'Update your comment...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    final updatedText = controller.text.trim();
+    controller.dispose();
+
+    if (result != true) return;
+    if (updatedText.isEmpty) return;
+
+    try {
+      final accessToken = ref.read(backendCourseAccessTokenProvider);
+      if (accessToken != null && accessToken.trim().isNotEmpty) {
+        final remote = ref.read(backendCourseRemoteDataSourceProvider);
+        await remote.updateReview(
+          accessToken: accessToken,
+          reviewId: reviewId,
+          request: BackendUpdateReviewRequest(
+            rating: newRating.clamp(1, 5),
+            comment: updatedText,
+          ),
+        );
+        ref.invalidate(backendReviewsByCourseIdProvider(widget.courseId));
+        ref.invalidate(backendReviewByIdProvider(reviewId));
+        if (!mounted) {
+          return;
+        }
+        AppNotice.show(
+          context,
+          message: 'Review updated',
+          type: AppNoticeType.success,
+        );
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      AppNotice.show(
+        context,
+        message: 'Failed to update review',
+        type: AppNoticeType.error,
       );
-      _reviewController.clear();
-    });
+    }
+  }
+
+  Future<void> _handleDeleteReview(String reviewId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete review'),
+        content: const Text('Are you sure you want to delete this review?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final accessToken = ref.read(backendCourseAccessTokenProvider);
+      if (accessToken != null && accessToken.trim().isNotEmpty) {
+        final remote = ref.read(backendCourseRemoteDataSourceProvider);
+        await remote.deleteReview(accessToken: accessToken, reviewId: reviewId);
+        ref.invalidate(backendReviewsByCourseIdProvider(widget.courseId));
+        ref.invalidate(backendReviewByIdProvider(reviewId));
+        if (!mounted) {
+          return;
+        }
+        AppNotice.show(
+          context,
+          message: 'Review deleted',
+          type: AppNoticeType.success,
+        );
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      AppNotice.show(
+        context,
+        message: 'Failed to delete review',
+        type: AppNoticeType.error,
+      );
+    }
   }
 
   Future<void> _handlePrimaryTap(
@@ -208,9 +457,22 @@ class _CommunityCourseDetailPageState
     CommunityCourse course,
     DemoAppController controller, {
     bool useBackendPreview = false,
+    bool alreadyEnrolled = false,
   }) async {
     if (useBackendPreview) {
       controller.enrollCommunityCourse(course.id, courseOverride: course);
+      await _openBackendPreview(context, course);
+      return;
+    }
+
+    // Paid/enrolled courses must always be openable. Prefer the player when the
+    // course actually has lessons; otherwise fall back to the backend preview
+    // panel so the user is never stuck on the detail page.
+    if (alreadyEnrolled) {
+      if (course.supportsCoursePlayer) {
+        context.push(AppRoutes.coursePlayerById(course.id));
+        return;
+      }
       await _openBackendPreview(context, course);
       return;
     }
@@ -335,18 +597,18 @@ class _CommunityCourseDetailPageState
   }
 }
 
-class _BackendCoursePreviewPanel extends StatefulWidget {
+class _BackendCoursePreviewPanel extends ConsumerStatefulWidget {
   const _BackendCoursePreviewPanel({required this.course});
 
   final CommunityCourse course;
 
   @override
-  State<_BackendCoursePreviewPanel> createState() =>
+  ConsumerState<_BackendCoursePreviewPanel> createState() =>
       _BackendCoursePreviewPanelState();
 }
 
 class _BackendCoursePreviewPanelState
-    extends State<_BackendCoursePreviewPanel> {
+    extends ConsumerState<_BackendCoursePreviewPanel> {
   late final List<_BackendPreviewLessonEntry> _entries;
   late String? _selectedLessonId;
 
@@ -367,6 +629,40 @@ class _BackendCoursePreviewPanelState
     final compact = context.isCompactLayout;
     final height = compact ? MediaQuery.of(context).size.height * 0.92 : 720.0;
     final currentEntry = _currentEntry;
+    final selectedLessonId = currentEntry?.lesson.id;
+    BackendLessonDto? backendLesson;
+    BackendPracticeDto? backendPractice;
+    List<BackendQuizDto> backendQuizzes = const <BackendQuizDto>[];
+    var backendBlocksLoading = false;
+
+    if (selectedLessonId != null) {
+      final backendLessonAsync = ref.watch(
+        backendLessonByIdProvider(selectedLessonId),
+      );
+      final backendPracticeAsync = ref.watch(
+        backendPracticeByLessonIdProvider(selectedLessonId),
+      );
+      final backendQuizzesAsync = ref.watch(
+        backendQuizzesByLessonIdProvider(selectedLessonId),
+      );
+
+      backendLesson = backendLessonAsync.maybeWhen(
+        data: (value) => value,
+        orElse: () => null,
+      );
+      backendPractice = backendPracticeAsync.maybeWhen(
+        data: (value) => value,
+        orElse: () => null,
+      );
+      backendQuizzes = backendQuizzesAsync.maybeWhen(
+        data: (value) => value,
+        orElse: () => const <BackendQuizDto>[],
+      );
+      backendBlocksLoading =
+          backendLessonAsync.isLoading ||
+          backendPracticeAsync.isLoading ||
+          backendQuizzesAsync.isLoading;
+    }
 
     return SizedBox(
       height: height,
@@ -450,6 +746,10 @@ class _BackendCoursePreviewPanelState
                         child: _BackendPreviewLessonContent(
                           course: widget.course,
                           entry: currentEntry,
+                          backendLesson: backendLesson,
+                          backendPractice: backendPractice,
+                          backendQuizzes: backendQuizzes,
+                          backendBlocksLoading: backendBlocksLoading,
                         ),
                       ),
                     ),
@@ -507,6 +807,10 @@ class _BackendCoursePreviewPanelState
                         child: _BackendPreviewLessonContent(
                           course: widget.course,
                           entry: currentEntry,
+                          backendLesson: backendLesson,
+                          backendPractice: backendPractice,
+                          backendQuizzes: backendQuizzes,
+                          backendBlocksLoading: backendBlocksLoading,
                         ),
                       ),
                     ),
@@ -519,7 +823,7 @@ class _BackendCoursePreviewPanelState
                 Expanded(
                   child: OutlinedButton(
                     onPressed: _hasPrevious ? _selectPrevious : null,
-                    child: const Text('Previous lesson'),
+                    child: Text(context.l10n.text('previous_lesson')),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -604,23 +908,71 @@ class _BackendPreviewLessonContent extends StatelessWidget {
   const _BackendPreviewLessonContent({
     required this.course,
     required this.entry,
+    required this.backendLesson,
+    required this.backendPractice,
+    required this.backendQuizzes,
+    required this.backendBlocksLoading,
   });
 
   final CommunityCourse course;
   final _BackendPreviewLessonEntry entry;
+  final BackendLessonDto? backendLesson;
+  final BackendPracticeDto? backendPractice;
+  final List<BackendQuizDto> backendQuizzes;
+  final bool backendBlocksLoading;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final lesson = entry.lesson;
     final locale = context.l10n.locale;
-    final keyPoints = lesson.explanation
-        .resolve(locale)
-        .split(RegExp(r'[.!?]\s+'))
-        .map((item) => item.trim())
-        .where((item) => item.isNotEmpty)
-        .take(4)
-        .toList(growable: false);
+    final lessonTitle = backendLesson == null
+        ? lesson.title.resolve(locale)
+        : _resolveBackendText(
+            backendLesson!.title,
+            locale,
+            fallback: lesson.title.resolve(locale),
+          );
+    final lessonSummary = backendLesson == null
+        ? lesson.annotation.resolve(locale)
+        : _resolveBackendText(
+            backendLesson!.summary,
+            locale,
+            fallback: lesson.annotation.resolve(locale),
+          );
+    final lessonObjective = backendLesson == null
+        ? lesson.objective.resolve(locale)
+        : _resolveBackendText(
+            backendLesson!.outcome,
+            locale,
+            fallback: lesson.objective.resolve(locale),
+          );
+    final lessonTheory = backendLesson == null
+        ? lesson.explanation.resolve(locale)
+        : _resolveBackendText(
+            backendLesson!.theoryContent,
+            locale,
+            fallback: lesson.explanation.resolve(locale),
+          );
+    final codeSnippet = (backendLesson?.codeSnippet.trim().isNotEmpty ?? false)
+        ? backendLesson!.codeSnippet
+        : lesson.codeSnippet;
+    final exampleOutput =
+        (backendLesson?.exampleOutput.trim().isNotEmpty ?? false)
+        ? backendLesson!.exampleOutput
+        : lesson.exampleOutput;
+    final keyPoints =
+        backendLesson?.keyPoints
+            .map((item) => _resolveBackendText(item, locale))
+            .where((item) => item.isNotEmpty)
+            .take(4)
+            .toList(growable: false) ??
+        lessonTheory
+            .split(RegExp(r'[.!?]\s+'))
+            .map((item) => item.trim())
+            .where((item) => item.isNotEmpty)
+            .take(4)
+            .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -639,14 +991,91 @@ class _BackendPreviewLessonContent extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                lesson.title.resolve(locale),
+                lessonTitle,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
-                lesson.annotation.resolve(locale),
+                lessonSummary,
                 style: TextStyle(color: colors.textSecondary, height: 1.45),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GlowCard(
+          accent: colors.accent,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Lesson activities',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              if (backendBlocksLoading) ...[
+                const SizedBox(height: 12),
+                LinearProgressIndicator(color: course.color),
+              ],
+              if (!backendBlocksLoading &&
+                  backendQuizzes.isEmpty &&
+                  backendPractice == null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'No quiz or practice block is attached to this lesson yet.',
+                  style: TextStyle(color: colors.textSecondary, height: 1.45),
+                ),
+              ],
+              if (backendQuizzes.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ...backendQuizzes.take(3).map((quiz) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.quiz_rounded, color: course.color, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _resolveBackendText(quiz.question, locale),
+                            style: TextStyle(
+                              color: colors.textSecondary,
+                              height: 1.45,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+              if (backendPractice != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.terminal_rounded,
+                      color: colors.success,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _resolveBackendText(
+                          backendPractice!.title,
+                          locale,
+                          fallback: backendPractice!.starterCode,
+                        ),
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          height: 1.45,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -662,7 +1091,7 @@ class _BackendPreviewLessonContent extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                lesson.objective.resolve(locale),
+                lessonObjective,
                 style: TextStyle(color: colors.textSecondary, height: 1.45),
               ),
             ],
@@ -681,7 +1110,7 @@ class _BackendPreviewLessonContent extends StatelessWidget {
               const SizedBox(height: 10),
               if (keyPoints.isEmpty)
                 Text(
-                  lesson.explanation.resolve(locale),
+                  lessonTheory,
                   style: TextStyle(color: colors.textSecondary, height: 1.45),
                 )
               else
@@ -725,7 +1154,7 @@ class _BackendPreviewLessonContent extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                lesson.explanation.resolve(locale),
+                lessonTheory,
                 style: TextStyle(color: colors.textSecondary, height: 1.55),
               ),
             ],
@@ -751,7 +1180,7 @@ class _BackendPreviewLessonContent extends StatelessWidget {
                   border: Border.all(color: colors.divider),
                 ),
                 child: SelectableText(
-                  lesson.codeSnippet,
+                  codeSnippet,
                   style: TextStyle(
                     color: colors.textPrimary,
                     fontFamily: 'monospace',
@@ -776,7 +1205,7 @@ class _BackendPreviewLessonContent extends StatelessWidget {
                   color: colors.surfaceSoft,
                 ),
                 child: SelectableText(
-                  lesson.exampleOutput,
+                  exampleOutput,
                   style: TextStyle(
                     color: colors.textPrimary,
                     fontFamily: 'monospace',
@@ -888,6 +1317,9 @@ class _CompactCourseDetailLayout extends StatelessWidget {
     required this.onSave,
     required this.onRate,
     required this.onSubmitComment,
+    required this.canManageReview,
+    required this.onUpdateReview,
+    required this.onDeleteReview,
     required this.onPrimaryTap,
   });
 
@@ -901,6 +1333,9 @@ class _CompactCourseDetailLayout extends StatelessWidget {
   final VoidCallback onSave;
   final ValueChanged<int> onRate;
   final VoidCallback onSubmitComment;
+  final bool Function(CommunityCourseReview review) canManageReview;
+  final ValueChanged<CommunityCourseReview> onUpdateReview;
+  final ValueChanged<String> onDeleteReview;
   final VoidCallback onPrimaryTap;
 
   @override
@@ -918,6 +1353,20 @@ class _CompactCourseDetailLayout extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Column(
                   children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        onPressed: () => _goBackFromCourseDetail(context),
+                        icon: Icon(
+                          Icons.arrow_back_rounded,
+                          color: colors.textPrimary,
+                        ),
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).backButtonTooltip,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                     _MobileHeroCard(
                       course: course,
                       saved: saved,
@@ -976,6 +1425,9 @@ class _CompactCourseDetailLayout extends StatelessWidget {
               commentController: commentController,
               onRate: onRate,
               onSubmitComment: onSubmitComment,
+              canManageReview: canManageReview,
+              onUpdateReview: onUpdateReview,
+              onDeleteReview: onDeleteReview,
             ),
             _CourseUpdatesSection(course: course, compact: true),
             _CourseProgramSection(course: course, compact: true),
@@ -998,6 +1450,9 @@ class _WideCourseDetailLayout extends StatelessWidget {
     required this.onSave,
     required this.onRate,
     required this.onSubmitComment,
+    required this.canManageReview,
+    required this.onUpdateReview,
+    required this.onDeleteReview,
     required this.onPrimaryTap,
   });
 
@@ -1011,6 +1466,9 @@ class _WideCourseDetailLayout extends StatelessWidget {
   final VoidCallback onSave;
   final ValueChanged<int> onRate;
   final VoidCallback onSubmitComment;
+  final bool Function(CommunityCourseReview review) canManageReview;
+  final ValueChanged<CommunityCourseReview> onUpdateReview;
+  final ValueChanged<String> onDeleteReview;
   final VoidCallback onPrimaryTap;
 
   @override
@@ -1040,7 +1498,7 @@ class _WideCourseDetailLayout extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
+                        onPressed: () => _goBackFromCourseDetail(context),
                         icon: Icon(
                           Icons.arrow_back_rounded,
                           color: context.appColors.textPrimary,
@@ -1088,6 +1546,9 @@ class _WideCourseDetailLayout extends StatelessWidget {
                         commentController: commentController,
                         onRate: onRate,
                         onSubmitComment: onSubmitComment,
+                        canManageReview: canManageReview,
+                        onUpdateReview: onUpdateReview,
+                        onDeleteReview: onDeleteReview,
                       ),
                     ],
                   ),
@@ -1374,7 +1835,36 @@ class _MobileHeroCard extends ConsumerWidget {
             maxWidth: null,
             onPressed: onPrimaryTap,
           ),
-          const SizedBox(height: 10),
+          if (!enrolled) ...[
+            const SizedBox(height: 10),
+            Consumer(
+              builder: (context, ref, _) {
+                final backendPrice = _resolveBackendPriceAmount(ref, course.id);
+                if (backendPrice == null) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AppButton.primary(
+                    label: switch (context.l10n.locale) {
+                      AppLocale.ru => 'Оплатить курс',
+                      AppLocale.kk => 'Курсты төлеу',
+                      _ => 'Pay for course',
+                    },
+                    icon: Icons.payment_rounded,
+                    maxWidth: null,
+                    onPressed: () {
+                      final route = AppRoutes.paymentById(
+                        courseId: course.id,
+                        amount: backendPrice,
+                      );
+                      context.push(route);
+                    },
+                  ),
+                );
+              },
+            ),
+          ],
           AppButton.secondary(
             label: switch (context.l10n.locale) {
               AppLocale.ru => 'Топ учеников',
@@ -1394,6 +1884,14 @@ class _MobileHeroCard extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 14),
+          _CoursePriceLabel(
+            courseId: course.id,
+            textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: course.color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
           Text(
             course.subtitle.en,
             style: TextStyle(color: colors.textSecondary, height: 1.4),
@@ -1530,10 +2028,7 @@ class _CourseSidebar extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            course.offer.priceLabel,
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
+          _CoursePriceLabel(courseId: course.id),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -1553,17 +2048,7 @@ class _CourseSidebar extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _SidebarMeta(
-            icon: Icons.pie_chart_rounded,
-            label: course.offer.installmentLabel,
-          ),
-          const SizedBox(height: 8),
-          _SidebarMeta(
-            icon: Icons.stacked_line_chart_rounded,
-            label: course.offer.secondaryInstallmentLabel,
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           AppButton.primary(
             label: enrolled
                 ? l10n.text('course_open_cta')
@@ -1572,6 +2057,34 @@ class _CourseSidebar extends ConsumerWidget {
             maxWidth: 260,
             onPressed: onPrimaryTap,
           ),
+          if (!enrolled)
+            Consumer(
+              builder: (context, ref, _) {
+                final backendPrice = _resolveBackendPriceAmount(ref, course.id);
+                if (backendPrice == null) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: AppButton.primary(
+                    label: switch (l10n.locale) {
+                      AppLocale.ru => 'Оплатить курс',
+                      AppLocale.kk => 'Курсты төлеу',
+                      _ => 'Pay for course',
+                    },
+                    icon: Icons.payment_rounded,
+                    maxWidth: 260,
+                    onPressed: () {
+                      final route = AppRoutes.paymentById(
+                        courseId: course.id,
+                        amount: backendPrice,
+                      );
+                      context.push(route);
+                    },
+                  ),
+                );
+              },
+            ),
           const SizedBox(height: 12),
           AppButton.secondary(
             label: switch (l10n.locale) {
@@ -1998,6 +2511,9 @@ class _CourseReviewsSection extends StatelessWidget {
     required this.commentController,
     required this.onRate,
     required this.onSubmitComment,
+    required this.canManageReview,
+    required this.onUpdateReview,
+    required this.onDeleteReview,
   });
 
   final CommunityCourse course;
@@ -2008,6 +2524,9 @@ class _CourseReviewsSection extends StatelessWidget {
   final TextEditingController commentController;
   final ValueChanged<int> onRate;
   final VoidCallback onSubmitComment;
+  final bool Function(CommunityCourseReview review) canManageReview;
+  final ValueChanged<CommunityCourseReview> onUpdateReview;
+  final ValueChanged<String> onDeleteReview;
 
   @override
   Widget build(BuildContext context) {
@@ -2066,14 +2585,11 @@ class _CourseReviewsSection extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          value: count / maxCount,
-                          minHeight: 9,
-                          backgroundColor: colors.backgroundElevated,
-                          color: course.color,
-                        ),
+                      child: BubbleProgressBar(
+                        value: count / maxCount,
+                        height: 9,
+                        backgroundColor: colors.backgroundElevated,
+                        color: course.color,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -2118,6 +2634,7 @@ class _CourseReviewsSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CircleAvatar(
                         backgroundColor: course.color.withValues(alpha: 0.16),
@@ -2149,16 +2666,46 @@ class _CourseReviewsSection extends StatelessWidget {
                         ),
                       ),
                       Row(
-                        children: List<Widget>.generate(
-                          5,
-                          (index) => Icon(
-                            Icons.star_rounded,
-                            size: 16,
-                            color: index < review.rating
-                                ? course.color
-                                : colors.divider,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ...List<Widget>.generate(
+                            5,
+                            (index) => Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: index < review.rating
+                                  ? course.color
+                                  : colors.divider,
+                            ),
                           ),
-                        ),
+                          if (canManageReview(review)) ...[
+                            const SizedBox(width: 4),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => onUpdateReview(review),
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.edit_rounded,
+                                  size: 16,
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                            ),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => onDeleteReview(review.id),
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.delete_rounded,
+                                  size: 16,
+                                  color: colors.danger,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -2388,6 +2935,53 @@ String _reviewCommentHint(AppLocale locale) {
     AppLocale.en => 'Write a comment',
     AppLocale.kk => 'Пікір жазыңыз',
   };
+}
+
+String _resolveBackendText(
+  BackendLocalizedTextDto text,
+  AppLocale locale, {
+  String fallback = '',
+}) {
+  final value = switch (locale) {
+    AppLocale.ru => text.ru,
+    AppLocale.en => text.en,
+    AppLocale.kk => text.kk,
+  }.trim();
+
+  if (value.isNotEmpty) {
+    return value;
+  }
+
+  final english = text.en.trim();
+  if (english.isNotEmpty) {
+    return english;
+  }
+
+  final russian = text.ru.trim();
+  if (russian.isNotEmpty) {
+    return russian;
+  }
+
+  final kazakh = text.kk.trim();
+  if (kazakh.isNotEmpty) {
+    return kazakh;
+  }
+
+  return fallback;
+}
+
+bool _looksLikeUuid(String value) {
+  return RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  ).hasMatch(value.trim());
+}
+
+void _goBackFromCourseDetail(BuildContext context) {
+  if (Navigator.of(context).canPop()) {
+    Navigator.of(context).maybePop();
+    return;
+  }
+  context.go(AppRoutes.courses);
 }
 
 class _CourseUpdatesSection extends StatelessWidget {
@@ -2624,40 +3218,6 @@ class _TeacherPill extends StatelessWidget {
   }
 }
 
-class _SidebarMeta extends StatelessWidget {
-  const _SidebarMeta({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: colors.surfaceSoft,
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: colors.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SidebarFactRow extends StatelessWidget {
   const _SidebarFactRow({required this.label, required this.value});
 
@@ -2830,7 +3390,9 @@ class _CourseLeaderboardPanel extends ConsumerWidget {
     final state = ref.watch(demoAppControllerProvider);
     final catalog = ref.watch(demoCatalogProvider);
 
-    final backendLeaderboardAsync = ref.watch(backendCourseLeaderboardProvider(courseId));
+    final backendLeaderboardAsync = ref.watch(
+      backendCourseLeaderboardProvider(courseId),
+    );
     final leaderboard = backendLeaderboardAsync.maybeWhen(
       data: (list) => list.isNotEmpty ? list : catalog.leaderboardFor(state),
       orElse: () => catalog.leaderboardFor(state),
@@ -2878,13 +3440,16 @@ class _CourseLeaderboardPanel extends ConsumerWidget {
                         _ => 'Top Students',
                       },
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       courseTitle,
-                      style: TextStyle(color: colors.textSecondary, fontSize: 13),
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 13,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -3011,9 +3576,7 @@ class _ModalLeaderboardPodium extends StatelessWidget {
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(8),
                           ),
-                          border: Border.all(
-                            color: mc.withValues(alpha: 0.35),
-                          ),
+                          border: Border.all(color: mc.withValues(alpha: 0.35)),
                         ),
                         child: Center(
                           child: Text(
@@ -3055,10 +3618,11 @@ class _ModalLeaderboardPodium extends StatelessWidget {
                     const SizedBox(width: 8),
                     CircleAvatar(
                       radius: 14,
-                      backgroundColor: (entry.isCurrentUser
-                              ? colors.primary
-                              : colors.surfaceSoft)
-                          .withValues(alpha: 0.2),
+                      backgroundColor:
+                          (entry.isCurrentUser
+                                  ? colors.primary
+                                  : colors.surfaceSoft)
+                              .withValues(alpha: 0.2),
                       child: Text(
                         entry.name.isEmpty ? '?' : entry.name[0].toUpperCase(),
                         style: TextStyle(
@@ -3100,4 +3664,54 @@ class _ModalLeaderboardPodium extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Displays the course price pulled from the payment-service.
+///
+/// When the backend has no price for the course (or the request fails) the widget
+/// shows the localized "Free" label, in line with the product requirement that
+/// courses without a backend price are treated as free.
+class _CoursePriceLabel extends ConsumerWidget {
+  const _CoursePriceLabel({required this.courseId, this.textStyle});
+
+  final String courseId;
+  final TextStyle? textStyle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final effectiveStyle =
+        textStyle ?? Theme.of(context).textTheme.headlineMedium;
+    final priceAsync = ref.watch(coursePriceProvider(courseId));
+
+    return priceAsync.when(
+      data: (price) {
+        if (price == null || price.amount <= 0) {
+          return Text(l10n.text('course_price_free'), style: effectiveStyle);
+        }
+        return Text(
+          '${price.amount} ${price.currency}',
+          style: effectiveStyle,
+        );
+      },
+      loading: () => Text(
+        l10n.text('course_price_loading'),
+        style: effectiveStyle?.copyWith(
+          color: context.appColors.textSecondary,
+        ),
+      ),
+      error: (_, __) =>
+          Text(l10n.text('course_price_free'), style: effectiveStyle),
+    );
+  }
+}
+
+/// Reads the backend course price synchronously when available.
+/// Returns null if the price has not yet been resolved or the course is free.
+int? _resolveBackendPriceAmount(WidgetRef ref, String courseId) {
+  final priceAsync = ref.read(coursePriceProvider(courseId));
+  return priceAsync.maybeWhen(
+    data: (price) => (price != null && price.amount > 0) ? price.amount : null,
+    orElse: () => null,
+  );
 }

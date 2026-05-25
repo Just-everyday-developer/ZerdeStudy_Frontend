@@ -16,6 +16,7 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../ai/presentation/providers/ai_chat_controller.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../widgets/premium_code_editor.dart';
 
 class LessonPage extends ConsumerStatefulWidget {
@@ -41,13 +42,19 @@ class _LessonPageState extends ConsumerState<LessonPage> {
   final Map<String, String> _selectedQuizAnswers = <String, String>{};
   final Map<String, String> _selectedTrainerAnswers = <String, String>{};
   final Map<String, List<String>> _trainerSequences = <String, List<String>>{};
+  final Map<String, String> _codeTexts = <String, String>{};
   final ScrollController _theoryScrollController = ScrollController();
+  final Map<String, bool> _codeStepSubmitted = <String, bool>{};
   int _currentStepIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _theoryScrollController.addListener(_onTheoryScroll);
+    // Mark lesson as started when entering
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(demoAppControllerProvider.notifier).startLesson(widget.lessonId);
+    });
   }
 
   @override
@@ -57,7 +64,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
   }
 
   void _onTheoryScroll() {
-    if (_theoryScrollController.position.pixels >= 
+    if (_theoryScrollController.position.pixels >=
         _theoryScrollController.position.maxScrollExtent - 50) {
       final controller = ref.read(demoAppControllerProvider.notifier);
       controller.completeTheoryStep('${widget.lessonId}_theory');
@@ -66,31 +73,61 @@ class _LessonPageState extends ConsumerState<LessonPage> {
 
   List<LessonStep> _buildSteps(LessonItem lesson) {
     final steps = <LessonStep>[];
-    
+
     // Step 1: Theory
-    steps.add(LessonStep(kind: LessonStepKind.theory, id: '${widget.lessonId}_theory'));
+    steps.add(
+      LessonStep(kind: LessonStepKind.theory, id: '${widget.lessonId}_theory'),
+    );
 
     // 5 Quiz steps
     for (int i = 0; i < 5; i++) {
-      final quiz = lesson.quizzes.isNotEmpty 
-          ? lesson.quizzes[i % lesson.quizzes.length] 
+      final quiz = lesson.quizzes.isNotEmpty
+          ? lesson.quizzes[i % lesson.quizzes.length]
           : LessonQuiz(
               id: '${widget.lessonId}_quiz_$i',
-              title: LocalizedText(ru: 'Вопрос ${i + 1}', en: 'Question ${i + 1}', kk: 'Сұрақ ${i + 1}'),
-              prompt: LocalizedText(ru: 'Выберите правильный ответ', en: 'Choose the correct answer', kk: 'Дұрыс жауапты таңдаңыз'),
+              title: LocalizedText(
+                ru: 'Вопрос ${i + 1}',
+                en: 'Question ${i + 1}',
+                kk: 'Сұрақ ${i + 1}',
+              ),
+              prompt: LocalizedText(
+                ru: 'Выберите правильный ответ',
+                en: 'Choose the correct answer',
+                kk: 'Дұрыс жауапты таңдаңыз',
+              ),
               options: [
-                QuizOption(id: 'a', label: LocalizedText(ru: 'Вариант А', en: 'Option A', kk: 'А нұсқасы')),
-                QuizOption(id: 'b', label: LocalizedText(ru: 'Вариант Б', en: 'Option B', kk: 'Б нұсқасы')),
+                QuizOption(
+                  id: 'a',
+                  label: LocalizedText(
+                    ru: 'Вариант А',
+                    en: 'Option A',
+                    kk: 'А нұсқасы',
+                  ),
+                ),
+                QuizOption(
+                  id: 'b',
+                  label: LocalizedText(
+                    ru: 'Вариант Б',
+                    en: 'Option B',
+                    kk: 'Б нұсқасы',
+                  ),
+                ),
               ],
               correctOptionId: 'a',
-              explanation: LocalizedText(ru: 'Объяснение', en: 'Explanation', kk: 'Түсініктеме'),
+              explanation: LocalizedText(
+                ru: 'Объяснение',
+                en: 'Explanation',
+                kk: 'Түсініктеме',
+              ),
             );
       steps.add(LessonStep(kind: LessonStepKind.quiz, quiz: quiz, id: quiz.id));
     }
 
     // 3 Code steps
     for (int i = 0; i < 3; i++) {
-      steps.add(LessonStep(kind: LessonStepKind.code, id: '${widget.lessonId}_code_$i'));
+      steps.add(
+        LessonStep(kind: LessonStepKind.code, id: '${widget.lessonId}_code_$i'),
+      );
     }
 
     return steps;
@@ -101,12 +138,15 @@ class _LessonPageState extends ConsumerState<LessonPage> {
     final state = ref.watch(demoAppControllerProvider);
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
-    final lesson = catalog.lessonById(widget.lessonId);
-    final completed = state.completedLessonIds.contains(widget.lessonId);
-    final requirementsMet = catalog.lessonRequirementsMet(
-      state,
-      widget.lessonId,
+
+    // For backend OOP lessons (UUID IDs), fetch from backend provider
+    final backendLessonAsync = ref.watch(backendOopLessonItemProvider(widget.lessonId));
+    final backendLesson = backendLessonAsync.maybeWhen(
+      data: (l) => l,
+      orElse: () => null,
     );
+    final lesson = backendLesson ?? catalog.lessonById(widget.lessonId);
+    final completed = state.completedLessonIds.contains(widget.lessonId);
     final colors = context.appColors;
     final l10n = context.l10n;
     final locale = state.locale;
@@ -137,11 +177,11 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                       height: 32,
                       margin: const EdgeInsets.only(right: 6),
                       decoration: BoxDecoration(
-                        color: isActive 
-                            ? colors.success 
-                            : isStepCompleted 
-                                ? colors.success.withValues(alpha: 0.4) 
-                                : colors.surfaceSoft,
+                        color: isActive
+                            ? colors.success
+                            : isStepCompleted
+                            ? colors.success.withValues(alpha: 0.4)
+                            : colors.surfaceSoft,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: isActive ? Colors.white70 : Colors.transparent,
@@ -149,7 +189,10 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                         ),
                       ),
                       child: Center(
-                        child: _getStepIcon(step, isActive ? Colors.white : colors.textSecondary),
+                        child: _getStepIcon(
+                          step,
+                          isActive ? Colors.white : colors.textSecondary,
+                        ),
                       ),
                     ),
                   );
@@ -157,13 +200,23 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               ),
             ),
           ),
-          
+
           Expanded(
             child: ListView(
-              controller: currentStep.kind == LessonStepKind.theory ? _theoryScrollController : null,
+              controller: currentStep.kind == LessonStepKind.theory
+                  ? _theoryScrollController
+                  : null,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
               children: [
-                _buildStepContent(currentStep, lesson, state, controller, colors, l10n, locale),
+                _buildStepContent(
+                  currentStep,
+                  lesson,
+                  state,
+                  controller,
+                  colors,
+                  l10n,
+                  locale,
+                ),
                 const SizedBox(height: 24),
                 // Navigation Buttons
                 Row(
@@ -187,9 +240,37 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                       Expanded(
                         child: AppButton.primary(
                           label: 'Отправить',
-                          icon: completed ? Icons.check_circle_rounded : Icons.done_rounded,
-                          onPressed: () {
+                          icon: completed
+                              ? Icons.check_circle_rounded
+                              : Icons.done_rounded,
+                          onPressed: () async {
                             controller.completeLesson(widget.lessonId);
+                            // Backend: create course point on lesson completion
+                            try {
+                              final accessToken = ref.read(
+                                backendCourseAccessTokenProvider,
+                              );
+                              if (accessToken != null &&
+                                  accessToken.trim().isNotEmpty) {
+                                final remote = ref.read(
+                                  backendCourseRemoteDataSourceProvider,
+                                );
+                                await remote.createCoursePoint(
+                                  accessToken: accessToken,
+                                  body: <String, dynamic>{
+                                    'lesson_id': widget.lessonId,
+                                    'completed': true,
+                                  },
+                                );
+                              }
+                            } catch (_) {
+                              // Backend unavailable — silently continue
+                            }
+                            ref.invalidate(backendStreakProvider);
+                            if (!context.mounted) {
+                              return;
+                            }
+
                             AppNotice.show(
                               context,
                               message: '+${lesson.xpReward} XP',
@@ -213,7 +294,14 @@ class _LessonPageState extends ConsumerState<LessonPage> {
       case LessonStepKind.theory:
         return const SizedBox.shrink(); // Empty for theory as requested
       case LessonStepKind.quiz:
-        return Text('?', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16));
+        return Text(
+          '?',
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        );
       case LessonStepKind.code:
         return Icon(Icons.code_rounded, size: 16, color: color);
       default:
@@ -236,9 +324,9 @@ class _LessonPageState extends ConsumerState<LessonPage> {
   }
 
   Widget _buildStepContent(
-    LessonStep step, 
-    LessonItem lesson, 
-    DemoAppState state, 
+    LessonStep step,
+    LessonItem lesson,
+    DemoAppState state,
     DemoAppController controller,
     AppThemeColors colors,
     AppLocalizations l10n,
@@ -267,9 +355,16 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.play_circle_fill_rounded, size: 48, color: colors.primary),
+                          Icon(
+                            Icons.play_circle_fill_rounded,
+                            size: 48,
+                            color: colors.primary,
+                          ),
                           const SizedBox(height: 8),
-                          const Text('Видео по теме', style: TextStyle(color: Colors.white54)),
+                          const Text(
+                            'Видео по теме',
+                            style: TextStyle(color: Colors.white54),
+                          ),
                         ],
                       ),
                     ),
@@ -283,7 +378,10 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                   Wrap(
                     spacing: 10,
                     children: [
-                      _Pill(label: '${lesson.durationMinutes} ${l10n.text('minutes')}'),
+                      _Pill(
+                        label:
+                            '${lesson.durationMinutes} ${l10n.text('minutes')}',
+                      ),
                       _Pill(label: '${lesson.xpReward} XP'),
                     ],
                   ),
@@ -298,18 +396,47 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.auto_stories_rounded, color: colors.primary, size: 22),
+                      Icon(
+                        Icons.auto_stories_rounded,
+                        color: colors.primary,
+                        size: 22,
+                      ),
                       const SizedBox(width: 10),
-                      Text(l10n.text('lesson_theory'), style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        l10n.text('lesson_theory'),
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 14),
                   ...lesson.theoryContent
                       .resolve(locale)
                       .split('\n\n')
-                      .map((paragraph) => _TheoryParagraph(text: paragraph, colors: colors)),
+                      .map(
+                        (paragraph) =>
+                            _TheoryParagraph(text: paragraph, colors: colors),
+                      ),
                 ],
               ),
+            ),
+            const SizedBox(height: 14),
+            AppButton.secondary(
+              label: context.l10n.text('ask_ai'),
+              icon: Icons.smart_toy_rounded,
+              onPressed: () {
+                final state2 = ref.read(demoAppControllerProvider);
+                ref
+                    .read(aiChatControllerProvider.notifier)
+                    .createNewChat(lesson.title.resolve(state2.locale));
+                context.go(AppRoutes.ai);
+                unawaited(
+                  ref
+                      .read(aiChatControllerProvider.notifier)
+                      .sendMessage(
+                        lesson.promptSuggestion.resolve(state2.locale),
+                      ),
+                );
+              },
             ),
           ],
         );
@@ -320,15 +447,41 @@ class _LessonPageState extends ConsumerState<LessonPage> {
           locale: locale,
           selectedOptionId: _selectedQuizAnswers[quiz.id],
           completed: state.completedQuizIds.contains(quiz.id),
-          onOptionSelected: (optionId) => setState(() => _selectedQuizAnswers[quiz.id] = optionId),
-          onSubmit: () {
+          onOptionSelected: (optionId) =>
+              setState(() => _selectedQuizAnswers[quiz.id] = optionId),
+          onSubmit: () async {
             final selected = _selectedQuizAnswers[quiz.id];
             if (selected == null) return;
             final correct = selected == quiz.correctOptionId;
             controller.completeQuiz(quiz.id, isCorrect: correct);
+            // Backend: submit quiz answer
+            try {
+              final accessToken = ref.read(backendCourseAccessTokenProvider);
+              if (accessToken != null && accessToken.trim().isNotEmpty) {
+                final remote = ref.read(backendCourseRemoteDataSourceProvider);
+                final selectedIndex = quiz.options.indexWhere(
+                  (o) => o.id == selected,
+                );
+                if (selectedIndex >= 0) {
+                  await remote.submitQuizAnswer(
+                    accessToken: accessToken,
+                    quizId: quiz.id,
+                    selectedAnswerIndex: selectedIndex,
+                  );
+                }
+              }
+            } catch (_) {
+              // Backend unavailable — silently continue
+            }
+            if (!mounted) {
+              return;
+            }
+
             AppNotice.show(
               context,
-              message: correct ? l10n.text('lesson_quiz_correct') : l10n.text('lesson_quiz_retry'),
+              message: correct
+                  ? l10n.text('lesson_quiz_correct')
+                  : l10n.text('lesson_quiz_retry'),
               type: correct ? AppNoticeType.success : AppNoticeType.error,
             );
           },
@@ -341,43 +494,155 @@ class _LessonPageState extends ConsumerState<LessonPage> {
           selectedOptionId: _selectedTrainerAnswers[trainer.id],
           selectedSequence: _trainerSequences[trainer.id] ?? <String>[],
           completed: state.completedTrainerIds.contains(trainer.id),
-          onOptionSelected: (optionId) => setState(() => _selectedTrainerAnswers[trainer.id] = optionId),
-          onSequenceChanged: (sequence) => setState(() => _trainerSequences[trainer.id] = sequence),
+          onOptionSelected: (optionId) =>
+              setState(() => _selectedTrainerAnswers[trainer.id] = optionId),
+          onSequenceChanged: (sequence) =>
+              setState(() => _trainerSequences[trainer.id] = sequence),
           onSubmit: () {
             final isCorrect = _isTrainerCorrect(trainer);
             if (isCorrect) controller.completeTrainer(trainer.id);
             AppNotice.show(
               context,
-              message: isCorrect ? l10n.text('lesson_memory_completed') : l10n.text('lesson_memory_retry'),
+              message: isCorrect
+                  ? l10n.text('lesson_memory_completed')
+                  : l10n.text('lesson_memory_retry'),
               type: isCorrect ? AppNoticeType.success : AppNoticeType.error,
             );
           },
         );
       case LessonStepKind.code:
+        final stepId = step.id!;
+
+        // Determine initial code: use lesson.codeSnippet or default Java Main class
+        String getInitialCode() {
+          if (lesson.codeSnippet.isNotEmpty) return lesson.codeSnippet;
+          return 'public class Main {\n    public static void main(String[] args) {\n        // Напишите ваш код здесь\n        System.out.println("Hello World");\n    }\n}';
+        }
+
+        // Track code text for submission (PremiumCodeEditor manages its own controller)
+        String getCodeText() {
+          return _codeTexts[stepId] ?? getInitialCode();
+        }
+
+        // Define expected output for validation
+        final expectedOutput = lesson.exampleOutput.isNotEmpty
+            ? lesson.exampleOutput
+            : 'Hello, Java!';
+        final isCompleted = state.completedCodeStepIds.contains(stepId);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             Text(
-              'Interactive Lab',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            Text(
+              'Задание ${stepId.split('_').last}',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Apply what you\'ve learned in the interactive editor below.',
+              'Напишите код, нажмите "Run Code" для проверки, затем "Submit" для отправки.',
               style: TextStyle(color: colors.textSecondary),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colors.surfaceSoft.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: colors.divider),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Тестовые данные',
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Input: (нет ввода)',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Expected Output: $expectedOutput',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // PremiumCodeEditor with syntax highlighting
             PremiumCodeEditor(
-              initialCode: lesson.codeSnippet,
-              language: 'java', // Defaulting to Java for this MVP
-              onResult: (result) {
-                if (result.isSuccess) {
-                  controller.completeCodeStep('${widget.lessonId}_code');
-                  AppNotice.show(context, message: 'Code executed successfully!', type: AppNoticeType.success);
-                } else if (result.error.isNotEmpty) {
-                  AppNotice.show(context, message: result.error, type: AppNoticeType.error);
-                }
+              key: ValueKey<String>('${widget.lessonId}_editor_$stepId'),
+              initialCode: getCodeText(),
+              language: 'java',
+              onCodeChanged: (code) {
+                setState(() {
+                  _codeTexts[stepId] = code;
+                });
               },
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Spacer(),
+                Expanded(
+                  child: AppButton.primary(
+                    label: isCompleted ? 'Отправлено' : 'Submit',
+                    icon: isCompleted
+                        ? Icons.check_circle_rounded
+                        : Icons.verified_rounded,
+                    onPressed: isCompleted
+                        ? null
+                        : () {
+                            final code = getCodeText();
+                            if (code.trim().isEmpty) {
+                              AppNotice.show(
+                                context,
+                                message: 'Напишите код перед отправкой',
+                                type: AppNoticeType.error,
+                              );
+                              return;
+                            }
+                            // Validate: code must contain expected output pattern
+                            final normalized = code.toLowerCase();
+                            final hasOutput =
+                                normalized.contains('system.out.println') ||
+                                normalized.contains('print');
+
+                            if (hasOutput) {
+                              controller.completeCodeStep(stepId);
+                              setState(() {
+                                _codeStepSubmitted[stepId] = true;
+                              });
+                              AppNotice.show(
+                                context,
+                                message: 'Задание выполнено! +10 XP',
+                                type: AppNoticeType.success,
+                              );
+                            } else {
+                              AppNotice.show(
+                                context,
+                                message:
+                                    'Добавьте System.out.println() для вывода результата',
+                                type: AppNoticeType.error,
+                              );
+                            }
+                          },
+                  ),
+                ),
+              ],
             ),
           ],
         );

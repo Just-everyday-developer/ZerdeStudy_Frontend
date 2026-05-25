@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
+import '../../../../core/common_widgets/bubble_progress_bar.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 
 enum QuestionType {
@@ -13,6 +13,119 @@ enum QuestionType {
   fillInTheBlank,
   matchingPairs,
 }
+
+enum DifficultyLevel { easy, medium, hard }
+
+extension DifficultyLevelWeight on DifficultyLevel {
+  int get weight => switch (this) {
+        DifficultyLevel.easy => 1,
+        DifficultyLevel.medium => 2,
+        DifficultyLevel.hard => 3,
+      };
+
+  String localizedLabel(AppLocale locale) {
+    return switch (this) {
+      DifficultyLevel.easy => switch (locale) {
+          AppLocale.ru => 'Базовый',
+          AppLocale.kk => 'Бастапқы',
+          _ => 'Easy',
+        },
+      DifficultyLevel.medium => switch (locale) {
+          AppLocale.ru => 'Средний',
+          AppLocale.kk => 'Орташа',
+          _ => 'Medium',
+        },
+      DifficultyLevel.hard => switch (locale) {
+          AppLocale.ru => 'Продвинутый',
+          AppLocale.kk => 'Жоғары',
+          _ => 'Hard',
+        },
+    };
+  }
+}
+
+class DiagnosticTopic {
+  const DiagnosticTopic({
+    required this.key,
+    required this.ru,
+    required this.kk,
+    required this.en,
+  });
+
+  final String key;
+  final String ru;
+  final String kk;
+  final String en;
+
+  String resolve(AppLocale locale) {
+    return switch (locale) {
+      AppLocale.ru => ru,
+      AppLocale.kk => kk,
+      _ => en,
+    };
+  }
+}
+
+const DiagnosticTopic _topicOOP = DiagnosticTopic(
+  key: 'oop',
+  ru: 'ООП и проектирование',
+  kk: 'ООП және жобалау',
+  en: 'OOP & Design',
+);
+const DiagnosticTopic _topicAlgorithms = DiagnosticTopic(
+  key: 'algorithms',
+  ru: 'Алгоритмы и структуры данных',
+  kk: 'Алгоритмдер және деректер құрылымы',
+  en: 'Algorithms & Data Structures',
+);
+const DiagnosticTopic _topicDatabases = DiagnosticTopic(
+  key: 'databases',
+  ru: 'Базы данных',
+  kk: 'Деректер базасы',
+  en: 'Databases',
+);
+const DiagnosticTopic _topicNetworking = DiagnosticTopic(
+  key: 'networking',
+  ru: 'Сети и веб-протоколы',
+  kk: 'Желілер және веб-протоколдар',
+  en: 'Networking & Web',
+);
+const DiagnosticTopic _topicOperatingSystems = DiagnosticTopic(
+  key: 'operating_systems',
+  ru: 'Операционные системы и память',
+  kk: 'Операциялық жүйелер және жад',
+  en: 'Operating Systems & Memory',
+);
+const DiagnosticTopic _topicArchitecture = DiagnosticTopic(
+  key: 'architecture',
+  ru: 'Архитектура компьютеров',
+  kk: 'Компьютер архитектурасы',
+  en: 'Computer Architecture',
+);
+const DiagnosticTopic _topicCloud = DiagnosticTopic(
+  key: 'cloud',
+  ru: 'Облачные технологии',
+  kk: 'Бұлттық технологиялар',
+  en: 'Cloud Computing',
+);
+const DiagnosticTopic _topicSecurity = DiagnosticTopic(
+  key: 'security',
+  ru: 'Информационная безопасность',
+  kk: 'Ақпараттық қауіпсіздік',
+  en: 'Information Security',
+);
+const DiagnosticTopic _topicAI = DiagnosticTopic(
+  key: 'ai_ml',
+  ru: 'Искусственный интеллект и ML',
+  kk: 'Жасанды интеллект және ML',
+  en: 'AI & Machine Learning',
+);
+const DiagnosticTopic _topicSoftwareEngineering = DiagnosticTopic(
+  key: 'software_engineering',
+  ru: 'Инженерные практики',
+  kk: 'Инженерлік тәжірибелер',
+  en: 'Software Engineering Practices',
+);
 
 class DiagnosticQuestion {
   const DiagnosticQuestion({
@@ -26,6 +139,8 @@ class DiagnosticQuestion {
     required this.correctMapping, // For matching pairs
     required this.correctBlanks, // For fill in the blanks
     required this.blankOptions, // For fill in the blanks
+    required this.difficulty,
+    required this.topic,
   });
 
   final String id;
@@ -38,6 +153,8 @@ class DiagnosticQuestion {
   final Map<int, int>? correctMapping;
   final List<int>? correctBlanks;
   final List<LocalizedText>? blankOptions;
+  final DifficultyLevel difficulty;
+  final DiagnosticTopic topic;
 }
 
 class LocalizedText {
@@ -83,6 +200,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.easy,
+    topic: _topicOOP,
   ),
   // 2. Polymorphism & Inheritance (Multiple choice)
   DiagnosticQuestion(
@@ -126,6 +245,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.hard,
+    topic: _topicOOP,
   ),
   // 3. Big O Notation (Single choice, 6 options)
   DiagnosticQuestion(
@@ -150,6 +271,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.medium,
+    topic: _topicAlgorithms,
   ),
   // 4. Database Normalization (Multiple choice, 6 options)
   DiagnosticQuestion(
@@ -198,6 +321,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.hard,
+    topic: _topicDatabases,
   ),
   // 5. Web Protocols HTTP vs HTTPS (Single choice, 5 options)
   DiagnosticQuestion(
@@ -241,6 +366,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.easy,
+    topic: _topicNetworking,
   ),
   // 6. Operating Systems Threads vs Processes (Multiple choice, 5 options)
   DiagnosticQuestion(
@@ -284,6 +411,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.hard,
+    topic: _topicOperatingSystems,
   ),
   // 7. Computer Architecture Cache Memory (Single choice, 4 options)
   DiagnosticQuestion(
@@ -322,6 +451,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.easy,
+    topic: _topicArchitecture,
   ),
   // 8. Software Design Patterns (Matching pairs)
   DiagnosticQuestion(
@@ -359,6 +490,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: {0: 0, 1: 1, 2: 2},
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.medium,
+    topic: _topicOOP,
   ),
   // 9. Cloud Computing models (Fill in the blanks)
   DiagnosticQuestion(
@@ -380,6 +513,8 @@ final List<DiagnosticQuestion> _questionsPool = [
       LocalizedText(ru: "PaaS", kk: "PaaS", en: "PaaS"),
       LocalizedText(ru: "SaaS", kk: "SaaS", en: "SaaS"),
     ],
+    difficulty: DifficultyLevel.medium,
+    topic: _topicCloud,
   ),
   // 10. Cryptography Public vs Private Key (Single choice, 5 options)
   DiagnosticQuestion(
@@ -423,6 +558,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.medium,
+    topic: _topicSecurity,
   ),
   // 11. Artificial Intelligence & ML types (Multiple choice, 6 options)
   DiagnosticQuestion(
@@ -471,6 +608,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.hard,
+    topic: _topicAI,
   ),
   // 12. Data Structures Stack vs Queue (Single choice, 4 options)
   DiagnosticQuestion(
@@ -497,6 +636,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.easy,
+    topic: _topicAlgorithms,
   ),
   // 13. Software Engineering Agile principles (Multiple choice, 5 options)
   DiagnosticQuestion(
@@ -540,6 +681,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: null,
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.medium,
+    topic: _topicSoftwareEngineering,
   ),
   // 14. Network Topologies (Matching pairs)
   DiagnosticQuestion(
@@ -577,6 +720,8 @@ final List<DiagnosticQuestion> _questionsPool = [
     correctMapping: {0: 0, 1: 1, 2: 2},
     correctBlanks: null,
     blankOptions: null,
+    difficulty: DifficultyLevel.medium,
+    topic: _topicNetworking,
   ),
   // 15. Memory Management (Fill in the blanks)
   DiagnosticQuestion(
@@ -598,8 +743,12 @@ final List<DiagnosticQuestion> _questionsPool = [
       LocalizedText(ru: "Куча (Heap)", kk: "Үйінді (Heap)", en: "Heap"),
       LocalizedText(ru: "Регистр (Register)", kk: "Регистр (Register)", en: "Register"),
     ],
+    difficulty: DifficultyLevel.easy,
+    topic: _topicOperatingSystems,
   ),
 ];
+
+const int _maxDiagnosticScore = 28;
 
 class DiagnosticTestPage extends ConsumerStatefulWidget {
   const DiagnosticTestPage({super.key});
@@ -629,6 +778,30 @@ class _DiagnosticTestPageState extends ConsumerState<DiagnosticTestPage> {
   bool _isCorrect = false;
   int _score = 0;
 
+  // Weighted scoring + per-topic / per-difficulty tracking
+  int _weightedScore = 0;
+  final Map<String, int> _topicScored = {}; // topicKey -> points earned
+  final Map<String, int> _topicMaxPossible = {}; // topicKey -> max points
+  final Map<DifficultyLevel, int> _difficultyScored = {
+    DifficultyLevel.easy: 0,
+    DifficultyLevel.medium: 0,
+    DifficultyLevel.hard: 0,
+  };
+  final Map<DifficultyLevel, int> _difficultyCorrect = {
+    DifficultyLevel.easy: 0,
+    DifficultyLevel.medium: 0,
+    DifficultyLevel.hard: 0,
+  };
+
+  void _accumulateMaxPossible() {
+    if (_topicMaxPossible.isNotEmpty) return;
+    for (final question in _questionsPool) {
+      _topicMaxPossible[question.topic.key] =
+          (_topicMaxPossible[question.topic.key] ?? 0) +
+              question.difficulty.weight;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -636,180 +809,8 @@ class _DiagnosticTestPageState extends ConsumerState<DiagnosticTestPage> {
     final activeLocale = _overrideLocale ?? riverpodLocale;
 
     if (_isFinished) {
-      final levelText = _score >= 12
-          ? (activeLocale == AppLocale.ru
-              ? 'Продвинутый уровень (Advanced)'
-              : (activeLocale == AppLocale.kk ? 'Жоғары деңгей (Advanced)' : 'Advanced Level'))
-          : (_score >= 6
-              ? (activeLocale == AppLocale.ru
-                  ? 'Средний уровень (Intermediate)'
-                  : (activeLocale == AppLocale.kk ? 'Орташа деңгей (Intermediate)' : 'Intermediate Level'))
-              : (activeLocale == AppLocale.ru
-                  ? 'Базовый уровень (Beginner)'
-                  : (activeLocale == AppLocale.kk ? 'Бастапқы деңгей (Beginner)' : 'Beginner Level')));
-
-      final recommendTitleText = activeLocale == AppLocale.ru
-          ? 'Рекомендованные разделы в Дереве Знаний:'
-          : (activeLocale == AppLocale.kk ? 'Білім ағашындағы ұсынылған бөлімдер:' : 'Recommended Sections in Knowledge Tree:');
-
-      final backButtonText = activeLocale == AppLocale.ru
-          ? 'Вернуться на главную'
-          : (activeLocale == AppLocale.kk ? 'Басты бетке оралу' : 'Return to Home');
-
-      final recommendedList = _score < 6
-          ? (activeLocale == AppLocale.ru
-              ? ['Математика', 'Дискретная математика', 'ООП']
-              : (activeLocale == AppLocale.kk ? ['Математика', 'Дискретті математика', 'ООП'] : ['Mathematics', 'Discrete Math', 'OOP']))
-          : (_score < 11
-              ? (activeLocale == AppLocale.ru
-                  ? ['Алгоритмы и структуры данных', 'Системы баз данных', 'Фронтенд разработка']
-                  : (activeLocale == AppLocale.kk ? ['Алгоритмдер және деректер құрылымы', 'Деректер базасы жүйелері', 'Фронтенд әзірлеу'] : ['Algorithms & Data Structures', 'Database Systems', 'Frontend Development']))
-              : (activeLocale == AppLocale.ru
-                  ? ['Операционные системы', 'Проектирование систем', 'Искусственный интеллект']
-                  : (activeLocale == AppLocale.kk ? ['Операциялық жүйелер', 'Жүйелерді жобалау', 'Жасанды интеллект'] : ['Operating Systems', 'System Design', 'Artificial Intelligence'])));
-
-      return AppPageScaffold(
-        title: activeLocale == AppLocale.ru
-            ? 'Результаты тестирования'
-            : (activeLocale == AppLocale.kk ? 'Тестілеу нәтижелері' : 'Diagnostic Results'),
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 640),
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [colors.surface, colors.surfaceSoft],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: colors.primary.withValues(alpha: 0.2), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.primary.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  spreadRadius: 2,
-                )
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.emoji_events_rounded, color: colors.primary, size: 84),
-                const SizedBox(height: 16),
-                Text(
-                  activeLocale == AppLocale.ru
-                      ? 'Диагностика Завершена!'
-                      : (activeLocale == AppLocale.kk ? 'Диагностика Аяқталды!' : 'Diagnostics Completed!'),
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  '${activeLocale == AppLocale.ru ? 'Ваш результат' : (activeLocale == AppLocale.kk ? 'Сіздің нәтижеңіз' : 'Your Score')}: $_score / 15',
-                  style: TextStyle(
-                    color: colors.primary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  levelText,
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Divider(height: 40, thickness: 1),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    recommendTitleText,
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Column(
-                  children: recommendedList.map((rec) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: colors.primary.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: colors.primary.withValues(alpha: 0.1)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.star_rounded, color: colors.primary, size: 18),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              rec,
-                              style: TextStyle(
-                                color: colors.textPrimary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13.5,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: colors.primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              activeLocale == AppLocale.ru
-                                  ? 'Рекомендовано'
-                                  : (activeLocale == AppLocale.kk ? 'Ұсынылады' : 'Recommended'),
-                              style: TextStyle(
-                                color: colors.primary,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      context.pop();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      backButtonText,
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      _accumulateMaxPossible();
+      return _buildResultPage(context, colors, activeLocale);
     }
 
     final question = _questionsPool[_currentIndex];
@@ -877,14 +878,11 @@ class _DiagnosticTestPageState extends ConsumerState<DiagnosticTestPage> {
                 Row(
                   children: [
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(
-                          value: (_currentIndex + 1) / _questionsPool.length,
-                          minHeight: 8,
-                          backgroundColor: colors.surfaceSoft,
-                          valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
-                        ),
+                      child: BubbleProgressBar(
+                        value: (_currentIndex + 1) / _questionsPool.length,
+                        height: 8,
+                        backgroundColor: colors.surfaceSoft,
+                        color: colors.primary,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -1056,6 +1054,14 @@ class _DiagnosticTestPageState extends ConsumerState<DiagnosticTestPage> {
         _isCorrect = correct;
         if (correct) {
           _score++;
+          final weight = question.difficulty.weight;
+          _weightedScore += weight;
+          _difficultyScored[question.difficulty] =
+              (_difficultyScored[question.difficulty] ?? 0) + weight;
+          _difficultyCorrect[question.difficulty] =
+              (_difficultyCorrect[question.difficulty] ?? 0) + 1;
+          _topicScored[question.topic.key] =
+              (_topicScored[question.topic.key] ?? 0) + weight;
         }
       });
     }
@@ -1545,6 +1551,586 @@ class _DiagnosticTestPageState extends ConsumerState<DiagnosticTestPage> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildResultPage(
+    BuildContext context,
+    AppThemeColors colors,
+    AppLocale locale,
+  ) {
+    // Beginner: < 12 weighted points
+    // Intermediate: 12 – 20 weighted points
+    // Advanced: >= 21 weighted points
+    final isAdvanced = _weightedScore >= 21;
+    final isIntermediate = !isAdvanced && _weightedScore >= 12;
+
+    final levelText = isAdvanced
+        ? switch (locale) {
+            AppLocale.ru => 'Продвинутый уровень (Advanced)',
+            AppLocale.kk => 'Жоғары деңгей (Advanced)',
+            _ => 'Advanced Level',
+          }
+        : isIntermediate
+            ? switch (locale) {
+                AppLocale.ru => 'Средний уровень (Intermediate)',
+                AppLocale.kk => 'Орташа деңгей (Intermediate)',
+                _ => 'Intermediate Level',
+              }
+            : switch (locale) {
+                AppLocale.ru => 'Базовый уровень (Beginner)',
+                AppLocale.kk => 'Бастапқы деңгей (Beginner)',
+                _ => 'Beginner Level',
+              };
+
+    final levelHint = isAdvanced
+        ? switch (locale) {
+            AppLocale.ru =>
+              'Уверенно владеете базой и решаете сложные задачи. Сфокусируйтесь на углублённых темах и системном дизайне.',
+            AppLocale.kk =>
+              'Базаны жақсы білесіз және күрделі мәселелерді шешесіз. Тереңдетілген тақырыптарға және жүйелік дизайнға назар аударыңыз.',
+            _ =>
+              'Confident with the fundamentals and tackling complex problems. Focus on advanced topics and system design.',
+          }
+        : isIntermediate
+            ? switch (locale) {
+                AppLocale.ru =>
+                  'Хорошая база, но есть пробелы. Прокачайте слабые темы ниже и переходите к практическим проектам.',
+                AppLocale.kk =>
+                  'Жақсы база, бірақ кемшіліктер бар. Төмендегі әлсіз тақырыптарды күшейтіп, тәжірибелік жобаларға көшіңіз.',
+                _ =>
+                  'Solid base with some gaps. Strengthen the weak topics below, then move to project-based practice.',
+              }
+            : switch (locale) {
+                AppLocale.ru =>
+                  'Начните с основ. Двигайтесь от базовых тем к сложным — для каждой темы есть отдельный модуль в Дереве Знаний.',
+                AppLocale.kk =>
+                  'Негіздерден бастаңыз. Базалық тақырыптардан күрделіге өтіңіз — әр тақырып үшін Білім ағашында жеке модуль бар.',
+                _ =>
+                  'Start with fundamentals. Move from basic to complex topics — each has its own module in the Knowledge Tree.',
+              };
+
+    final backButtonText = switch (locale) {
+      AppLocale.ru => 'Вернуться на главную',
+      AppLocale.kk => 'Басты бетке оралу',
+      _ => 'Return to Home',
+    };
+
+    // Pick weakest topics (lowest mastery %), max 3
+    final weakTopics = _weakestTopics();
+
+    return AppPageScaffold(
+      title: switch (locale) {
+        AppLocale.ru => 'Результаты тестирования',
+        AppLocale.kk => 'Тестілеу нәтижелері',
+        _ => 'Diagnostic Results',
+      },
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 660),
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [colors.surface, colors.surfaceSoft],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: colors.primary.withValues(alpha: 0.2),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(
+                  Icons.emoji_events_rounded,
+                  color: colors.primary,
+                  size: 72,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  switch (locale) {
+                    AppLocale.ru => 'Диагностика завершена',
+                    AppLocale.kk => 'Диагностика аяқталды',
+                    _ => 'Diagnostics completed',
+                  },
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _ScoreSummaryBlock(
+                  weighted: _weightedScore,
+                  maxWeighted: _maxDiagnosticScore,
+                  rawCorrect: _score,
+                  totalQuestions: _questionsPool.length,
+                  levelText: levelText,
+                  levelHint: levelHint,
+                  isAdvanced: isAdvanced,
+                  isIntermediate: isIntermediate,
+                  colors: colors,
+                  locale: locale,
+                ),
+                const SizedBox(height: 24),
+                _DifficultyBreakdown(
+                  difficultyCorrect: _difficultyCorrect,
+                  locale: locale,
+                  colors: colors,
+                ),
+                const SizedBox(height: 24),
+                _TopicMasteryList(
+                  topicScored: _topicScored,
+                  topicMaxPossible: _topicMaxPossible,
+                  locale: locale,
+                  colors: colors,
+                ),
+                if (weakTopics.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    switch (locale) {
+                      AppLocale.ru => 'Рекомендуем подтянуть:',
+                      AppLocale.kk => 'Күшейтуді ұсынамыз:',
+                      _ => 'Recommended areas to strengthen:',
+                    },
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...weakTopics.map(
+                    (entry) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.primary.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: colors.primary.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.bolt_rounded,
+                            color: colors.primary,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              entry.topic.resolve(locale),
+                              style: TextStyle(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13.5,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${(entry.mastery * 100).round()}%',
+                            style: TextStyle(
+                              color: colors.primary,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      backButtonText,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<_WeakTopicEntry> _weakestTopics() {
+    final entries = <_WeakTopicEntry>[];
+    final seenTopics = <String, DiagnosticTopic>{};
+    for (final question in _questionsPool) {
+      seenTopics.putIfAbsent(question.topic.key, () => question.topic);
+    }
+    seenTopics.forEach((key, topic) {
+      final scored = _topicScored[key] ?? 0;
+      final maxPossible = _topicMaxPossible[key] ?? 0;
+      if (maxPossible == 0) return;
+      final mastery = scored / maxPossible;
+      if (mastery < 0.7) {
+        entries.add(_WeakTopicEntry(topic: topic, mastery: mastery));
+      }
+    });
+    entries.sort((a, b) => a.mastery.compareTo(b.mastery));
+    return entries.take(3).toList(growable: false);
+  }
+}
+
+class _WeakTopicEntry {
+  const _WeakTopicEntry({required this.topic, required this.mastery});
+  final DiagnosticTopic topic;
+  final double mastery;
+}
+
+class _ScoreSummaryBlock extends StatelessWidget {
+  const _ScoreSummaryBlock({
+    required this.weighted,
+    required this.maxWeighted,
+    required this.rawCorrect,
+    required this.totalQuestions,
+    required this.levelText,
+    required this.levelHint,
+    required this.isAdvanced,
+    required this.isIntermediate,
+    required this.colors,
+    required this.locale,
+  });
+
+  final int weighted;
+  final int maxWeighted;
+  final int rawCorrect;
+  final int totalQuestions;
+  final String levelText;
+  final String levelHint;
+  final bool isAdvanced;
+  final bool isIntermediate;
+  final AppThemeColors colors;
+  final AppLocale locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = isAdvanced
+        ? Colors.green
+        : isIntermediate
+            ? colors.primary
+            : Colors.orange;
+    final percent = maxWeighted == 0 ? 0.0 : weighted / maxWeighted;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      levelText,
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${switch (locale) {
+                        AppLocale.ru => 'Очки',
+                        AppLocale.kk => 'Ұпай',
+                        _ => 'Points',
+                      }}: $weighted / $maxWeighted · ${switch (locale) {
+                        AppLocale.ru => 'верно',
+                        AppLocale.kk => 'дұрыс',
+                        _ => 'correct',
+                      }}: $rawCorrect / $totalQuestions',
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${(percent * 100).round()}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: percent,
+              minHeight: 8,
+              backgroundColor: accent.withValues(alpha: 0.18),
+              valueColor: AlwaysStoppedAnimation<Color>(accent),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            levelHint,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DifficultyBreakdown extends StatelessWidget {
+  const _DifficultyBreakdown({
+    required this.difficultyCorrect,
+    required this.locale,
+    required this.colors,
+  });
+
+  final Map<DifficultyLevel, int> difficultyCorrect;
+  final AppLocale locale;
+  final AppThemeColors colors;
+
+  int _totalForLevel(DifficultyLevel level) {
+    return _questionsPool.where((q) => q.difficulty == level).length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = DifficultyLevel.values.map((level) {
+      final correct = difficultyCorrect[level] ?? 0;
+      final total = _totalForLevel(level);
+      final accent = switch (level) {
+        DifficultyLevel.easy => Colors.green,
+        DifficultyLevel.medium => colors.primary,
+        DifficultyLevel.hard => Colors.deepOrange,
+      };
+      final percent = total == 0 ? 0.0 : correct / total;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 96,
+              child: Text(
+                level.localizedLabel(locale),
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12.5,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: percent,
+                  minHeight: 8,
+                  backgroundColor: accent.withValues(alpha: 0.18),
+                  valueColor: AlwaysStoppedAnimation<Color>(accent),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 48,
+              child: Text(
+                '$correct / $total',
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList(growable: false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          switch (locale) {
+            AppLocale.ru => 'Результат по сложности',
+            AppLocale.kk => 'Күрделілік бойынша нәтиже',
+            _ => 'Performance by difficulty',
+          },
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        ...rows,
+      ],
+    );
+  }
+}
+
+class _TopicMasteryList extends StatelessWidget {
+  const _TopicMasteryList({
+    required this.topicScored,
+    required this.topicMaxPossible,
+    required this.locale,
+    required this.colors,
+  });
+
+  final Map<String, int> topicScored;
+  final Map<String, int> topicMaxPossible;
+  final AppLocale locale;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final seenTopics = <String, DiagnosticTopic>{};
+    for (final question in _questionsPool) {
+      seenTopics.putIfAbsent(question.topic.key, () => question.topic);
+    }
+    final entries = seenTopics.entries.map((e) {
+      final scored = topicScored[e.key] ?? 0;
+      final maxPossible = topicMaxPossible[e.key] ?? 0;
+      final mastery = maxPossible == 0 ? 0.0 : scored / maxPossible;
+      return MapEntry(e.value, mastery);
+    }).toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          switch (locale) {
+            AppLocale.ru => 'Освоение по темам',
+            AppLocale.kk => 'Тақырыптарды меңгеру',
+            _ => 'Topic mastery',
+          },
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        ...entries.map((entry) {
+          final mastery = entry.value;
+          final accent = mastery >= 0.7
+              ? Colors.green
+              : mastery >= 0.4
+                  ? colors.primary
+                  : Colors.orange;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.key.resolve(locale),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 88,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: mastery,
+                      minHeight: 6,
+                      backgroundColor: accent.withValues(alpha: 0.18),
+                      valueColor: AlwaysStoppedAnimation<Color>(accent),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 38,
+                  child: Text(
+                    '${(mastery * 100).round()}%',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 11.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 }

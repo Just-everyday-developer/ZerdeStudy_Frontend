@@ -35,7 +35,12 @@ class AppRoutes {
   static const String moderatorComments = '/moderator/comments';
   static const String moderatorCommunity = '/moderator/community';
   static const String moderatorFaq = '/moderator/faq';
+  static const String moderatorUsers = '/moderator/users';
+  static const String moderatorSystem = '/moderator/system';
   static const String diagnostics = '/diagnostics';
+  static const String payment = '/payment';
+  static const String googleCallback = '/auth/google/callback';
+  static const String githubCallback = '/auth/github/callback';
 
   static String trackById(String trackId) => '$track/$trackId';
 
@@ -65,6 +70,21 @@ class AppRoutes {
     final uri = Uri(
       path: resetPassword,
       queryParameters: <String, String>{'email': email, 'code': code},
+    );
+    return uri.toString();
+  }
+
+  static String paymentById({
+    required String courseId,
+    required int amount,
+    String currency = 'KZT',
+  }) {
+    final uri = Uri(
+      path: '$payment/$courseId',
+      queryParameters: <String, String>{
+        'amount': '$amount',
+        'currency': currency,
+      },
     );
     return uri.toString();
   }

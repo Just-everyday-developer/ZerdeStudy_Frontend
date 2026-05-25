@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../../core/common_widgets/bubble_progress_bar.dart';
 
 class CourseCard extends StatelessWidget {
   const CourseCard({
@@ -27,10 +27,18 @@ class CourseCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(28),
-      child: GlowCard(
-        accent: color,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.surface.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: colors.divider.withValues(alpha: 0.5),
+          ),
+        ),
         child: Column(
+
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -62,14 +70,11 @@ class CourseCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: colors.backgroundElevated,
-                color: color,
-              ),
+            BubbleProgressBar(
+              value: progress,
+              color: color,
+              backgroundColor: colors.backgroundElevated,
+              height: 8,
             ),
           ],
         ),

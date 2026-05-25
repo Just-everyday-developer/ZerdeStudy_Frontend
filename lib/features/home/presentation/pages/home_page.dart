@@ -8,7 +8,12 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/common_widgets/bubble_progress_bar.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
+import '../../../courses_backend/data/models/backend_streak_dto.dart';
+import '../../../app_guide/presentation/app_guide_controller.dart';
+import '../../../app_guide/presentation/app_guide_target.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../app/state/demo_app_state.dart';
 import '../../../../app/state/app_locale.dart';
@@ -18,7 +23,8 @@ class HomePage extends ConsumerWidget {
 
   String _getLastTopicTitle(DemoAppState state, LearningTrack track) {
     for (final module in track.modules.reversed) {
-      if (module.practice != null && state.completedPracticeIds.contains(module.practice!.id)) {
+      if (module.practice != null &&
+          state.completedPracticeIds.contains(module.practice!.id)) {
         return module.practice!.title.resolve(state.locale);
       }
       for (final lesson in module.lessons.reversed) {
@@ -37,15 +43,22 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
+    final backendStreak = ref
+        .watch(backendStreakProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
+    final streakDays = backendStreak?.streak ?? state.streak;
+    final activeStreakDates =
+        backendStreak?.activeDates.toSet() ??
+        BackendStreakDto.deriveActiveDates(
+          streak: state.streak,
+          lastLogin: DateTime.now(),
+        ).toSet();
     final catalog = ref.watch(demoCatalogProvider);
     final currentTrack = catalog.trackById(state.currentTrackId);
     final currentProgress = catalog.progressForTrack(state, currentTrack.id);
-    
+
     final leaderboard = catalog.leaderboardFor(state);
     final myRank = leaderboard.indexWhere((e) => e.isCurrentUser) + 1;
-    final incorrectExercises = catalog.incorrectCourseExercisesFor(state);
-    final incorrectQuizzes = catalog.incorrectTrackQuizzesFor(state);
-    final mistakesCount = incorrectExercises.length + incorrectQuizzes.length;
     final colors = context.appColors;
     final compact = context.isCompactLayout;
 
@@ -143,7 +156,9 @@ class HomePage extends ConsumerWidget {
                 userName: state.user?.name ?? 'Talgat',
                 locale: state.locale,
               ),
-              if (currentTrack.description.resolve(state.locale).isNotEmpty) ...[
+              if (currentTrack.description
+                  .resolve(state.locale)
+                  .isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Text(
                   currentTrack.description.resolve(state.locale),
@@ -160,9 +175,10 @@ class HomePage extends ConsumerWidget {
               ),
               if (currentProgress.nextTarget != null) ...[
                 const SizedBox(height: 18),
-                _NextTargetCTACard(
-                  target: currentProgress.nextTarget!,
-                  trackColor: currentTrack.color,
+                _CurrentTrackCard(
+                  track: currentTrack,
+                  progress: currentProgress,
+                  xp: state.xp,
                   colors: colors,
                   locale: state.locale,
                   onTap: () {
@@ -177,20 +193,21 @@ class HomePage extends ConsumerWidget {
               ],
               const SizedBox(height: 18),
               _HabitTrackerCalendar(
-                streak: state.streak,
+                streak: streakDays,
+                activeDates: activeStreakDates,
                 rank: myRank,
                 colors: colors,
               ),
               const SizedBox(height: 24),
-              
+
               // Knowledge Tree Section (Always at the top of progress cards)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Text(
                   trackSectionTitle,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
               if (compact)
@@ -199,7 +216,9 @@ class HomePage extends ConsumerWidget {
                 Wrap(
                   spacing: 16,
                   runSpacing: 16,
-                  children: trackCards.map((card) => SizedBox(width: 340, child: card)).toList(),
+                  children: trackCards
+                      .map((card) => SizedBox(width: 340, child: card))
+                      .toList(),
                 ),
               const SizedBox(height: 18),
 
@@ -208,9 +227,9 @@ class HomePage extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Text(
                   courseSectionTitle,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
               if (compact)
@@ -219,7 +238,9 @@ class HomePage extends ConsumerWidget {
                 Wrap(
                   spacing: 16,
                   runSpacing: 16,
-                  children: courseCards.map((card) => SizedBox(width: 340, child: card)).toList(),
+                  children: courseCards
+                      .map((card) => SizedBox(width: 340, child: card))
+                      .toList(),
                 ),
             ],
           ),
@@ -232,11 +253,13 @@ class HomePage extends ConsumerWidget {
 class _HabitTrackerCalendar extends StatefulWidget {
   const _HabitTrackerCalendar({
     required this.streak,
+    required this.activeDates,
     required this.rank,
     required this.colors,
   });
 
   final int streak;
+  final Set<DateTime> activeDates;
   final int rank;
   final AppThemeColors colors;
 
@@ -265,14 +288,30 @@ class _HabitTrackerCalendarState extends State<_HabitTrackerCalendar> {
   }
 
   void _nextMonth() {
+    final now = DateTime.now();
+    final next = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+    final currentCalendarMonth = DateTime(now.year, now.month, 1);
+    if (next.isAfter(currentCalendarMonth)) {
+      return;
+    }
     setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+      _currentMonth = next;
     });
   }
 
   static const _monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   void _showMonthYearPicker(BuildContext context) {
@@ -337,19 +376,28 @@ class _HabitTrackerCalendarState extends State<_HabitTrackerCalendar> {
                                 child: ListView.builder(
                                   itemCount: 12,
                                   itemBuilder: (context, index) {
-                                    final isSelected = currentMonthIndex == index;
+                                    final isSelected =
+                                        currentMonthIndex == index;
                                     return ListTile(
                                       dense: true,
                                       title: Text(
                                         _monthNames[index],
                                         style: TextStyle(
-                                          color: isSelected ? colors.primary : colors.textPrimary,
-                                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                          color: isSelected
+                                              ? colors.primary
+                                              : colors.textPrimary,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w800
+                                              : FontWeight.w500,
                                         ),
                                       ),
                                       onTap: () {
                                         setState(() {
-                                          _currentMonth = DateTime(_currentMonth.year, index + 1, 1);
+                                          _currentMonth = DateTime(
+                                            _currentMonth.year,
+                                            index + 1,
+                                            1,
+                                          );
                                         });
                                         setDialogState(() {});
                                       },
@@ -390,19 +438,28 @@ class _HabitTrackerCalendarState extends State<_HabitTrackerCalendar> {
                                   itemCount: 52, // 2026 to 2077
                                   itemBuilder: (context, index) {
                                     final year = 2026 + index;
-                                    final isSelected = _currentMonth.year == year;
+                                    final isSelected =
+                                        _currentMonth.year == year;
                                     return ListTile(
                                       dense: true,
                                       title: Text(
                                         '$year',
                                         style: TextStyle(
-                                          color: isSelected ? colors.primary : colors.textPrimary,
-                                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                          color: isSelected
+                                              ? colors.primary
+                                              : colors.textPrimary,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w800
+                                              : FontWeight.w500,
                                         ),
                                       ),
                                       onTap: () {
                                         setState(() {
-                                          _currentMonth = DateTime(year, _currentMonth.month, 1);
+                                          _currentMonth = DateTime(
+                                            year,
+                                            _currentMonth.month,
+                                            1,
+                                          );
                                         });
                                         setDialogState(() {});
                                       },
@@ -448,39 +505,47 @@ class _HabitTrackerCalendarState extends State<_HabitTrackerCalendar> {
   @override
   Widget build(BuildContext context) {
     final colors = widget.colors;
-    
+
     // Calculate days in month and starting weekday
-    final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    final daysInMonth = DateTime(
+      _currentMonth.year,
+      _currentMonth.month + 1,
+      0,
+    ).day;
     final firstWeekday = _currentMonth.weekday; // 1 = Mon, 7 = Sun
-    final previousMonthDays = DateTime(_currentMonth.year, _currentMonth.month, 0).day;
+    final previousMonthDays = DateTime(
+      _currentMonth.year,
+      _currentMonth.month,
+      0,
+    ).day;
 
     final calendarDays = <Widget>[];
-    
+
     // Previous month filler days
     for (int i = 1; i < firstWeekday; i++) {
       final day = previousMonthDays - firstWeekday + i + 1;
-      calendarDays.add(_buildDayCell(day, isCurrentMonth: false, isFlame: false, colors: colors));
+      final date = DateTime(_currentMonth.year, _currentMonth.month - 1, day);
+      calendarDays.add(
+        _buildDayCell(day, date: date, isCurrentMonth: false, colors: colors),
+      );
     }
-    
-    // Current month days
+
+    // Current month days — all empty (no fake checkmarks)
     for (int i = 1; i <= daysInMonth; i++) {
-      bool isFlame = false;
-      final cellDate = DateTime(_currentMonth.year, _currentMonth.month, i);
-      final limitDate = DateTime(2026, 5, 12);
-      
-      if (!cellDate.isAfter(limitDate)) {
-        isFlame = i % 3 != 0;
-      } else {
-        isFlame = false;
-      }
-      calendarDays.add(_buildDayCell(i, isCurrentMonth: true, isFlame: isFlame, colors: colors));
+      final date = DateTime(_currentMonth.year, _currentMonth.month, i);
+      calendarDays.add(
+        _buildDayCell(i, date: date, isCurrentMonth: true, colors: colors),
+      );
     }
-    
+
     // Next month filler days
     final totalCellsNeeded = calendarDays.length <= 35 ? 35 : 42;
     final cellsToAdd = totalCellsNeeded - calendarDays.length;
     for (int i = 1; i <= cellsToAdd; i++) {
-      calendarDays.add(_buildDayCell(i, isCurrentMonth: false, isFlame: false, colors: colors));
+      final date = DateTime(_currentMonth.year, _currentMonth.month + 1, i);
+      calendarDays.add(
+        _buildDayCell(i, date: date, isCurrentMonth: false, colors: colors),
+      );
     }
 
     // Split into rows
@@ -541,7 +606,10 @@ class _HabitTrackerCalendarState extends State<_HabitTrackerCalendar> {
                 borderRadius: BorderRadius.circular(12),
                 onTap: () => _showMonthYearPicker(context),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.surfaceSoft,
                     borderRadius: BorderRadius.circular(16),
@@ -550,7 +618,11 @@ class _HabitTrackerCalendarState extends State<_HabitTrackerCalendar> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.calendar_today_rounded, size: 16, color: colors.primary),
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 16,
+                        color: colors.primary,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         _monthNames[_currentMonth.month - 1],
@@ -570,7 +642,11 @@ class _HabitTrackerCalendarState extends State<_HabitTrackerCalendar> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down_rounded, size: 20, color: colors.textPrimary),
+                      Icon(
+                        Icons.arrow_drop_down_rounded,
+                        size: 20,
+                        color: colors.textPrimary,
+                      ),
                     ],
                   ),
                 ),
@@ -598,18 +674,20 @@ class _HabitTrackerCalendarState extends State<_HabitTrackerCalendar> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
-                .map((day) => Expanded(
-                      child: Center(
-                        child: Text(
-                          day,
-                          style: TextStyle(
-                            color: colors.textSecondary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
+                .map(
+                  (day) => Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
                         ),
                       ),
-                    ))
+                    ),
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 12),
@@ -619,21 +697,37 @@ class _HabitTrackerCalendarState extends State<_HabitTrackerCalendar> {
     );
   }
 
-  Widget _buildDayCell(int day, {required bool isCurrentMonth, required bool isFlame, required AppThemeColors colors}) {
+  Widget _buildDayCell(
+    int day, {
+    required DateTime date,
+    required bool isCurrentMonth,
+    required AppThemeColors colors,
+  }) {
+    final isFlame = widget.activeDates.contains(_dateOnly(date));
     return Expanded(
       child: Center(
-        child: isFlame 
+        child: isFlame
             ? Icon(Icons.check_circle_rounded, color: colors.success, size: 18)
             : Text(
                 '$day',
                 style: TextStyle(
-                  color: isCurrentMonth ? colors.textPrimary : colors.textSecondary.withValues(alpha: 0.5),
-                  fontWeight: isCurrentMonth ? FontWeight.w600 : colors.textPrimary.a > 0.5 ? FontWeight.w500 : FontWeight.w400,
+                  color: isCurrentMonth
+                      ? colors.textPrimary
+                      : colors.textSecondary.withValues(alpha: 0.5),
+                  fontWeight: isCurrentMonth
+                      ? FontWeight.w600
+                      : colors.textPrimary.a > 0.5
+                      ? FontWeight.w500
+                      : FontWeight.w400,
                   fontSize: 14,
                 ),
               ),
       ),
     );
+  }
+
+  DateTime _dateOnly(DateTime value) {
+    return DateTime(value.year, value.month, value.day);
   }
 }
 
@@ -749,7 +843,6 @@ class _CircularProgressCard extends StatelessWidget {
   }
 }
 
-
 class _AssessmentDiagnosticCard extends StatelessWidget {
   const _AssessmentDiagnosticCard({
     required this.colors,
@@ -770,9 +863,12 @@ class _AssessmentDiagnosticCard extends StatelessWidget {
     };
 
     final description = switch (locale) {
-      AppLocale.ru => 'Пройдите быстрое адаптивное тестирование по фундаментальным концепциям Computer Science! Система автоматически определит ваш уровень и сформирует персональные рекомендации в Дереве Знаний.',
-      AppLocale.kk => 'Компьютерлік ғылымдардың іргелі тұжырымдамалары бойынша жылдам бейімделген тестілеуден өтіңіз! Жүйе сіздің деңгейіңізді автоматты түрде анықтап, Білім ағашында дербес ұсыныстар жасайды.',
-      _ => 'Take a quick adaptive test on the fundamental concepts of Computer Science! The system will automatically determine your level and generate personalized recommendations in the Knowledge Tree.',
+      AppLocale.ru =>
+        'Пройдите быстрое адаптивное тестирование по фундаментальным концепциям Computer Science! Система автоматически определит ваш уровень и сформирует персональные рекомендации в Дереве Знаний.',
+      AppLocale.kk =>
+        'Компьютерлік ғылымдардың іргелі тұжырымдамалары бойынша жылдам бейімделген тестілеуден өтіңіз! Жүйе сіздің деңгейіңізді автоматты түрде анықтап, Білім ағашында дербес ұсыныстар жасайды.',
+      _ =>
+        'Take a quick adaptive test on the fundamental concepts of Computer Science! The system will automatically determine your level and generate personalized recommendations in the Knowledge Tree.',
     };
 
     return MouseRegion(
@@ -781,58 +877,64 @@ class _AssessmentDiagnosticCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: GlowCard(
-        accent: colors.primary,
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: colors.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
+          accent: colors.primary,
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: colors.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.psychology_rounded,
+                            color: colors.primary,
+                            size: 24,
+                          ),
                         ),
-                        child: Icon(Icons.psychology_rounded, color: colors.primary, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      fontSize: 13,
-                      height: 1.45,
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 13,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Icon(Icons.chevron_right_rounded, color: colors.primary),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Icon(Icons.chevron_right_rounded, color: colors.primary),
+              ),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
 }
 
@@ -846,7 +948,8 @@ class _AnimatedGreeting extends StatefulWidget {
   State<_AnimatedGreeting> createState() => _AnimatedGreetingState();
 }
 
-class _AnimatedGreetingState extends State<_AnimatedGreeting> with SingleTickerProviderStateMixin {
+class _AnimatedGreetingState extends State<_AnimatedGreeting>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _rotationAnimation;
 
@@ -858,9 +961,10 @@ class _AnimatedGreetingState extends State<_AnimatedGreeting> with SingleTickerP
       vsync: this,
     )..repeat(reverse: true);
 
-    _rotationAnimation = Tween<double>(begin: -0.12, end: 0.12).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _rotationAnimation = Tween<double>(
+      begin: -0.12,
+      end: 0.12,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -917,18 +1021,15 @@ class _AnimatedGreetingState extends State<_AnimatedGreeting> with SingleTickerP
                   child: Text(
                     '$greeting, ${widget.userName}!',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontSize: context.isCompactLayout ? 24 : 28,
-                          fontWeight: FontWeight.w900,
-                        ),
+                      fontSize: context.isCompactLayout ? 24 : 28,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 RotationTransition(
                   turns: _rotationAnimation,
-                  child: const Text(
-                    '👋',
-                    style: TextStyle(fontSize: 28),
-                  ),
+                  child: const Text('👋', style: TextStyle(fontSize: 28)),
                 ),
               ],
             ),
@@ -939,94 +1040,323 @@ class _AnimatedGreetingState extends State<_AnimatedGreeting> with SingleTickerP
   }
 }
 
-class _NextTargetCTACard extends StatelessWidget {
-  const _NextTargetCTACard({
-    required this.target,
-    required this.trackColor,
+class _CurrentTrackCard extends StatelessWidget {
+  const _CurrentTrackCard({
+    required this.track,
+    required this.progress,
+    required this.xp,
     required this.colors,
     required this.locale,
     required this.onTap,
   });
 
-  final LearningTarget target;
-  final Color trackColor;
+  final LearningTrack track;
+  final TrackProgress progress;
+  final int xp;
   final AppThemeColors colors;
   final AppLocale locale;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isPractice = target.isPractice;
-    final icon = isPractice ? Icons.fitness_center_rounded : Icons.menu_book_rounded;
-    final tagText = isPractice
-        ? (locale == AppLocale.ru ? 'ПРАКТИКА' : (locale == AppLocale.kk ? 'ТӘЖІРИБЕ' : 'PRACTICE'))
-        : (locale == AppLocale.ru ? 'УРОК' : (locale == AppLocale.kk ? 'САБАҚ' : 'LESSON'));
+    final level = (xp / 200).floor() + 1;
+    final xpInCurrentLevel = xp % 200;
+    final xpNeededForNext = 200 - xpInCurrentLevel;
 
-    final actionLabel = isPractice
-        ? (locale == AppLocale.ru ? 'Начать практику' : (locale == AppLocale.kk ? 'Тәжірибені бастау' : 'Start Practice'))
-        : (locale == AppLocale.ru ? 'Перейти к уроку' : (locale == AppLocale.kk ? 'Сабаққа өту' : 'Go to Lesson'));
+    final labelCurrentTrack = switch (locale) {
+      AppLocale.ru => 'ТЕКУЩИЙ ТРЕК',
+      AppLocale.kk => 'АҒЫМДАҒЫ ТРЕК',
+      _ => 'CURRENT TRACK',
+    };
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: GlowCard(
-        accent: trackColor,
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: trackColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: trackColor, size: 30),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final labelCompleted = switch (locale) {
+      AppLocale.ru =>
+        '${progress.completedUnits} из ${progress.totalUnits} разделов завершено',
+      AppLocale.kk =>
+        '${progress.completedUnits} / ${progress.totalUnits} бөлім аяқталды',
+      _ =>
+        '${progress.completedUnits} of ${progress.totalUnits} units completed',
+    };
+
+    final labelNextLevel = switch (locale) {
+      AppLocale.ru => 'До следующего уровня: $xpNeededForNext XP',
+      AppLocale.kk => 'Келесі деңгейге дейін: $xpNeededForNext XP',
+      _ => 'Next level in: $xpNeededForNext XP',
+    };
+
+    final labelContinue = switch (locale) {
+      AppLocale.ru => 'Продолжить обучение',
+      AppLocale.kk => 'Оқуды жалғастыру',
+      _ => 'Continue Learning',
+    };
+
+    return GlowCard(
+      accent: track.color,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: trackColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
+                      color: track.color.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(
-                      tagText,
-                      style: TextStyle(
-                        color: trackColor,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 10,
-                        letterSpacing: 1,
-                      ),
-                    ),
+                    child: Icon(track.icon, color: track.color, size: 18),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(width: 12),
                   Text(
-                    target.title.resolve(locale),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    labelCurrentTrack,
                     style: TextStyle(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    actionLabel,
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      color: colors.textSecondary.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 11,
+                      letterSpacing: 1.5,
                     ),
                   ),
                 ],
               ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Text(
+                      'Lv.$level',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.bolt_rounded,
+                          size: 14,
+                          color: Colors.orange.shade400,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$xp XP',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Track Title
+          Text(
+            track.title.resolve(locale),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.8,
             ),
-            Icon(Icons.arrow_forward_ios_rounded, color: trackColor, size: 16),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            labelCompleted,
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Bubble Progress Bar
+          BubbleProgressBar(
+            value: progress.fraction,
+            color: track.color,
+            backgroundColor: Colors.white.withValues(alpha: 0.05),
+            height: 10,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            labelNextLevel,
+            style: TextStyle(
+              color: colors.textSecondary.withValues(alpha: 0.6),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          AppGuideTarget(
+            id: AppGuideTargetIds.homeContinue,
+            child: _AnimatedPremiumButton(
+              onTap: onTap,
+              label: labelContinue,
+              color: track.color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnimatedPremiumButton extends StatefulWidget {
+  const _AnimatedPremiumButton({
+    required this.onTap,
+    required this.label,
+    required this.color,
+  });
+
+  final VoidCallback onTap;
+  final String label;
+  final Color color;
+
+  @override
+  State<_AnimatedPremiumButton> createState() => _AnimatedPremiumButtonState();
+}
+
+class _AnimatedPremiumButtonState extends State<_AnimatedPremiumButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: widget.color.withValues(alpha: 0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Stack(
+          children: [
+            // Animated Border Gradient
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: SweepGradient(
+                        center: Alignment.center,
+                        startAngle: 0,
+                        endAngle: 3.14 * 2,
+                        transform: GradientRotation(
+                          _controller.value * 3.14 * 2,
+                        ),
+                        colors: [
+                          widget.color.withValues(alpha: 0),
+                          widget.color,
+                          widget.color.withValues(alpha: 0),
+                        ],
+                        stops: const [0.35, 0.5, 0.65],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            // Background Layer (slightly smaller to show border)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(2), // Border width
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: widget.color,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            // Interaction Layer
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: widget.onTap,
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.play_circle_fill_rounded,
+                        color: Colors.black87,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        widget.label,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

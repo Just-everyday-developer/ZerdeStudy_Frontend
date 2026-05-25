@@ -380,13 +380,25 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
         ? null
         : catalog.progressForTrack(state, track.id);
     final orbSize = node.radius * 2;
-    final statusHasBadge =
-        bestPercent > 0 || (progress?.completedUnits ?? 0) > 0;
-    final statusLabel = bestPercent > 0
-        ? '$bestPercent%'
-        : progress == null || progress.completedUnits == 0
-        ? ''
-        : '${progress.completedUnits}';
+    
+    // Determine lesson-level status for this track node
+    final hasStartedLessons = track != null && track.modules.any(
+      (m) => m.lessons.any((l) => state.startedLessonIds.contains(l.id)),
+    );
+    final hasCompletedLessons = track != null && track.modules.any(
+      (m) => m.lessons.any((l) => state.completedLessonIds.contains(l.id)),
+    );
+    final hasCompletedPractice = track != null && track.modules.any(
+      (m) => m.practice != null && state.completedPracticeIds.contains(m.practice!.id),
+    );
+    
+    final trackStatusLabel = track == null ? '' 
+        : hasCompletedLessons || hasCompletedPractice
+            ? (state.locale == AppLocale.ru ? 'Выполнен' : (state.locale == AppLocale.kk ? 'Аяқталды' : 'Completed'))
+            : hasStartedLessons
+                ? (state.locale == AppLocale.ru ? 'В процессе' : (state.locale == AppLocale.kk ? 'Орындалуда' : 'In Progress'))
+                : '';
+    final statusHasBadge = trackStatusLabel.isNotEmpty;
     final hubIcon = node.id == 'root'
         ? Icons.hub_rounded
         : Icons.auto_awesome_rounded;
@@ -543,16 +555,16 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                 child: statusHasBadge
                     ? Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: statusLabel.isEmpty ? 0 : 8,
-                          vertical: statusLabel.isEmpty ? 0 : 5,
+                          horizontal: trackStatusLabel.isEmpty ? 0 : 8,
+                          vertical: trackStatusLabel.isEmpty ? 0 : 5,
                         ),
-                        width: statusLabel.isEmpty ? 12 : null,
-                        height: statusLabel.isEmpty ? 12 : null,
+                        width: trackStatusLabel.isEmpty ? 12 : null,
+                        height: trackStatusLabel.isEmpty ? 12 : null,
                         decoration: BoxDecoration(
-                          shape: statusLabel.isEmpty
+                          shape: trackStatusLabel.isEmpty
                               ? BoxShape.circle
                               : BoxShape.rectangle,
-                          borderRadius: statusLabel.isEmpty
+                          borderRadius: trackStatusLabel.isEmpty
                               ? null
                               : BorderRadius.circular(999),
                           color: colors.surfaceSoft.withValues(alpha: 0.96),
@@ -560,10 +572,10 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                             color: accent.withValues(alpha: 0.58),
                           ),
                         ),
-                        child: statusLabel.isEmpty
+                        child: trackStatusLabel.isEmpty
                             ? null
                             : Text(
-                                statusLabel,
+                                trackStatusLabel,
                                 style: TextStyle(
                                   color: accent,
                                   fontWeight: FontWeight.w800,

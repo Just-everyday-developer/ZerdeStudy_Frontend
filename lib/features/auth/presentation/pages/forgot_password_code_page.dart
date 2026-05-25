@@ -145,8 +145,9 @@ class _ForgotPasswordCodePageState
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          const SizedBox(height: 16),
           TechTextField(
             hint: l10n.text('email'),
             icon: Icons.alternate_email_rounded,

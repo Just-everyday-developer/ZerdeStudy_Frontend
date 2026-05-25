@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/auth/oauth_web_bootstrap.dart';
 import '../state/app_experience.dart';
 import '../state/demo_app_controller.dart';
 import '../../core/common_widgets/app_shell_scaffold.dart';
@@ -13,11 +15,12 @@ import '../../features/auth/presentation/providers/auth_controller.dart';
 import '../../features/auth/presentation/pages/forgot_password_code_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/oauth_callback_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
-import '../../features/community/presentation/pages/community_group_page.dart';
 import '../../features/community/presentation/pages/community_page.dart';
+import '../../features/community/presentation/pages/community_group_page.dart';
 import '../../features/faq/presentation/pages/faq_page.dart';
 import '../../features/home/presentation/pages/community_course_detail_page.dart';
 import '../../features/home/presentation/pages/community_course_player_page.dart';
@@ -31,6 +34,7 @@ import '../../features/learning/presentation/pages/lesson_page.dart';
 import '../../features/learning/presentation/pages/practice_page.dart';
 import '../../features/learning/presentation/pages/track_page.dart';
 import '../../features/moderator/presentation/pages/moderator_shell_page.dart';
+import '../../features/payment/presentation/pages/payment_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/teacher/presentation/pages/teacher_shell_page.dart';
 import 'app_routes.dart';
@@ -77,9 +81,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: appRootNavigatorKey,
-    initialLocation: AppRoutes.welcome,
+    initialLocation: OAuthWebBootstrap.initialLocation,
     refreshListenable: refreshListenable,
     redirect: (context, state) {
+      if (kIsWeb) {
+        final oauthRoute = OAuthWebBootstrap.redirectForGoRouter(
+          state.matchedLocation,
+        );
+        if (oauthRoute != null) {
+          return oauthRoute;
+        }
+      }
+
       final authSnapshot = ref.read(
         authControllerProvider.select(
           (controllerState) => (
@@ -101,6 +114,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         AppRoutes.forgotPassword,
         AppRoutes.forgotPasswordCode,
         AppRoutes.resetPassword,
+        AppRoutes.googleCallback,
+        AppRoutes.githubCallback,
       }.contains(path);
       final isTeacherRoute = path.startsWith(AppRoutes.teacher);
       final isModeratorRoute = path.startsWith(AppRoutes.moderator);
@@ -108,7 +123,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         AppExperience.student => AppRoutes.home,
         AppExperience.teacher => AppRoutes.teacher,
         AppExperience.moderator => AppRoutes.moderator,
-        AppExperience.admin => AppRoutes.home,
+        AppExperience.admin => AppRoutes.moderator,
       };
 
       if (!isReady) {
@@ -172,6 +187,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ),
       ),
+      GoRoute(
+        path: AppRoutes.googleCallback,
+        pageBuilder: (context, state) {
+          final code = state.uri.queryParameters['code'] ?? '';
+          return cyberTransition(
+            state: state,
+            child: OAuthCallbackPage(provider: 'google', code: code),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.githubCallback,
+        pageBuilder: (context, state) {
+          final code = state.uri.queryParameters['code'] ?? '';
+          return cyberTransition(
+            state: state,
+            child: OAuthCallbackPage(provider: 'github', code: code),
+          );
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShellScaffold(
@@ -192,6 +227,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.home,
                 builder: (context, state) => const HomePage(),
+              ),
+              GoRoute(
+                path: AppRoutes.community,
+                builder: (context, state) => const CommunityPage(),
               ),
             ],
           ),
@@ -355,6 +394,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '${AppRoutes.payment}/:courseId',
+        parentNavigatorKey: appRootNavigatorKey,
+        pageBuilder: (context, state) {
+          final courseId = state.pathParameters['courseId'] ?? '';
+          final amount = int.tryParse(
+                state.uri.queryParameters['amount'] ?? '',
+              ) ?? 0;
+          final currency = state.uri.queryParameters['currency'] ?? 'KZT';
+          return cyberTransition(
+            state: state,
+            child: PaymentPage(
+              courseId: courseId,
+              amount: amount,
+              currency: currency,
+            ),
+          );
+        },
+      ),
+      GoRoute(
         path: AppRoutes.teacher,
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
@@ -367,7 +425,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const TeacherShellPage(section: TeacherSection.generator),
+          child: const TeacherShellPage(section: TeacherSection.builder),
         ),
       ),
       GoRoute(
@@ -383,7 +441,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const TeacherShellPage(section: TeacherSection.assessments),
+          child: const TeacherShellPage(section: TeacherSection.builder),
         ),
       ),
       GoRoute(
@@ -391,7 +449,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const TeacherShellPage(section: TeacherSection.publishing),
+          child: const TeacherShellPage(section: TeacherSection.builder),
         ),
       ),
       GoRoute(
@@ -464,6 +522,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => cyberTransition(
           state: state,
           child: const ModeratorShellPage(initialTab: 5),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.moderatorUsers,
+        parentNavigatorKey: appRootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const ModeratorShellPage(initialTab: 6),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.moderatorSystem,
+        parentNavigatorKey: appRootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const ModeratorShellPage(initialTab: 7),
         ),
       ),
     ],

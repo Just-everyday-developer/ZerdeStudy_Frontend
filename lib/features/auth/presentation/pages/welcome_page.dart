@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/demo_app_controller.dart';
-import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
@@ -40,8 +39,15 @@ class WelcomePage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  GlowCard(
-                    accent: colors.primary,
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: colors.surface.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: colors.divider.withValues(alpha: 0.5),
+                      ),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -86,7 +92,7 @@ class WelcomePage extends ConsumerWidget {
                     alignment: Alignment.centerLeft,
                     child: TextButton(
                       onPressed: () => context.push(AppRoutes.forgotPassword),
-                      child: Text(l10n.text('forgot_password')),
+                      child: Center(child: Text(l10n.text('forgot_password'))),
                     ),
                   ),
                 ],

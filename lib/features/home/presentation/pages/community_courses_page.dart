@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -239,9 +240,9 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           TextButton(
                             onPressed: () {
@@ -256,7 +257,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                             },
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
+                                horizontal: 16,
                                 vertical: 14,
                               ),
                               foregroundColor: context.appColors.textSecondary,
@@ -274,6 +275,12 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                               });
                               Navigator.of(context).pop();
                             },
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28,
+                                vertical: 14,
+                              ),
+                            ),
                             child: Text(_applyFiltersLabel(l10n)),
                           ),
                         ],
@@ -357,7 +364,14 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
     final hasAnyResults = totalVisibleResults > 0;
     final authors = _filteredAuthors(catalog.courseAuthors());
 
-    return AppPageScaffold(
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            _handleEscapeUndo(context),
+      },
+      child: Focus(
+        autofocus: true,
+        child: AppPageScaffold(
       title: context.isCompactLayout ? l10n.text('catalog_title') : null,
       horizontalPadding: context.isCompactLayout ? 0 : 16,
       expandContent: true,
@@ -438,33 +452,32 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                 CourseDiscoverySectionHeader(
                   title: l10n.text('section_popular_courses'),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 if (compact)
                   ...visibleRemoteResults.map(
                     (course) => Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: SizedBox(
-                        height: 416,
-                        child: DiscoveryWideCourseCard(
-                          course: course,
-                          saved: state.savedCommunityCourseIds.contains(
-                            course.id,
-                          ),
-                          levelLabel: _levelFilterLabel(
-                            l10n,
-                            backendDictionaries,
-                            course.level,
-                          ),
-                          savedLabel: l10n.text('saved'),
-                          rating: catalog.displayCourseRatingForCourse(
-                            state,
-                            course,
-                          ),
-                          reviewCount: catalog
-                              .displayCourseReviewCountForCourse(state, course),
-                          onTap: () =>
-                              context.push(AppRoutes.courseById(course.id)),
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: DiscoveryCatalogCompactCard(
+                        course: course,
+                        saved: state.savedCommunityCourseIds.contains(
+                          course.id,
                         ),
+                        levelLabel: _levelFilterLabel(
+                          l10n,
+                          backendDictionaries,
+                          course.level,
+                        ),
+                        savedLabel: l10n.text('saved'),
+                        rating: catalog.displayCourseRatingForCourse(
+                          state,
+                          course,
+                        ),
+                        reviewCount: catalog.displayCourseReviewCountForCourse(
+                          state,
+                          course,
+                        ),
+                        onTap: () =>
+                            context.push(AppRoutes.courseById(course.id)),
                       ),
                     ),
                   )
@@ -473,15 +486,15 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: visibleRemoteResults.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: wide ? 3 : 2,
-                      crossAxisSpacing: 18,
-                      mainAxisSpacing: 18,
-                      childAspectRatio: wide ? 0.83 : 0.78,
+                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: wide ? 460 : 420,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      mainAxisExtent: 108,
                     ),
                     itemBuilder: (context, index) {
                       final course = visibleRemoteResults[index];
-                      return DiscoveryWideCourseCard(
+                      return DiscoveryCatalogCompactCard(
                         course: course,
                         saved: state.savedCommunityCourseIds.contains(
                           course.id,
@@ -505,7 +518,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                       );
                     },
                   ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
               ],
               if (!hasAnyResults)
                 GlowCard(
@@ -531,27 +544,19 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
               else if (results.isNotEmpty && compact)
                 ...results.map(
                   (course) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: SizedBox(
-                      height: 416,
-                      child: DiscoveryWideCourseCard(
-                        course: course,
-                        saved: state.savedCommunityCourseIds.contains(
-                          course.id,
-                        ),
-                        levelLabel: l10n.courseLevelLabel(course.level),
-                        savedLabel: l10n.text('saved'),
-                        rating: catalog.displayCourseRatingFor(
-                          state,
-                          course.id,
-                        ),
-                        reviewCount: catalog.displayCourseReviewCountFor(
-                          state,
-                          course.id,
-                        ),
-                        onTap: () =>
-                            context.push(AppRoutes.courseById(course.id)),
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: DiscoveryCatalogCompactCard(
+                      course: course,
+                      saved: state.savedCommunityCourseIds.contains(course.id),
+                      levelLabel: l10n.courseLevelLabel(course.level),
+                      savedLabel: l10n.text('saved'),
+                      rating: catalog.displayCourseRatingFor(state, course.id),
+                      reviewCount: catalog.displayCourseReviewCountFor(
+                        state,
+                        course.id,
                       ),
+                      onTap: () =>
+                          context.push(AppRoutes.courseById(course.id)),
                     ),
                   ),
                 )
@@ -560,15 +565,15 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: results.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: wide ? 3 : 2,
-                    crossAxisSpacing: 18,
-                    mainAxisSpacing: 18,
-                    childAspectRatio: wide ? 0.83 : 0.78,
+                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: wide ? 460 : 420,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    mainAxisExtent: 108,
                   ),
                   itemBuilder: (context, index) {
                     final course = results[index];
-                    return DiscoveryWideCourseCard(
+                    return DiscoveryCatalogCompactCard(
                       course: course,
                       saved: state.savedCommunityCourseIds.contains(course.id),
                       levelLabel: l10n.courseLevelLabel(course.level),
@@ -613,7 +618,35 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
           );
         },
       ),
+        ),
+      ),
     );
+  }
+
+  void _handleEscapeUndo(BuildContext context) {
+    // ESC: undo last filter change if any active filter exists,
+    // otherwise navigate back.
+    final hasActiveFilter = _selectedTopicKey != null ||
+        _selectedLevel != 'All' ||
+        _selectedMinRating != null ||
+        _selectedDurationBucket != null ||
+        _certificateOnly ||
+        _query.isNotEmpty;
+    if (hasActiveFilter) {
+      setState(() {
+        _selectedTopicKey = null;
+        _selectedLevel = 'All';
+        _selectedMinRating = null;
+        _selectedDurationBucket = null;
+        _certificateOnly = false;
+        _query = '';
+        _searchController.clear();
+      });
+      return;
+    }
+    if (context.canPop()) {
+      context.pop();
+    }
   }
 
   List<CommunityCourseAuthor> _filteredAuthors(

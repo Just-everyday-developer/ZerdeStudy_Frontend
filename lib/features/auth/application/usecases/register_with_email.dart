@@ -6,7 +6,11 @@ class RegisterWithEmail {
 
   final AuthRepository _repository;
 
-  Future<AuthSession> call({required String email, required String password}) {
-    return _repository.register(email: email, password: password);
+  Future<AuthSession> call({
+    required String email,
+    required String password,
+    String? platform,
+  }) {
+    return _repository.register(email: email, password: password, platform: platform);
   }
 }
