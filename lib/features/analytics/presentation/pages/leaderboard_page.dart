@@ -8,6 +8,7 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 
 class LeaderboardPage extends ConsumerWidget {
   const LeaderboardPage({super.key});
@@ -15,7 +16,15 @@ class LeaderboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
-    final entries = ref.watch(demoCatalogProvider).leaderboardFor(state);
+    final mockEntries = ref.watch(demoCatalogProvider).leaderboardFor(state);
+    // Prefer the live backend leaderboard; fall back to local demo data when
+    // unauthenticated, loading, or the backend returns nothing.
+    final entries = ref
+        .watch(backendOopLeaderboardProvider)
+        .maybeWhen(
+          data: (list) => list.isNotEmpty ? list : mockEntries,
+          orElse: () => mockEntries,
+        );
     final podium = entries.take(3).toList(growable: false);
     final rest = entries.skip(3).toList(growable: false);
     final colors = context.appColors;

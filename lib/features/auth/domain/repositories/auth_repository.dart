@@ -23,6 +23,20 @@ abstract class AuthRepository {
     required String newPassword,
   });
 
+  /// Updates the authenticated user's own profile.
+  Future<void> updateProfile({
+    String? name,
+    String? bio,
+    String? email,
+    String? avatarBase64,
+  });
+
+  /// Changes the authenticated user's password.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
   Future<String> getGoogleAuthUrl({String? redirectUri, String? platform});
   Future<String> getGithubAuthUrl({String? redirectUri});
   Future<AuthSession> googleCallback(

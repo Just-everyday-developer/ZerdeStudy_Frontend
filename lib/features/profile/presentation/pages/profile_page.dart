@@ -49,7 +49,17 @@ class ProfilePage extends ConsumerWidget {
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
     final l10n = context.l10n;
-    final achievements = catalog.achievementsFor(state);
+    // Prefer server-computed achievements; fall back to local demo data when
+    // unauthenticated, loading, or the backend returns nothing.
+    final backendAchievements = ref
+        .watch(backendAchievementsProvider)
+        .maybeWhen(
+          data: (list) => list,
+          orElse: () => const <Achievement>[],
+        );
+    final achievements = backendAchievements.isNotEmpty
+        ? backendAchievements
+        : catalog.achievementsFor(state);
     final unlocked = achievements
         .where((item) => item.unlocked)
         .toList(growable: false);
@@ -662,6 +672,13 @@ class ProfilePage extends ConsumerWidget {
             ),
           ),
 
+
+          const SizedBox(height: 12),
+          AppButton.secondary(
+            label: _changePasswordLabel(l10n),
+            icon: Icons.lock_reset_rounded,
+            onPressed: () => _showChangePasswordDialog(context, ref),
+          ),
 
           const SizedBox(height: 12),
           AppButton.secondary(
@@ -1360,6 +1377,25 @@ Future<void> _showEditProfileDialog(
     return;
   }
 
+  // Persist to the backend first; local state is updated only on success
+  // so the displayed profile mirrors what the server stored.
+  final error = await ref.read(authControllerProvider.notifier).updateProfile(
+        name: result.name,
+        bio: result.bio,
+        avatarBase64: result.avatarBase64,
+      );
+
+  if (!context.mounted) {
+    return;
+  }
+
+  if (error != null) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(error)));
+    return;
+  }
+
   ref
       .read(demoAppControllerProvider.notifier)
       .updateProfile(name: result.name, bio: result.bio, avatarBase64: result.avatarBase64);
@@ -1367,6 +1403,179 @@ Future<void> _showEditProfileDialog(
   ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(context.l10n.text('profile_updated'))));
+}
+
+String _changePasswordLabel(AppLocalizations l10n) {
+  switch (l10n.locale) {
+    case AppLocale.ru:
+      return 'Сменить пароль';
+    case AppLocale.en:
+      return 'Change password';
+    case AppLocale.kk:
+      return 'Құпиясөзді өзгерту';
+  }
+}
+
+String _currentPasswordLabel(AppLocalizations l10n) {
+  switch (l10n.locale) {
+    case AppLocale.ru:
+      return 'Текущий пароль';
+    case AppLocale.en:
+      return 'Current password';
+    case AppLocale.kk:
+      return 'Ағымдағы құпиясөз';
+  }
+}
+
+String _passwordChangedLabel(AppLocalizations l10n) {
+  switch (l10n.locale) {
+    case AppLocale.ru:
+      return 'Пароль обновлён';
+    case AppLocale.en:
+      return 'Password updated';
+    case AppLocale.kk:
+      return 'Құпиясөз жаңартылды';
+  }
+}
+
+Future<void> _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
+  final changed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => const _ChangePasswordDialog(),
+  );
+
+  if (changed == true && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_passwordChangedLabel(context.l10n))),
+    );
+  }
+}
+
+class _ChangePasswordDialog extends ConsumerStatefulWidget {
+  const _ChangePasswordDialog();
+
+  @override
+  ConsumerState<_ChangePasswordDialog> createState() =>
+      _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
+  final _currentController = TextEditingController();
+  final _newController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _currentController.dispose();
+    _newController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final l10n = context.l10n;
+    final current = _currentController.text;
+    final next = _newController.text;
+    final confirm = _confirmController.text;
+
+    if (next.length < 8) {
+      setState(() => _error = l10n.text('invalid_password'));
+      return;
+    }
+    if (next != confirm) {
+      setState(() => _error = l10n.text('passwords_do_not_match'));
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    final error = await ref
+        .read(authControllerProvider.notifier)
+        .changePassword(currentPassword: current, newPassword: next);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (error != null) {
+      setState(() {
+        _submitting = false;
+        _error = error;
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+
+    return AlertDialog(
+      title: Text(_changePasswordLabel(l10n)),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _currentController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: _currentPasswordLabel(l10n),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _newController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: l10n.text('set_new_password_title'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _confirmController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: l10n.text('confirm_password'),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: TextStyle(color: colors.danger, fontSize: 13),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          child: Text(l10n.text('cancel')),
+        ),
+        FilledButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2.2),
+                )
+              : Text(_changePasswordLabel(l10n)),
+        ),
+      ],
+    );
+  }
 }
 
 class _EditableProfileAvatar extends StatelessWidget {

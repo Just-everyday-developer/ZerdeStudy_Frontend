@@ -80,6 +80,24 @@ class JsonHttpClient {
     return _decodeJsonMap(response);
   }
 
+  Future<JsonMap> patchJson(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String> headers = const <String, String>{},
+  }) async {
+    final response = await _send(
+      () => _client.patch(
+        _uriResolver(path),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: jsonEncode(body ?? const <String, dynamic>{}),
+      ),
+    );
+    return _decodeJsonMap(response);
+  }
+
   Future<void> postEmpty(
     String path, {
     Map<String, dynamic>? body,

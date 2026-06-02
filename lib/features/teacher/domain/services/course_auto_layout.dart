@@ -25,11 +25,11 @@ import '../models/course_graph.dart';
 
 class CourseAutoLayout {
   const CourseAutoLayout({
-    this.columnSpacing = 300,
-    this.rowSpacing = 130,
+    this.columnSpacing = 330,
+    this.rowSpacing = 150,
     this.originX = 120,
     this.originY = 120,
-    this.moduleGap = 160,
+    this.moduleGap = 170,
   });
 
   /// Horizontal distance between module columns.
@@ -91,7 +91,9 @@ class CourseAutoLayout {
         if (!visited.add(id)) continue;
         final n = course.nodeById(id);
         if (n == null) continue;
-        if (n.type == CourseNodeType.module) continue; // belongs to its own column
+        if (n.type == CourseNodeType.module) {
+          continue; // belongs to its own column
+        }
         if (placed.contains(id)) continue;
         localOrder.add(id);
         final next = adj[id];
@@ -164,9 +166,7 @@ class CourseAutoLayout {
 
     // Anything left (cycle) — append in current-X order.
     if (ordered.length < modules.length) {
-      final leftovers = modules
-          .where((m) => !ordered.contains(m))
-          .toList()
+      final leftovers = modules.where((m) => !ordered.contains(m)).toList()
         ..sort((a, b) => a.position.dx.compareTo(b.position.dx));
       ordered.addAll(leftovers);
     }

@@ -16,6 +16,7 @@ import '../../../../core/network/json_http_client.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../data/datasources/backend_course_remote_data_source.dart';
 import '../../data/models/backend_course_dto.dart';
+import '../../data/models/backend_progress_dto.dart';
 import '../../data/models/backend_lesson_dto.dart';
 import '../../data/models/backend_module_dto.dart';
 import '../../data/models/backend_course_query.dart';
@@ -56,24 +57,32 @@ class BackendCourseDictionaries {
     required this.topics,
     required this.durationCategories,
     required this.statuses,
+    this.tags = const <BackendDictionaryEntryDto>[],
+    this.locales = const <BackendDictionaryEntryDto>[],
   });
 
   const BackendCourseDictionaries.empty()
     : levels = const <BackendDictionaryEntryDto>[],
       topics = const <BackendDictionaryEntryDto>[],
       durationCategories = const <BackendDictionaryEntryDto>[],
-      statuses = const <BackendDictionaryEntryDto>[];
+      statuses = const <BackendDictionaryEntryDto>[],
+      tags = const <BackendDictionaryEntryDto>[],
+      locales = const <BackendDictionaryEntryDto>[];
 
   final List<BackendDictionaryEntryDto> levels;
   final List<BackendDictionaryEntryDto> topics;
   final List<BackendDictionaryEntryDto> durationCategories;
   final List<BackendDictionaryEntryDto> statuses;
+  final List<BackendDictionaryEntryDto> tags;
+  final List<BackendDictionaryEntryDto> locales;
 
   bool get isEmpty =>
       levels.isEmpty &&
       topics.isEmpty &&
       durationCategories.isEmpty &&
-      statuses.isEmpty;
+      statuses.isEmpty &&
+      tags.isEmpty &&
+      locales.isEmpty;
 
   String? levelLabel(String? value) => _labelForValue(value, levels);
 
@@ -81,6 +90,10 @@ class BackendCourseDictionaries {
 
   String? durationLabel(String? value) =>
       _labelForValue(value, durationCategories);
+
+  String? tagLabel(String? value) => _labelForValue(value, tags);
+
+  String? localeLabel(String? value) => _labelForValue(value, locales);
 }
 
 final backendCourseDictionariesProvider =
@@ -93,12 +106,26 @@ final backendCourseDictionariesProvider =
       final remote = ref.watch(backendCourseRemoteDataSourceProvider);
 
       try {
+        Future<List<BackendDictionaryEntryDto>> optional(
+          Future<List<BackendDictionaryEntryDto>> future,
+        ) async {
+          try {
+            return await future;
+          } catch (_) {
+            return const <BackendDictionaryEntryDto>[];
+          }
+        }
+
         final responses = await Future.wait<List<BackendDictionaryEntryDto>>(
           <Future<List<BackendDictionaryEntryDto>>>[
             remote.fetchLevels(accessToken: accessToken),
             remote.fetchTopics(accessToken: accessToken),
             remote.fetchDurationCategories(accessToken: accessToken),
             remote.fetchStatuses(accessToken: accessToken),
+            // Tags and locales are optional: a failure here must not wipe the
+            // core level/topic/duration filters.
+            optional(remote.fetchTags(accessToken: accessToken)),
+            optional(remote.fetchLocales(accessToken: accessToken)),
           ],
         );
 
@@ -107,6 +134,8 @@ final backendCourseDictionariesProvider =
           topics: responses[1],
           durationCategories: responses[2],
           statuses: responses[3],
+          tags: responses[4],
+          locales: responses[5],
         );
       } catch (_) {
         return const BackendCourseDictionaries.empty();
@@ -247,32 +276,54 @@ final backendCourseLeaderboardProvider =
 
       final remote = ref.watch(backendCourseRemoteDataSourceProvider);
 
+      final currentUserId = ref
+          .watch(authControllerProvider)
+          .session
+          ?.user
+          .id
+          .trim();
+
       try {
         final response = await remote.getCoursePointByCourseId(
           accessToken: accessToken,
           courseId: normalizedCourseId,
         );
 
-        return response
-            .map((json) {
-              final xp = (json['xp'] as num?)?.toInt() ?? 0;
-              final userId = json['user_id'] as String? ?? 'Unknown';
+        final entries = response.map((json) {
+          final xp = (json['xp'] as num?)?.toInt() ?? 0;
+          final userId = json['user_id'] as String? ?? 'Unknown';
+          final isCurrentUser =
+              currentUserId != null && currentUserId.isNotEmpty && userId == currentUserId;
+          final shortId = userId.length >= 4 ? userId.substring(0, 4) : userId;
 
-              return LeaderboardEntry(
-                id: userId,
-                name: 'Learner ${userId.substring(0, 4)}',
-                xp: xp,
-                level: (xp / 100).floor() + 1,
-                role: 'Learner',
-                focus: 'Course',
-                isCurrentUser: false,
-              );
-            })
-            .toList(growable: false);
+          return LeaderboardEntry(
+            id: userId,
+            name: isCurrentUser ? 'You' : 'Learner $shortId',
+            xp: xp,
+            level: (xp / 100).floor() + 1,
+            role: 'Learner',
+            focus: 'Course',
+            isCurrentUser: isCurrentUser,
+          );
+        }).toList(growable: true)
+          ..sort((a, b) => b.xp.compareTo(a.xp));
+
+        return entries;
       } catch (_) {
         return const <LeaderboardEntry>[];
       }
     });
+
+/// Leaderboard for the fully integrated OOP course, used by the global
+/// leaderboard screen. Falls back to an empty list when unauthenticated or
+/// the backend is unavailable (the UI then shows local demo data).
+final backendOopLeaderboardProvider = FutureProvider<List<LeaderboardEntry>>((
+  ref,
+) {
+  return ref.watch(
+    backendCourseLeaderboardProvider(_oopCourseBackendId).future,
+  );
+});
 
 CommunityCourse adaptBackendCourseToCommunityCourse(BackendCourseDto course) {
   final topicKeys = _topicKeysForCourse(course);
@@ -1185,6 +1236,137 @@ final backendReviewByIdProvider =
       }
     });
 
+/// Achievements for the signed-in user, mapped to the shared [Achievement]
+/// model so the existing profile UI can render them directly. Returns an empty
+/// list when unauthenticated or the backend is unavailable; the UI then falls
+/// back to local demo achievements.
+final backendAchievementsProvider = FutureProvider<List<Achievement>>((
+  ref,
+) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) {
+    return const <Achievement>[];
+  }
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+  try {
+    final items = await remote.fetchAchievements(accessToken: accessToken);
+    return items
+        .map(
+          (dto) => Achievement(
+            id: dto.id,
+            title: _localizedTextFromBackend(dto.title, fallback: 'Achievement'),
+            description: _localizedTextFromBackend(
+              dto.description,
+              fallback: '',
+            ),
+            icon: _iconForAchievementKey(dto.iconKey),
+            goal: dto.goal,
+            progress: dto.progress,
+            unlocked: dto.unlocked,
+          ),
+        )
+        .toList(growable: false);
+  } catch (_) {
+    return const <Achievement>[];
+  }
+});
+
+IconData _iconForAchievementKey(String iconKey) {
+  switch (iconKey.trim().toLowerCase()) {
+    case 'lesson':
+    case 'lessons':
+    case 'completed_lessons':
+    case 'book':
+    case 'school':
+      return Icons.menu_book_rounded;
+    case 'quiz':
+    case 'quizzes':
+    case 'passed_quizzes':
+      return Icons.quiz_rounded;
+    case 'streak':
+    case 'max_streak':
+    case 'fire':
+    case 'flame':
+      return Icons.local_fire_department_rounded;
+    case 'xp':
+    case 'xp_total':
+    case 'points':
+      return Icons.bolt_rounded;
+    case 'course':
+    case 'courses':
+    case 'started_courses':
+    case 'active_courses':
+      return Icons.workspace_premium_rounded;
+    case 'completed_courses':
+    case 'graduate':
+      return Icons.school_rounded;
+    case 'module':
+    case 'modules':
+    case 'completed_modules':
+      return Icons.account_tree_rounded;
+    case 'star':
+      return Icons.star_rounded;
+    default:
+      return Icons.emoji_events_rounded;
+  }
+}
+
+/// Progress for a single course for the signed-in user.
+/// Returns null when unauthenticated, not enrolled, or the backend is down.
+final backendCourseProgressProvider =
+    FutureProvider.family<BackendCourseProgressDto?, String>((
+      ref,
+      courseId,
+    ) async {
+      final normalizedCourseId = courseId.trim();
+      if (normalizedCourseId.isEmpty) {
+        return null;
+      }
+
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return null;
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchCourseProgress(
+          accessToken: accessToken,
+          courseId: normalizedCourseId,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
+
+/// Progress across all of the signed-in user's courses.
+final backendAllProgressProvider =
+    FutureProvider<List<BackendCourseProgressDto>>((ref) async {
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return const <BackendCourseProgressDto>[];
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchAllProgress(accessToken: accessToken);
+      } catch (_) {
+        return const <BackendCourseProgressDto>[];
+      }
+    });
+
+/// Progress for the fully integrated OOP course.
+final backendOopProgressProvider =
+    FutureProvider<BackendCourseProgressDto?>((ref) {
+      return ref.watch(
+        backendCourseProgressProvider(_oopCourseBackendId).future,
+      );
+    });
+
 final backendStreakProvider = FutureProvider<BackendStreakDto?>((ref) async {
   final accessToken = ref.watch(backendCourseAccessTokenProvider);
   if (accessToken == null || accessToken.trim().isEmpty) {
@@ -1335,6 +1517,17 @@ Future<LearningModule> _fetchOopModule(
         )
       : null;
 
+  // Fetch quizzes for every lesson in parallel; failures silently return [].
+  final quizzesPerLesson = await Future.wait(
+    lessons.map(
+      (lesson) => _safeFetchQuizzes(
+        remote,
+        accessToken: accessToken,
+        lessonId: lesson.id,
+      ),
+    ),
+  );
+
   final lessonItems = List.generate(
     lessons.length,
     (i) => _adaptBackendLessonDto(
@@ -1342,6 +1535,7 @@ Future<LearningModule> _fetchOopModule(
       moduleId: module.id,
       moduleIndex: moduleIndex,
       lessonIndex: i,
+      backendQuizzes: quizzesPerLesson[i],
     ),
   );
 
@@ -1363,6 +1557,53 @@ Future<LearningModule> _fetchOopModule(
 }
 
 
+/// Fetches quizzes for a lesson, returning an empty list on any error.
+Future<List<BackendQuizDto>> _safeFetchQuizzes(
+  BackendCourseRemoteDataSource remote, {
+  required String accessToken,
+  required String lessonId,
+}) async {
+  try {
+    final quizzes = await remote.fetchQuizzesByLessonId(
+      accessToken: accessToken,
+      lessonId: lessonId,
+    );
+    final sorted = [...quizzes]
+      ..sort((a, b) => a.position.compareTo(b.position));
+    return sorted;
+  } catch (_) {
+    return const <BackendQuizDto>[];
+  }
+}
+
+/// Converts a [BackendQuizDto] to the shared [LessonQuiz] domain model.
+LessonQuiz _quizFromBackend(BackendQuizDto dto) {
+  final sortedOptions = [...dto.options]
+    ..sort((a, b) => a.position.compareTo(b.position));
+
+  return LessonQuiz(
+    id: dto.id,
+    title: _localizedTextFromBackend(
+      dto.question,
+      fallback: 'Quiz question',
+    ),
+    prompt: _localizedTextFromBackend(
+      dto.question,
+      fallback: 'Quiz question',
+    ),
+    options: sortedOptions
+        .map(
+          (o) => QuizOption(
+            id: o.id,
+            label: _localizedTextFromBackend(o.text, fallback: 'Option'),
+          ),
+        )
+        .toList(growable: false),
+    correctOptionId: dto.correctOptionId,
+    explanation: _localizedTextFromBackend(dto.explanation, fallback: ''),
+  );
+}
+
 Future<BackendPracticeDto?> _safeFetchPracticeDto(
   BackendCourseRemoteDataSource remote, {
   required String accessToken,
@@ -1383,8 +1624,16 @@ LessonItem _adaptBackendLessonDto(
   required String moduleId,
   int moduleIndex = 0,
   int lessonIndex = 0,
+  List<BackendQuizDto> backendQuizzes = const <BackendQuizDto>[],
 }) {
-  final quizItems = OopQuizData.forModule(moduleIndex);
+  // Prefer quizzes from the backend; fall back to local OopQuizData when the
+  // backend returns none (e.g. content not yet seeded for this lesson).
+  final quizItems = backendQuizzes.isNotEmpty
+      ? backendQuizzes
+            .map(_quizFromBackend)
+            .toList(growable: false)
+      : OopQuizData.forModule(moduleIndex);
+
   final codeTask = getOopCodeTask(moduleIndex, lessonIndex);
   return LessonItem(
     id: dto.id,

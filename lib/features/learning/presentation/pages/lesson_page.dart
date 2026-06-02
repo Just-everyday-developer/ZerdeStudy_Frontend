@@ -16,6 +16,7 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../ai/presentation/providers/ai_chat_controller.dart';
+import '../../../courses_backend/data/models/backend_lesson_dto.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../widgets/premium_code_editor.dart';
 
@@ -245,28 +246,33 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                               : Icons.done_rounded,
                           onPressed: () async {
                             controller.completeLesson(widget.lessonId);
-                            // Backend: create course point on lesson completion
+                            // Backend: record lesson completion server-side.
+                            // Progress, XP and streak are tracked by the
+                            // curriculum service via this endpoint. Only real
+                            // backend lessons (UUID ids) are synced.
                             try {
                               final accessToken = ref.read(
                                 backendCourseAccessTokenProvider,
                               );
                               if (accessToken != null &&
-                                  accessToken.trim().isNotEmpty) {
+                                  accessToken.trim().isNotEmpty &&
+                                  _isBackendId(widget.lessonId)) {
                                 final remote = ref.read(
                                   backendCourseRemoteDataSourceProvider,
                                 );
-                                await remote.createCoursePoint(
+                                await remote.completeLesson(
                                   accessToken: accessToken,
-                                  body: <String, dynamic>{
-                                    'lesson_id': widget.lessonId,
-                                    'completed': true,
-                                  },
+                                  lessonId: widget.lessonId,
                                 );
                               }
                             } catch (_) {
-                              // Backend unavailable — silently continue
+                              // Backend unavailable — keep local progress; the
+                              // completion will not be reflected on the server.
                             }
                             ref.invalidate(backendStreakProvider);
+                            ref.invalidate(backendOopProgressProvider);
+                            ref.invalidate(backendAllProgressProvider);
+                            ref.invalidate(backendAchievementsProvider);
                             if (!context.mounted) {
                               return;
                             }
@@ -452,36 +458,75 @@ class _LessonPageState extends ConsumerState<LessonPage> {
           onSubmit: () async {
             final selected = _selectedQuizAnswers[quiz.id];
             if (selected == null) return;
-            final correct = selected == quiz.correctOptionId;
-            controller.completeQuiz(quiz.id, isCorrect: correct);
-            // Backend: submit quiz answer
-            try {
-              final accessToken = ref.read(backendCourseAccessTokenProvider);
-              if (accessToken != null && accessToken.trim().isNotEmpty) {
-                final remote = ref.read(backendCourseRemoteDataSourceProvider);
-                final selectedIndex = quiz.options.indexWhere(
-                  (o) => o.id == selected,
-                );
-                if (selectedIndex >= 0) {
-                  await remote.submitQuizAnswer(
-                    accessToken: accessToken,
-                    quizId: quiz.id,
-                    selectedAnswerIndex: selectedIndex,
+
+            // For backend quizzes (UUID ids) the server is the source of
+            // truth: we submit the answer and use is_correct + explanation
+            // from the response. For local/fallback quizzes we grade locally.
+            bool correct;
+            String? serverExplanation;
+
+            if (_isBackendId(quiz.id)) {
+              try {
+                final accessToken =
+                    ref.read(backendCourseAccessTokenProvider);
+                if (accessToken != null && accessToken.trim().isNotEmpty) {
+                  final remote =
+                      ref.read(backendCourseRemoteDataSourceProvider);
+                  final selectedIndex = quiz.options.indexWhere(
+                    (o) => o.id == selected,
                   );
+                  if (selectedIndex >= 0) {
+                    final result = await remote.submitQuizAnswer(
+                      accessToken: accessToken,
+                      quizId: quiz.id,
+                      selectedAnswerIndex: selectedIndex,
+                    );
+                    correct = result.isCorrect;
+                    final exp = _resolveBackendText(
+                      result.explanation,
+                      locale,
+                    );
+                    if (exp.trim().isNotEmpty) serverExplanation = exp;
+                  } else {
+                    correct = selected == quiz.correctOptionId;
+                  }
+                } else {
+                  correct = selected == quiz.correctOptionId;
                 }
+              } catch (_) {
+                // Backend unavailable — fall back to local check
+                correct = selected == quiz.correctOptionId;
               }
-            } catch (_) {
-              // Backend unavailable — silently continue
+            } else {
+              correct = selected == quiz.correctOptionId;
             }
-            if (!mounted) {
-              return;
+
+            controller.completeQuiz(quiz.id, isCorrect: correct);
+
+            // Invalidate server-side counters so achievements, streak and
+            // progress reflect the just-submitted answer immediately.
+            if (correct && _isBackendId(quiz.id)) {
+              ref.invalidate(backendAchievementsProvider);
+              ref.invalidate(backendOopProgressProvider);
+              ref.invalidate(backendAllProgressProvider);
             }
+
+            if (!mounted) return;
+
+            // Show server explanation on wrong answer if available, else
+            // fall back to the locally stored explanation.
+            final explanationText = !correct
+                ? (serverExplanation ??
+                      quiz.explanation.resolve(locale))
+                : null;
 
             AppNotice.show(
               context,
               message: correct
                   ? l10n.text('lesson_quiz_correct')
-                  : l10n.text('lesson_quiz_retry'),
+                  : (explanationText?.isNotEmpty == true
+                        ? explanationText!
+                        : l10n.text('lesson_quiz_retry')),
               type: correct ? AppNoticeType.success : AppNoticeType.error,
             );
           },
@@ -665,6 +710,33 @@ class _LessonPageState extends ConsumerState<LessonPage> {
       return true;
     }
     return _selectedTrainerAnswers[trainer.id] == trainer.correctOptionId;
+  }
+}
+
+final _uuidPattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
+
+/// Whether [id] looks like a backend (curriculum-service) UUID, as opposed to
+/// a local demo-catalog id. Only backend lessons are synced to the server.
+bool _isBackendId(String id) => _uuidPattern.hasMatch(id.trim());
+
+/// Picks the right locale field from a [BackendLocalizedTextDto], falling back
+/// to the first non-empty language when the preferred one is empty.
+String _resolveBackendText(BackendLocalizedTextDto dto, AppLocale locale) {
+  String pick(String preferred, String a, String b) {
+    if (preferred.trim().isNotEmpty) return preferred.trim();
+    if (a.trim().isNotEmpty) return a.trim();
+    return b.trim();
+  }
+
+  switch (locale) {
+    case AppLocale.ru:
+      return pick(dto.ru, dto.en, dto.kk);
+    case AppLocale.kk:
+      return pick(dto.kk, dto.ru, dto.en);
+    case AppLocale.en:
+      return pick(dto.en, dto.ru, dto.kk);
   }
 }
 

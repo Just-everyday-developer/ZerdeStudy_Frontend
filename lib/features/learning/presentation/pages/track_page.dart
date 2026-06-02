@@ -14,6 +14,7 @@ import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../../core/common_widgets/bubble_progress_bar.dart';
+import '../../../courses_backend/data/models/backend_progress_dto.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 
 class TrackPage extends ConsumerWidget {
@@ -38,9 +39,18 @@ class TrackPage extends ConsumerWidget {
         orElse: () => null,
       );
       track = backendTrack ?? catalog.trackById(trackId);
-      progress = backendTrack != null
+      final localProgress = backendTrack != null
           ? _computeTrackProgress(state, backendTrack)
           : catalog.progressForTrack(state, trackId);
+      // Overlay server-tracked progress (lessons completed via the curriculum
+      // service) when available; fall back to locally computed progress.
+      final backendProgress = ref
+          .watch(backendOopProgressProvider)
+          .maybeWhen(data: (p) => p, orElse: () => null);
+      progress =
+          (backendProgress != null && backendProgress.totalLessons > 0)
+          ? _mergeBackendProgress(localProgress, backendProgress)
+          : localProgress;
     } else {
       track = catalog.trackById(trackId);
       progress = catalog.progressForTrack(state, trackId);
@@ -303,6 +313,34 @@ class TrackPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Overlays server-tracked lesson progress onto the locally computed
+/// [TrackProgress], keeping local quiz/trainer counts and next target.
+TrackProgress _mergeBackendProgress(
+  TrackProgress local,
+  BackendCourseProgressDto backend,
+) {
+  final total = backend.totalLessons;
+  final completed = backend.completedLessons.clamp(0, total);
+  final availability = completed == 0
+      ? TrackAvailability.available
+      : completed < total
+          ? TrackAvailability.inProgress
+          : TrackAvailability.completed;
+
+  return TrackProgress(
+    state: availability,
+    completedUnits: completed,
+    totalUnits: total,
+    completedQuizzes: backend.passedQuizIds.isNotEmpty
+        ? backend.passedQuizIds.length
+        : local.completedQuizzes,
+    totalQuizzes: local.totalQuizzes,
+    completedTrainers: local.completedTrainers,
+    totalTrainers: local.totalTrainers,
+    nextTarget: local.nextTarget,
+  );
 }
 
 TrackProgress _computeTrackProgress(DemoAppState state, LearningTrack track) {

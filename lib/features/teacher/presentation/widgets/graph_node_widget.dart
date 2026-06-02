@@ -14,8 +14,8 @@ import '../../domain/models/course_graph.dart';
 /// Logical size of a node on the canvas. Kept in sync with the painter's edge
 /// calculations.
 Size nodeSize(CourseNode node) {
-  if (node.type == CourseNodeType.milestone) return const Size(150, 52);
-  return const Size(196, 80);
+  if (node.type == CourseNodeType.milestone) return const Size(190, 60);
+  return const Size(260, 104);
 }
 
 class GraphNodeWidget extends StatelessWidget {
@@ -54,16 +54,12 @@ class GraphNodeWidget extends StatelessWidget {
 
     return SizedBox(
       width: size.width,
-      height: size.height + (selected ? 30 : 0), // extra room for delete pop
+      height: size.height + (selected ? 34 : 0), // extra room for delete pop
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           if (selected)
-            Positioned(
-              top: -34,
-              right: 0,
-              child: _NodePop(onDelete: onDelete),
-            ),
+            Positioned(top: -34, right: 0, child: _NodePop(onDelete: onDelete)),
           Positioned(
             left: 0,
             top: selected ? 30 : 0,
@@ -106,7 +102,9 @@ class GraphNodeWidget extends StatelessWidget {
           color: colors.success.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? colors.primary : colors.success.withValues(alpha: 0.6),
+            color: selected
+                ? colors.primary
+                : colors.success.withValues(alpha: 0.6),
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -115,13 +113,17 @@ class GraphNodeWidget extends StatelessWidget {
           children: [
             Icon(Icons.flag_rounded, size: 14, color: colors.success),
             const SizedBox(width: 6),
-            Text(
-              node.title.toUpperCase(),
-              style: TextStyle(
-                color: colors.success,
-                fontWeight: FontWeight.w700,
-                fontSize: 11.5,
-                letterSpacing: 0.06,
+            Flexible(
+              child: Text(
+                node.title.toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                style: TextStyle(
+                  color: colors.success,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  letterSpacing: 0.06,
+                ),
               ),
             ),
           ],
@@ -139,10 +141,10 @@ class GraphNodeWidget extends StatelessWidget {
           color: selected
               ? colors.primary
               : (node.risk
-                  ? colors.danger.withValues(alpha: 0.7)
-                  : (isGhost
-                      ? colors.accent.withValues(alpha: 0.7)
-                      : colors.divider)),
+                    ? colors.danger.withValues(alpha: 0.7)
+                    : (isGhost
+                          ? colors.accent.withValues(alpha: 0.7)
+                          : colors.divider)),
           width: selected ? 1.5 : 1,
         ),
         boxShadow: selected
@@ -165,8 +167,8 @@ class GraphNodeWidget extends StatelessWidget {
         children: [
           // Left accent bar
           Container(
-            width: 3,
-            margin: const EdgeInsets.symmetric(vertical: 4),
+            width: 4,
+            margin: const EdgeInsets.symmetric(vertical: 7),
             decoration: BoxDecoration(
               color: mode == CanvasMode.mastery && node.mastery != null
                   ? _masteryColor(node.mastery!, colors)
@@ -177,61 +179,57 @@ class GraphNodeWidget extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
-                      Flexible(
-                        child: Text(
-                          _typeLabel(node.type),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                          style: TextStyle(
-                            color: accent,
-                            fontSize: 9.5,
-                            height: 1.1,
-                            fontFamily: 'monospace',
-                            letterSpacing: 0.1,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      Text(
+                        _typeLabel(node.type),
+                        style: TextStyle(
+                          color: accent,
+                          fontSize: 10.5,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.1,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       if (node.risk) ...[
                         const SizedBox(width: 6),
-                        Icon(Icons.warning_amber_rounded,
-                            size: 11, color: colors.danger),
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 12,
+                          color: colors.danger,
+                        ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Text(
                     node.title,
                     overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
+                    maxLines: 2,
                     style: TextStyle(
                       color: colors.textPrimary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 12.5,
-                      height: 1.2,
+                      fontSize: 14,
+                      height: 1.15,
                     ),
                   ),
                   if (_meta(node) != null) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       _meta(node)!,
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                       style: TextStyle(
                         color: colors.textSecondary,
-                        fontSize: 10.5,
-                        height: 1.1,
+                        fontSize: 11.5,
                         fontFamily: 'monospace',
                       ),
                     ),
@@ -246,9 +244,9 @@ class GraphNodeWidget extends StatelessWidget {
               node.mastery != null &&
               node.mastery! > 0)
             Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: 10),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
                   color: mode == CanvasMode.mastery
                       ? Colors.transparent
@@ -261,7 +259,7 @@ class GraphNodeWidget extends StatelessWidget {
                     color: mode == CanvasMode.mastery
                         ? _masteryColor(node.mastery!, colors)
                         : colors.textSecondary,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontFamily: 'monospace',
                     fontWeight: FontWeight.w600,
                   ),

@@ -1,3 +1,14 @@
+// Teacher Studio · Analytics — Phase 2.
+//
+// Mirrors the HTML prototype:
+//   - 4 KPI tiles (enrolled / completion / quiz mean / Q&A volume)
+//   - Learner funnel with drop-off highlighting
+//   - Two-column split: per-cohort quiz heatmap (left) + cohort grid (right)
+//   - AI root-cause cards
+//
+// All blocks adapt to mobile: KPIs go 1-col, funnel rows shrink, heatmap
+// becomes horizontally scrollable, cohort grid stays a column.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,7 +16,7 @@ import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../teacher_text.dart';
-import '../widgets/teacher_workspace_widgets.dart';
+import '../widgets/teacher_studio_widgets.dart';
 
 class TeacherAnalyticsPage extends ConsumerWidget {
   const TeacherAnalyticsPage({super.key});
@@ -17,282 +28,991 @@ class TeacherAnalyticsPage extends ConsumerWidget {
     );
     final colors = context.appColors;
 
-    return TeacherPageScrollView(
+    return TsPageScrollView(
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 860;
-            final metrics = [
-              TeacherMetricTile(
-                label: _metricOneLabel.resolve(locale),
-                value: '84%',
-                hint: _metricOneHint.resolve(locale),
-                icon: Icons.play_circle_outline_rounded,
-                accent: colors.primary,
-              ),
-              TeacherMetricTile(
-                label: _metricTwoLabel.resolve(locale),
-                value: '61%',
-                hint: _metricTwoHint.resolve(locale),
-                icon: Icons.trending_down_rounded,
-                accent: colors.accent,
-              ),
-              TeacherMetricTile(
-                label: _metricThreeLabel.resolve(locale),
-                value: '4.7/5',
-                hint: _metricThreeHint.resolve(locale),
-                icon: Icons.star_outline_rounded,
-                accent: colors.success,
-              ),
-            ];
+        TsPageHeader(
+          eyebrow: _heroEyebrow.resolve(locale),
+          title: _heroTitle.resolve(locale),
+          subtitle: _heroSubtitle.resolve(locale),
+          actions: [
+            TsButton(
+              label: _actionCohort.resolve(locale),
+              icon: Icons.tune_rounded,
+              onPressed: () {},
+            ),
+            TsButton(
+              label: _actionPeriod.resolve(locale),
+              icon: Icons.calendar_today_rounded,
+              onPressed: () {},
+            ),
+            TsButton.primary(
+              label: _actionRescan.resolve(locale),
+              icon: Icons.auto_awesome_rounded,
+              onPressed: () {},
+            ),
+          ],
+        ),
 
-            if (compact) {
-              return Column(
-                children: [
-                  for (var i = 0; i < metrics.length; i++) ...[
-                    metrics[i],
-                    if (i != metrics.length - 1) const SizedBox(height: 12),
-                  ],
+        // ── KPI strip ────────────────────────────────────────────────────
+        TsResponsiveGrid(
+          desktopCols: 4,
+          children: [
+            TsKpiCard(
+              label: _kpiEnrolledLabel.resolve(locale),
+              value: '1 284',
+              accent: colors.primary,
+              delta: 11,
+            ),
+            TsKpiCard(
+              label: _kpiCompletionLabel.resolve(locale),
+              value: '78%',
+              accent: colors.accent,
+              delta: -2,
+            ),
+            TsKpiCard(
+              label: _kpiQuizLabel.resolve(locale),
+              value: '68%',
+              accent: const Color(0xFFFBBF24),
+              delta: -4,
+            ),
+            TsKpiCard(
+              label: _kpiQnaLabel.resolve(locale),
+              value: '142',
+              accent: const Color(0xFFB4A8FF),
+              delta: 22,
+              subtitle: _kpiQnaSub.resolve(locale),
+            ),
+          ],
+        ),
+
+        // ── Funnel ──────────────────────────────────────────────────────
+        TsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TsCardHeader(
+                eyebrow: _funnelEyebrow.resolve(locale),
+                eyebrowDot: colors.accent,
+                title: _funnelTitle.resolve(locale),
+                subtitle: _funnelSubtitle.resolve(locale),
+                actions: [
+                  TsButton(
+                    label: _funnelByCohort.resolve(locale),
+                    onPressed: () {},
+                  ),
+                  TsButton.primary(
+                    label: _funnelWhy.resolve(locale),
+                    icon: Icons.auto_awesome_rounded,
+                    onPressed: () {},
+                  ),
                 ],
-              );
-            }
+              ),
+              _FunnelChart(steps: _funnelSteps(locale, colors)),
+            ],
+          ),
+        ),
 
-            return Row(
+        // ── Heatmap + Cohorts ───────────────────────────────────────────
+        TsResponsiveSplit(
+          leftFlex: 14,
+          rightFlex: 10,
+          left: TsCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (var i = 0; i < metrics.length; i++) ...[
-                  Expanded(child: metrics[i]),
-                  if (i != metrics.length - 1) const SizedBox(width: 12),
-                ],
+                TsCardHeader(
+                  eyebrow: _heatmapEyebrow.resolve(locale),
+                  title: _heatmapTitle.resolve(locale),
+                  subtitle: _heatmapSubtitle.resolve(locale),
+                ),
+                _QuizHeatmap(
+                  cohorts: const ['C-24/A', 'C-24/B', 'C-25/A', 'C-25/B'],
+                  rows: [
+                    _HeatRow(_q1.resolve(locale), const [.91, .88, .90, .86]),
+                    _HeatRow(_q2.resolve(locale), const [.62, .58, .66, .54]),
+                    _HeatRow(_q3.resolve(locale), const [.74, .69, .71, .65]),
+                    _HeatRow(_q4.resolve(locale), const [.38, .34, .41, .36]),
+                    _HeatRow(_q5.resolve(locale), const [.55, .48, .52, .46]),
+                    _HeatRow(_q6.resolve(locale), const [.82, .79, .81, .78]),
+                    _HeatRow(_q7.resolve(locale), const [.66, .61, .64, .60]),
+                    _HeatRow(_q8.resolve(locale), const [.71, .67, .73, .68]),
+                  ],
+                ),
               ],
-            );
-          },
+            ),
+          ),
+          right: TsCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TsCardHeader(
+                  eyebrow: _cohortsEyebrow.resolve(locale),
+                  title: _cohortsTitle.resolve(locale),
+                  subtitle: _cohortsSubtitle.resolve(locale),
+                ),
+                _CohortGrid(items: _cohortItems(locale)),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(height: 18),
-        TeacherSectionCard(
-          title: _insightsTitle.resolve(locale),
-          subtitle: _insightsSubtitle.resolve(locale),
-          accent: colors.primary,
-          child: Column(children: _insightRows(locale, colors)),
-        ),
-        const SizedBox(height: 18),
-        TeacherSectionCard(
-          title: _recommendedTitle.resolve(locale),
-          subtitle: _recommendedSubtitle.resolve(locale),
-          accent: colors.accent,
-          child: Column(children: _recommendedRows(locale, colors)),
+
+        // ── AI root-cause cards ─────────────────────────────────────────
+        TsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TsCardHeader(
+                eyebrow: _causeEyebrow.resolve(locale),
+                eyebrowDot: colors.success,
+                title: _causeTitle.resolve(locale),
+                subtitle: _causeSubtitle.resolve(locale),
+                actions: [
+                  TsButton(
+                    label: _causeMore.resolve(locale),
+                    icon: Icons.auto_awesome_rounded,
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+              TsResponsiveGrid(
+                desktopCols: 3,
+                children: [
+                  _CauseCard(
+                    color: colors.danger,
+                    tag: _cause1Tag.resolve(locale),
+                    title: _cause1Title.resolve(locale),
+                    body: _cause1Body.resolve(locale),
+                    weight: 0.82,
+                    action: _causeAction.resolve(locale),
+                  ),
+                  _CauseCard(
+                    color: const Color(0xFFFBBF24),
+                    tag: _cause2Tag.resolve(locale),
+                    title: _cause2Title.resolve(locale),
+                    body: _cause2Body.resolve(locale),
+                    weight: 0.61,
+                    action: _causeAction.resolve(locale),
+                  ),
+                  _CauseCard(
+                    color: colors.accent,
+                    tag: _cause3Tag.resolve(locale),
+                    title: _cause3Title.resolve(locale),
+                    body: _cause3Body.resolve(locale),
+                    weight: 0.54,
+                    action: _causeAction.resolve(locale),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  List<Widget> _insightRows(AppLocale locale, AppThemeColors colors) {
-    final rows = [
-      (
-        _insightOneTitle.resolve(locale),
-        _insightOneSubtitle.resolve(locale),
-        _insightOneStatus.resolve(locale),
-        colors.accent,
-      ),
-      (
-        _insightTwoTitle.resolve(locale),
-        _insightTwoSubtitle.resolve(locale),
-        _insightTwoStatus.resolve(locale),
-        colors.success,
-      ),
-      (
-        _insightThreeTitle.resolve(locale),
-        _insightThreeSubtitle.resolve(locale),
-        _insightThreeStatus.resolve(locale),
-        colors.danger,
-      ),
-    ];
+  List<_FunnelStep> _funnelSteps(AppLocale l, AppThemeColors c) => [
+    _FunnelStep(_step1.resolve(l), 1284, c.primary),
+    _FunnelStep(_step2.resolve(l), 1241, c.primary),
+    _FunnelStep(_step3.resolve(l), 1180, c.primary),
+    _FunnelStep(_step4.resolve(l), 1144, c.primary),
+    _FunnelStep(_step5.resolve(l), 1052, c.primary),
+    _FunnelStep(_step6.resolve(l), 1018, c.accent),
+    _FunnelStep(_step7.resolve(l), 612, c.danger),
+    _FunnelStep(_step8.resolve(l), 542, c.primary),
+    _FunnelStep(_step9.resolve(l), 471, c.primary),
+    _FunnelStep(_step10.resolve(l), 459, c.success),
+  ];
 
-    return [
-      for (var i = 0; i < rows.length; i++) ...[
-        TeacherStatusRow(
-          title: rows[i].$1,
-          subtitle: rows[i].$2,
-          status: rows[i].$3,
-          accent: rows[i].$4,
-        ),
-        if (i != rows.length - 1) const SizedBox(height: 12),
+  List<_CohortItem> _cohortItems(AppLocale l) => [
+    _CohortItem('C-24/A', 312, 82, 58, active: false),
+    _CohortItem('C-24/B', 287, 76, 51, active: false),
+    _CohortItem('C-25/A', 341, 71, 49, active: true),
+    _CohortItem('C-25/B', 344, 64, 44, active: true),
+  ];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Funnel chart
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FunnelStep {
+  _FunnelStep(this.label, this.value, this.color);
+  final String label;
+  final int value;
+  final Color color;
+}
+
+class _FunnelChart extends StatelessWidget {
+  const _FunnelChart({required this.steps});
+  final List<_FunnelStep> steps;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final maxValue = steps.first.value;
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    final labelWidth = compact ? 110.0 : 180.0;
+
+    return Column(
+      children: [
+        for (var i = 0; i < steps.length; i++) ...[
+          () {
+            final s = steps[i];
+            final pct = s.value / maxValue;
+            final prev = i > 0 ? steps[i - 1].value : s.value;
+            final drop = i > 0 ? ((prev - s.value) / prev * 100).round() : 0;
+            final big = drop >= 30;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: labelWidth,
+                    child: Text(
+                      s.label,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontFamily: 'monospace',
+                        fontSize: 11.5,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(5),
+                      child: Stack(
+                        children: [
+                          Container(
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: colors.surfaceSoft,
+                              border: Border.all(color: colors.divider),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                          AnimatedFractionallySizedBox(
+                            duration: const Duration(milliseconds: 600),
+                            curve: Curves.easeOutCubic,
+                            alignment: Alignment.centerLeft,
+                            widthFactor: pct,
+                            child: Container(
+                              height: 22,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    s.color,
+                                    s.color.withValues(alpha: 0.6),
+                                  ],
+                                ),
+                                border: Border(
+                                  right: big
+                                      ? BorderSide(
+                                          color: colors.danger,
+                                          width: 2,
+                                        )
+                                      : BorderSide.none,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      _formatNumber(s.value),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontFamily: 'monospace',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 50,
+                    child: Text(
+                      i == 0 ? '100%' : '−$drop%',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: i == 0
+                            ? colors.textSecondary
+                            : drop >= 30
+                            ? colors.danger
+                            : drop >= 10
+                            ? colors.accent
+                            : colors.textSecondary,
+                        fontFamily: 'monospace',
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }(),
+        ],
       ],
-    ];
+    );
   }
 
-  List<Widget> _recommendedRows(AppLocale locale, AppThemeColors colors) {
-    final rows = [
-      (
-        _recommendedOneTitle.resolve(locale),
-        _recommendedOneSubtitle.resolve(locale),
-        _recommendedOneStatus.resolve(locale),
-        colors.primary,
-      ),
-      (
-        _recommendedTwoTitle.resolve(locale),
-        _recommendedTwoSubtitle.resolve(locale),
-        _recommendedTwoStatus.resolve(locale),
-        colors.success,
-      ),
-      (
-        _recommendedThreeTitle.resolve(locale),
-        _recommendedThreeSubtitle.resolve(locale),
-        _recommendedThreeStatus.resolve(locale),
-        colors.accent,
-      ),
-    ];
+  String _formatNumber(int n) => n.toString().replaceAllMapped(
+    RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+    (m) => '${m.group(1)} ',
+  );
+}
 
-    return [
-      for (var i = 0; i < rows.length; i++) ...[
-        TeacherStatusRow(
-          title: rows[i].$1,
-          subtitle: rows[i].$2,
-          status: rows[i].$3,
-          accent: rows[i].$4,
+// ─────────────────────────────────────────────────────────────────────────────
+// Quiz accuracy heatmap
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HeatRow {
+  _HeatRow(this.label, this.values);
+  final String label;
+  final List<double> values;
+}
+
+class _QuizHeatmap extends StatelessWidget {
+  const _QuizHeatmap({required this.cohorts, required this.rows});
+  final List<String> cohorts;
+  final List<_HeatRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final tableWidth = (180.0 + cohorts.length * 60.0).clamp(360.0, 720.0);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: tableWidth,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header row
+            Row(
+              children: [
+                const SizedBox(width: 180),
+                for (final c in cohorts)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: SizedBox(
+                      width: 56,
+                      child: Text(
+                        c,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 10.5,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.04,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            for (final row in rows)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 180,
+                      child: Text(
+                        row.label,
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    for (final v in row.values)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: _HeatCell(value: v),
+                      ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
+            // Legend
+            Row(
+              children: [
+                Text(
+                  '0%',
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 10.5,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: LinearGradient(
+                        colors: [
+                          colors.danger,
+                          colors.accent,
+                          const Color(0xFFFBBF24),
+                          colors.primary,
+                          colors.success,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '100%',
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 10.5,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        if (i != rows.length - 1) const SizedBox(height: 12),
-      ],
-    ];
+      ),
+    );
   }
 }
 
-final _metricOneLabel = teacherText(
-  ru: 'Activation rate',
-  en: 'Activation rate',
-  kk: 'Activation rate',
+class _HeatCell extends StatelessWidget {
+  const _HeatCell({required this.value});
+  final double value;
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final bg = tsQualityColor(value, colors);
+    return Container(
+      width: 56,
+      height: 34,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '${(value * 100).round()}',
+        style: TextStyle(
+          color: value < 0.5 ? Colors.white : const Color(0xFF062623),
+          fontSize: 11.5,
+          fontFamily: 'monospace',
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cohort grid
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CohortItem {
+  _CohortItem(
+    this.id,
+    this.learners,
+    this.completion,
+    this.nps, {
+    required this.active,
+  });
+  final String id;
+  final int learners;
+  final int completion;
+  final int nps;
+  final bool active;
+}
+
+class _CohortGrid extends StatelessWidget {
+  const _CohortGrid({required this.items});
+  final List<_CohortItem> items;
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: items[i].active
+                  ? colors.primary.withValues(alpha: 0.07)
+                  : colors.surfaceSoft.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: items[i].active
+                    ? colors.primary.withValues(alpha: 0.3)
+                    : colors.divider.withValues(alpha: 0.55),
+              ),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 92,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        items[i].id,
+                        style: TextStyle(
+                          color: items[i].active
+                              ? colors.primary
+                              : colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        items[i].active ? 'ACTIVE' : 'CLOSED',
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 9.5,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _CohortMetric(
+                        label: 'LEARNERS',
+                        value: items[i].learners.toString(),
+                      ),
+                      _CohortMetric(
+                        label: 'COMPLETION',
+                        value: '${items[i].completion}%',
+                        color: items[i].completion >= 75
+                            ? colors.success
+                            : items[i].completion >= 65
+                            ? colors.accent
+                            : colors.danger,
+                      ),
+                      _CohortMetric(
+                        label: 'NPS',
+                        value: '+${items[i].nps}',
+                        color: items[i].nps >= 50
+                            ? colors.success
+                            : colors.accent,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (i != items.length - 1) const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _CohortMetric extends StatelessWidget {
+  const _CohortMetric({required this.label, required this.value, this.color});
+  final String label;
+  final String value;
+  final Color? color;
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TsEyebrow(label),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: color ?? colors.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            fontFamily: 'monospace',
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cause card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CauseCard extends StatelessWidget {
+  const _CauseCard({
+    required this.color,
+    required this.tag,
+    required this.title,
+    required this.body,
+    required this.weight,
+    required this.action,
+  });
+  final Color color;
+  final String tag, title, body, action;
+  final double weight;
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.surfaceSoft.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.divider.withValues(alpha: 0.55)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 2,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    TsTag(label: tag, color: color),
+                    const Spacer(),
+                    Text(
+                      'conf · ${(weight * 100).round()}',
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 10.5,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TsButton(
+                    label: action,
+                    icon: Icons.arrow_forward_rounded,
+                    onPressed: () {},
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Strings
+// ─────────────────────────────────────────────────────────────────────────────
+
+final _heroEyebrow = teacherText(
+  ru: 'SQL/01 · ПОСЛЕДНИЕ 30 ДНЕЙ',
+  en: 'SQL/01 · LAST 30 DAYS',
+  kk: 'SQL/01 · СОҢҒЫ 30 КҮН',
 );
-final _metricOneHint = teacherText(
-  ru: 'Сколько записавшихся реально открыли первый урок.',
-  en: 'How many enrolled learners actually opened the first lesson.',
-  kk: 'Жазылғандардың қаншасы бірінші сабақты шын мәнінде ашты.',
+final _heroTitle = teacherText(
+  ru: 'Аналитика',
+  en: 'Analytics',
+  kk: 'Аналитика',
 );
-final _metricTwoLabel = teacherText(
-  ru: 'Доходят до capstone',
-  en: 'Reach the capstone',
-  kk: 'Capstone-ға жетеді',
+final _heroSubtitle = teacherText(
+  ru: 'Funnel, точность quiz, сравнение групп и AI-причины для курса SQL for Analysts.',
+  en: 'Funnel, quiz accuracy, cohort comparison and AI-surfaced root causes for SQL for Analysts.',
+  kk: 'SQL for Analysts курсы үшін funnel, quiz дәлдігі, топ салыстыру және AI себептері.',
 );
-final _metricTwoHint = teacherText(
-  ru: 'Самая чувствительная метрика удержания курса.',
-  en: 'The most sensitive metric for course retention.',
-  kk: 'Курсты ұстап қалудың ең сезімтал метрикасы.',
+final _actionCohort = teacherText(
+  ru: 'Группа: все',
+  en: 'Cohort: All',
+  kk: 'Топ: бәрі',
 );
-final _metricThreeLabel = teacherText(
-  ru: 'Оценка курса',
-  en: 'Course satisfaction',
-  kk: 'Курс бағасы',
+final _actionPeriod = teacherText(ru: '30 дней', en: '30 days', kk: '30 күн');
+final _actionRescan = teacherText(
+  ru: 'Перезапустить AI-сканирование',
+  en: 'Re-run AI scan',
+  kk: 'AI сканерді қайта іске қосу',
 );
-final _metricThreeHint = teacherText(
-  ru: 'Средняя оценка после последних двух итераций.',
-  en: 'Average learner rating after the last two iterations.',
-  kk: 'Соңғы екі итерациядан кейінгі орташа рейтинг.',
+
+final _kpiEnrolledLabel = teacherText(
+  ru: 'Записались · 30д',
+  en: 'Enrolled · 30d',
+  kk: 'Жазылғандар · 30к',
 );
-final _insightsTitle = teacherText(
-  ru: 'Главные инсайты',
-  en: 'Top insights',
-  kk: 'Негізгі инсайттар',
+final _kpiCompletionLabel = teacherText(
+  ru: 'Завершение',
+  en: 'Completion',
+  kk: 'Аяқтау',
 );
-final _insightsSubtitle = teacherText(
-  ru: 'Не просто графики, а выводы, на которые преподаватель может отреагировать.',
-  en: 'Not just charts, but conclusions a teacher can act on.',
-  kk: 'Жай график емес, оқытушы әрекет ете алатын қорытындылар.',
+final _kpiQuizLabel = teacherText(
+  ru: 'Среднее quiz',
+  en: 'Quiz mean',
+  kk: 'Quiz орташасы',
 );
-final _insightOneTitle = teacherText(
-  ru: 'Drop-off after lesson 4',
-  en: 'Drop-off after lesson 4',
-  kk: 'Drop-off after lesson 4',
+final _kpiQnaLabel = teacherText(
+  ru: 'Объём Q&A',
+  en: 'Q&A volume',
+  kk: 'Q&A көлемі',
 );
-final _insightOneSubtitle = teacherText(
-  ru: 'На lesson 4 резко растет время прохождения и падает accuracy по quiz.',
-  en: 'Lesson 4 shows a time spike and a drop in quiz accuracy.',
-  kk: '4-сабақта уақыт күрт өсіп, quiz accuracy төмендейді.',
+final _kpiQnaSub = teacherText(
+  ru: '↑ в модуле joins',
+  en: '↑ in joins module',
+  kk: '↑ joins модулінде',
 );
-final _insightOneStatus = teacherText(
-  ru: 'Friction point',
-  en: 'Friction point',
-  kk: 'Friction point',
+
+final _funnelEyebrow = teacherText(
+  ru: 'ВОРОНКА УЧЕНИКОВ',
+  en: 'LEARNER FUNNEL',
+  kk: 'ОҚУШЫ ВОРОНКАСЫ',
 );
-final _insightTwoTitle = teacherText(
-  ru: 'Discussion boosts completion',
-  en: 'Discussion boosts completion',
-  kk: 'Discussion boosts completion',
+final _funnelTitle = teacherText(
+  ru: 'Где ученики уходят',
+  en: 'Where learners drop out',
+  kk: 'Оқушылар қайдан кетеді',
 );
-final _insightTwoSubtitle = teacherText(
-  ru: 'Группы, где преподаватель отвечает в Q&A в течение 24 часов, завершают курс заметно чаще.',
-  en: 'Cohorts with teacher replies inside 24 hours complete far more often.',
-  kk: 'Оқытушы 24 сағат ішінде жауап берген топтар курсты жиірек аяқтайды.',
+final _funnelSubtitle = teacherText(
+  ru: '612 из 1018 доходят до конца M3 · Joins. 40% потеря — главный сигнал месяца.',
+  en: '612 of 1018 reach the end of M3 · Joins. The 40% loss is the dominant signal this month.',
+  kk: '1018-дің 612-сі M3 · Joins аяғына жетеді. 40% жоғалту — айдың басты сигналы.',
 );
-final _insightTwoStatus = teacherText(
-  ru: 'Positive signal',
-  en: 'Positive signal',
-  kk: 'Positive signal',
+final _funnelByCohort = teacherText(
+  ru: 'По группам',
+  en: 'By cohort',
+  kk: 'Топтар бойынша',
 );
-final _insightThreeTitle = teacherText(
-  ru: 'Assignment rubric mismatch',
-  en: 'Assignment rubric mismatch',
-  kk: 'Assignment rubric mismatch',
+final _funnelWhy = teacherText(
+  ru: 'Почему? · AI',
+  en: 'Why? · AI',
+  kk: 'Неге? · AI',
 );
-final _insightThreeSubtitle = teacherText(
-  ru: 'Высокий процент пересдач говорит, что ожидания задачи объяснены не до конца.',
-  en: 'The high resubmission rate suggests the task expectations are not explicit enough.',
-  kk: 'Қайта тапсыру пайызы жоғары болса, тапсырма күтулері жеткілікті түсіндірілмеген.',
+final _step1 = teacherText(ru: 'Записались', en: 'Enrolled', kk: 'Жазылған');
+final _step2 = teacherText(
+  ru: 'Начали M1',
+  en: 'Started M1',
+  kk: 'M1 бастаған',
 );
-final _insightThreeStatus = teacherText(
-  ru: 'Needs rubric fix',
-  en: 'Needs rubric fix',
-  kk: 'Rubric түзету керек',
+final _step3 = teacherText(
+  ru: 'Закончили M1',
+  en: 'Finished M1',
+  kk: 'M1 аяқтаған',
 );
-final _recommendedTitle = teacherText(
-  ru: 'Рекомендуемые действия',
-  en: 'Recommended actions',
-  kk: 'Ұсынылған әрекеттер',
+final _step4 = teacherText(
+  ru: 'Начали M2',
+  en: 'Started M2',
+  kk: 'M2 бастаған',
 );
-final _recommendedSubtitle = teacherText(
-  ru: 'Аналитика должна подсказывать учителю, что менять дальше, а не просто показывать цифры.',
-  en: 'Analytics should recommend the next teacher action, not just display numbers.',
-  kk: 'Аналитика тек сандарды емес, келесі мұғалім әрекетін де ұсынуы керек.',
+final _step5 = teacherText(
+  ru: 'Закончили M2',
+  en: 'Finished M2',
+  kk: 'M2 аяқтаған',
 );
-final _recommendedOneTitle = teacherText(
-  ru: 'Сделать bridge-lesson',
-  en: 'Add a bridge lesson',
-  kk: 'Bridge-lesson қосу',
+final _step6 = teacherText(
+  ru: 'Начали M3 · Joins',
+  en: 'Started M3 · Joins',
+  kk: 'M3 · Joins бастаған',
 );
-final _recommendedOneSubtitle = teacherText(
-  ru: 'Короткий вводный блок между theory и practice уменьшит cognitive jump.',
-  en: 'A short bridge between theory and practice should reduce the cognitive jump.',
-  kk: 'Theory мен practice арасындағы қысқа блок cognitive jump-ты азайтады.',
+final _step7 = teacherText(
+  ru: 'Закончили M3',
+  en: 'Finished M3',
+  kk: 'M3 аяқтаған',
 );
-final _recommendedOneStatus = teacherText(
-  ru: 'Content fix',
-  en: 'Content fix',
-  kk: 'Контент түзету',
+final _step8 = teacherText(
+  ru: 'Закончили M4',
+  en: 'Finished M4',
+  kk: 'M4 аяқтаған',
 );
-final _recommendedTwoTitle = teacherText(
-  ru: 'Автоматизировать reminders',
-  en: 'Automate reminders',
-  kk: 'Reminders автоматтандыру',
+final _step9 = teacherText(
+  ru: 'Сдали capstone',
+  en: 'Capstone submitted',
+  kk: 'Capstone тапсырған',
 );
-final _recommendedTwoSubtitle = teacherText(
-  ru: 'Push/email напоминания перед дедлайном повышают submission rate.',
-  en: 'Push/email reminders before a deadline improve submission rate.',
-  kk: 'Дедлайн алдындағы push/email reminders submission rate-ты көтереді.',
+final _step10 = teacherText(
+  ru: 'Сертификат',
+  en: 'Certified',
+  kk: 'Сертификат',
 );
-final _recommendedTwoStatus = teacherText(
-  ru: 'Operational',
-  en: 'Operational',
-  kk: 'Operational',
+
+final _heatmapEyebrow = teacherText(
+  ru: 'ТОЧНОСТЬ QUIZ · ПО ГРУППАМ',
+  en: 'QUIZ ACCURACY · BY COHORT',
+  kk: 'QUIZ ДӘЛДІГІ · ТОПТАР БОЙЫНША',
 );
-final _recommendedThreeTitle = teacherText(
-  ru: 'Пересмотреть question difficulty',
-  en: 'Revisit question difficulty',
-  kk: 'Question difficulty қайта қарау',
+final _heatmapTitle = teacherText(
+  ru: 'Joins quiz · по вопросам',
+  en: 'Joins quiz · item-level heatmap',
+  kk: 'Joins quiz · сұрақтар бойынша',
 );
-final _recommendedThreeSubtitle = teacherText(
-  ru: 'Три вопроса подряд с fail-rate выше 60% ломают ритм проверки знаний.',
-  en: 'Three consecutive questions above 60% fail rate break the knowledge-check rhythm.',
-  kk: '60%-дан жоғары fail-rate бар үш сұрақ қатар келсе, тексеру ырғағы бұзылады.',
+final _heatmapSubtitle = teacherText(
+  ru: 'Каждая ячейка — средняя точность по вопросу. Q4 (Self join) слабейший везде.',
+  en: 'Each cell = mean accuracy on that item. Q4 (Self join cases) is the weakest item across every cohort.',
+  kk: 'Әр ұяшық — сұрақтың орташа дәлдігі. Q4 (Self join) барлық топта әлсіз.',
 );
-final _recommendedThreeStatus = teacherText(
-  ru: 'Assessment tuning',
-  en: 'Assessment tuning',
-  kk: 'Assessment tuning',
+final _q1 = teacherText(
+  ru: 'Q1 · INNER JOIN базис',
+  en: 'Q1 · INNER JOIN basics',
+  kk: 'Q1 · INNER JOIN негіздері',
+);
+final _q2 = teacherText(
+  ru: 'Q2 · семантика NULL',
+  en: 'Q2 · NULL semantics',
+  kk: 'Q2 · NULL семантикасы',
+);
+final _q3 = teacherText(
+  ru: 'Q3 · LEFT vs RIGHT',
+  en: 'Q3 · LEFT vs RIGHT',
+  kk: 'Q3 · LEFT vs RIGHT',
+);
+final _q4 = teacherText(
+  ru: 'Q4 · self join',
+  en: 'Q4 · Self join cases',
+  kk: 'Q4 · self join',
+);
+final _q5 = teacherText(
+  ru: 'Q5 · CROSS JOIN ловушка',
+  en: 'Q5 · CROSS JOIN footgun',
+  kk: 'Q5 · CROSS JOIN тұзақ',
+);
+final _q6 = teacherText(
+  ru: 'Q6 · смешанные AND/OR',
+  en: 'Q6 · Mixed AND/OR',
+  kk: 'Q6 · аралас AND/OR',
+);
+final _q7 = teacherText(
+  ru: 'Q7 · equi-join',
+  en: 'Q7 · Equi-join',
+  kk: 'Q7 · equi-join',
+);
+final _q8 = teacherText(
+  ru: 'Q8 · set operations',
+  en: 'Q8 · Set operations',
+  kk: 'Q8 · set operations',
+);
+
+final _cohortsEyebrow = teacherText(ru: 'ГРУППЫ', en: 'COHORTS', kk: 'ТОПТАР');
+final _cohortsTitle = teacherText(
+  ru: 'Сравнение',
+  en: 'Side-by-side',
+  kk: 'Қатар салыстыру',
+);
+final _cohortsSubtitle = teacherText(
+  ru: 'Сравниваем 4 последние группы по ключевым метрикам.',
+  en: 'Compare the 4 most recent cohorts on the metrics that matter.',
+  kk: 'Соңғы 4 топты негізгі метрикалар бойынша салыстырамыз.',
+);
+
+final _causeEyebrow = teacherText(
+  ru: 'AI · ПРИЧИНЫ',
+  en: 'AI ROOT-CAUSE',
+  kk: 'AI · СЕБЕПТЕР',
+);
+final _causeTitle = teacherText(
+  ru: 'Почему это происходит?',
+  en: 'Why is this happening?',
+  kk: 'Неге бұл болып жатыр?',
+);
+final _causeSubtitle = teacherText(
+  ru: 'Три причинных гипотезы из данных недели.',
+  en: "Three causal hypotheses the system extracted from this week's data.",
+  kk: 'Осы апта деректерінен үш себептік болжам.',
+);
+final _causeMore = teacherText(
+  ru: 'Ещё гипотезы',
+  en: 'Generate more',
+  kk: 'Тағы болжам',
+);
+final _causeAction = teacherText(
+  ru: 'Разобрать',
+  en: 'Investigate',
+  kk: 'Зерттеу',
+);
+final _cause1Tag = teacherText(
+  ru: 'ПРЕРЕКВИЗИТ',
+  en: 'PREREQUISITE GAP',
+  kk: 'ПРЕРЕКВИЗИТ',
+);
+final _cause1Title = teacherText(
+  ru: 'Учеников бросают на OUTER joins без знания NULL',
+  en: 'Learners hit OUTER joins without NULL fluency',
+  kk: 'Оқушылар NULL білмей-ақ OUTER joins-қа жетеді',
+);
+final _cause1Body = teacherText(
+  ru: '84% тех, кто провалил Q4, также промахивались по NULL в Q2. Bridge-урок решает оба.',
+  en: '84% of learners who fail Q4 also miss NULL-related items in Q2. The bridge lesson addresses both.',
+  kk: 'Q4 құлаған 84% оқушы Q2-де NULL сұрақтарын да қателесті. Bridge-сабақ екеуін де шешеді.',
+);
+final _cause2Tag = teacherText(
+  ru: 'НЕОДНОЗНАЧНОСТЬ',
+  en: 'AMBIGUOUS WORDING',
+  kk: 'ЕКІҰШТЫ ТҰЖЫРЫМ',
+);
+final _cause2Title = teacherText(
+  ru: 'У Q4 distractor B выглядит верным',
+  en: 'Q4 distractor B is plausibly correct',
+  kk: 'Q4 distractor B дұрыс сияқты көрінеді',
+);
+final _cause2Body = teacherText(
+  ru: 'C-24/A непропорционально выбирали distractor B — проблема в формулировке, не в концепции.',
+  en: 'Cohort-A students disproportionately picked distractor B, suggesting wording is the issue.',
+  kk: 'C-24/A студенттері B-ні жиі таңдады — мәселе тұжырымда, концепцияда емес.',
+);
+final _cause3Tag = teacherText(ru: 'ТЕМП', en: 'PACING', kk: 'ҚАРҚЫН');
+final _cause3Title = teacherText(
+  ru: 'Lab #14 на 38% длиннее медианы',
+  en: 'Lab #14 is 38% longer than median',
+  kk: 'Lab #14 медианадан 38% ұзақ',
+);
+final _cause3Body = teacherText(
+  ru: 'Медиана для Lab 14 = 92 мин против 55 мин по курсу. Сократите до 8 puzzles или разделите.',
+  en: 'Median completion for Lab 14 is 92 min vs the course median of 55 min. Trim to 8 puzzles or split.',
+  kk: 'Lab 14 медианасы — 92 мин, ал курс медианасы — 55 мин. 8 puzzles-қа дейін қысқартыңыз.',
 );

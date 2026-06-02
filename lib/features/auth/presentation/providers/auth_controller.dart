@@ -287,6 +287,48 @@ class AuthController extends Notifier<AuthState> {
     );
   }
 
+  /// Updates the signed-in user's profile on the backend.
+  /// Returns null on success, or an error message on failure.
+  Future<String?> updateProfile({
+    String? name,
+    String? bio,
+    String? email,
+    String? avatarBase64,
+  }) async {
+    try {
+      await ref.read(authRepositoryProvider).updateProfile(
+            name: name,
+            bio: bio,
+            email: email,
+            avatarBase64: avatarBase64,
+          );
+      return null;
+    } on ApiException catch (error) {
+      return error.message;
+    } catch (_) {
+      return 'Unable to update your profile right now.';
+    }
+  }
+
+  /// Changes the signed-in user's password on the backend.
+  /// Returns null on success, or an error message on failure.
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await ref.read(authRepositoryProvider).changePassword(
+            currentPassword: currentPassword,
+            newPassword: newPassword,
+          );
+      return null;
+    } on ApiException catch (error) {
+      return error.message;
+    } catch (_) {
+      return 'Unable to change your password right now.';
+    }
+  }
+
   Future<void> _restoreSession() async {
     try {
       final session = await ref.read(restoreAuthSessionProvider)();

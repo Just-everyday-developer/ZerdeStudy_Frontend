@@ -26,7 +26,8 @@ class KnowledgeGraphCanvas extends ConsumerStatefulWidget {
   const KnowledgeGraphCanvas({super.key});
 
   @override
-  ConsumerState<KnowledgeGraphCanvas> createState() => _KnowledgeGraphCanvasState();
+  ConsumerState<KnowledgeGraphCanvas> createState() =>
+      _KnowledgeGraphCanvasState();
 }
 
 class _KnowledgeGraphCanvasState extends ConsumerState<KnowledgeGraphCanvas> {
@@ -41,7 +42,7 @@ class _KnowledgeGraphCanvasState extends ConsumerState<KnowledgeGraphCanvas> {
 
   void _fitToScreen(Size viewportSize) {
     final scale = (viewportSize.width - 80) / kCanvasWidth;
-    final clamped = scale.clamp(0.35, 1.0);
+    final clamped = scale.clamp(0.42, 1.0);
     _transformController.value = Matrix4.identity()
       ..scaleByDouble(clamped, clamped, 1, 1)
       ..setTranslationRaw(30, 30, 0);
@@ -155,9 +156,7 @@ class _KnowledgeGraphCanvasState extends ConsumerState<KnowledgeGraphCanvas> {
                 left: 0,
                 right: 0,
                 child: Center(
-                  child: _ConnectHint(
-                    onCancel: controller.cancelConnect,
-                  ),
+                  child: _ConnectHint(onCancel: controller.cancelConnect),
                 ),
               ),
           ],
@@ -216,10 +215,7 @@ class _CanvasContent extends StatelessWidget {
               onDragDelta: (delta) {
                 final scale = transformController.value.getMaxScaleOnAxis();
                 final scaled = delta / scale;
-                controller.moveNode(
-                  node.id,
-                  node.position + scaled,
-                );
+                controller.moveNode(node.id, node.position + scaled);
               },
             ),
           ),
@@ -271,8 +267,8 @@ class _EdgesPainter extends CustomPainter {
       final bSize = nodeSize(b);
 
       final path = _edgePath(a.position, aSize, b.position, bSize);
-      final isGhost = a.type == CourseNodeType.ghost ||
-          b.type == CourseNodeType.ghost;
+      final isGhost =
+          a.type == CourseNodeType.ghost || b.type == CourseNodeType.ghost;
       final isRisk = mode == CanvasMode.structure && (a.risk || b.risk);
 
       if (isGhost) {
@@ -422,11 +418,29 @@ class _CanvasToolbar extends StatelessWidget {
             icon: Icon(Icons.add_rounded, color: colors.textPrimary, size: 18),
             onSelected: onAddNode,
             itemBuilder: (_) => const [
-              PopupMenuItem(value: CourseNodeType.lesson,    child: _MenuRow(icon: Icons.menu_book_rounded,      label: 'Lesson')),
-              PopupMenuItem(value: CourseNodeType.quiz,      child: _MenuRow(icon: Icons.quiz_rounded,            label: 'Quiz')),
-              PopupMenuItem(value: CourseNodeType.practice,  child: _MenuRow(icon: Icons.science_rounded,         label: 'Practice lab')),
-              PopupMenuItem(value: CourseNodeType.module,    child: _MenuRow(icon: Icons.dashboard_rounded,       label: 'Module')),
-              PopupMenuItem(value: CourseNodeType.milestone, child: _MenuRow(icon: Icons.flag_rounded,            label: 'Milestone')),
+              PopupMenuItem(
+                value: CourseNodeType.lesson,
+                child: _MenuRow(icon: Icons.menu_book_rounded, label: 'Lesson'),
+              ),
+              PopupMenuItem(
+                value: CourseNodeType.quiz,
+                child: _MenuRow(icon: Icons.quiz_rounded, label: 'Quiz'),
+              ),
+              PopupMenuItem(
+                value: CourseNodeType.practice,
+                child: _MenuRow(
+                  icon: Icons.science_rounded,
+                  label: 'Practice lab',
+                ),
+              ),
+              PopupMenuItem(
+                value: CourseNodeType.module,
+                child: _MenuRow(icon: Icons.dashboard_rounded, label: 'Module'),
+              ),
+              PopupMenuItem(
+                value: CourseNodeType.milestone,
+                child: _MenuRow(icon: Icons.flag_rounded, label: 'Milestone'),
+              ),
             ],
           ),
           _ToolbarBtn(
@@ -436,15 +450,27 @@ class _CanvasToolbar extends StatelessWidget {
             onPressed: onStartConnect,
           ),
           const _ToolbarSep(),
-          _ToolbarBtn(tooltip: 'Zoom out', icon: Icons.remove_rounded, onPressed: onZoomOut),
+          _ToolbarBtn(
+            tooltip: 'Zoom out',
+            icon: Icons.remove_rounded,
+            onPressed: onZoomOut,
+          ),
           _ToolbarBtn(
             tooltip: 'Fit',
             label: '${(scale * 100).round()}',
             onPressed: onFit,
           ),
-          _ToolbarBtn(tooltip: 'Zoom in', icon: Icons.add_rounded, onPressed: onZoomIn),
+          _ToolbarBtn(
+            tooltip: 'Zoom in',
+            icon: Icons.add_rounded,
+            onPressed: onZoomIn,
+          ),
           const _ToolbarSep(),
-          _ToolbarBtn(tooltip: 'Auto-layout', icon: Icons.account_tree_rounded, onPressed: onAutoLayout),
+          _ToolbarBtn(
+            tooltip: 'Auto-layout',
+            icon: Icons.account_tree_rounded,
+            onPressed: onAutoLayout,
+          ),
         ],
       ),
     );
@@ -458,11 +484,7 @@ class _MenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: [
-        Icon(icon, size: 16),
-        const SizedBox(width: 10),
-        Text(label),
-      ],
+      children: [Icon(icon, size: 16), const SizedBox(width: 10), Text(label)],
     );
   }
 }
@@ -545,9 +567,7 @@ class _ModeSwitcher extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final m in CanvasMode.values) _seg(context, m),
-        ],
+        children: [for (final m in CanvasMode.values) _seg(context, m)],
       ),
     );
   }
@@ -579,10 +599,10 @@ class _ModeSwitcher extends StatelessWidget {
   }
 
   String _label(CanvasMode m) => switch (m) {
-        CanvasMode.structure => 'Structure',
-        CanvasMode.mastery => 'Mastery',
-        CanvasMode.funnel => 'Funnel',
-      };
+    CanvasMode.structure => 'Structure',
+    CanvasMode.mastery => 'Mastery',
+    CanvasMode.funnel => 'Funnel',
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -609,7 +629,9 @@ class _MiniMap extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: CustomPaint(painter: _MiniMapPainter(course: course, colors: colors)),
+        child: CustomPaint(
+          painter: _MiniMapPainter(course: course, colors: colors),
+        ),
       ),
     );
   }
@@ -635,18 +657,27 @@ class _MiniMapPainter extends CustomPainter {
         (ns.height * sy).clamp(2, size.height),
       );
       final paint = Paint()..color = _colorFor(n);
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(1)), paint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(1)),
+        paint,
+      );
     }
   }
 
   Color _colorFor(CourseNode n) {
     switch (n.type) {
-      case CourseNodeType.module:    return colors.primary;
-      case CourseNodeType.quiz:      return colors.accent;
-      case CourseNodeType.practice:  return const Color(0xFFB4A8FF);
-      case CourseNodeType.milestone: return colors.success;
-      case CourseNodeType.ghost:     return colors.accent.withValues(alpha: 0.4);
-      case CourseNodeType.lesson:    return colors.textSecondary;
+      case CourseNodeType.module:
+        return colors.primary;
+      case CourseNodeType.quiz:
+        return colors.accent;
+      case CourseNodeType.practice:
+        return const Color(0xFFB4A8FF);
+      case CourseNodeType.milestone:
+        return colors.success;
+      case CourseNodeType.ghost:
+        return colors.accent.withValues(alpha: 0.4);
+      case CourseNodeType.lesson:
+        return colors.textSecondary;
     }
   }
 

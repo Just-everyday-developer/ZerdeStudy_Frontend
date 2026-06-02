@@ -1,0 +1,28 @@
+{
+  "name": "frontend_flutter",
+  "version": "1.0.0",
+  "description": "`frontend_flutter` - это Flutter frontend для **ZerdeStudy**, MVP образовательной платформы в рамках дипломного проекта. Репозиторий содержит многоплатформенное клиентское приложение с учебными сценариями для студентов, каталогом курсов, AI-ассистентом, community-разделом и отдельными интерфейсами для преподавателя и модератора.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Just-everyday-developer/ZerdeStudy_Frontend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Just-everyday-developer/ZerdeStudy_Frontend/issues"
+  },
+  "homepage": "https://github.com/Just-everyday-developer/ZerdeStudy_Frontend#readme",
+  "dependencies": {
+    "playwright": "^1.60.0"
+  }
+}

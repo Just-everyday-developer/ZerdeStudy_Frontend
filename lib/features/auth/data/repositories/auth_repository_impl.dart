@@ -117,6 +117,49 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> updateProfile({
+    String? name,
+    String? bio,
+    String? email,
+    String? avatarBase64,
+  }) async {
+    final accessToken = _requireAccessToken();
+    await _remote.updateProfile(
+      accessToken: accessToken,
+      name: name,
+      bio: bio,
+      email: email,
+      avatarBase64: avatarBase64,
+    );
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final accessToken = _requireAccessToken();
+    await _remote.changePassword(
+      accessToken: accessToken,
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+  }
+
+  String _requireAccessToken() {
+    final stored = _local.readSession();
+    final token = stored?.accessToken.trim() ?? '';
+    if (token.isEmpty) {
+      throw const ApiException(
+        statusCode: 401,
+        code: 'invalid_token',
+        message: 'You need to be signed in to do this.',
+      );
+    }
+    return token;
+  }
+
+  @override
   Future<String> getGoogleAuthUrl({String? redirectUri, String? platform}) =>
       _remote.getGoogleAuthUrl(redirectUri: redirectUri, platform: platform);
 

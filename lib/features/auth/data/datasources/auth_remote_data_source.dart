@@ -79,6 +79,46 @@ class AuthRemoteDataSource {
     return AuthUserDto.fromJson(json);
   }
 
+  /// Updates the current user's own profile via PATCH /profiles/me.
+  /// The backend maps [name] to the user `login`, and [avatarBase64]/photoUrl
+  /// to `photo_url`. Only non-null fields are sent.
+  Future<void> updateProfile({
+    required String accessToken,
+    String? name,
+    String? bio,
+    String? email,
+    String? avatarBase64,
+  }) {
+    final body = <String, dynamic>{
+      if (name != null) 'name': name,
+      if (bio != null) 'bio': bio,
+      if (email != null) 'email': email,
+      if (avatarBase64 != null) 'avatarBase64': avatarBase64,
+    };
+
+    return _client.patchJson(
+      '/api/v1/profiles/me',
+      headers: <String, String>{'Authorization': 'Bearer $accessToken'},
+      body: body,
+    );
+  }
+
+  /// Changes the current user's password via POST /auth/change-password.
+  Future<void> changePassword({
+    required String accessToken,
+    required String currentPassword,
+    required String newPassword,
+  }) {
+    return _client.postEmpty(
+      '/api/v1/auth/change-password',
+      headers: <String, String>{'Authorization': 'Bearer $accessToken'},
+      body: <String, dynamic>{
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      },
+    );
+  }
+
   Future<String> getGoogleAuthUrl({
     String? redirectUri,
     String? platform,

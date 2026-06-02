@@ -1,5 +1,7 @@
 import '../../../../core/network/json_http_client.dart';
+import '../models/backend_achievement_dto.dart';
 import '../models/backend_course_dto.dart';
+import '../models/backend_progress_dto.dart';
 import '../models/backend_lesson_dto.dart';
 import '../models/backend_module_dto.dart';
 import '../models/backend_course_query.dart';
@@ -314,6 +316,58 @@ class BackendCourseRemoteDataSource {
     return BackendStreakDto.fromJson(json);
   }
 
+  /// Marks a lesson complete for the signed-in user and returns the updated
+  /// course progress. POST /api/v1/lesson/:id/complete (write-role exempt).
+  Future<BackendCourseProgressDto> completeLesson({
+    required String accessToken,
+    required String lessonId,
+  }) async {
+    final json = await _client.postJson(
+      '/api/v1/lesson/${lessonId.trim()}/complete',
+      headers: _authHeaders(accessToken),
+    );
+
+    return BackendCourseProgressDto.fromJson(json);
+  }
+
+  /// Progress for a single course for the signed-in user.
+  Future<BackendCourseProgressDto> fetchCourseProgress({
+    required String accessToken,
+    required String courseId,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/course/${courseId.trim()}/progress',
+      headers: _authHeaders(accessToken),
+    );
+
+    return BackendCourseProgressDto.fromJson(json);
+  }
+
+  /// Progress across all of the signed-in user's courses.
+  Future<List<BackendCourseProgressDto>> fetchAllProgress({
+    required String accessToken,
+  }) async {
+    final json = await _client.getJsonList(
+      '/api/v1/progress',
+      headers: _authHeaders(accessToken),
+    );
+
+    return json
+        .map(BackendCourseProgressDto.fromJson)
+        .toList(growable: false);
+  }
+
+  Future<List<BackendAchievementDto>> fetchAchievements({
+    required String accessToken,
+  }) async {
+    final json = await _client.getJsonList(
+      '/api/v1/achievements',
+      headers: _authHeaders(accessToken),
+    );
+
+    return json.map(BackendAchievementDto.fromJson).toList(growable: false);
+  }
+
   Future<List<BackendDictionaryEntryDto>> fetchLevels({
     required String accessToken,
   }) {
@@ -346,6 +400,24 @@ class BackendCourseRemoteDataSource {
   }) {
     return _fetchDictionary(
       '/api/v1/dictionary/status',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<List<BackendDictionaryEntryDto>> fetchTags({
+    required String accessToken,
+  }) {
+    return _fetchDictionary(
+      '/api/v1/dictionary/tag',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<List<BackendDictionaryEntryDto>> fetchLocales({
+    required String accessToken,
+  }) {
+    return _fetchDictionary(
+      '/api/v1/dictionary/locale',
       accessToken: accessToken,
     );
   }

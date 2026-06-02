@@ -947,6 +947,20 @@ class FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
+  Future<void> updateProfile({
+    String? name,
+    String? bio,
+    String? email,
+    String? avatarBase64,
+  }) async {}
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {}
+
+  @override
   Future<String> getGoogleAuthUrl({
     String? redirectUri,
     String? platform,
