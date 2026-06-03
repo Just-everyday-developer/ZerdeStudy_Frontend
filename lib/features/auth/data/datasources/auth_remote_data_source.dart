@@ -1,6 +1,7 @@
 import '../../../../core/network/json_http_client.dart';
 import '../models/auth_tokens_dto.dart';
 import '../models/auth_user_dto.dart';
+import '../models/backend_profile_dto.dart';
 
 class AuthRemoteDataSource {
   AuthRemoteDataSource(this._client);
@@ -77,6 +78,16 @@ class AuthRemoteDataSource {
       headers: <String, String>{'Authorization': 'Bearer $accessToken'},
     );
     return AuthUserDto.fromJson(json);
+  }
+
+  /// Fetches the signed-in user's full profile including server-computed
+  /// XP, level, streak and max_streak via GET /profiles/me.
+  Future<BackendProfileDto> fetchProfile({required String accessToken}) async {
+    final json = await _client.getJson(
+      '/api/v1/profiles/me',
+      headers: <String, String>{'Authorization': 'Bearer $accessToken'},
+    );
+    return BackendProfileDto.fromJson(json);
   }
 
   /// Updates the current user's own profile via PATCH /profiles/me.

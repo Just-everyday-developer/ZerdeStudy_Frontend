@@ -10,6 +10,7 @@ import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/common_widgets/bubble_progress_bar.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../../../courses_backend/data/models/backend_streak_dto.dart';
 import '../../../app_guide/presentation/app_guide_controller.dart';
@@ -43,10 +44,22 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
+    final backendProfile = ref
+        .watch(backendProfileProvider)
+        .maybeWhen(data: (p) => p, orElse: () => null);
     final backendStreak = ref
         .watch(backendStreakProvider)
         .maybeWhen(data: (value) => value, orElse: () => null);
-    final streakDays = backendStreak?.streak ?? state.streak;
+    // Use backend streak when any backend source has loaded; fall back to local
+    // only when both providers are still loading (null). This prevents old
+    // inflated local state from overriding the real backend value.
+    final streakDays = (backendStreak != null || backendProfile != null)
+        ? [
+            backendStreak?.streak ?? 0,
+            backendProfile?.streak ?? 0,
+          ].reduce((a, b) => a > b ? a : b)
+        : state.streak;
+    final effectiveXp = backendProfile?.xp ?? state.xp;
     final activeStreakDates =
         backendStreak?.activeDates.toSet() ??
         BackendStreakDto.deriveActiveDates(
@@ -55,7 +68,31 @@ class HomePage extends ConsumerWidget {
         ).toSet();
     final catalog = ref.watch(demoCatalogProvider);
     final currentTrack = catalog.trackById(state.currentTrackId);
-    final currentProgress = catalog.progressForTrack(state, currentTrack.id);
+    // For the OOP track, overlay backend progress so the home card reflects
+    // real completed lessons (UUID IDs that the local catalog doesn't count).
+    final backendOopProgress = ref
+        .watch(backendOopProgressProvider)
+        .maybeWhen(data: (p) => p, orElse: () => null);
+    final localTrackProgress = catalog.progressForTrack(state, currentTrack.id);
+    final currentProgress =
+        (state.currentTrackId == 'oop' &&
+            backendOopProgress != null &&
+            backendOopProgress.totalLessons > 0)
+        ? TrackProgress(
+            state: backendOopProgress.completedLessons == 0
+                ? TrackAvailability.available
+                : backendOopProgress.completedLessons < backendOopProgress.totalLessons
+                    ? TrackAvailability.inProgress
+                    : TrackAvailability.completed,
+            completedUnits: backendOopProgress.completedLessons,
+            totalUnits: backendOopProgress.totalLessons,
+            completedQuizzes: backendOopProgress.passedQuizIds.length,
+            totalQuizzes: localTrackProgress.totalQuizzes,
+            completedTrainers: localTrackProgress.completedTrainers,
+            totalTrainers: localTrackProgress.totalTrainers,
+            nextTarget: localTrackProgress.nextTarget,
+          )
+        : localTrackProgress;
 
     final leaderboard = catalog.leaderboardFor(state);
     final myRank = leaderboard.indexWhere((e) => e.isCurrentUser) + 1;
@@ -178,7 +215,7 @@ class HomePage extends ConsumerWidget {
                 _CurrentTrackCard(
                   track: currentTrack,
                   progress: currentProgress,
-                  xp: state.xp,
+                  xp: effectiveXp,
                   colors: colors,
                   locale: state.locale,
                   onTap: () {

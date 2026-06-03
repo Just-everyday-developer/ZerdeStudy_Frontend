@@ -9,7 +9,8 @@ import '../../../../app/state/demo_moderator_controller.dart';
 import '../../../../app/state/demo_moderator_data.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
-import 'admin_pages.dart';
+import '../../../admin/presentation/pages/admin_roles_page.dart';
+import '../../../admin/presentation/pages/admin_users_page.dart';
 import 'moderator_comments_page.dart';
 import 'moderator_community_page.dart';
 import 'moderator_courses_page.dart';
@@ -162,8 +163,8 @@ class ModeratorShellPage extends ConsumerWidget {
                               colors: colors,
                             ),
                             _NavItem(
-                              icon: Icons.analytics_rounded,
-                              label: 'Система',
+                              icon: Icons.shield_rounded,
+                              label: 'Роли',
                               selected: initialTab == 7,
                               accentColor: accentColor,
                               onTap: () =>
@@ -283,7 +284,7 @@ class ModeratorShellPage extends ConsumerWidget {
                     4 => const ModeratorCommunityPage(),
                     5 => const ModeratorFaqPage(),
                     6 => const AdminUsersPage(),
-                    7 => const AdminSystemPage(),
+                    7 => const AdminRolesPage(),
                     _ => const ModeratorDashboardPage(),
                   },
                 ),

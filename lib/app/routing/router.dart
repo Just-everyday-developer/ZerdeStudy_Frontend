@@ -19,9 +19,11 @@ import '../../features/auth/presentation/pages/oauth_callback_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
-import '../../features/community/presentation/pages/community_page.dart';
-import '../../features/community/presentation/pages/community_group_page.dart';
-import '../../features/faq/presentation/pages/faq_page.dart';
+// Community Groups removed (no backend, fully hardcoded mock).
+// import '../../features/community/presentation/pages/community_page.dart';
+// import '../../features/community/presentation/pages/community_group_page.dart';
+// FAQ temporarily disabled.
+// import '../../features/faq/presentation/pages/faq_page.dart';
 import '../../features/home/presentation/pages/community_course_detail_page.dart';
 import '../../features/home/presentation/pages/community_course_player_page.dart';
 import '../../features/home/presentation/pages/community_courses_page.dart';
@@ -142,6 +144,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (isAuthenticated && activeExperience == AppExperience.moderator) {
         return isModeratorRoute ? null : AppRoutes.moderator;
       }
+      // Admin shares the moderator shell (with extra Users/Roles tabs).
+      if (isAuthenticated && activeExperience == AppExperience.admin) {
+        return isModeratorRoute ? null : AppRoutes.moderator;
+      }
       if (isTeacherRoute || isModeratorRoute) {
         return AppRoutes.home;
       }
@@ -228,10 +234,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: AppRoutes.home,
                 builder: (context, state) => const HomePage(),
               ),
-              GoRoute(
-                path: AppRoutes.community,
-                builder: (context, state) => const CommunityPage(),
-              ),
+              // Community Groups removed — no backend, fully hardcoded mock.
             ],
           ),
           StatefulShellBranch(
@@ -272,16 +275,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      GoRoute(
-        path: '${AppRoutes.community}/groups/:groupId',
-        parentNavigatorKey: appRootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: CommunityGroupPage(
-            groupId: state.pathParameters['groupId'] ?? '',
-          ),
-        ),
-      ),
+      // Community group detail removed together with community groups.
       GoRoute(
         path: AppRoutes.profilePreview,
         parentNavigatorKey: appRootNavigatorKey,
@@ -348,12 +342,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) =>
             cyberTransition(state: state, child: const LeaderboardPage()),
       ),
-      GoRoute(
-        path: AppRoutes.faq,
-        parentNavigatorKey: appRootNavigatorKey,
-        pageBuilder: (context, state) =>
-            cyberTransition(state: state, child: const FaqPage()),
-      ),
+      // FAQ temporarily disabled.
+      // GoRoute(
+      //   path: AppRoutes.faq,
+      //   parentNavigatorKey: appRootNavigatorKey,
+      //   pageBuilder: (context, state) =>
+      //       cyberTransition(state: state, child: const FaqPage()),
+      // ),
       GoRoute(
         path: AppRoutes.courses,
         parentNavigatorKey: appRootNavigatorKey,

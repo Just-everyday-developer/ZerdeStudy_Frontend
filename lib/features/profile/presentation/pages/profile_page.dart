@@ -13,8 +13,6 @@ import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
 
 import '../../../../app/state/demo_app_controller.dart';
-import '../../../../app/state/demo_app_state.dart';
-import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
 import '../../../../core/common_widgets/app_button.dart';
@@ -42,10 +40,14 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
-    final backendStreak = ref
-        .watch(backendStreakProvider)
-        .maybeWhen(data: (value) => value, orElse: () => null);
-    final effectiveStreak = backendStreak?.streak ?? state.streak;
+    final backendProfile = ref
+        .watch(backendProfileProvider)
+        .maybeWhen(data: (p) => p, orElse: () => null);
+    // XP, level, streak, max_streak — prefer server values; local state is fallback.
+    final effectiveXp = backendProfile?.xp ?? state.xp;
+    final effectiveLevel = backendProfile?.level ?? state.level;
+    final effectiveStreak = backendProfile?.streak ?? state.streak;
+    final effectiveMaxStreak = backendProfile?.maxStreak ?? state.maxStreak;
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
     final l10n = context.l10n;
@@ -65,34 +67,61 @@ class ProfilePage extends ConsumerWidget {
         .toList(growable: false);
     final previewAchievements = achievements.take(6).toList(growable: false);
     final certificates = catalog.certificatesFor(state);
-    final favorites = <CommunityCourse>[];
-    for (final courseId in state.savedCommunityCourseIds) {
-      final localCourse = catalog.maybeCourseById(courseId);
-      if (localCourse != null) {
-        favorites.add(localCourse);
-        continue;
-      }
-
-      final remoteCourse = ref
-          .watch(backendCourseDetailProvider(courseId))
-          .maybeWhen(data: (course) => course, orElse: () => null);
-      if (remoteCourse != null) {
-        favorites.add(remoteCourse);
-      }
-    }
+    // favorites removed — no backend endpoint; section hidden in UI.
     final completedTracks = catalog.completedTracksFor(state);
     final completedModules = catalog.completedModulesFor(state);
     final completedLessons = catalog.completedLessonsFor(state);
     final completedPractices = catalog.completedPracticesFor(state);
-    final history = state.learningHistory.toList(growable: false)
-      ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
     final user = state.user;
-    final displayName = user?.name ?? 'Talgat O.';
-    final email = user?.email ?? 'tomyrkanov@gmail.com';
+
+    // Prefer backend profile data (login, bio, photoUrl) over local state.
+    // This ensures name/bio survive app restarts by reading from the server.
+    final backendLogin = (backendProfile?.login ?? '').trim();
+    final backendBio   = (backendProfile?.bio ?? '').trim();
+    final effectiveDisplayName = backendLogin.isNotEmpty
+        ? backendLogin
+        : (user?.name ?? '').trim().isNotEmpty
+            ? user!.name
+            : 'User';
+    final effectiveBio = backendBio.isNotEmpty ? backendBio : (user?.bio ?? '');
+
+    // Sync server profile to local DemoUser when backend data is fresher.
+    // addPostFrameCallback avoids calling setState during build.
+    if (backendProfile != null && backendLogin.isNotEmpty) {
+      final localName = (user?.name ?? '').trim();
+      if (localName != backendLogin || effectiveBio != (user?.bio ?? '')) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            ref.read(demoAppControllerProvider.notifier).updateProfile(
+                  name: backendLogin,
+                  bio: backendBio,
+                );
+          }
+        });
+      }
+    }
+
+    final displayName = effectiveDisplayName;
+    final email = (backendProfile?.email ?? '').isNotEmpty
+        ? backendProfile!.email
+        : (user?.email ?? 'user@zerdestudy.app');
     final colors = context.appColors;
     final compact = context.isCompactLayout;
+
+    // Build the effective DemoUser for the edit dialog (server values + local avatar).
+    final effectiveUserForEdit = user?.copyWith(
+          name: effectiveDisplayName,
+          bio: effectiveBio,
+        ) ?? DemoUser(
+          name: effectiveDisplayName,
+          email: email,
+          role: 'student',
+          goal: 'learning',
+          bio: effectiveBio,
+        );
+
     void openProfileEditor() {
-      _showEditProfileDialog(context, ref, user);
+      _showEditProfileDialog(context, ref, effectiveUserForEdit);
     }
 
     return AppPageScaffold(
@@ -246,10 +275,10 @@ class ProfilePage extends ConsumerWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            _Pill(label: 'XP', value: '${state.xp}'),
+                            _Pill(label: 'XP', value: '$effectiveXp'),
                             _Pill(
                               label: l10n.text('level'),
-                              value: '${state.level}',
+                              value: '$effectiveLevel',
                             ),
                             _Pill(
                               label: l10n.text('streak'),
@@ -257,7 +286,7 @@ class ProfilePage extends ConsumerWidget {
                             ),
                             _Pill(
                               label: l10n.locale == AppLocale.ru ? 'Макс. серия' : (l10n.locale == AppLocale.kk ? 'Макс. серия' : 'Max Streak'),
-                              value: '${state.maxStreak}d',
+                              value: '${effectiveMaxStreak}d',
                             ),
                           ],
                         ),
@@ -329,10 +358,10 @@ class ProfilePage extends ConsumerWidget {
                               spacing: 10,
                               runSpacing: 10,
                               children: [
-                                _Pill(label: 'XP', value: '${state.xp}'),
+                                _Pill(label: 'XP', value: '$effectiveXp'),
                                 _Pill(
                                   label: l10n.text('level'),
-                                  value: '${state.level}',
+                                  value: '$effectiveLevel',
                                 ),
                                 _Pill(
                                   label: l10n.text('streak'),
@@ -340,7 +369,7 @@ class ProfilePage extends ConsumerWidget {
                                 ),
                                 _Pill(
                                   label: l10n.locale == AppLocale.ru ? 'Макс. серия' : (l10n.locale == AppLocale.kk ? 'Макс. серия' : 'Max Streak'),
-                                  value: '${state.maxStreak}d',
+                                  value: '${effectiveMaxStreak}d',
                                 ),
                               ],
                             ),
@@ -489,85 +518,8 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
           ),
-          SizedBox(height: compact ? 14 : 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionPanelHeader(
-                  title: l10n.text('favorites'),
-                  subtitle:
-                      '${favorites.length} ${l10n.text('saved').toLowerCase()}',
-                  icon: Icons.bookmark_rounded,
-                  accent: colors.primary,
-                  onOpen: favorites.isEmpty
-                      ? null
-                      : () => _showFavoritesSheet(
-                          context,
-                          favorites,
-                          state,
-                          catalog,
-                        ),
-                ),
-                const SizedBox(height: 14),
-                if (favorites.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/svgs/empty_box.svg',
-                            width: 64,
-                            height: 64,
-                            colorFilter: ColorFilter.mode(colors.textSecondary.withValues(alpha: 0.5), BlendMode.srcIn),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            l10n.text('favorites_empty'),
-                            style: TextStyle(color: colors.textSecondary, fontSize: 13, height: 1.4),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  SizedBox(
-                    height: compact
-                        ? 196
-                        : context.isWideLayout
-                        ? 176
-                        : 188,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: favorites.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
-                      itemBuilder: (context, index) {
-                        final course = favorites[index];
-                        return SizedBox(
-                          width: compact ? 224 : 248,
-                          child: _FavoritePreviewCard(
-                            course: course,
-                            subtitle:
-                                '${course.author.name} / ${l10n.courseLevelLabel(course.level)} / ${catalog.displayCourseRatingForCourse(state, course).toStringAsFixed(1)}',
-                            onTap: () =>
-                                context.push(AppRoutes.courseById(course.id)),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          // Favorites section hidden — no backend endpoint for saved courses.
+          // TODO: implement when backend supports it.
 
           SizedBox(height: compact ? 14 : 16),
           Container(
@@ -636,48 +588,6 @@ class ProfilePage extends ConsumerWidget {
                   ),
               ],
             ),
-          ),
-
-          SizedBox(height: compact ? 14 : 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionPanelHeader(
-                  title: l10n.text('result_history'),
-                  subtitle: history.isEmpty
-                      ? l10n.text('result_history_empty')
-                      : '${history.length} ${l10n.text('result_history').toLowerCase()}',
-                  icon: Icons.history_rounded,
-                  accent: colors.success,
-                  onOpen: history.isEmpty
-                      ? null
-                      : () => _showHistorySheet(context, history),
-                ),
-                const SizedBox(height: 14),
-                AppButton.secondary(
-                  label: l10n.text('open_history'),
-                  icon: Icons.receipt_long_rounded,
-                  onPressed: history.isEmpty
-                      ? null
-                      : () => _showHistorySheet(context, history),
-                ),
-              ],
-            ),
-          ),
-
-
-          const SizedBox(height: 12),
-          AppButton.secondary(
-            label: _changePasswordLabel(l10n),
-            icon: Icons.lock_reset_rounded,
-            onPressed: () => _showChangePasswordDialog(context, ref),
           ),
 
           const SizedBox(height: 12),
@@ -825,82 +735,387 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  void _showFavoritesSheet(
-    BuildContext context,
-    List<CommunityCourse> favorites,
-    DemoAppState state,
-    DemoCatalog catalog,
-  ) {
-    showAdaptivePanel<void>(
-      context: context,
-      wideMaxWidth: 760,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-          child: Column(
-            children: [
-              const AdaptivePanelHandle(),
-              const SizedBox(height: 18),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: favorites.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final course = favorites[index];
-                    return _ProfileLinkTile(
-                      title: course.title.en,
-                      subtitle:
-                          '${course.author.name} - ${context.l10n.courseLevelLabel(course.level)} - ${catalog.displayCourseRatingForCourse(state, course).toStringAsFixed(1)}',
-                      accent: course.color,
-                      icon: Icons.bookmark_rounded,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        context.push(AppRoutes.courseById(course.id));
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showHistorySheet(
-    BuildContext context,
-    List<LearningHistoryEntry> history,
-  ) {
-    showAdaptivePanel<void>(
-      context: context,
-      wideMaxWidth: 760,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-          child: Column(
-            children: [
-              const AdaptivePanelHandle(),
-              const SizedBox(height: 18),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: history.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) =>
-                      _HistoryTile(entry: history[index]),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   String _formatDate(DateTime value) {
     final month = value.month.toString().padLeft(2, '0');
     final day = value.day.toString().padLeft(2, '0');
     return '${value.year}-$month-$day';
+  }
+}
+
+Future<void> _showEditProfileDialog(
+  BuildContext context,
+  WidgetRef ref,
+  DemoUser? user,
+) async {
+  final result = await showDialog<_ProfileEditorResult>(
+    context: context,
+    builder: (dialogContext) => _EditProfileDialog(
+      initialName: user?.name ?? 'Talgat O.',
+      initialEmail: user?.email ?? 'tomyrkanov@gmail.com',
+      initialBio: user?.bio ?? '',
+      initialAvatarBase64: user?.avatarBase64,
+    ),
+  );
+
+  if (!context.mounted || result == null) return;
+
+  final error = await ref.read(authControllerProvider.notifier).updateProfile(
+        name: result.name,
+        bio: result.bio,
+        avatarBase64: result.avatarBase64,
+      );
+
+  if (!context.mounted) return;
+
+  if (error != null) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    return;
+  }
+
+  ref
+      .read(demoAppControllerProvider.notifier)
+      .updateProfile(name: result.name, bio: result.bio, avatarBase64: result.avatarBase64);
+
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(context.l10n.text('profile_updated'))));
+}
+
+class _EditableProfileAvatar extends StatelessWidget {
+  const _EditableProfileAvatar({
+    required this.user,
+    required this.enableHero,
+    required this.size,
+    required this.onTap,
+  });
+
+  final DemoUser? user;
+  final bool enableHero;
+  final double size;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AppUserAvatar(
+            name: user?.name ?? 'Talgat O.',
+            avatarBase64: user?.avatarBase64,
+            size: size,
+            enableHero: enableHero,
+          ),
+          Positioned(
+            right: 2,
+            bottom: 2,
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.primary,
+                border: Border.all(color: colors.surface, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.28),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.edit_rounded,
+                size: 16,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileEditorResult {
+  const _ProfileEditorResult({
+    required this.name,
+    required this.bio,
+    required this.avatarBase64,
+  });
+
+  final String name;
+  final String bio;
+  final String? avatarBase64;
+}
+
+class _EditProfileDialog extends StatefulWidget {
+  const _EditProfileDialog({
+    required this.initialName,
+    required this.initialEmail,
+    required this.initialBio,
+    required this.initialAvatarBase64,
+  });
+
+  final String initialName;
+  final String initialEmail;
+  final String initialBio;
+  final String? initialAvatarBase64;
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _bioController;
+  late String? _avatarBase64;
+  bool _isPickingAvatar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _bioController = TextEditingController(text: widget.initialBio);
+    _avatarBase64 = widget.initialAvatarBase64;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickAvatar() async {
+    setState(() => _isPickingAvatar = true);
+    try {
+      final picked = await FilePicker.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (!mounted || picked == null || picked.files.isEmpty) return;
+      final bytes = picked.files.single.bytes;
+      if (bytes == null || bytes.isEmpty) { _showAvatarError(); return; }
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) { _showAvatarError(); return; }
+      final squareSize = math.min(decoded.width, decoded.height);
+      final cropped = img.copyCrop(
+        decoded,
+        x: (decoded.width - squareSize) ~/ 2,
+        y: (decoded.height - squareSize) ~/ 2,
+        width: squareSize,
+        height: squareSize,
+      );
+      final resized = img.copyResize(cropped, width: 320, height: 320);
+      setState(() => _avatarBase64 = base64Encode(Uint8List.fromList(img.encodeJpg(resized, quality: 82))));
+    } catch (_) {
+      if (mounted) _showAvatarError();
+    } finally {
+      if (mounted) setState(() => _isPickingAvatar = false);
+    }
+  }
+
+  void _showAvatarError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.text('profile_avatar_error'))),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final trimmedName = _nameController.text.trim();
+    final canSave = trimmedName.isNotEmpty && !_isPickingAvatar;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.all(20),
+      backgroundColor: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surface.withValues(alpha: 0.98),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.22)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          context.l10n.text('profile_edit_title'),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(Icons.close_rounded, color: colors.textSecondary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: AppUserAvatar(
+                      name: trimmedName.isEmpty ? widget.initialName : trimmedName,
+                      avatarBase64: _avatarBase64,
+                      size: 96,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Wrap(
+                      spacing: 10, runSpacing: 10, alignment: WrapAlignment.center,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _isPickingAvatar ? null : _pickAvatar,
+                          icon: const Icon(Icons.photo_library_rounded),
+                          label: Text(context.l10n.text('profile_avatar_pick')),
+                        ),
+                        if (_avatarBase64 != null)
+                          OutlinedButton.icon(
+                            onPressed: () => setState(() => _avatarBase64 = null),
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            label: Text(context.l10n.text('profile_avatar_remove')),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  TextField(
+                    controller: _nameController,
+                    autofocus: true,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText: context.l10n.text('profile_name_label'),
+                      hintText: context.l10n.text('profile_name_hint'),
+                      helperText: widget.initialEmail,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _bioController,
+                    maxLength: 255,
+                    maxLines: 3,
+                    minLines: 1,
+                    decoration: const InputDecoration(
+                      labelText: 'Bio',
+                      hintText: 'Tell us about yourself...',
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(context.l10n.text('profile_cancel')),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: canSave
+                              ? () => Navigator.of(context).pop(
+                                  _ProfileEditorResult(
+                                    name: trimmedName,
+                                    bio: _bioController.text.trim(),
+                                    avatarBase64: _avatarBase64,
+                                  ),
+                                )
+                              : null,
+                          child: _isPickingAvatar
+                              ? const SizedBox(
+                                  width: 18, height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2.2),
+                                )
+                              : Text(context.l10n.text('profile_save')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AchievementGridItem extends StatelessWidget {
+  const _AchievementGridItem({
+    required this.achievement,
+    required this.locale,
+  });
+
+  final Achievement achievement;
+  final AppLocale locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = achievement.unlocked ? colors.success : colors.textSecondary;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: achievement.unlocked
+            ? colors.success.withValues(alpha: 0.08)
+            : colors.surfaceSoft,
+        border: Border.all(
+          color: achievement.unlocked
+              ? colors.success.withValues(alpha: 0.3)
+              : colors.divider.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(achievement.icon, color: accent, size: 24),
+          const Spacer(),
+          Text(
+            achievement.title.resolve(locale),
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(
+            value: achievement.fraction,
+            backgroundColor: colors.divider,
+            valueColor: AlwaysStoppedAnimation<Color>(accent),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${achievement.progress}/${achievement.goal}',
+            style: TextStyle(
+              color: accent,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1221,695 +1436,6 @@ class _CertificatePreviewCard extends StatelessWidget {
   }
 }
 
-class _FavoritePreviewCard extends StatelessWidget {
-  const _FavoritePreviewCard({
-    required this.course,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final CommunityCourse course;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          color: colors.surfaceSoft,
-          border: Border.all(color: course.color.withValues(alpha: 0.24)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: course.color.withValues(alpha: 0.16),
-                  child: Icon(Icons.bookmark_rounded, color: course.color),
-                ),
-                const Spacer(),
-                Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              course.title.en,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 6),
-            Expanded(
-              child: Text(
-                subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: colors.textSecondary, height: 1.35),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AchievementGridItem extends StatelessWidget {
-  const _AchievementGridItem({required this.achievement, required this.locale});
-
-  final Achievement achievement;
-  final AppLocale locale;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final accent = achievement.unlocked ? colors.success : colors.textSecondary;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: colors.surfaceSoft,
-        border: Border.all(
-          color: achievement.unlocked
-              ? accent.withValues(alpha: 0.45)
-              : colors.divider,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: accent.withValues(alpha: 0.16),
-            child: Icon(achievement.icon, color: accent, size: 16),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            achievement.title.resolve(locale),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w800,
-              height: 1.15,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            achievement.description.resolve(locale),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: colors.textSecondary,
-              fontSize: 11,
-              height: 1.3,
-            ),
-          ),
-          const Spacer(),
-          BubbleProgressBar(
-            value: achievement.fraction,
-            height: 6,
-            backgroundColor: colors.backgroundElevated,
-            color: accent,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${achievement.progress}/${achievement.goal}',
-            style: TextStyle(
-              color: accent, 
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-Future<void> _showEditProfileDialog(
-  BuildContext context,
-  WidgetRef ref,
-  DemoUser? user,
-) async {
-  final result = await showDialog<_ProfileEditorResult>(
-    context: context,
-    builder: (dialogContext) => _EditProfileDialog(
-      initialName: user?.name ?? 'Talgat O.',
-      initialEmail: user?.email ?? 'tomyrkanov@gmail.com',
-      initialBio: user?.bio ?? '',
-      initialAvatarBase64: user?.avatarBase64,
-    ),
-  );
-
-  if (!context.mounted || result == null) {
-    return;
-  }
-
-  // Persist to the backend first; local state is updated only on success
-  // so the displayed profile mirrors what the server stored.
-  final error = await ref.read(authControllerProvider.notifier).updateProfile(
-        name: result.name,
-        bio: result.bio,
-        avatarBase64: result.avatarBase64,
-      );
-
-  if (!context.mounted) {
-    return;
-  }
-
-  if (error != null) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(error)));
-    return;
-  }
-
-  ref
-      .read(demoAppControllerProvider.notifier)
-      .updateProfile(name: result.name, bio: result.bio, avatarBase64: result.avatarBase64);
-
-  ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(context.l10n.text('profile_updated'))));
-}
-
-String _changePasswordLabel(AppLocalizations l10n) {
-  switch (l10n.locale) {
-    case AppLocale.ru:
-      return 'Сменить пароль';
-    case AppLocale.en:
-      return 'Change password';
-    case AppLocale.kk:
-      return 'Құпиясөзді өзгерту';
-  }
-}
-
-String _currentPasswordLabel(AppLocalizations l10n) {
-  switch (l10n.locale) {
-    case AppLocale.ru:
-      return 'Текущий пароль';
-    case AppLocale.en:
-      return 'Current password';
-    case AppLocale.kk:
-      return 'Ағымдағы құпиясөз';
-  }
-}
-
-String _passwordChangedLabel(AppLocalizations l10n) {
-  switch (l10n.locale) {
-    case AppLocale.ru:
-      return 'Пароль обновлён';
-    case AppLocale.en:
-      return 'Password updated';
-    case AppLocale.kk:
-      return 'Құпиясөз жаңартылды';
-  }
-}
-
-Future<void> _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
-  final changed = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => const _ChangePasswordDialog(),
-  );
-
-  if (changed == true && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_passwordChangedLabel(context.l10n))),
-    );
-  }
-}
-
-class _ChangePasswordDialog extends ConsumerStatefulWidget {
-  const _ChangePasswordDialog();
-
-  @override
-  ConsumerState<_ChangePasswordDialog> createState() =>
-      _ChangePasswordDialogState();
-}
-
-class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
-  final _currentController = TextEditingController();
-  final _newController = TextEditingController();
-  final _confirmController = TextEditingController();
-  bool _submitting = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _currentController.dispose();
-    _newController.dispose();
-    _confirmController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    final l10n = context.l10n;
-    final current = _currentController.text;
-    final next = _newController.text;
-    final confirm = _confirmController.text;
-
-    if (next.length < 8) {
-      setState(() => _error = l10n.text('invalid_password'));
-      return;
-    }
-    if (next != confirm) {
-      setState(() => _error = l10n.text('passwords_do_not_match'));
-      return;
-    }
-
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
-
-    final error = await ref
-        .read(authControllerProvider.notifier)
-        .changePassword(currentPassword: current, newPassword: next);
-
-    if (!mounted) {
-      return;
-    }
-
-    if (error != null) {
-      setState(() {
-        _submitting = false;
-        _error = error;
-      });
-      return;
-    }
-
-    Navigator.of(context).pop(true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-
-    return AlertDialog(
-      title: Text(_changePasswordLabel(l10n)),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _currentController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: _currentPasswordLabel(l10n),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _newController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: l10n.text('set_new_password_title'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _confirmController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: l10n.text('confirm_password'),
-              ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: TextStyle(color: colors.danger, fontSize: 13),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
-          child: Text(l10n.text('cancel')),
-        ),
-        FilledButton(
-          onPressed: _submitting ? null : _submit,
-          child: _submitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2.2),
-                )
-              : Text(_changePasswordLabel(l10n)),
-        ),
-      ],
-    );
-  }
-}
-
-class _EditableProfileAvatar extends StatelessWidget {
-  const _EditableProfileAvatar({
-    required this.user,
-    required this.enableHero,
-    required this.size,
-    required this.onTap,
-  });
-
-  final DemoUser? user;
-  final bool enableHero;
-  final double size;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          AppUserAvatar(
-            name: user?.name ?? 'Talgat O.',
-            avatarBase64: user?.avatarBase64,
-            size: size,
-            enableHero: enableHero,
-          ),
-          Positioned(
-            right: 2,
-            bottom: 2,
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colors.primary,
-                border: Border.all(color: colors.surface, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.primary.withValues(alpha: 0.28),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Icon(
-                Icons.edit_rounded,
-                size: 16,
-                color: Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileEditorResult {
-  const _ProfileEditorResult({required this.name, required this.bio, required this.avatarBase64});
-
-  final String name;
-  final String bio;
-  final String? avatarBase64;
-}
-
-class _EditProfileDialog extends StatefulWidget {
-  const _EditProfileDialog({
-    required this.initialName,
-    required this.initialEmail,
-    required this.initialBio,
-    required this.initialAvatarBase64,
-  });
-
-  final String initialName;
-  final String initialEmail;
-  final String initialBio;
-  final String? initialAvatarBase64;
-
-  @override
-  State<_EditProfileDialog> createState() => _EditProfileDialogState();
-}
-
-class _EditProfileDialogState extends State<_EditProfileDialog> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _bioController;
-  late String? _avatarBase64;
-  bool _isPickingAvatar = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.initialName);
-    _bioController = TextEditingController(text: widget.initialBio);
-    _avatarBase64 = widget.initialAvatarBase64;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _bioController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickAvatar() async {
-    setState(() => _isPickingAvatar = true);
-    try {
-      final picked = await FilePicker.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-        withData: true,
-      );
-      if (!mounted || picked == null || picked.files.isEmpty) {
-        return;
-      }
-
-      final bytes = picked.files.single.bytes;
-      if (bytes == null || bytes.isEmpty) {
-        _showError();
-        return;
-      }
-
-      final optimizedBytes = _optimizeAvatar(bytes);
-      setState(() => _avatarBase64 = base64Encode(optimizedBytes));
-    } catch (_) {
-      if (mounted) {
-        _showError();
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isPickingAvatar = false);
-      }
-    }
-  }
-
-  void _showError() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.text('profile_avatar_error'))),
-    );
-  }
-
-  Uint8List _optimizeAvatar(Uint8List sourceBytes) {
-    final decoded = img.decodeImage(sourceBytes);
-    if (decoded == null) {
-      return sourceBytes;
-    }
-
-    final squareSize = math.min(decoded.width, decoded.height);
-    final cropped = img.copyCrop(
-      decoded,
-      x: (decoded.width - squareSize) ~/ 2,
-      y: (decoded.height - squareSize) ~/ 2,
-      width: squareSize,
-      height: squareSize,
-    );
-    final resized = img.copyResize(cropped, width: 320, height: 320);
-    return Uint8List.fromList(img.encodeJpg(resized, quality: 82));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final trimmedName = _nameController.text.trim();
-    final trimmedBio = _bioController.text.trim();
-    final canSave = trimmedName.isNotEmpty && !_isPickingAvatar;
-
-    return Dialog(
-      insetPadding: const EdgeInsets.all(20),
-      backgroundColor: Colors.transparent,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.surface.withValues(alpha: 0.98),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: colors.primary.withValues(alpha: 0.22)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.24),
-                blurRadius: 34,
-                offset: const Offset(0, 18),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          context.l10n.text('profile_edit_title'),
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w900),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: AppUserAvatar(
-                      name: trimmedName.isEmpty
-                          ? widget.initialName
-                          : trimmedName,
-                      avatarBase64: _avatarBase64,
-                      size: 96,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: _isPickingAvatar ? null : _pickAvatar,
-                          icon: const Icon(Icons.photo_library_rounded),
-                          label: Text(context.l10n.text('profile_avatar_pick')),
-                        ),
-                        if (_avatarBase64 != null)
-                          OutlinedButton.icon(
-                            onPressed: () =>
-                                setState(() => _avatarBase64 = null),
-                            icon: const Icon(Icons.delete_outline_rounded),
-                            label: Text(
-                              context.l10n.text('profile_avatar_remove'),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    context.l10n.text('profile_avatar_helper'),
-                    style: TextStyle(color: colors.textSecondary, height: 1.4),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    context.l10n.text('profile_name_label'),
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _nameController,
-                    autofocus: true,
-                    textInputAction: TextInputAction.done,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      hintText: context.l10n.text('profile_name_hint'),
-                      helperText: widget.initialEmail,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Bio',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _bioController,
-                    maxLength: 255,
-                    maxLines: 3,
-                    minLines: 1,
-                    onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(
-                      hintText: 'Tell us about yourself...',
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(context.l10n.text('profile_cancel')),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: canSave
-                              ? () => Navigator.of(context).pop(
-                                  _ProfileEditorResult(
-                                    name: trimmedName,
-                                    bio: trimmedBio,
-                                    avatarBase64: _avatarBase64,
-                                  ),
-                                )
-                              : null,
-                          child: _isPickingAvatar
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.2,
-                                  ),
-                                )
-                              : Text(context.l10n.text('profile_save')),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _Pill extends StatelessWidget {
   const _Pill({required this.label, required this.value});
 
@@ -2009,121 +1535,4 @@ class _ProfileLinkTile extends StatelessWidget {
   }
 }
 
-class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({required this.entry});
-
-  final LearningHistoryEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final l10n = context.l10n;
-    final accent = switch (entry.kind) {
-      LearningHistoryKind.lessonCompleted => colors.primary,
-      LearningHistoryKind.practiceCompleted => colors.accent,
-      LearningHistoryKind.moduleCompleted => colors.success,
-      LearningHistoryKind.trackCompleted => const Color(0xFFFFD166),
-      LearningHistoryKind.assessmentCompleted => colors.success,
-      LearningHistoryKind.courseSaved => colors.primary,
-      LearningHistoryKind.courseEnrolled => colors.primary,
-      LearningHistoryKind.courseCompleted => colors.success,
-      LearningHistoryKind.certificateEarned => const Color(0xFFFFD166),
-    };
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: colors.surfaceSoft,
-        border: Border.all(color: colors.divider),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            backgroundColor: accent.withValues(alpha: 0.16),
-            child: Icon(switch (entry.kind) {
-              LearningHistoryKind.lessonCompleted => Icons.play_lesson_rounded,
-              LearningHistoryKind.practiceCompleted => Icons.code_rounded,
-              LearningHistoryKind.moduleCompleted => Icons.layers_rounded,
-              LearningHistoryKind.trackCompleted => Icons.account_tree_rounded,
-              LearningHistoryKind.assessmentCompleted =>
-                Icons.assignment_turned_in_rounded,
-              LearningHistoryKind.courseSaved => Icons.bookmark_rounded,
-              LearningHistoryKind.courseEnrolled => Icons.school_rounded,
-              LearningHistoryKind.courseCompleted => Icons.check_circle_rounded,
-              LearningHistoryKind.certificateEarned =>
-                Icons.workspace_premium_rounded,
-            }, color: accent),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _historyTitle(l10n, entry.kind),
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (entry.subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    entry.subtitle!,
-                    style: TextStyle(color: colors.textSecondary, height: 1.35),
-                  ),
-                ],
-                const SizedBox(height: 6),
-                Text(
-                  [
-                    if (entry.scoreLabel != null) entry.scoreLabel!,
-                    _formatHistoryTimestamp(entry.createdAt),
-                  ].join('  -  '),
-                  style: TextStyle(
-                    color: accent,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _historyTitle(AppLocalizations l10n, LearningHistoryKind kind) {
-    switch (kind) {
-      case LearningHistoryKind.lessonCompleted:
-        return l10n.text('history_lesson_completed');
-      case LearningHistoryKind.practiceCompleted:
-        return l10n.text('history_practice_completed');
-      case LearningHistoryKind.moduleCompleted:
-        return l10n.text('history_module_completed');
-      case LearningHistoryKind.trackCompleted:
-        return l10n.text('history_track_completed');
-      case LearningHistoryKind.assessmentCompleted:
-        return l10n.text('history_assessment_completed');
-      case LearningHistoryKind.courseSaved:
-        return l10n.text('history_course_saved');
-      case LearningHistoryKind.courseEnrolled:
-        return l10n.text('course_enroll_title');
-      case LearningHistoryKind.courseCompleted:
-        return l10n.text('course_completed');
-      case LearningHistoryKind.certificateEarned:
-        return l10n.text('course_certificate');
-    }
-  }
-
-  String _formatHistoryTimestamp(DateTime timestamp) {
-    final month = timestamp.month.toString().padLeft(2, '0');
-    final day = timestamp.day.toString().padLeft(2, '0');
-    final hour = timestamp.hour.toString().padLeft(2, '0');
-    final minute = timestamp.minute.toString().padLeft(2, '0');
-    return '$day.$month.${timestamp.year}  $hour:$minute';
-  }
-}
 

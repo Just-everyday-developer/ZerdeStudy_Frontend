@@ -254,36 +254,7 @@ abstract final class AppGuideCopy {
             hotkeys: <String>['Ctrl + K', 'Ctrl + L'],
           ),
         };
-      case AppGuideStepId.communityGroups:
-        return switch (locale) {
-          AppLocale.ru => const AppGuidePanelCopy(
-            title: 'Сообщество',
-            body:
-                'В этом разделе создаются учебные группы, собираются ссылки, материалы и люди по интересам.',
-            tips: <String>[
-              'Создайте свою группу, если хотите собрать cohort, клуб или проектную команду.',
-              'Поиск и фильтры помогают быстро находить нужные сообщества.',
-            ],
-          ),
-          AppLocale.en => const AppGuidePanelCopy(
-            title: 'Community',
-            body:
-                'This section is for learning groups, shared links, media, and people around the same topic.',
-            tips: <String>[
-              'Create a group when you want a cohort, club, or project team.',
-              'Search and filters help you find the right communities faster.',
-            ],
-          ),
-          AppLocale.kk => const AppGuidePanelCopy(
-            title: 'Қауымдастық',
-            body:
-                'Бұл бөлімде оқу топтары, сілтемелер, материалдар және ортақ қызығушылығы бар адамдар жиналады.',
-            tips: <String>[
-              'Cohort, клуб не жоба командасын жинағыңыз келсе, өз тобыңызды құрыңыз.',
-              'Іздеу мен фильтрлер керек қауымдастықты тез табуға көмектеседі.',
-            ],
-          ),
-        };
+      // communityGroups case removed — feature removed.
       case AppGuideStepId.aiMentor:
         return switch (locale) {
           AppLocale.ru => const AppGuidePanelCopy(

@@ -337,32 +337,12 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
       });
     });
 
-    final results = catalog.searchCourses(
-      state: state,
-      query: _query,
-      topicKey: _resolvedMockTopicKey(),
-      level: normalizeMockLevelLabel(_selectedLevel),
-      minRating: _selectedMinRating,
-      durationBucket: _selectedDurationBucket,
-      certificateOnly: _certificateOnly ? true : null,
-    );
-    final comparisonCourse = catalog.courseById('course_sql_for_analysts');
     final remoteResults = backendCourses.maybeWhen(
       data: (courses) => courses,
       orElse: () => const <CommunityCourse>[],
     );
-    final remoteSourceCourses = _shouldPinComparisonCourse()
-        ? withComparisonCourse(
-            backendCourses: remoteResults,
-            comparisonCourse: comparisonCourse,
-          )
-        : remoteResults;
-    final visibleRemoteResults = remoteResults.isEmpty
-        ? const <CommunityCourse>[]
-        : _filterRemoteCourses(remoteSourceCourses);
-    final totalVisibleResults = results.length + visibleRemoteResults.length;
-    final hasAnyResults = totalVisibleResults > 0;
-    final authors = _filteredAuthors(catalog.courseAuthors());
+    final visibleRemoteResults = _filterRemoteCourses(remoteResults);
+    final hasAnyResults = visibleRemoteResults.isNotEmpty;
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -403,7 +383,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                 children: [
                   _ResultSignalChip(
                     label: l10n.format('catalog_results', <String, Object>{
-                      'count': totalVisibleResults,
+                      'count': visibleRemoteResults.length,
                     }),
                     color: colors.primary,
                   ),
@@ -541,79 +521,6 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                     ],
                   ),
                 )
-              else if (results.isNotEmpty && compact)
-                ...results.map(
-                  (course) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: DiscoveryCatalogCompactCard(
-                      course: course,
-                      saved: state.savedCommunityCourseIds.contains(course.id),
-                      levelLabel: l10n.courseLevelLabel(course.level),
-                      savedLabel: l10n.text('saved'),
-                      rating: catalog.displayCourseRatingFor(state, course.id),
-                      reviewCount: catalog.displayCourseReviewCountFor(
-                        state,
-                        course.id,
-                      ),
-                      onTap: () =>
-                          context.push(AppRoutes.courseById(course.id)),
-                    ),
-                  ),
-                )
-              else if (results.isNotEmpty)
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: results.length,
-                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: wide ? 460 : 420,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    mainAxisExtent: 108,
-                  ),
-                  itemBuilder: (context, index) {
-                    final course = results[index];
-                    return DiscoveryCatalogCompactCard(
-                      course: course,
-                      saved: state.savedCommunityCourseIds.contains(course.id),
-                      levelLabel: l10n.courseLevelLabel(course.level),
-                      savedLabel: l10n.text('saved'),
-                      rating: catalog.displayCourseRatingFor(state, course.id),
-                      reviewCount: catalog.displayCourseReviewCountFor(
-                        state,
-                        course.id,
-                      ),
-                      onTap: () =>
-                          context.push(AppRoutes.courseById(course.id)),
-                    );
-                  },
-                ),
-              const SizedBox(height: 26),
-              if (authors.isNotEmpty) ...[
-                CourseDiscoverySectionHeader(
-                  title: l10n.text('section_popular_authors'),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: compact ? 264 : 284,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: authors.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 14),
-                    itemBuilder: (context, index) {
-                      final author = authors[index];
-                      return DiscoveryAuthorCard(
-                        author: author,
-                        followersLabel: l10n.text('followers'),
-                        coursesLabel: l10n.text('courses_label'),
-                        onTap: () => context.push(
-                          AppRoutes.coursesCatalog(search: author.name),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
             ],
           );
         },
@@ -649,40 +556,6 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
     }
   }
 
-  List<CommunityCourseAuthor> _filteredAuthors(
-    List<CommunityCourseAuthor> authors,
-  ) {
-    final allowedTopicKeys = resolveMockTopicKeys(_selectedTopicKey);
-    return authors
-        .where((author) {
-          if (_selectedTopicKey != null &&
-              !allowedTopicKeys.any(author.topicKeys.contains)) {
-            return false;
-          }
-          if (_query.trim().isEmpty) {
-            return true;
-          }
-          final normalized = _query.trim().toLowerCase();
-          return author.name.toLowerCase().contains(normalized) ||
-              author.role.toLowerCase().contains(normalized) ||
-              author.summary.toLowerCase().contains(normalized);
-        })
-        .toList(growable: false);
-  }
-
-  String? _resolvedMockTopicKey() {
-    if (_selectedTopicKey == null) {
-      return null;
-    }
-
-    final allowedTopicKeys = resolveMockTopicKeys(_selectedTopicKey);
-    if (allowedTopicKeys.isNotEmpty) {
-      return allowedTopicKeys.first;
-    }
-
-    return _selectedTopicKey;
-  }
-
   List<CommunityCourse> _filterRemoteCourses(List<CommunityCourse> courses) {
     return courses
         .where((course) {
@@ -711,15 +584,6 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
               course.author.name.toLowerCase().contains(normalized);
         })
         .toList(growable: false);
-  }
-
-  bool _shouldPinComparisonCourse() {
-    return _query.trim().isEmpty &&
-        _selectedTopicKey == null &&
-        _selectedLevel == 'All' &&
-        _selectedMinRating == null &&
-        _selectedDurationBucket == null &&
-        !_certificateOnly;
   }
 
   String _durationLabel(AppLocalizations l10n, CourseDurationBucket bucket) {

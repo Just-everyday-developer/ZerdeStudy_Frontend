@@ -146,7 +146,7 @@ enum AppGuideStepId {
   homeProgress,
   treeOverview,
   learnDiscovery,
-  communityGroups,
+  // communityGroups removed — community groups feature removed.
   aiMentor,
   profileOverview,
   settingsAccess,
@@ -208,12 +208,7 @@ const List<AppGuideStep> appGuideSteps = <AppGuideStep>[
     targetId: AppGuideTargetIds.learnSearch,
     panelSide: AppGuidePanelSide.below,
   ),
-  AppGuideStep(
-    id: AppGuideStepId.communityGroups,
-    route: AppRoutes.community,
-    targetId: AppGuideTargetIds.communityCreate,
-    panelSide: AppGuidePanelSide.below,
-  ),
+  // communityGroups step removed — community groups feature removed.
   AppGuideStep(
     id: AppGuideStepId.aiMentor,
     route: AppRoutes.ai,

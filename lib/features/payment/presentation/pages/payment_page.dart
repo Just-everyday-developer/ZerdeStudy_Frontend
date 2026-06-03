@@ -529,6 +529,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             .read(demoAppControllerProvider.notifier)
             .enrollCommunityCourse(widget.courseId);
 
+        // Sync enrollment to backend so progress/achievements track correctly.
+        await backendEnrollCourse(ref, widget.courseId);
+        ref.invalidate(backendAchievementsProvider);
+        ref.invalidate(backendAllProgressProvider);
+
+        if (!mounted) return;
         // Navigate to course player
         context.go(AppRoutes.coursePlayerById(widget.courseId));
       }

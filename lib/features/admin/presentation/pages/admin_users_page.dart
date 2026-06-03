@@ -1,0 +1,690 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/theme/app_theme_colors.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
+import '../../data/models/admin_role_dto.dart';
+import '../../data/models/admin_user_dto.dart';
+import '../providers/admin_providers.dart';
+
+const Color _kAdminViolet = Color(0xFF8E24AA);
+
+class AdminUsersPage extends ConsumerStatefulWidget {
+  const AdminUsersPage({super.key});
+
+  @override
+  ConsumerState<AdminUsersPage> createState() => _AdminUsersPageState();
+}
+
+class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
+  final Set<String> _busyUserIds = <String>{};
+  String _query = '';
+
+  Future<void> _runUserAction(
+    String userId,
+    Future<void> Function() action,
+  ) async {
+    setState(() => _busyUserIds.add(userId));
+    String? error;
+    try {
+      await action();
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      if (mounted) {
+        setState(() => _busyUserIds.remove(userId));
+      }
+    }
+
+    if (!mounted) return;
+    // Refresh the list so the UI reflects the server state.
+    ref.invalidate(adminUsersProvider);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось: $error')),
+      );
+    }
+  }
+
+  Future<void> _toggleStatus(AdminUserDto user) {
+    final token = ref.read(adminAccessTokenProvider);
+    if (token == null || token.isEmpty) return Future<void>.value();
+    final remote = ref.read(adminRemoteDataSourceProvider);
+    return _runUserAction(
+      user.id,
+      () => remote.updateUserStatus(
+        accessToken: token,
+        userId: user.id,
+        isActive: !user.isActive,
+      ),
+    );
+  }
+
+  Future<void> _editRoles(AdminUserDto user) async {
+    final allRoles = ref.read(adminRolesProvider).maybeWhen(
+          data: (roles) => roles,
+          orElse: () => const <AdminRoleDto>[],
+        );
+    if (allRoles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Список ролей недоступен')),
+      );
+      return;
+    }
+
+    final selected = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => _RoleEditorDialog(
+        allRoles: allRoles,
+        initialRoleIds: user.roles.map((r) => r.id).toSet(),
+        userName: user.displayName,
+      ),
+    );
+
+    if (selected == null) return; // cancelled
+    final token = ref.read(adminAccessTokenProvider);
+    if (token == null || token.isEmpty) return;
+    final remote = ref.read(adminRemoteDataSourceProvider);
+    await _runUserAction(
+      user.id,
+      () => remote.replaceUserRoles(
+        accessToken: token,
+        userId: user.id,
+        roleIds: selected,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final usersAsync = ref.watch(adminUsersProvider);
+    final currentUserId =
+        ref.watch(authControllerProvider).session?.user.id ?? '';
+
+    return Scaffold(
+      backgroundColor: colors.background,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Управление пользователями',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Список всех зарегистрированных пользователей, '
+                        'управление ролями и статусами.',
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Обновить',
+                  onPressed: () => ref.invalidate(adminUsersProvider),
+                  icon: Icon(Icons.refresh_rounded, color: colors.textSecondary),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            usersAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 80),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (error, _) => _ErrorCard(
+                message: '$error',
+                onRetry: () => ref.invalidate(adminUsersProvider),
+              ),
+              data: (users) {
+                if (users.isEmpty) {
+                  return _EmptyCard(colors: colors);
+                }
+
+                final normalizedQuery = _query.trim().toLowerCase();
+                final filtered = normalizedQuery.isEmpty
+                    ? users
+                    : users
+                          .where(
+                            (u) =>
+                                u.displayName
+                                    .toLowerCase()
+                                    .contains(normalizedQuery) ||
+                                u.email
+                                    .toLowerCase()
+                                    .contains(normalizedQuery) ||
+                                u.roles.any(
+                                  (r) => r.code
+                                      .toLowerCase()
+                                      .contains(normalizedQuery),
+                                ),
+                          )
+                          .toList(growable: false);
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SummaryRow(users: users, colors: colors),
+                    const SizedBox(height: 18),
+                    TextField(
+                      onChanged: (value) => setState(() => _query = value),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        hintText: 'Поиск по имени, email или роли',
+                        filled: true,
+                        fillColor: colors.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: colors.divider),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: colors.divider),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    ...filtered.map(
+                      (user) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _UserRowCard(
+                          user: user,
+                          colors: colors,
+                          busy: _busyUserIds.contains(user.id),
+                          isSelf: user.id == currentUserId,
+                          onToggleStatus: () => _toggleStatus(user),
+                          onEditRoles: () => _editRoles(user),
+                        ),
+                      ),
+                    ),
+                    if (filtered.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                          child: Text(
+                            'Никого не найдено',
+                            style: TextStyle(color: colors.textSecondary),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({required this.users, required this.colors});
+
+  final List<AdminUserDto> users;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = users.length;
+    final active = users.where((u) => u.isActive).length;
+    final banned = total - active;
+
+    Widget chip(String label, String value, Color color) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colors.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(color: colors.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        chip('Всего', '$total', colors.textPrimary),
+        chip('Активны', '$active', const Color(0xFF4CAF50)),
+        chip('Заблокированы', '$banned', const Color(0xFFF44336)),
+      ],
+    );
+  }
+}
+
+class _UserRowCard extends StatelessWidget {
+  const _UserRowCard({
+    required this.user,
+    required this.colors,
+    required this.busy,
+    required this.isSelf,
+    required this.onToggleStatus,
+    required this.onEditRoles,
+  });
+
+  final AdminUserDto user;
+  final AppThemeColors colors;
+  final bool busy;
+  final bool isSelf;
+  final VoidCallback onToggleStatus;
+  final VoidCallback onEditRoles;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor =
+        user.isActive ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: _kAdminViolet.withValues(alpha: 0.12),
+            child: Text(
+              user.displayName.isNotEmpty
+                  ? user.displayName[0].toUpperCase()
+                  : '?',
+              style: const TextStyle(
+                color: _kAdminViolet,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        user.displayName,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    if (isSelf) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _kAdminViolet.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Вы',
+                          style: TextStyle(
+                            color: _kAdminViolet,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  user.email,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12.5),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (user.roles.isEmpty)
+                      _RoleChip(label: 'без роли', colors: colors, muted: true)
+                    else
+                      ...user.roles.map(
+                        (r) => _RoleChip(
+                          label: r.code.isNotEmpty ? r.code : r.name,
+                          colors: colors,
+                        ),
+                      ),
+                    _RoleChip(
+                      label: 'XP ${user.xp} · ур. ${user.level}',
+                      colors: colors,
+                      muted: true,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: statusColor,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    user.isActive ? 'Активен' : 'Заблокирован',
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (busy)
+                const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                )
+              else
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: onEditRoles,
+                      icon: const Icon(Icons.shield_outlined, size: 16),
+                      label: const Text('Роли'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _kAdminViolet,
+                        side: BorderSide(
+                          color: _kAdminViolet.withValues(alpha: 0.4),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: isSelf
+                          ? 'Нельзя изменить свой статус'
+                          : (user.isActive ? 'Заблокировать' : 'Разблокировать'),
+                      child: Switch(
+                        value: user.isActive,
+                        activeThumbColor: const Color(0xFF4CAF50),
+                        onChanged: isSelf ? null : (_) => onToggleStatus(),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoleChip extends StatelessWidget {
+  const _RoleChip({
+    required this.label,
+    required this.colors,
+    this.muted = false,
+  });
+
+  final String label;
+  final AppThemeColors colors;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: muted ? colors.surfaceSoft : _kAdminViolet.withValues(alpha: 0.1),
+        border: Border.all(
+          color: muted
+              ? colors.divider
+              : _kAdminViolet.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
+          color: muted ? colors.textSecondary : _kAdminViolet,
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleEditorDialog extends StatefulWidget {
+  const _RoleEditorDialog({
+    required this.allRoles,
+    required this.initialRoleIds,
+    required this.userName,
+  });
+
+  final List<AdminRoleDto> allRoles;
+  final Set<String> initialRoleIds;
+  final String userName;
+
+  @override
+  State<_RoleEditorDialog> createState() => _RoleEditorDialogState();
+}
+
+class _RoleEditorDialogState extends State<_RoleEditorDialog> {
+  late final Set<String> _selected = <String>{...widget.initialRoleIds};
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AlertDialog(
+      title: Text('Роли · ${widget.userName}'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Выберите роли. Сохранение заменяет весь набор ролей пользователя.',
+              style: TextStyle(color: colors.textSecondary, fontSize: 12.5),
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: widget.allRoles.map((role) {
+                    final checked = _selected.contains(role.id);
+                    return CheckboxListTile(
+                      value: checked,
+                      activeColor: _kAdminViolet,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        role.name.isNotEmpty ? role.name : role.code,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        role.description.isNotEmpty
+                            ? role.description
+                            : role.code,
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == true) {
+                            _selected.add(role.id);
+                          } else {
+                            _selected.remove(role.id);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: _kAdminViolet),
+          // Backend requires at least one role.
+          onPressed: _selected.isEmpty
+              ? null
+              : () => Navigator.of(context).pop(_selected.toList()),
+          child: const Text('Сохранить'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ErrorCard extends StatelessWidget {
+  const _ErrorCard({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF44336).withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Color(0xFFF44336)),
+              const SizedBox(width: 10),
+              Text(
+                'Не удалось загрузить пользователей',
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: TextStyle(color: colors.textSecondary, fontSize: 12.5),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: _kAdminViolet),
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Повторить'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyCard extends StatelessWidget {
+  const _EmptyCard({required this.colors});
+
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.people_outline_rounded,
+              size: 40, color: colors.textSecondary),
+          const SizedBox(height: 12),
+          Text(
+            'Пользователи не найдены',
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Войдите под учётной записью администратора, чтобы увидеть список.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: colors.textSecondary, fontSize: 12.5),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -17,6 +17,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../ai/presentation/providers/ai_chat_controller.dart';
 import '../../../courses_backend/data/models/backend_lesson_dto.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../widgets/premium_code_editor.dart';
 
@@ -47,6 +48,11 @@ class _LessonPageState extends ConsumerState<LessonPage> {
   final ScrollController _theoryScrollController = ScrollController();
   final Map<String, bool> _codeStepSubmitted = <String, bool>{};
   int _currentStepIndex = 0;
+
+  /// XP reward from the backend lesson. Latched on the first successful load
+  /// so the completion notification always shows the real backend value, even
+  /// if the provider was still loading when the page first built.
+  int? _backendXpReward;
 
   @override
   void initState() {
@@ -147,6 +153,18 @@ class _LessonPageState extends ConsumerState<LessonPage> {
       orElse: () => null,
     );
     final lesson = backendLesson ?? catalog.lessonById(widget.lessonId);
+
+    // Latch the backend xpReward as soon as it arrives so the completion
+    // notification always shows the real value, even if the button is pressed
+    // before or after the provider rebuild.
+    if (backendLesson != null && _backendXpReward == null) {
+      // Use addPostFrameCallback to avoid setState during build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _backendXpReward == null) {
+          setState(() => _backendXpReward = backendLesson.xpReward);
+        }
+      });
+    }
     final completed = state.completedLessonIds.contains(widget.lessonId);
     final colors = context.appColors;
     final l10n = context.l10n;
@@ -273,13 +291,24 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                             ref.invalidate(backendOopProgressProvider);
                             ref.invalidate(backendAllProgressProvider);
                             ref.invalidate(backendAchievementsProvider);
+                            ref.invalidate(backendProfileProvider);
                             if (!context.mounted) {
                               return;
                             }
 
+                            // Use backend XP if already latched; otherwise
+                            // re-read the provider (may have loaded by now).
+                            final xp = _backendXpReward
+                                ?? ref
+                                    .read(backendOopLessonItemProvider(widget.lessonId))
+                                    .maybeWhen(
+                                      data: (l) => l?.xpReward,
+                                      orElse: () => null,
+                                    )
+                                ?? lesson.xpReward;
                             AppNotice.show(
                               context,
-                              message: '+${lesson.xpReward} XP',
+                              message: '+$xp XP',
                               type: AppNoticeType.success,
                             );
                           },
@@ -508,6 +537,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
             if (correct && _isBackendId(quiz.id)) {
               ref.invalidate(backendAchievementsProvider);
               ref.invalidate(backendOopProgressProvider);
+              ref.invalidate(backendProfileProvider);
               ref.invalidate(backendAllProgressProvider);
             }
 
@@ -627,67 +657,53 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               ),
             ),
             const SizedBox(height: 16),
-            // PremiumCodeEditor with syntax highlighting
+            // PremiumCodeEditor — Submit is handled by the editor's own button.
             PremiumCodeEditor(
               key: ValueKey<String>('${widget.lessonId}_editor_$stepId'),
               initialCode: getCodeText(),
               language: 'java',
+              expectedOutput: expectedOutput,
+              isSubmitted: isCompleted,
               onCodeChanged: (code) {
                 setState(() {
                   _codeTexts[stepId] = code;
                 });
               },
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Spacer(),
-                Expanded(
-                  child: AppButton.primary(
-                    label: isCompleted ? 'Отправлено' : 'Submit',
-                    icon: isCompleted
-                        ? Icons.check_circle_rounded
-                        : Icons.verified_rounded,
-                    onPressed: isCompleted
-                        ? null
-                        : () {
-                            final code = getCodeText();
-                            if (code.trim().isEmpty) {
-                              AppNotice.show(
-                                context,
-                                message: 'Напишите код перед отправкой',
-                                type: AppNoticeType.error,
-                              );
-                              return;
-                            }
-                            // Validate: code must contain expected output pattern
-                            final normalized = code.toLowerCase();
-                            final hasOutput =
-                                normalized.contains('system.out.println') ||
-                                normalized.contains('print');
-
-                            if (hasOutput) {
-                              controller.completeCodeStep(stepId);
-                              setState(() {
-                                _codeStepSubmitted[stepId] = true;
-                              });
-                              AppNotice.show(
-                                context,
-                                message: 'Задание выполнено! +10 XP',
-                                type: AppNoticeType.success,
-                              );
-                            } else {
-                              AppNotice.show(
-                                context,
-                                message:
-                                    'Добавьте System.out.println() для вывода результата',
-                                type: AppNoticeType.error,
-                              );
-                            }
-                          },
-                  ),
-                ),
-              ],
+              onSubmit: isCompleted
+                  ? null
+                  : (result) {
+                      if (result.error.isNotEmpty) {
+                        AppNotice.show(
+                          context,
+                          message: 'Ошибка выполнения: ${result.error}',
+                          type: AppNoticeType.error,
+                        );
+                        return;
+                      }
+                      final output = result.stdout.trim();
+                      final expected = expectedOutput.trim();
+                      final passed = expected.isEmpty ||
+                          output == expected ||
+                          output.contains(expected);
+                      if (passed) {
+                        controller.completeCodeStep(stepId);
+                        setState(() => _codeStepSubmitted[stepId] = true);
+                        final xpPerStep =
+                            (lesson.xpReward / 3).round().clamp(5, 30);
+                        AppNotice.show(
+                          context,
+                          message: '+$xpPerStep XP — код принят!',
+                          type: AppNoticeType.success,
+                        );
+                      } else {
+                        AppNotice.show(
+                          context,
+                          message:
+                              'Вывод не совпадает. Ожидалось: "$expected"',
+                          type: AppNoticeType.error,
+                        );
+                      }
+                    },
             ),
           ],
         );

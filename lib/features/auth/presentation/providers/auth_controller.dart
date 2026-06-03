@@ -21,6 +21,7 @@ import 'package:frontend_flutter/features/auth/application/usecases/reset_passwo
 import 'package:frontend_flutter/features/auth/application/usecases/restore_auth_session.dart';
 import 'package:frontend_flutter/features/auth/data/datasources/auth_local_data_source.dart';
 import 'package:frontend_flutter/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:frontend_flutter/features/auth/data/models/backend_profile_dto.dart';
 import 'package:frontend_flutter/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:frontend_flutter/features/auth/domain/entities/auth_role.dart';
 import 'package:frontend_flutter/features/auth/domain/entities/auth_session.dart';
@@ -98,6 +99,24 @@ final resetPasswordProvider = Provider<ResetPassword>((ref) {
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(
   AuthController.new,
 );
+
+/// Full user profile with server-computed XP, level, streak and max_streak.
+/// Returns null when unauthenticated or the backend is unavailable.
+/// Invalidate this provider after profile edits or XP-earning actions.
+final backendProfileProvider = FutureProvider<BackendProfileDto?>((ref) async {
+  final session = ref.watch(
+    authControllerProvider.select((s) => s.session),
+  );
+  final accessToken = session?.accessToken.trim() ?? '';
+  if (accessToken.isEmpty) return null;
+
+  final remote = ref.watch(authRemoteDataSourceProvider);
+  try {
+    return await remote.fetchProfile(accessToken: accessToken);
+  } catch (_) {
+    return null;
+  }
+});
 
 class AuthController extends Notifier<AuthState> {
   bool _bootstrapStarted = false;

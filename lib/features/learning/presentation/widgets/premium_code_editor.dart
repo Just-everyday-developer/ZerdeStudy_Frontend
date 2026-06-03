@@ -16,12 +16,22 @@ class PremiumCodeEditor extends ConsumerStatefulWidget {
     this.language = 'java',
     this.onResult,
     this.onCodeChanged,
+    this.onSubmit,
+    this.expectedOutput,
+    this.isSubmitted = false,
   });
 
   final String initialCode;
   final String language;
   final ValueChanged<CodeExecutionResult>? onResult;
   final ValueChanged<String>? onCodeChanged;
+  /// Called when Submit is pressed and code ran successfully. Receives the
+  /// execution result so the parent can decide if it passes validation.
+  final ValueChanged<CodeExecutionResult>? onSubmit;
+  /// Expected output for submit validation hint (shown after run).
+  final String? expectedOutput;
+  /// When true, Submit button shows a checkmark indicating already submitted.
+  final bool isSubmitted;
 
   @override
   ConsumerState<PremiumCodeEditor> createState() => _PremiumCodeEditorState();
@@ -64,7 +74,7 @@ class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
     super.dispose();
   }
 
-  Future<void> _runCode() async {
+  Future<void> _runCode({bool isSubmit = false}) async {
     setState(() {
       _isRunning = true;
       _lastResult = null;
@@ -73,7 +83,6 @@ class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
     final service = ref.read(codeRunnerServiceProvider);
 
     String finalCode = _codeController.text;
-    // Auto-wrap with Main class if missing (basic check)
     if (widget.language == 'java' && !finalCode.contains('class Main')) {
       if (!finalCode.contains('public class')) {
         finalCode =
@@ -92,6 +101,9 @@ class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
       });
       widget.onCodeChanged?.call(finalCode);
       widget.onResult?.call(result);
+      if (isSubmit) {
+        widget.onSubmit?.call(result);
+      }
     }
   }
 
@@ -185,51 +197,60 @@ class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Submit Button
-                    Tooltip(
-                      message: 'Submit',
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _isRunning ? null : _runCode,
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: compactHeader ? 9 : 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.green.withValues(alpha: 0.4),
+                    // Submit Button — runs code and notifies parent via onSubmit
+                    if (widget.onSubmit != null) ...[
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: widget.isSubmitted ? 'Submitted' : 'Submit',
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: (_isRunning || widget.isSubmitted)
+                                ? null
+                                : () => _runCode(isSubmit: true),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: compactHeader ? 9 : 12,
+                                vertical: 6,
                               ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.send_rounded,
-                                  size: 18,
-                                  color: Colors.white,
+                              decoration: BoxDecoration(
+                                color: widget.isSubmitted
+                                    ? Colors.green.withValues(alpha: 0.3)
+                                    : Colors.green.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.green.withValues(alpha: 0.5),
                                 ),
-                                if (!compactHeader) ...[
-                                  const SizedBox(width: 6),
-                                  const Text(
-                                    'Submit',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    widget.isSubmitted
+                                        ? Icons.check_circle_rounded
+                                        : Icons.send_rounded,
+                                    size: 18,
+                                    color: Colors.white,
                                   ),
+                                  if (!compactHeader) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      widget.isSubmitted ? 'Submitted' : 'Submit',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 );
               },

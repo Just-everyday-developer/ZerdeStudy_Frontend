@@ -461,6 +461,9 @@ class _CommunityCourseDetailPageState
   }) async {
     if (useBackendPreview) {
       controller.enrollCommunityCourse(course.id, courseOverride: course);
+      await backendEnrollCourse(ref, course.id);
+      _invalidateEnrollmentProviders();
+      if (!context.mounted) return;
       await _openBackendPreview(context, course);
       return;
     }
@@ -488,6 +491,8 @@ class _CommunityCourseDetailPageState
 
     if (context.isCompactLayout) {
       controller.enrollCommunityCourse(course.id);
+      await backendEnrollCourse(ref, course.id);
+      _invalidateEnrollmentProviders();
       if (!context.mounted) {
         return;
       }
@@ -565,6 +570,9 @@ class _CommunityCourseDetailPageState
                     child: FilledButton(
                       onPressed: () {
                         controller.enrollCommunityCourse(course.id);
+                        backendEnrollCourse(ref, course.id).then((_) {
+                          _invalidateEnrollmentProviders();
+                        });
                         Navigator.of(panelContext).pop();
                         context.push(
                           AppRoutes.coursePlayerById(
@@ -583,6 +591,12 @@ class _CommunityCourseDetailPageState
         );
       },
     );
+  }
+
+  void _invalidateEnrollmentProviders() {
+    ref.invalidate(backendAchievementsProvider);
+    ref.invalidate(backendAllProgressProvider);
+    ref.invalidate(backendOopProgressProvider);
   }
 
   Future<void> _openBackendPreview(

@@ -17,6 +17,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../app_guide/presentation/app_guide_controller.dart';
 import '../../../app_guide/presentation/app_guide_target.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../tree_map_config.dart';
 
 class KnowledgeTreePage extends ConsumerWidget {
@@ -349,7 +350,7 @@ class _KnowledgeTreeViewportState
   }
 }
 
-class _KnowledgeTreeNodeCard extends StatelessWidget {
+class _KnowledgeTreeNodeCard extends ConsumerWidget {
   const _KnowledgeTreeNodeCard({
     required this.node,
     required this.state,
@@ -365,7 +366,7 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final track = node.trackId == null
         ? null
@@ -376,9 +377,35 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
     final bestPercent = track == null
         ? 0
         : catalog.bestAssessmentPercentFor(state, track.id);
-    final progress = track == null
+
+    // For the OOP track use real backend progress so the bubble fills correctly.
+    final localProgress = track == null
         ? null
         : catalog.progressForTrack(state, track.id);
+    final backendOopProgress = (track?.id == 'oop')
+        ? ref
+            .watch(backendOopProgressProvider)
+            .maybeWhen(data: (p) => p, orElse: () => null)
+        : null;
+    final progress = (backendOopProgress != null &&
+            backendOopProgress.totalLessons > 0 &&
+            track?.id == 'oop')
+        ? TrackProgress(
+            state: backendOopProgress.completedLessons == 0
+                ? TrackAvailability.available
+                : backendOopProgress.completedLessons <
+                        backendOopProgress.totalLessons
+                    ? TrackAvailability.inProgress
+                    : TrackAvailability.completed,
+            completedUnits: backendOopProgress.completedLessons,
+            totalUnits: backendOopProgress.totalLessons,
+            completedQuizzes: backendOopProgress.passedQuizIds.length,
+            totalQuizzes: localProgress?.totalQuizzes ?? 0,
+            completedTrainers: 0,
+            totalTrainers: 0,
+            nextTarget: localProgress?.nextTarget,
+          )
+        : localProgress;
     final orbSize = node.radius * 2;
     
     // Determine lesson-level status for this track node

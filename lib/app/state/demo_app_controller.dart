@@ -10,6 +10,10 @@ import 'demo_app_state.dart';
 import 'demo_catalog.dart';
 import 'demo_models.dart';
 
+final _uuidPattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
+
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('SharedPreferences provider must be overridden.');
 });
@@ -363,8 +367,11 @@ class DemoAppController extends Notifier<DemoAppState> {
     }
 
     final previousState = state;
+    // For backend lessons (UUID ids), the catalog returns a random fallback
+    // lesson — don't use its trackId or xpReward; keep the current track.
+    final isBackendLesson = _uuidPattern.hasMatch(lessonId.trim());
     final lesson = _catalog.lessonById(lessonId);
-    if (!_catalog.lessonRequirementsMet(state, lessonId)) {
+    if (!isBackendLesson && !_catalog.lessonRequirementsMet(state, lessonId)) {
       return;
     }
 
@@ -372,9 +379,9 @@ class DemoAppController extends Notifier<DemoAppState> {
       ..add(lessonId);
 
     final candidate = previousState.copyWith(
-      currentTrackId: lesson.trackId,
+      currentTrackId: isBackendLesson ? 'oop' : lesson.trackId,
       completedLessonIds: completedLessonIds,
-      xp: previousState.xp + lesson.xpReward,
+      xp: previousState.xp + (isBackendLesson ? 0 : lesson.xpReward),
       streak: previousState.streak + 1,
       dailyMissionDone: true,
       focusedLessonId: lessonId,

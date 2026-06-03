@@ -317,6 +317,39 @@ final backendCourseLeaderboardProvider =
 /// Leaderboard for the fully integrated OOP course, used by the global
 /// leaderboard screen. Falls back to an empty list when unauthenticated or
 /// the backend is unavailable (the UI then shows local demo data).
+/// Enrolls the signed-in user into [courseId] on the backend.
+///
+/// Call this alongside [DemoAppController.enrollCommunityCourse] so the local
+/// state and the server stay in sync. Only real backend courses (UUID ids) are
+/// sent to the server; local demo courses are silently skipped.
+///
+/// Returns null on success, or an error message string on failure.
+Future<String?> backendEnrollCourse(
+  WidgetRef ref,
+  String courseId,
+) async {
+  if (!_looksLikeUuid(courseId)) return null;
+
+  final accessToken = ref.read(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) return null;
+
+  final userId = ref.read(authControllerProvider).session?.user.id ?? '';
+  if (userId.trim().isEmpty) return null;
+
+  final remote = ref.read(backendCourseRemoteDataSourceProvider);
+
+  try {
+    await remote.enrollCourse(
+      accessToken: accessToken,
+      courseId: courseId,
+      userId: userId,
+    );
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 final backendOopLeaderboardProvider = FutureProvider<List<LeaderboardEntry>>((
   ref,
 ) {

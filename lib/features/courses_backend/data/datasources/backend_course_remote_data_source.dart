@@ -445,6 +445,23 @@ class BackendCourseRemoteDataSource {
     );
   }
 
+  /// Enrolls [userId] into [courseId]. Idempotent — a second call for the
+  /// same pair is handled gracefully (backend returns the existing record).
+  Future<void> enrollCourse({
+    required String accessToken,
+    required String courseId,
+    required String userId,
+  }) {
+    return _client.postJson(
+      '/api/v1/course/enrollment',
+      headers: _authHeaders(accessToken),
+      body: <String, dynamic>{
+        'course_id': courseId,
+        'user_id': userId,
+      },
+    );
+  }
+
   Future<JsonMap> createCoursePoint({
     required String accessToken,
     required Map<String, dynamic> body,

@@ -315,21 +315,20 @@ class _LearnPageState extends ConsumerState<LearnPage> {
       });
     });
     final compact = context.isCompactLayout;
-    final authors = _filterAuthors(catalog.courseAuthors());
-    final comparisonCourse = catalog.courseById('course_sql_for_analysts');
     final remoteCourses = backendCourses.maybeWhen(
       data: (courses) => courses,
       orElse: () => const <CommunityCourse>[],
     );
-    final remoteSourceCourses = _shouldPinComparisonCourse()
-        ? withComparisonCourse(
-            backendCourses: remoteCourses,
-            comparisonCourse: comparisonCourse,
-          )
-        : remoteCourses;
-    final remoteRailCourses = remoteCourses.isEmpty
-        ? const <CommunityCourse>[]
-        : _filterRemoteCourses(remoteSourceCourses);
+    final remoteRailCourses = _filterRemoteCourses(remoteCourses);
+
+    // Level-split sections: separate rails for beginner / intermediate / advanced.
+    List<CommunityCourse> byLevel(String levelCode) => remoteCourses
+        .where((c) => c.level.toLowerCase().startsWith(levelCode))
+        .toList(growable: false);
+
+    final beginnerCourses = byLevel('beginner');
+    final intermediateCourses = byLevel('intermediate');
+    final advancedCourses = byLevel('advanced');
 
     final sections = <_CourseRailSection>[
       if (remoteRailCourses.isNotEmpty)
@@ -337,60 +336,22 @@ class _LearnPageState extends ConsumerState<LearnPage> {
           title: l10n.text('section_popular_courses'),
           courses: remoteRailCourses,
         ),
-      _CourseRailSection(
-        title: l10n.text('section_programming_languages'),
-        topicKey: courseTopicProgrammingLanguages,
-        courses: _filterMockCourses(
-          state,
-          catalog,
-          catalog.coursesForTopic(courseTopicProgrammingLanguages),
+      if (beginnerCourses.isNotEmpty)
+        _CourseRailSection(
+          title: _levelSectionLabel(l10n, 'beginner'),
+          courses: beginnerCourses,
         ),
-      ),
-      _CourseRailSection(
-        title: l10n.text('section_data_analytics'),
-        topicKey: courseTopicDataAnalytics,
-        courses: _filterMockCourses(
-          state,
-          catalog,
-          catalog.coursesForTopic(courseTopicDataAnalytics),
+      if (intermediateCourses.isNotEmpty)
+        _CourseRailSection(
+          title: _levelSectionLabel(l10n, 'intermediate'),
+          courses: intermediateCourses,
         ),
-      ),
-      _CourseRailSection(
-        title: l10n.text('section_ai'),
-        topicKey: courseTopicAi,
-        courses: _filterMockCourses(
-          state,
-          catalog,
-          catalog.coursesForTopic(courseTopicAi),
+      if (advancedCourses.isNotEmpty)
+        _CourseRailSection(
+          title: _levelSectionLabel(l10n, 'advanced'),
+          courses: advancedCourses,
         ),
-      ),
-      _CourseRailSection(
-        title: l10n.text('section_sql_databases'),
-        topicKey: courseTopicSqlDatabases,
-        courses: _filterMockCourses(
-          state,
-          catalog,
-          catalog.coursesForTopic(courseTopicSqlDatabases),
-        ),
-      ),
-      _CourseRailSection(
-        title: l10n.text('section_soft_skills'),
-        topicKey: courseTopicSoftSkills,
-        courses: _filterMockCourses(
-          state,
-          catalog,
-          catalog.coursesForTopic(courseTopicSoftSkills),
-        ),
-      ),
-      _CourseRailSection(
-        title: l10n.text('section_recommended_courses'),
-        courses: _filterMockCourses(
-          state,
-          catalog,
-          catalog.recommendedCourses(state),
-        ),
-      ),
-    ].where((section) => section.courses.isNotEmpty).toList(growable: false);
+    ];
 
     return AppPageScaffold(
       horizontalPadding: compact ? 0 : (context.isNativeWindowsApp ? 12 : 16),
@@ -447,7 +408,6 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                   void viewAllTap() {
                     context.push(
                       AppRoutes.coursesCatalog(
-                        topic: section.topicKey,
                         search: _query.isEmpty ? null : _query,
                         level: _selectedLevel == 'All' ? null : _selectedLevel,
                         minRating: _selectedMinRating,
@@ -471,128 +431,11 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                     ),
                   );
                 }),
-              const SizedBox(height: 6),
-              CourseDiscoverySectionHeader(
-                title: l10n.text('section_popular_authors'),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: compact ? 264 : 288,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: authors.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 18),
-                  itemBuilder: (context, index) {
-                    final author = authors[index];
-                    return DiscoveryAuthorCard(
-                      author: author,
-                      followersLabel: l10n.text('followers'),
-                      coursesLabel: l10n.text('courses_label'),
-                      onTap: () => context.push(
-                        AppRoutes.coursesCatalog(search: author.name),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 64),
-              GlowCard(
-                accent: colors.accent,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.text('section_frequent_searches'),
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: catalog
-                          .frequentSearchTerms()
-                          .map((termKey) {
-                            return ActionChip(
-                              label: Text(l10n.frequentSearchLabel(termKey)),
-                              onPressed: () => context.push(
-                                AppRoutes.coursesCatalog(
-                                  search: _searchQueryForFrequentTerm(termKey),
-                                ),
-                              ),
-                            );
-                          })
-                          .toList(growable: false),
-                    ),
-                  ],
-                ),
-              ),
             ],
           );
         },
       ),
     );
-  }
-
-  List<CommunityCourse> _filterMockCourses(
-    DemoAppState state,
-    DemoCatalog catalog,
-    List<CommunityCourse> courses,
-  ) {
-    final allowedTopicKeys = resolveMockTopicKeys(_selectedTopicKey);
-    final normalizedLevel = normalizeMockLevelLabel(_selectedLevel);
-
-    return courses
-        .where((course) {
-          if (_selectedTopicKey != null &&
-              !allowedTopicKeys.any(course.topicKeys.contains)) {
-            return false;
-          }
-          if (normalizedLevel != 'All' && course.level != normalizedLevel) {
-            return false;
-          }
-          if (_selectedMinRating != null &&
-              catalog.displayCourseRatingFor(state, course.id) <
-                  _selectedMinRating!) {
-            return false;
-          }
-          if (_selectedDurationBucket != null &&
-              catalog.courseDurationBucketFor(course) !=
-                  _selectedDurationBucket) {
-            return false;
-          }
-          if (_certificateOnly && !course.facts.hasCertificate) {
-            return false;
-          }
-          if (_query.isEmpty) {
-            return true;
-          }
-
-          final normalizedQuery = _query.trim().toLowerCase();
-          return course.title.en.toLowerCase().contains(normalizedQuery) ||
-              course.subtitle.en.toLowerCase().contains(normalizedQuery) ||
-              course.description.en.toLowerCase().contains(normalizedQuery) ||
-              course.heroBadge.toLowerCase().contains(normalizedQuery) ||
-              course.heroHeadline.toLowerCase().contains(normalizedQuery) ||
-              course.learningOutcomes.any(
-                (item) => item.toLowerCase().contains(normalizedQuery),
-              ) ||
-              course.moduleSections.any(
-                (section) =>
-                    section.title.toLowerCase().contains(normalizedQuery) ||
-                    section.items.any(
-                      (item) =>
-                          item.title.toLowerCase().contains(normalizedQuery),
-                    ),
-              ) ||
-              course.searchKeywords.any(
-                (keyword) => keyword.toLowerCase().contains(normalizedQuery),
-              ) ||
-              course.tags.any(
-                (tag) => tag.toLowerCase().contains(normalizedQuery),
-              ) ||
-              course.author.name.toLowerCase().contains(normalizedQuery);
-        })
-        .toList(growable: false);
   }
 
   List<CommunityCourse> _filterRemoteCourses(List<CommunityCourse> courses) {
@@ -625,46 +468,6 @@ class _LearnPageState extends ConsumerState<LearnPage> {
         .toList(growable: false);
   }
 
-  bool _shouldPinComparisonCourse() {
-    return _query.trim().isEmpty &&
-        _selectedTopicKey == null &&
-        _selectedLevel == 'All' &&
-        _selectedMinRating == null &&
-        _selectedDurationBucket == null &&
-        !_certificateOnly;
-  }
-
-  List<CommunityCourseAuthor> _filterAuthors(
-    List<CommunityCourseAuthor> authors,
-  ) {
-    final allowedTopicKeys = resolveMockTopicKeys(_selectedTopicKey);
-    return authors
-        .where((author) {
-          if (_selectedTopicKey != null &&
-              !allowedTopicKeys.any(author.topicKeys.contains)) {
-            return false;
-          }
-          if (_query.isEmpty) {
-            return true;
-          }
-          final normalizedQuery = _query.trim().toLowerCase();
-          return author.name.toLowerCase().contains(normalizedQuery) ||
-              author.role.toLowerCase().contains(normalizedQuery) ||
-              author.accentLabel.toLowerCase().contains(normalizedQuery) ||
-              author.summary.toLowerCase().contains(normalizedQuery);
-        })
-        .toList(growable: false);
-  }
-
-  String _searchQueryForFrequentTerm(String key) {
-    switch (key) {
-      case 'qa_testing':
-        return 'qa';
-      default:
-        return key;
-    }
-  }
-
   String _durationLabel(AppLocalizations l10n, CourseDurationBucket bucket) {
     switch (bucket) {
       case CourseDurationBucket.quick:
@@ -682,6 +485,31 @@ class _LearnPageState extends ConsumerState<LearnPage> {
     String value,
   ) {
     return dictionaries.topicLabel(value) ?? l10n.courseTopicLabel(value);
+  }
+
+  String _levelSectionLabel(AppLocalizations l10n, String levelCode) {
+    switch (levelCode) {
+      case 'beginner':
+        return switch (l10n.locale) {
+          AppLocale.ru => 'Для начинающих',
+          AppLocale.kk => 'Бастаушыларға',
+          _ => 'Beginner Courses',
+        };
+      case 'intermediate':
+        return switch (l10n.locale) {
+          AppLocale.ru => 'Средний уровень',
+          AppLocale.kk => 'Орта деңгей',
+          _ => 'Intermediate Courses',
+        };
+      case 'advanced':
+        return switch (l10n.locale) {
+          AppLocale.ru => 'Продвинутый уровень',
+          AppLocale.kk => 'Жоғары деңгей',
+          _ => 'Advanced Courses',
+        };
+      default:
+        return l10n.courseLevelLabel(levelCode);
+    }
   }
 
   String _levelFilterLabel(
@@ -793,12 +621,10 @@ class _CourseRailSection {
   const _CourseRailSection({
     required this.title,
     required this.courses,
-    this.topicKey,
   });
 
   final String title;
   final List<CommunityCourse> courses;
-  final String? topicKey;
 
   List<CommunityCourse> get visibleCourses =>
       courses.take(10).toList(growable: false);

@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-
-import '../../app/routing/app_routes.dart';
 import '../../app/state/app_theme_mode.dart';
 import '../../app/state/demo_app_controller.dart';
 import '../../features/ai/presentation/providers/ai_user_api_key_controller.dart';
 import '../../features/app_guide/presentation/app_guide_controller.dart';
 import '../../features/app_guide/presentation/app_guide_copy.dart';
+import '../../features/auth/presentation/providers/auth_controller.dart';
 import '../localization/app_localizations.dart';
 import '../notifications/local_notification_service.dart';
 import '../theme/app_theme_colors.dart';
@@ -202,6 +200,30 @@ class _AppSettingsPanelContentState
     );
   }
 
+  Future<void> _showChangePasswordDialog() async {
+    final currentCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _ChangePasswordDialogInSettings(
+        onSubmit: (current, next) => ref
+            .read(authControllerProvider.notifier)
+            .changePassword(currentPassword: current, newPassword: next),
+      ),
+    );
+
+    currentCtrl.dispose();
+    newCtrl.dispose();
+    confirmCtrl.dispose();
+
+    if (changed == true && mounted) {
+      AppNotice.show(context,
+          message: 'Пароль обновлён', type: AppNoticeType.success);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
@@ -219,14 +241,20 @@ class _AppSettingsPanelContentState
         children: [
           const AdaptivePanelHandle(),
           const SizedBox(height: 18),
-          Text(
-            l10n.text('settings'),
-            style: Theme.of(context).textTheme.headlineSmall,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              l10n.text('settings'),
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
           ),
           const SizedBox(height: 18),
-          Text(
-            l10n.text('locale'),
-            style: Theme.of(context).textTheme.titleMedium,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              l10n.text('locale'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ),
           const SizedBox(height: 10),
           LocaleSelector(
@@ -234,33 +262,37 @@ class _AppSettingsPanelContentState
             onChanged: controller.changeLocale,
           ),
           const SizedBox(height: 18),
-          Text(
-            l10n.text('theme'),
-            style: Theme.of(context).textTheme.titleMedium,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              l10n.text('theme'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ),
           const SizedBox(height: 10),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: AppThemeMode.values
-                .map((mode) {
-                  final selected = mode == state.themeMode;
-                  return ChoiceChip(
-                    label: Text(_themeLabel(l10n, mode)),
-                    selected: selected,
-                    onSelected: (_) => controller.changeThemeMode(mode),
-                    selectedColor: colors.primary.withValues(alpha: 0.16),
-                    backgroundColor: colors.surfaceSoft,
-                    side: BorderSide(
-                      color: selected ? colors.primary : colors.divider,
-                    ),
-                    labelStyle: TextStyle(
-                      color: selected ? colors.primary : colors.textSecondary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  );
-                })
-                .toList(growable: false),
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.start,
+              children: AppThemeMode.values
+                  .map((mode) {
+                    final selected = mode == state.themeMode;
+                    return ChoiceChip(
+                      label: Text(_themeLabel(l10n, mode)),
+                      selected: selected,
+                      onSelected: (_) => controller.changeThemeMode(mode),
+                      selectedColor: colors.primary.withValues(alpha: 0.16),
+                      backgroundColor: colors.surfaceSoft,
+                      side: BorderSide(
+                        color: selected ? colors.primary : colors.divider,
+                      ),
+                      labelStyle: TextStyle(
+                        color: selected ? colors.primary : colors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    );
+                  })
+                  .toList(growable: false),
           ),
           const SizedBox(height: 18),
           (() {
@@ -478,57 +510,12 @@ class _AppSettingsPanelContentState
             ),
           ),
           const SizedBox(height: 18),
-          Text(
-            l10n.text('help'),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          InkWell(
-            onTap: () {
-              Navigator.of(context).pop();
-              GoRouter.of(context).push(AppRoutes.faq);
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: colors.surfaceSoft,
-                border: Border.all(color: colors.divider),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.quiz_rounded, color: colors.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.text('faq_title'),
-                          style: TextStyle(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.text('faq_subtitle'),
-                          style: TextStyle(
-                            color: colors.textSecondary,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: colors.textSecondary,
-                  ),
-                ],
-              ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _showChangePasswordDialog,
+              icon: const Icon(Icons.lock_reset_rounded),
+              label: const Text('Сменить пароль'),
             ),
           ),
         ],
@@ -543,6 +530,110 @@ class _AppSettingsPanelContentState
       case AppThemeMode.light:
         return l10n.text('theme_light');
     }
+  }
+}
+
+class _ChangePasswordDialogInSettings extends StatefulWidget {
+  const _ChangePasswordDialogInSettings({required this.onSubmit});
+
+  final Future<String?> Function(String current, String next) onSubmit;
+
+  @override
+  State<_ChangePasswordDialogInSettings> createState() =>
+      _ChangePasswordDialogInSettingsState();
+}
+
+class _ChangePasswordDialogInSettingsState
+    extends State<_ChangePasswordDialogInSettings> {
+  final _currentCtrl = TextEditingController();
+  final _newCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+  bool _submitting = false;
+  String _error = '';
+
+  @override
+  void dispose() {
+    _currentCtrl.dispose();
+    _newCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_newCtrl.text != _confirmCtrl.text) {
+      setState(() => _error = 'Пароли не совпадают');
+      return;
+    }
+    if (_newCtrl.text.length < 8) {
+      setState(() => _error = 'Минимум 8 символов');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = '';
+    });
+    final err = await widget.onSubmit(_currentCtrl.text, _newCtrl.text);
+    if (!mounted) return;
+    if (err != null) {
+      setState(() {
+        _error = err;
+        _submitting = false;
+      });
+    } else {
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AlertDialog(
+      title: const Text('Сменить пароль'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _currentCtrl,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Текущий пароль'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _newCtrl,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Новый пароль'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _confirmCtrl,
+            obscureText: true,
+            decoration:
+                const InputDecoration(labelText: 'Подтвердите пароль'),
+          ),
+          if (_error.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(_error,
+                style: TextStyle(color: colors.danger, fontSize: 13)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Сохранить'),
+        ),
+      ],
+    );
   }
 }
 

@@ -271,6 +271,7 @@ class DiscoveryFilterChoiceWrap<T> extends StatelessWidget {
     return Wrap(
       spacing: 10,
       runSpacing: 10,
+      alignment: WrapAlignment.center,
       children: options
           .map((option) {
             final selected = option == selectedValue;
@@ -487,7 +488,7 @@ class DiscoveryWideCourseCard extends StatelessWidget {
   }
 }
 
-class _BaseDiscoveryCourseCard extends StatelessWidget {
+class _BaseDiscoveryCourseCard extends ConsumerWidget {
   const _BaseDiscoveryCourseCard({
     required this.course,
     required this.saved,
@@ -511,10 +512,20 @@ class _BaseDiscoveryCourseCard extends StatelessWidget {
   final bool showExtendedMeta;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final compactCard = !showExtendedMeta;
     final heroHeight = showExtendedMeta ? 132.0 : 108.0;
+    final l10n = context.l10n;
+    final priceAsync = ref.watch(coursePriceProvider(course.id));
+    final priceLabel = priceAsync.when(
+      data: (price) {
+        if (price == null || price.amount <= 0) return l10n.text('course_price_free');
+        return '${price.amount.toStringAsFixed(0)} ${price.currency}';
+      },
+      loading: () => '...',
+      error: (_, __) => l10n.text('course_price_free'),
+    );
     final heroPadding = showExtendedMeta ? 14.0 : 12.0;
     final bodyPadding = showExtendedMeta ? 18.0 : 14.0;
     final titleMaxLines = showExtendedMeta ? 2 : 2;
@@ -680,6 +691,11 @@ class _BaseDiscoveryCourseCard extends StatelessWidget {
                           icon: Icons.schedule_rounded,
                           label: '${course.estimatedHours}h',
                           color: colors.textSecondary,
+                        ),
+                        _MetaChip(
+                          icon: Icons.payments_outlined,
+                          label: priceLabel,
+                          color: colors.success,
                         ),
                       ],
                     ),

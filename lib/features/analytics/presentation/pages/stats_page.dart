@@ -1,51 +1,18 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:syncfusion_flutter_charts/charts.dart';
-
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
-import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/common_widgets/bubble_progress_bar.dart';
+import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 
 enum StatsTab { analytics, progress }
-
-// Riverpod Notifier to dynamically track active app usage time in seconds across ALL pages
-final realLearningSecondsProvider = NotifierProvider<RealLearningSecondsNotifier, int>(RealLearningSecondsNotifier.new);
-
-class RealLearningSecondsNotifier extends Notifier<int> {
-  late final SharedPreferences _prefs;
-  
-  @override
-  int build() {
-    _prefs = ref.watch(sharedPreferencesProvider);
-    // Load persisted value or default to a realistic baseline (320 minutes = 19200 seconds)
-    final saved = _prefs.getInt('zerdestudy_real_learning_seconds');
-    if (saved != null) {
-      _startTimer();
-      return saved;
-    } else {
-      _prefs.setInt('zerdestudy_real_learning_seconds', 19200);
-      _startTimer();
-      return 19200;
-    }
-  }
-  
-  void _startTimer() {
-    Future.delayed(Duration.zero, () {
-      Stream.periodic(const Duration(seconds: 1)).listen((_) {
-        state = state + 1;
-        _prefs.setInt('zerdestudy_real_learning_seconds', state);
-      });
-    });
-  }
-}
 
 class StatsPage extends ConsumerStatefulWidget {
   const StatsPage({super.key});
@@ -79,78 +46,50 @@ class _StatsPageState extends ConsumerState<StatsPage> {
       return en;
     }
 
-    // Dynamic state calculations for original stats tab
-    final unlockedAchievements = catalog
-        .achievementsFor(state)
-        .where((item) => item.unlocked)
-        .length;
+    // Server profile — XP and streak from backend when available.
+    final backendProfile = ref
+        .watch(backendProfileProvider)
+        .maybeWhen(data: (p) => p, orElse: () => null);
+    final backendAchievements = ref
+        .watch(backendAchievementsProvider)
+        .maybeWhen(data: (list) => list, orElse: () => const <Achievement>[]);
+
+    // Achievements: prefer server list; fall back to local catalog.
+    final achievementList = backendAchievements.isNotEmpty
+        ? backendAchievements
+        : catalog.achievementsFor(state);
+    final unlockedAchievements =
+        achievementList.where((a) => a.unlocked).length;
+
     final passedAssessments = catalog.passedAssessments(state);
     final averageAssessment = catalog.averageBestAssessmentPercent(state);
-    final aiSessions = state.aiMessages
-        .where((item) => item.author == AiAuthor.user)
-        .length;
+    final aiSessions =
+        state.aiMessages.where((m) => m.author == AiAuthor.user).length;
 
-    // Dynamic state calculations for analytics dashboard tab
     final completedPracticeCount = state.completedPracticeIds.length;
     final completedLessonCount = state.completedLessonIds.length;
-    final totalSolvedTasks = completedLessonCount + (completedPracticeCount * 3);
-    final aiQueries = state.aiMessages.where((msg) => msg.author == AiAuthor.user).length;
+    final totalSolvedTasks =
+        completedLessonCount + (completedPracticeCount * 3);
+    final aiQueries =
+        state.aiMessages.where((m) => m.author == AiAuthor.user).length;
 
-    // Formatted real KPI values
-    final quizPercentVal = state.quizAccuracy > 0 ? (state.quizAccuracy * 100).round() : 72;
-    final liveXpVal = state.xp > 0 ? state.xp : 1450;
-    final solvedTasksVal = totalSolvedTasks > 0 ? totalSolvedTasks : 87;
-    final aiTopicsVal = aiQueries > 0 ? aiQueries : 24;
-    final effectiveStreak = backendStreak?.streak ?? state.streak;
-    final streakDaysVal = effectiveStreak > 0 ? effectiveStreak : 12;
+    // Real KPI values — no fake fallbacks.
+    final quizPercentVal =
+        (state.quizAccuracy * 100).round().clamp(0, 100);
+    final liveXpVal = backendProfile?.xp ?? state.xp;
+    final solvedTasksVal = totalSolvedTasks;
+    final aiTopicsVal = aiQueries;
+    final streakDaysVal =
+        backendProfile?.streak ?? backendStreak?.streak ?? state.streak;
 
-    // 100% REAL LIVE GRAPH HISTORIES
-    final List<double> quizAccuracyHistory = [
-      (quizPercentVal - 14).clamp(10, 100).toDouble(),
-      (quizPercentVal - 8).clamp(10, 100).toDouble(),
-      (quizPercentVal - 11).clamp(10, 100).toDouble(),
-      (quizPercentVal - 4).clamp(10, 100).toDouble(),
-      (quizPercentVal - 6).clamp(10, 100).toDouble(),
-      (quizPercentVal - 2).clamp(10, 100).toDouble(),
-      quizPercentVal.toDouble(),
-    ];
-
-    final List<double> aiTopicsHistory = [
-      (aiTopicsVal * 0.4).roundToDouble().clamp(1.0, 100.0),
-      (aiTopicsVal * 0.6).roundToDouble().clamp(1.0, 100.0),
-      (aiTopicsVal * 0.5).roundToDouble().clamp(1.0, 100.0),
-      (aiTopicsVal * 0.8).roundToDouble().clamp(1.0, 100.0),
-      (aiTopicsVal * 0.65).roundToDouble().clamp(1.0, 100.0),
-      (aiTopicsVal * 0.85).roundToDouble().clamp(1.0, 100.0),
-      aiTopicsVal.toDouble(),
-    ];
-
-    final List<double> xpHistory = [
-      (liveXpVal * 0.28).roundToDouble(),
-      (liveXpVal * 0.45).roundToDouble(),
-      (liveXpVal * 0.38).roundToDouble(),
-      (liveXpVal * 0.62).roundToDouble(),
-      (liveXpVal * 0.55).roundToDouble(),
-      (liveXpVal * 0.76).roundToDouble(),
-      liveXpVal.toDouble(),
-    ];
-
-    final List<double> solvedTasksHistory = [
-      (solvedTasksVal * 0.45).roundToDouble(),
-      (solvedTasksVal * 0.60).roundToDouble(),
-      (solvedTasksVal * 0.55).roundToDouble(),
-      (solvedTasksVal * 0.75).roundToDouble(),
-      (solvedTasksVal * 0.68).roundToDouble(),
-      (solvedTasksVal * 0.82).roundToDouble(),
-      solvedTasksVal.toDouble(),
-    ];
-
-    // Compute composite dynamic Mastery Level (replacing percentile)
-    // Formula: 40% Accuracy, 30% Course completion ratio, 30% XP progression (against a 5K XP target)
-    final double completionRatio = catalog.totalCompletedUnits(state) / math.max(1, catalog.totalUnits());
-    final double xpRatio = (state.xp / 5000.0).clamp(0.0, 1.0);
-    final double accuracyRatio = state.quizAccuracy > 0 ? state.quizAccuracy : 0.72;
-    final double masteryValue = (accuracyRatio * 0.4 + completionRatio * 0.3 + xpRatio * 0.3).clamp(0.1, 0.99);
+    // Mastery: 40 % quiz accuracy + 30 % course completion + 30 % XP (5 K target).
+    final double completionRatio =
+        catalog.totalCompletedUnits(state) / math.max(1, catalog.totalUnits());
+    final double xpRatio = (liveXpVal / 5000.0).clamp(0.0, 1.0);
+    final double accuracyRatio = state.quizAccuracy.clamp(0.0, 1.0);
+    final double masteryValue =
+        (accuracyRatio * 0.4 + completionRatio * 0.3 + xpRatio * 0.3)
+            .clamp(0.0, 0.99);
 
     return AppPageScaffold(
       title: context.l10n.text('stats'),
@@ -185,11 +124,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                           en: 'Percentage of quizzes and tests solved correctly on the first attempt.',
                           kk: 'Бірінші әрекеттен дұрыс шешілген квиздер мен тесттердің пайызы.',
                         ),
-                        chart: _MiniSplineChart(
-                          values: quizAccuracyHistory,
-                          color: colors.success,
-                          suffix: '%',
-                        ),
                       ),
                     ),
                   ),
@@ -208,11 +142,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                           en: 'Number of unique topics and questions studied together with the AI Mentor.',
                           kk: 'ИИ-ментормен бірге зерттелген және талданған тақырыптар мен сұрақтар саны.',
                         ),
-                        chart: _MiniBarChart(
-                          values: aiTopicsHistory,
-                          color: colors.accent,
-                          maxVal: aiTopicsVal * 1.3,
-                        ),
                       ),
                     ),
                   ),
@@ -230,14 +159,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                           ru: 'Динамика набора очков опыта (XP) за дни текущей недели.',
                           en: 'Dynamics of experience points (XP) earned during the current week.',
                           kk: 'Ағымдағы аптаның күндері бойынша тәжірибе ұпайларын (XP) жинау динамикасы.',
-                        ),
-                        chart: _MiniSplineChart(
-                          values: xpHistory,
-                          color: colors.primary,
-                          suffix: ' XP',
-                          customAnnotationLabel: liveXpVal >= 1000
-                              ? '${(liveXpVal / 1000).toStringAsFixed(2)}K'
-                              : '$liveXpVal',
                         ),
                       ),
                     ),
@@ -290,11 +211,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                           en: 'Number of successfully completed exercises, quizzes, and code tasks.',
                           kk: 'Сәтті орындалған жаттығулар, квиздер мен практикалық тапсырмалар саны.',
                         ),
-                        chart: _MiniBarChart(
-                          values: solvedTasksHistory,
-                          color: const Color(0xFF00E5FF),
-                          maxVal: solvedTasksVal * 1.3,
-                        ),
                       ),
                     ),
                   ),
@@ -345,11 +261,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                           en: 'Percentage of quizzes and tests solved correctly on the first attempt.',
                           kk: 'Бірінші әрекеттен дұрыс шешілген квиздер мен тесттердің пайызы.',
                         ),
-                        chart: _MiniSplineChart(
-                          values: quizAccuracyHistory,
-                          color: colors.success,
-                          suffix: '%',
-                        ),
                       ),
                     ),
                   ),
@@ -367,11 +278,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                           ru: 'Количество тем и вопросов, изученных и разобранных совместно с ИИ-ментором.',
                           en: 'Number of unique topics and questions studied together with the AI Mentor.',
                           kk: 'ИИ-ментормен бірге зерттелген және талданған тақырыптар мен сұрақтар саны.',
-                        ),
-                        chart: _MiniBarChart(
-                          values: aiTopicsHistory,
-                          color: colors.accent,
-                          maxVal: aiTopicsVal * 1.3,
                         ),
                       ),
                     ),
@@ -394,14 +300,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                           ru: 'Динамика набора очков опыта (XP) за дни текущей недели.',
                           en: 'Dynamics of experience points (XP) earned during the current week.',
                           kk: 'Ағымдағы аптаның күндері бойынша тәжірибе ұпайларын (XP) жинау динамикасы.',
-                        ),
-                        chart: _MiniSplineChart(
-                          values: xpHistory,
-                          color: colors.primary,
-                          suffix: ' XP',
-                          customAnnotationLabel: liveXpVal >= 1000
-                              ? '${(liveXpVal / 1000).toStringAsFixed(2)}K'
-                              : '$liveXpVal',
                         ),
                       ),
                     ),
@@ -443,11 +341,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                     en: 'Number of successfully completed exercises, quizzes, and code tasks.',
                     kk: 'Сәтті орындалған жаттығулар, квиздер мен практикалық тапсырмалар саны.',
                   ),
-                  chart: _MiniBarChart(
-                    values: solvedTasksHistory,
-                    color: const Color(0xFF00E5FF),
-                    maxVal: solvedTasksVal * 1.3,
-                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -488,11 +381,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                     en: 'Percentage of quizzes and tests solved correctly on the first attempt.',
                     kk: 'Бірінші әрекеттен дұрыс шешілген квиздер мен тесттердің пайызы.',
                   ),
-                  chart: _MiniSplineChart(
-                    values: quizAccuracyHistory,
-                    color: colors.success,
-                    suffix: '%',
-                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -509,11 +397,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                     en: 'Number of unique topics and questions studied together with the AI Mentor.',
                     kk: 'ИИ-ментормен бірге зерттелген және талданған тақырыптар мен сұрақтар саны.',
                   ),
-                  chart: _MiniBarChart(
-                    values: aiTopicsHistory,
-                    color: colors.accent,
-                    maxVal: aiTopicsVal * 1.3,
-                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -529,14 +412,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                     ru: 'Динамика набора очков опыта (XP) за дни текущей недели.',
                     en: 'Dynamics of experience points (XP) earned during the current week.',
                     kk: 'Ағымдағы аптаның күндері бойынша тәжірибе ұпайларын (XP) жинау динамикасы.',
-                  ),
-                  chart: _MiniSplineChart(
-                    values: xpHistory,
-                    color: colors.primary,
-                    suffix: ' XP',
-                    customAnnotationLabel: liveXpVal >= 1000
-                        ? '${(liveXpVal / 1000).toStringAsFixed(2)}K'
-                        : '$liveXpVal',
                   ),
                 ),
               ),
@@ -573,11 +448,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                     en: 'Number of successfully completed exercises, quizzes, and code tasks.',
                     kk: 'Сәтті орындалған жаттығулар, квиздер мен практикалық тапсырмалар саны.',
                   ),
-                  chart: _MiniBarChart(
-                    values: solvedTasksHistory,
-                    color: const Color(0xFF00E5FF),
-                    maxVal: solvedTasksVal * 1.3,
-                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -595,10 +465,10 @@ class _StatsPageState extends ConsumerState<StatsPage> {
             GlowCard(
               accent: colors.primary,
               child: _MetricsCarousel(
-                xp: '${state.xp}',
-                level: '${state.level}',
-                xpToNextLevel: '${state.xpToNextLevel} XP',
-                streak: '${effectiveStreak}d',
+                xp: '$liveXpVal',
+                level: '${backendProfile?.level ?? state.level}',
+                xpToNextLevel: '${(500 - liveXpVal % 500)} XP',
+                streak: '${streakDaysVal}d',
                 completedUnits: '${catalog.totalCompletedUnits(state)}/${catalog.totalUnits()}',
                 unlockedAchievements: '$unlockedAchievements',
                 passedAssessments: '$passedAssessments/${state.assessmentResultsByTrackId.length}',
@@ -617,15 +487,15 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${state.xpIntoLevel}/500 XP',
+                    '${liveXpVal % 500}/500 XP',
                     style: TextStyle(color: colors.textSecondary, height: 1.4),
                   ),
                   const SizedBox(height: 14),
                   BubbleProgressBar(
-                    value: state.xpIntoLevel / 500.0,
+                    value: (liveXpVal % 500) / 500.0,
                     color: colors.primary,
                     backgroundColor: colors.backgroundElevated,
-                    bubbleText: '${state.xpIntoLevel}/500 XP',
+                    bubbleText: '${liveXpVal % 500}/500 XP',
                   ),
                 ],
               ),
@@ -1246,7 +1116,6 @@ class _KPICard extends StatelessWidget {
   final IconData topIcon;
   final Color accentColor;
   final String tooltipText;
-  final Widget chart;
 
   const _KPICard({
     required this.title,
@@ -1255,7 +1124,6 @@ class _KPICard extends StatelessWidget {
     required this.topIcon,
     required this.accentColor,
     required this.tooltipText,
-    required this.chart,
   });
 
   @override
@@ -1372,7 +1240,6 @@ class _KPICard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Expanded(child: chart),
         ],
       ),
     );
@@ -1495,173 +1362,6 @@ class _MasteryIndexCard extends StatelessWidget {
   }
 }
 
-// Mini Spline Chart component (using Syncfusion)
-class _MiniSplineChart extends StatelessWidget {
-  final List<double> values;
-  final Color color;
-  final String suffix;
-  final String? customAnnotationLabel;
-
-  const _MiniSplineChart({
-    required this.values,
-    required this.color,
-    this.suffix = '',
-    this.customAnnotationLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final labels = const ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    final data = List.generate(values.length, (i) => _ChartData(labels[i], values[i]));
-
-    final annotationValue = customAnnotationLabel ?? '${values.last.round()}$suffix';
-
-    return SfCartesianChart(
-      plotAreaBorderWidth: 0,
-      margin: EdgeInsets.zero,
-      primaryXAxis: CategoryAxis(
-        majorGridLines: const MajorGridLines(width: 0),
-        axisLine: const AxisLine(width: 0),
-        labelStyle: TextStyle(
-          color: colors.textSecondary.withValues(alpha: 0.5),
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      primaryYAxis: NumericAxis(
-        isVisible: false,
-        minimum: 0,
-        maximum: values.reduce(math.max) * 1.3,
-      ),
-      series: <CartesianSeries<_ChartData, String>>[
-        SplineAreaSeries<_ChartData, String>(
-          dataSource: data,
-          xValueMapper: (_ChartData d, _) => d.x,
-          yValueMapper: (_ChartData d, _) => d.y,
-          gradient: LinearGradient(
-            colors: [
-              color.withValues(alpha: 0.22),
-              color.withValues(alpha: 0.02),
-              Colors.transparent,
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        SplineSeries<_ChartData, String>(
-          dataSource: data,
-          xValueMapper: (_ChartData d, _) => d.x,
-          yValueMapper: (_ChartData d, _) => d.y,
-          color: color,
-          width: 2.8,
-          markerSettings: MarkerSettings(
-            isVisible: true,
-            height: 5.5,
-            width: 5.5,
-            shape: DataMarkerType.circle,
-            color: colors.surface,
-            borderColor: color,
-            borderWidth: 1.5,
-          ),
-        ),
-      ],
-      annotations: <CartesianChartAnnotation>[
-        CartesianChartAnnotation(
-          widget: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              annotationValue,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          coordinateUnit: CoordinateUnit.point,
-          x: 'Вс',
-          y: values.last * 1.15,
-        ),
-      ],
-    );
-  }
-}
-
-// Mini Bar Chart component
-class _MiniBarChart extends StatelessWidget {
-  final List<double> values;
-  final Color color;
-  final double maxVal;
-
-  const _MiniBarChart({
-    required this.values,
-    required this.color,
-    required this.maxVal,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final labels = const ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    final data = List.generate(values.length, (i) => _ChartData(labels[i], values[i]));
-
-    return SfCartesianChart(
-      plotAreaBorderWidth: 0,
-      margin: EdgeInsets.zero,
-      primaryXAxis: CategoryAxis(
-        majorGridLines: const MajorGridLines(width: 0),
-        axisLine: const AxisLine(width: 0),
-        labelStyle: TextStyle(
-          color: colors.textSecondary.withValues(alpha: 0.5),
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      primaryYAxis: NumericAxis(
-        isVisible: false,
-        minimum: 0,
-        maximum: maxVal * 1.3,
-      ),
-      series: <CartesianSeries<_ChartData, String>>[
-        ColumnSeries<_ChartData, String>(
-          dataSource: data,
-          xValueMapper: (_ChartData d, _) => d.x,
-          yValueMapper: (_ChartData d, _) => d.y,
-          color: color,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
-          width: 0.42,
-        ),
-      ],
-      annotations: <CartesianChartAnnotation>[
-        CartesianChartAnnotation(
-          widget: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '${values.last.round()}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          coordinateUnit: CoordinateUnit.point,
-          x: 'Вс',
-          y: values.last + (maxVal * 0.16),
-        ),
-      ],
-    );
-  }
-}
 
 // Half Circle Gauge painter and wrapper
 class _HalfCircleGauge extends StatelessWidget {
@@ -2263,7 +1963,7 @@ class _StreakCard extends ConsumerWidget {
   }
 }
 
-// Learning Time Card connected to active user realLearningSecondsProvider
+// Learning Time Card — estimates time from completed lessons (15 min each).
 class _LearningTimeCard extends ConsumerWidget {
   final String Function({required String ru, required String en, required String kk}) t;
   final AppThemeColors colors;
@@ -2272,11 +1972,12 @@ class _LearningTimeCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Reads from global background active STUDY timer (tracks reading, videos, AI, tests, code, KT & Learn)
-    final totalSeconds = ref.watch(realLearningSecondsProvider);
-    final liveHours = totalSeconds ~/ 3600;
-    final liveMinutes = (totalSeconds % 3600) ~/ 60;
-    final ringProgress = (totalSeconds / 43200.0).clamp(0.1, 1.0); // Progress towards weekly 12h goal
+    final state = ref.watch(demoAppControllerProvider);
+    final totalMinutes = state.completedLessonIds.length * 15;
+    final liveHours = totalMinutes ~/ 60;
+    final liveMinutes = totalMinutes % 60;
+    // Progress ring: weekly goal of 5 hours (300 min).
+    final ringProgress = (totalMinutes / 300.0).clamp(0.05, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -2653,10 +2354,4 @@ class _FavoriteTopicsCard extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _ChartData {
-  _ChartData(this.x, this.y);
-  final String x;
-  final double y;
 }

@@ -14,6 +14,7 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/common_widgets/inline_markdown_text.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../ai/domain/entities/ai_chat_message.dart';
@@ -58,6 +59,11 @@ class _CommunityCoursePlayerPageState
       final state = ref.read(demoAppControllerProvider);
       if (!state.enrolledCommunityCourseIds.contains(widget.courseId)) {
         controller.enrollCommunityCourse(widget.courseId);
+        // Sync to backend; fire-and-forget — opening the player must not block.
+        backendEnrollCourse(ref, widget.courseId).then((_) {
+          ref.invalidate(backendAchievementsProvider);
+          ref.invalidate(backendAllProgressProvider);
+        });
       }
     });
   }
