@@ -2477,15 +2477,73 @@ class _CourseTeachersSection extends StatelessWidget {
   }
 }
 
-class _CourseCertificateSection extends StatelessWidget {
+class _CourseCertificateSection extends ConsumerStatefulWidget {
   const _CourseCertificateSection({required this.course});
 
   final CommunityCourse course;
 
   @override
+  ConsumerState<_CourseCertificateSection> createState() =>
+      _CourseCertificateSectionState();
+}
+
+class _CourseCertificateSectionState
+    extends ConsumerState<_CourseCertificateSection> {
+  bool _loading = false;
+  String? _downloadUrl;
+  String? _certNumber;
+  String? _error;
+
+  Future<void> _issue() async {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final accessToken = ref
+        .read(backendCourseAccessTokenProvider);
+    if (accessToken == null || accessToken.isEmpty) {
+      setState(() {
+        _loading = false;
+        _error = 'Необходима авторизация';
+      });
+      return;
+    }
+
+    try {
+      final remote = ref.read(backendCourseRemoteDataSourceProvider);
+      final result = await remote.issueCertificate(
+        accessToken: accessToken,
+        courseId: widget.course.id,
+      );
+      setState(() {
+        _downloadUrl = result['download_url'] as String? ?? '';
+        _certNumber = result['certificate_number'] as String? ?? '';
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = e.toString().contains('course_not_completed')
+            ? 'Сначала завершите все уроки курса'
+            : 'Не удалось выдать сертификат: $e';
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final locale = context.l10n.locale;
+    final buttonLabel = switch (locale) {
+      AppLocale.ru => 'Получить сертификат',
+      AppLocale.kk => 'Сертификат алу',
+      AppLocale.en => 'Get certificate',
+    };
+
     return GlowCard(
-      accent: context.appColors.success,
+      accent: colors.success,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2495,20 +2553,74 @@ class _CourseCertificateSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            course.facts.certificateLabel,
+            widget.course.facts.certificateLabel,
             style: TextStyle(
-              color: context.appColors.textPrimary,
+              color: colors.textPrimary,
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            course.heroHeadline,
-            style: TextStyle(
-              color: context.appColors.textSecondary,
-              height: 1.45,
-            ),
+            widget.course.heroHeadline,
+            style: TextStyle(color: colors.textSecondary, height: 1.45),
           ),
+          if (widget.course.facts.hasCertificate) ...[
+            const SizedBox(height: 16),
+            if (_certNumber != null && _downloadUrl != null &&
+                _downloadUrl!.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(Icons.workspace_premium_rounded,
+                      color: colors.success, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Сертификат $_certNumber выдан',
+                      style: TextStyle(
+                          color: colors.success, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  AppNotice.show(
+                    context,
+                    message: 'Ссылка: $_downloadUrl',
+                    type: AppNoticeType.info,
+                  );
+                },
+                icon: const Icon(Icons.download_rounded, size: 18),
+                label: const Text('Скачать PDF'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.success,
+                  side: BorderSide(color: colors.success.withValues(alpha: 0.5)),
+                ),
+              ),
+            ] else ...[
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(_error!,
+                      style: TextStyle(color: colors.danger, fontSize: 13)),
+                ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.success,
+                  foregroundColor: Colors.black87,
+                ),
+                onPressed: _loading ? null : _issue,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.workspace_premium_rounded, size: 18),
+                label: Text(buttonLabel),
+              ),
+            ],
+          ],
         ],
       ),
     );

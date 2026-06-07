@@ -123,6 +123,12 @@ class AuthController extends Notifier<AuthState> {
 
   @override
   AuthState build() {
+    // Keep the repository (and its HTTP client) alive for the lifetime of this
+    // notifier. In Riverpod 3.x providers are auto-disposed when unobserved;
+    // without this watch the client gets closed while an async request is in
+    // flight, silently cancelling it.
+    ref.watch(authRepositoryProvider);
+
     if (!_bootstrapStarted) {
       _bootstrapStarted = true;
       Future<void>.microtask(_restoreSession);
@@ -193,7 +199,13 @@ class AuthController extends Notifier<AuthState> {
           );
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+          // On web, navigate the current tab so the bridge returns the user
+          // straight back to the running app instead of a detached new tab.
+          webOnlyWindowName: kIsWeb ? '_self' : null,
+        );
         // User continues in the system browser; keep UI usable until deep link / web callback.
         state = const AuthState.unauthenticated();
         return null;
@@ -216,7 +228,11 @@ class AuthController extends Notifier<AuthState> {
       final url = await ref.read(authRepositoryProvider).getGithubAuthUrl(redirectUri: redirectUri);
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+          webOnlyWindowName: kIsWeb ? '_self' : null,
+        );
         state = const AuthState.unauthenticated();
         return null;
       } else {
@@ -321,6 +337,7 @@ class AuthController extends Notifier<AuthState> {
             email: email,
             avatarBase64: avatarBase64,
           );
+      ref.invalidate(backendProfileProvider);
       return null;
     } on ApiException catch (error) {
       return error.message;
@@ -361,7 +378,6 @@ class AuthController extends Notifier<AuthState> {
       if (role != null) {
         final experience = switch (role) {
           'teacher' => AppExperience.teacher,
-          'manager' => AppExperience.moderator,
           'admin' => AppExperience.admin,
           _ => AppExperience.student,
         };
@@ -386,14 +402,15 @@ class AuthController extends Notifier<AuthState> {
     state = state.copyWith(status: status, errorMessage: null);
 
     try {
+      debugPrint('[AuthController] _runSessionAction: calling operation()…');
       final session = await operation();
+      debugPrint('[AuthController] _runSessionAction: operation() succeeded');
       
       // Update active experience based on user's primary role
       final role = session.user.roles.firstOrNull?.code;
       if (role != null) {
         final experience = switch (role) {
           'teacher' => AppExperience.teacher,
-          'manager' => AppExperience.moderator,
           'admin' => AppExperience.admin,
           _ => AppExperience.student,
         };

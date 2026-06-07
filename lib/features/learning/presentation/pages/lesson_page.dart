@@ -14,6 +14,7 @@ import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/notifications/local_notification_service.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../ai/presentation/providers/ai_chat_controller.dart';
 import '../../../courses_backend/data/models/backend_lesson_dto.dart';
@@ -311,6 +312,25 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                               message: '+$xp XP',
                               type: AppNoticeType.success,
                             );
+                            // Fire an OS notification (Android/iOS/Windows/…)
+                            final notifTitle = switch (locale) {
+                              AppLocale.ru => 'Урок завершён! 🎉',
+                              AppLocale.kk => 'Сабақ аяқталды! 🎉',
+                              AppLocale.en => 'Lesson completed! 🎉',
+                            };
+                            final notifBody = switch (locale) {
+                              AppLocale.ru => 'Вы заработали +$xp XP. Так держать!',
+                              AppLocale.kk => 'Сіз +$xp XP жинадыңыз. Жарайсыз!',
+                              AppLocale.en => 'You earned +$xp XP. Keep it up!',
+                            };
+                            ref
+                                .read(localNotificationServiceProvider)
+                                .showNotification(
+                                  id: 5001,
+                                  title: notifTitle,
+                                  body: notifBody,
+                                  payload: 'lesson:${widget.lessonId}',
+                                );
                           },
                         ),
                       ),

@@ -62,6 +62,28 @@ class JsonHttpClient {
     return _decodeJsonMap(response);
   }
 
+  Future<JsonMap> postMultipart(
+    String path, {
+    Map<String, String> headers = const <String, String>{},
+    Map<String, String> fields = const <String, String>{},
+    required String fileField,
+    required List<int> fileBytes,
+    required String fileName,
+  }) async {
+    final response = await _send(() async {
+      final request = http.MultipartRequest('POST', _uriResolver(path));
+      request.headers.addAll(headers);
+      request.fields.addAll(fields);
+      request.files.add(
+        http.MultipartFile.fromBytes(fileField, fileBytes, filename: fileName),
+      );
+
+      final streamed = await request.send();
+      return http.Response.fromStream(streamed);
+    });
+    return _decodeJsonMap(response);
+  }
+
   Future<JsonMap> putJson(
     String path, {
     Map<String, dynamic>? body,

@@ -38,6 +38,8 @@ class BackendLessonDto {
     required this.xpReward,
     required this.codeSnippet,
     required this.exampleOutput,
+    required this.videoObjectKey,
+    required this.videoUrl,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -53,6 +55,8 @@ class BackendLessonDto {
   final int xpReward;
   final String codeSnippet;
   final String exampleOutput;
+  final String videoObjectKey;
+  final String videoUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -74,6 +78,8 @@ class BackendLessonDto {
       xpReward: (json['xp_reward'] as num?)?.round() ?? 0,
       codeSnippet: json['code_snippet'] as String? ?? '',
       exampleOutput: json['example_output'] as String? ?? '',
+      videoObjectKey: json['video_object_key'] as String? ?? '',
+      videoUrl: json['video_url'] as String? ?? '',
       createdAt:
           DateTime.tryParse('${json['created_at'] ?? ''}') ??
           DateTime.fromMillisecondsSinceEpoch(0),

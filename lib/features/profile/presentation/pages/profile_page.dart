@@ -121,7 +121,7 @@ class ProfilePage extends ConsumerWidget {
         );
 
     void openProfileEditor() {
-      _showEditProfileDialog(context, ref, effectiveUserForEdit);
+      _showEditProfileDialog(context, ref, effectiveUserForEdit, backendProfile?.photoUrl);
     }
 
     return AppPageScaffold(
@@ -200,6 +200,7 @@ class ProfilePage extends ConsumerWidget {
                           children: [
                             _EditableProfileAvatar(
                               user: user,
+                              photoUrl: backendProfile?.photoUrl,
                               enableHero: enableShellAvatarHero,
                               size: 108,
                               onTap: openProfileEditor,
@@ -300,6 +301,7 @@ class ProfilePage extends ConsumerWidget {
                     children: [
                       _EditableProfileAvatar(
                         user: user,
+                        photoUrl: backendProfile?.photoUrl,
                         enableHero: enableShellAvatarHero,
                         size: 108,
                         onTap: openProfileEditor,
@@ -746,6 +748,7 @@ Future<void> _showEditProfileDialog(
   BuildContext context,
   WidgetRef ref,
   DemoUser? user,
+  String? backendPhotoUrl,
 ) async {
   final result = await showDialog<_ProfileEditorResult>(
     context: context,
@@ -754,6 +757,7 @@ Future<void> _showEditProfileDialog(
       initialEmail: user?.email ?? 'tomyrkanov@gmail.com',
       initialBio: user?.bio ?? '',
       initialAvatarBase64: user?.avatarBase64,
+      initialPhotoUrl: backendPhotoUrl,
     ),
   );
 
@@ -784,12 +788,14 @@ Future<void> _showEditProfileDialog(
 class _EditableProfileAvatar extends StatelessWidget {
   const _EditableProfileAvatar({
     required this.user,
+    this.photoUrl,
     required this.enableHero,
     required this.size,
     required this.onTap,
   });
 
   final DemoUser? user;
+  final String? photoUrl;
   final bool enableHero;
   final double size;
   final VoidCallback onTap;
@@ -806,6 +812,7 @@ class _EditableProfileAvatar extends StatelessWidget {
           AppUserAvatar(
             name: user?.name ?? 'Talgat O.',
             avatarBase64: user?.avatarBase64,
+            photoUrl: photoUrl,
             size: size,
             enableHero: enableHero,
           ),
@@ -858,12 +865,15 @@ class _EditProfileDialog extends StatefulWidget {
     required this.initialEmail,
     required this.initialBio,
     required this.initialAvatarBase64,
+    this.initialPhotoUrl,
   });
 
   final String initialName;
   final String initialEmail;
   final String initialBio;
   final String? initialAvatarBase64;
+  /// Presigned photo URL from backend — shown when no local avatar is selected.
+  final String? initialPhotoUrl;
 
   @override
   State<_EditProfileDialog> createState() => _EditProfileDialogState();
@@ -873,6 +883,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
   late final TextEditingController _nameController;
   late final TextEditingController _bioController;
   late String? _avatarBase64;
+  bool _localAvatarSelected = false;
   bool _isPickingAvatar = false;
 
   @override
@@ -882,6 +893,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
     _bioController = TextEditingController(text: widget.initialBio);
     _avatarBase64 = widget.initialAvatarBase64;
   }
+
 
   @override
   void dispose() {
@@ -912,7 +924,10 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
         height: squareSize,
       );
       final resized = img.copyResize(cropped, width: 320, height: 320);
-      setState(() => _avatarBase64 = base64Encode(Uint8List.fromList(img.encodeJpg(resized, quality: 82))));
+      setState(() {
+        _avatarBase64 = base64Encode(Uint8List.fromList(img.encodeJpg(resized, quality: 82)));
+        _localAvatarSelected = true;
+      });
     } catch (_) {
       if (mounted) _showAvatarError();
     } finally {
@@ -970,6 +985,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
                     child: AppUserAvatar(
                       name: trimmedName.isEmpty ? widget.initialName : trimmedName,
                       avatarBase64: _avatarBase64,
+                      photoUrl: _localAvatarSelected ? null : widget.initialPhotoUrl,
                       size: 96,
                     ),
                   ),

@@ -604,6 +604,16 @@ class AppLocalizations {
       AppLocale.en: 'Leaderboard',
       AppLocale.kk: 'Лидерборд',
     },
+    'leaderboard_empty_title': {
+      AppLocale.ru: 'Пока никого нет',
+      AppLocale.en: 'No one here yet',
+      AppLocale.kk: 'Әзірше ешкім жоқ',
+    },
+    'leaderboard_empty_subtitle': {
+      AppLocale.ru: 'Завершайте уроки и набирайте XP — рейтинг заполнится реальными участниками.',
+      AppLocale.en: 'Complete lessons and earn XP — the board will fill with real learners.',
+      AppLocale.kk: 'Сабақтарды аяқтап, XP жинаңыз — рейтинг нақты қатысушылармен толады.',
+    },
     'stats': {
       AppLocale.ru: 'Статистика',
       AppLocale.en: 'Statistics',

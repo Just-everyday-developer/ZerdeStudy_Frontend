@@ -93,6 +93,23 @@ class LocalNotificationService {
   Future<LocalNotificationSendStatus> sendTestNotification({
     required String title,
     required String body,
+  }) {
+    return showNotification(
+      id: 4201,
+      title: title,
+      body: body,
+      payload: 'settings:test_notification',
+    );
+  }
+
+  /// Shows a notification right now on every supported platform
+  /// (Android, iOS, macOS, Linux, Windows). Safe to call from anywhere —
+  /// silently no-ops when the platform is unsupported or permission denied.
+  Future<LocalNotificationSendStatus> showNotification({
+    required String title,
+    required String body,
+    int id = 4202,
+    String? payload,
   }) async {
     if (!_isSupported || _plugin == null) {
       return LocalNotificationSendStatus.unsupported;
@@ -105,7 +122,7 @@ class LocalNotificationService {
 
     try {
       await _plugin.show(
-        id: 4201,
+        id: id,
         title: title,
         body: body,
         notificationDetails: const NotificationDetails(
@@ -129,7 +146,7 @@ class LocalNotificationService {
           linux: LinuxNotificationDetails(),
           windows: WindowsNotificationDetails(),
         ),
-        payload: 'settings:test_notification',
+        payload: payload,
       );
       return LocalNotificationSendStatus.sent;
     } catch (error, stackTrace) {

@@ -29,14 +29,8 @@ class AppRoutes {
   static const String teacherQna = '/teacher/qna';
   static const String teacherAnalytics = '/teacher/analytics';
   static const String teacherProfile = '/teacher/profile';
-  static const String moderator = '/moderator';
-  static const String moderatorCourses = '/moderator/courses';
-  static const String moderatorReports = '/moderator/reports';
-  static const String moderatorComments = '/moderator/comments';
-  static const String moderatorCommunity = '/moderator/community';
-  static const String moderatorFaq = '/moderator/faq';
-  static const String moderatorUsers = '/moderator/users';
-  static const String moderatorSystem = '/moderator/system';
+  static const String admin = '/admin';
+  static const String adminRoles = '/admin/roles';
   static const String diagnostics = '/diagnostics';
   static const String payment = '/payment';
   static const String googleCallback = '/auth/google/callback';

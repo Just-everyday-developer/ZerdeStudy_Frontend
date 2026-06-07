@@ -87,7 +87,7 @@ class DemoAppController extends Notifier<DemoAppState> {
       state.copyWith(
         activeExperience: state.activeExperience,
         isAuthenticated: true,
-        isModerator: state.activeExperience == AppExperience.moderator,
+        isModerator: false,
         user: _createUser(
           name: 'Talgat',
           email: '${normalized.isEmpty ? 'guest' : normalized}@zerdestudy.app',
@@ -111,33 +111,12 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
-  void loginAsModerator() {
-    state = _withDerived(
-      state.copyWith(
-        activeExperience: AppExperience.moderator,
-        isAuthenticated: true,
-        isModerator: true,
-      ),
-    );
-  }
-
-  void logoutModerator() {
-    state = _withDerived(
-      state.copyWith(
-        activeExperience: AppExperience.student,
-        isAuthenticated: false,
-        isModerator: false,
-      ),
-    );
-  }
-
   void setActiveExperience(AppExperience experience) {
-    final moderatorMode = experience == AppExperience.moderator;
     final currentUser = state.user;
     state = _withDerived(
       state.copyWith(
         activeExperience: experience,
-        isModerator: moderatorMode,
+        isModerator: false,
         user: currentUser?.copyWith(
           role: _roleForExperience(experience),
           goal: _goalForExperience(experience),
@@ -1364,8 +1343,6 @@ class DemoAppController extends Notifier<DemoAppState> {
         'Build steady progress across CS Core and IT Spheres',
       AppExperience.teacher =>
         'Design practical courses, guide cohorts, and improve learning outcomes',
-      AppExperience.moderator =>
-        'Keep course flows safe, clean, and well moderated',
       AppExperience.admin =>
         'Coordinate platform quality, settings, and operational health',
     };
@@ -1375,7 +1352,6 @@ class DemoAppController extends Notifier<DemoAppState> {
     return switch (experience) {
       AppExperience.student => 'Student',
       AppExperience.teacher => 'Teacher',
-      AppExperience.moderator => 'Moderator',
       AppExperience.admin => 'Administrator',
     };
   }

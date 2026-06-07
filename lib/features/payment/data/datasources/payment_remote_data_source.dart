@@ -19,15 +19,33 @@ class PaymentRemoteDataSource {
     return OrderResponse.fromJson(json);
   }
 
-  Future<JsonMap> createCoursePrice({
+  Future<CoursePriceResponse> createCoursePrice({
     required String accessToken,
     required Map<String, dynamic> body,
   }) async {
-    return _client.postJson(
+    final json = await _client.postJson(
       '/api/v1/price',
       headers: _authHeaders(accessToken),
       body: body,
     );
+    return CoursePriceResponse.fromJson(json);
+  }
+
+  Future<CoursePriceResponse> updateCoursePrice({
+    required String accessToken,
+    required String priceId,
+    required int amount,
+    required String currency,
+  }) async {
+    final json = await _client.putJson(
+      '/api/v1/price/${Uri.encodeComponent(priceId.trim())}',
+      headers: _authHeaders(accessToken),
+      body: <String, dynamic>{
+        'amount': amount,
+        'currency': currency.trim().isEmpty ? 'KZT' : currency.trim(),
+      },
+    );
+    return CoursePriceResponse.fromJson(json);
   }
 
   Future<CoursePriceResponse> fetchCoursePrice({

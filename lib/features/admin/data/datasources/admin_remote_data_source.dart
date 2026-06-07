@@ -30,6 +30,28 @@ class AdminRemoteDataSource {
   }
 
   /// PATCH /api/v1/users/status — activate or deactivate a user.
+  Future<AdminUserDto> fetchUserProfile({
+    required String accessToken,
+    required String userId,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/profiles/${userId.trim()}',
+      headers: _authHeaders(accessToken),
+    );
+    return AdminUserDto.fromJson(json);
+  }
+
+  Future<List<AdminRoleDto>> fetchUserRoles({
+    required String accessToken,
+    required String userId,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/user_roles/${userId.trim()}',
+      headers: _authHeaders(accessToken),
+    );
+    return _rolesFromUserRolesResponse(json);
+  }
+
   Future<AdminUserDto> updateUserStatus({
     required String accessToken,
     required String userId,

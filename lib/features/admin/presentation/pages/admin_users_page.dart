@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
+import '../../../courses_backend/data/models/backend_achievement_dto.dart';
+import '../../../courses_backend/data/models/backend_progress_dto.dart';
 import '../../data/models/admin_role_dto.dart';
 import '../../data/models/admin_user_dto.dart';
 import '../providers/admin_providers.dart';
@@ -39,11 +41,12 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
     if (!mounted) return;
     // Refresh the list so the UI reflects the server state.
     ref.invalidate(adminUsersProvider);
+    ref.invalidate(adminUserDetailsProvider(userId));
 
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Не удалось: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Не удалось: $error')));
     }
   }
 
@@ -62,14 +65,16 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
   }
 
   Future<void> _editRoles(AdminUserDto user) async {
-    final allRoles = ref.read(adminRolesProvider).maybeWhen(
+    final allRoles = ref
+        .read(adminRolesProvider)
+        .maybeWhen(
           data: (roles) => roles,
           orElse: () => const <AdminRoleDto>[],
         );
     if (allRoles.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Список ролей недоступен')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Список ролей недоступен')));
       return;
     }
 
@@ -93,6 +98,13 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
         userId: user.id,
         roleIds: selected,
       ),
+    );
+  }
+
+  Future<void> _showUserDetails(AdminUserDto user) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => _UserDetailsDialog(user: user),
     );
   }
 
@@ -136,7 +148,10 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                 IconButton(
                   tooltip: 'Обновить',
                   onPressed: () => ref.invalidate(adminUsersProvider),
-                  icon: Icon(Icons.refresh_rounded, color: colors.textSecondary),
+                  icon: Icon(
+                    Icons.refresh_rounded,
+                    color: colors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -161,16 +176,16 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                     : users
                           .where(
                             (u) =>
-                                u.displayName
-                                    .toLowerCase()
-                                    .contains(normalizedQuery) ||
-                                u.email
-                                    .toLowerCase()
-                                    .contains(normalizedQuery) ||
+                                u.displayName.toLowerCase().contains(
+                                  normalizedQuery,
+                                ) ||
+                                u.email.toLowerCase().contains(
+                                  normalizedQuery,
+                                ) ||
                                 u.roles.any(
-                                  (r) => r.code
-                                      .toLowerCase()
-                                      .contains(normalizedQuery),
+                                  (r) => r.code.toLowerCase().contains(
+                                    normalizedQuery,
+                                  ),
                                 ),
                           )
                           .toList(growable: false);
@@ -208,6 +223,7 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                           isSelf: user.id == currentUserId,
                           onToggleStatus: () => _toggleStatus(user),
                           onEditRoles: () => _editRoles(user),
+                          onViewDetails: () => _showUserDetails(user),
                         ),
                       ),
                     ),
@@ -293,6 +309,7 @@ class _UserRowCard extends StatelessWidget {
     required this.isSelf,
     required this.onToggleStatus,
     required this.onEditRoles,
+    required this.onViewDetails,
   });
 
   final AdminUserDto user;
@@ -301,11 +318,13 @@ class _UserRowCard extends StatelessWidget {
   final bool isSelf;
   final VoidCallback onToggleStatus;
   final VoidCallback onEditRoles;
+  final VoidCallback onViewDetails;
 
   @override
   Widget build(BuildContext context) {
-    final statusColor =
-        user.isActive ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
+    final statusColor = user.isActive
+        ? const Color(0xFF4CAF50)
+        : const Color(0xFFF44336);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -436,6 +455,15 @@ class _UserRowCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    IconButton(
+                      tooltip: 'Детали пользователя',
+                      onPressed: onViewDetails,
+                      icon: Icon(
+                        Icons.visibility_outlined,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     OutlinedButton.icon(
                       onPressed: onEditRoles,
                       icon: const Icon(Icons.shield_outlined, size: 16),
@@ -455,7 +483,9 @@ class _UserRowCard extends StatelessWidget {
                     Tooltip(
                       message: isSelf
                           ? 'Нельзя изменить свой статус'
-                          : (user.isActive ? 'Заблокировать' : 'Разблокировать'),
+                          : (user.isActive
+                                ? 'Заблокировать'
+                                : 'Разблокировать'),
                       child: Switch(
                         value: user.isActive,
                         activeThumbColor: const Color(0xFF4CAF50),
@@ -489,11 +519,11 @@ class _RoleChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color: muted ? colors.surfaceSoft : _kAdminViolet.withValues(alpha: 0.1),
+        color: muted
+            ? colors.surfaceSoft
+            : _kAdminViolet.withValues(alpha: 0.1),
         border: Border.all(
-          color: muted
-              ? colors.divider
-              : _kAdminViolet.withValues(alpha: 0.3),
+          color: muted ? colors.divider : _kAdminViolet.withValues(alpha: 0.3),
         ),
       ),
       child: Text(
@@ -503,6 +533,479 @@ class _RoleChip extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: muted ? colors.textSecondary : _kAdminViolet,
         ),
+      ),
+    );
+  }
+}
+
+class _UserDetailsDialog extends ConsumerWidget {
+  const _UserDetailsDialog({required this.user});
+
+  final AdminUserDto user;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final detailsAsync = ref.watch(adminUserDetailsProvider(user.id));
+
+    return AlertDialog(
+      title: Text('Данные пользователя · ${user.displayName}'),
+      content: SizedBox(
+        width: 760,
+        child: detailsAsync.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => _DetailsError(
+            message: '$error',
+            onRetry: () => ref.invalidate(adminUserDetailsProvider(user.id)),
+          ),
+          data: (details) {
+            if (details == null) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Text('Нет данных для выбранного пользователя.'),
+              );
+            }
+
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _DetailsHeader(
+                    profile: details.profile,
+                    isActive: user.isActive,
+                    colors: colors,
+                  ),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _MetricTile(
+                        label: 'XP',
+                        value: '${details.profile.xp}',
+                        colors: colors,
+                      ),
+                      _MetricTile(
+                        label: 'Level',
+                        value: '${details.profile.level}',
+                        colors: colors,
+                      ),
+                      _MetricTile(
+                        label: 'Streak',
+                        value:
+                            '${details.profile.streak}/${details.profile.maxStreak}',
+                        colors: colors,
+                      ),
+                      _MetricTile(
+                        label: 'Achievements',
+                        value:
+                            '${details.unlockedAchievements}/${details.achievements.length}',
+                        colors: colors,
+                      ),
+                      _MetricTile(
+                        label: 'Lessons',
+                        value:
+                            '${details.completedLessons}/${details.totalLessons}',
+                        colors: colors,
+                      ),
+                      _MetricTile(
+                        label: 'Courses',
+                        value: '${details.courseProgress.length}',
+                        colors: colors,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  _SectionTitle(
+                    title: 'Роли',
+                    trailing: '${details.roles.length}',
+                    colors: colors,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: details.roles.isEmpty
+                        ? [
+                            _RoleChip(
+                              label: 'без роли',
+                              colors: colors,
+                              muted: true,
+                            ),
+                          ]
+                        : details.roles
+                              .map(
+                                (role) => _RoleChip(
+                                  label: role.code.isNotEmpty
+                                      ? role.code
+                                      : role.name,
+                                  colors: colors,
+                                ),
+                              )
+                              .toList(growable: false),
+                  ),
+                  const SizedBox(height: 20),
+                  _SectionTitle(
+                    title: 'Достижения',
+                    trailing:
+                        '${details.unlockedAchievements}/${details.achievements.length}',
+                    colors: colors,
+                  ),
+                  const SizedBox(height: 8),
+                  _AchievementsPreview(
+                    achievements: details.achievements,
+                    colors: colors,
+                  ),
+                  const SizedBox(height: 20),
+                  _SectionTitle(
+                    title: 'Прогресс по курсам',
+                    trailing: '${details.courseProgress.length}',
+                    colors: colors,
+                  ),
+                  const SizedBox(height: 8),
+                  _ProgressPreview(
+                    progress: details.courseProgress,
+                    courseNames: details.courseNames,
+                    colors: colors,
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton.icon(
+          onPressed: () => ref.invalidate(adminUserDetailsProvider(user.id)),
+          icon: const Icon(Icons.refresh_rounded, size: 18),
+          label: const Text('Обновить'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: _kAdminViolet),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Закрыть'),
+        ),
+      ],
+    );
+  }
+}
+
+class _DetailsHeader extends StatelessWidget {
+  const _DetailsHeader({
+    required this.profile,
+    required this.isActive,
+    required this.colors,
+  });
+
+  final AdminUserDto profile;
+  final bool isActive;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = isActive
+        ? const Color(0xFF4CAF50)
+        : const Color(0xFFF44336);
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: _kAdminViolet.withValues(alpha: 0.12),
+          child: Text(
+            profile.displayName.isNotEmpty
+                ? profile.displayName[0].toUpperCase()
+                : '?',
+            style: const TextStyle(
+              color: _kAdminViolet,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                profile.displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                profile.email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: colors.textSecondary, fontSize: 12.5),
+              ),
+              if (profile.bio.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  profile.bio.trim(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12.5),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: statusColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            isActive ? 'Активен' : 'Заблокирован',
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
+    required this.label,
+    required this.value,
+    required this.colors,
+  });
+
+  final String label;
+  final String value;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 112,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: colors.textSecondary, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({
+    required this.title,
+    required this.trailing,
+    required this.colors,
+  });
+
+  final String title;
+  final String trailing;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          trailing,
+          style: TextStyle(color: colors.textSecondary, fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
+
+class _AchievementsPreview extends StatelessWidget {
+  const _AchievementsPreview({
+    required this.achievements,
+    required this.colors,
+  });
+
+  final List<BackendAchievementDto> achievements;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    if (achievements.isEmpty) {
+      return Text(
+        'Достижений пока нет.',
+        style: TextStyle(color: colors.textSecondary),
+      );
+    }
+
+    return Column(
+      children: achievements
+          .take(8)
+          .map((item) {
+            final title = item.title.ru.isNotEmpty
+                ? item.title.ru
+                : item.title.en.isNotEmpty
+                ? item.title.en
+                : item.id;
+            return _CompactRow(
+              icon: item.unlocked
+                  ? Icons.emoji_events_rounded
+                  : Icons.lock_outline_rounded,
+              title: title,
+              subtitle: '${item.progress}/${item.goal}',
+              color: item.unlocked
+                  ? const Color(0xFFFFA000)
+                  : colors.textSecondary,
+              colors: colors,
+            );
+          })
+          .toList(growable: false),
+    );
+  }
+}
+
+class _ProgressPreview extends StatelessWidget {
+  const _ProgressPreview({
+    required this.progress,
+    required this.courseNames,
+    required this.colors,
+  });
+
+  final List<BackendCourseProgressDto> progress;
+  final Map<String, String> courseNames;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    if (progress.isEmpty) {
+      return Text(
+        'Прогресса по курсам пока нет.',
+        style: TextStyle(color: colors.textSecondary),
+      );
+    }
+
+    return Column(
+      children: progress
+          .map((item) {
+            final name = courseNames[item.courseId]?.trim();
+            final title = (name != null && name.isNotEmpty)
+                ? name
+                : item.courseId.substring(0, 8);
+            return _CompactRow(
+              icon: Icons.timeline_rounded,
+              title: title,
+              subtitle:
+                  '${item.progressPercent}% · ${item.completedLessons}/${item.totalLessons} уроков',
+              color: _kAdminViolet,
+              colors: colors,
+            );
+          })
+          .toList(growable: false),
+    );
+  }
+}
+
+class _CompactRow extends StatelessWidget {
+  const _CompactRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.colors,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            subtitle,
+            style: TextStyle(color: colors.textSecondary, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailsError extends StatelessWidget {
+  const _DetailsError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline_rounded, color: Color(0xFFF44336)),
+          const SizedBox(height: 10),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Повторить'),
+          ),
+        ],
       ),
     );
   }
@@ -614,7 +1117,9 @@ class _ErrorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF44336).withValues(alpha: 0.4)),
+        border: Border.all(
+          color: const Color(0xFFF44336).withValues(alpha: 0.4),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,8 +1172,11 @@ class _EmptyCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(Icons.people_outline_rounded,
-              size: 40, color: colors.textSecondary),
+          Icon(
+            Icons.people_outline_rounded,
+            size: 40,
+            color: colors.textSecondary,
+          ),
           const SizedBox(height: 12),
           Text(
             'Пользователи не найдены',

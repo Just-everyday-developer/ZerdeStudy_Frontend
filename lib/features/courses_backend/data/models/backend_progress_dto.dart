@@ -3,6 +3,7 @@
 class BackendCourseProgressDto {
   const BackendCourseProgressDto({
     required this.courseId,
+    required this.userId,
     required this.totalLessons,
     required this.completedLessons,
     required this.progressPercent,
@@ -11,6 +12,7 @@ class BackendCourseProgressDto {
   });
 
   final String courseId;
+  final String userId;
   final int totalLessons;
   final int completedLessons;
   final int progressPercent;
@@ -28,6 +30,7 @@ class BackendCourseProgressDto {
 
     return BackendCourseProgressDto(
       courseId: '${json['course_id'] ?? ''}',
+      userId: '${json['user_id'] ?? ''}',
       totalLessons: (json['total_lessons'] as num?)?.round() ?? 0,
       completedLessons: (json['completed_lessons'] as num?)?.round() ?? 0,
       progressPercent: (json['progress_percent'] as num?)?.round() ?? 0,

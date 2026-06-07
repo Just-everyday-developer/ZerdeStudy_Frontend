@@ -10,6 +10,7 @@ class AppUserAvatar extends StatelessWidget {
     super.key,
     required this.name,
     this.avatarBase64,
+    this.photoUrl,
     required this.size,
     this.enableHero = false,
     this.heroTag = 'shell-profile-avatar',
@@ -17,6 +18,8 @@ class AppUserAvatar extends StatelessWidget {
 
   final String name;
   final String? avatarBase64;
+  /// Presigned URL from Minio/backend. Takes priority over [avatarBase64].
+  final String? photoUrl;
   final double size;
   final bool enableHero;
   final String heroTag;
@@ -24,13 +27,18 @@ class AppUserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final imageBytes = _decodeAvatarBytes(avatarBase64);
+    final effectiveUrl = photoUrl?.trim();
+    final hasNetworkImage = effectiveUrl != null && effectiveUrl.isNotEmpty;
+    final imageBytes = hasNetworkImage ? null : _decodeAvatarBytes(avatarBase64);
+    final hasLocalImage = imageBytes != null;
+    final hasImage = hasNetworkImage || hasLocalImage;
+
     final avatar = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: imageBytes == null
+        gradient: !hasImage
             ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -40,7 +48,7 @@ class AppUserAvatar extends StatelessWidget {
                 ],
               )
             : null,
-        color: imageBytes == null ? null : colors.surfaceSoft,
+        color: hasImage ? colors.surfaceSoft : null,
         border: Border.all(
           color: colors.primary.withValues(alpha: 0.34),
           width: size >= 72 ? 2.2 : 1.6,
@@ -54,30 +62,32 @@ class AppUserAvatar extends StatelessWidget {
         ],
       ),
       child: ClipOval(
-        child: imageBytes == null
-            ? Center(
-                child: Text(
-                  _initials(name),
-                  style: TextStyle(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w900,
-                    fontSize: size * 0.3,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-              )
-            : Image.memory(
-                imageBytes,
+        child: hasNetworkImage
+            ? Image.network(
+                effectiveUrl,
                 fit: BoxFit.cover,
                 gaplessPlayback: true,
-                errorBuilder: (_, _, _) => Center(
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: colors.primary,
-                    size: size * 0.42,
-                  ),
-                ),
-              ),
+                errorBuilder: (_, _, _) {
+                  final bytes = imageBytes;
+                  return bytes != null
+                      ? Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true)
+                      : _initialsWidget(name, colors);
+                },
+              )
+            : hasLocalImage
+                ? Image.memory(
+                    imageBytes,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, _, _) => Center(
+                      child: Icon(
+                        Icons.person_rounded,
+                        color: colors.primary,
+                        size: size * 0.42,
+                      ),
+                    ),
+                  )
+                : _initialsWidget(name, colors),
       ),
     );
 
@@ -86,6 +96,20 @@ class AppUserAvatar extends StatelessWidget {
     }
 
     return Hero(tag: heroTag, child: avatar);
+  }
+
+  Widget _initialsWidget(String name, AppThemeColors colors) {
+    return Center(
+      child: Text(
+        _initials(name),
+        style: TextStyle(
+          color: colors.primary,
+          fontWeight: FontWeight.w900,
+          fontSize: size * 0.3,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
   }
 
   static Uint8List? _decodeAvatarBytes(String? avatarBase64) {

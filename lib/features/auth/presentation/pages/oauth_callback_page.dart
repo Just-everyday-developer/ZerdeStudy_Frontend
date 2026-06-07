@@ -24,25 +24,32 @@ class _OAuthCallbackPageState extends ConsumerState<OAuthCallbackPage> {
   @override
   void initState() {
     super.initState();
-    _processCallback();
+    // Defer until after the frame is built — Riverpod 3.x throws if provider
+    // state is modified during the build phase (which includes initState).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _processCallback();
+    });
   }
 
   Future<void> _processCallback() async {
+    debugPrint('[OAuth] callback started — provider=${widget.provider} code_len=${widget.code.length}');
     final notifier = ref.read(authControllerProvider.notifier);
     final String? error;
-    
+
     if (widget.provider == 'google') {
+      debugPrint('[OAuth] calling handleGoogleCallback…');
       error = await notifier.handleGoogleCallback(widget.code);
     } else {
+      debugPrint('[OAuth] calling handleGithubCallback…');
       error = await notifier.handleGithubCallback(widget.code);
     }
 
+    debugPrint('[OAuth] handler returned — error=$error mounted=$mounted');
     if (!mounted) return;
 
     if (error != null) {
       setState(() => _error = error);
     } else {
-      // The router SHOULD redirect automatically, but we'll force it just in case
       context.go(AppRoutes.home);
     }
   }

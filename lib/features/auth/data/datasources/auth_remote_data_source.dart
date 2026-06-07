@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../../core/network/json_http_client.dart';
 import '../models/auth_tokens_dto.dart';
 import '../models/auth_user_dto.dart';
@@ -160,6 +162,7 @@ class AuthRemoteDataSource {
     String? platform,
     String? redirectUri,
   }) async {
+    debugPrint('[RemoteDataSource] POST /oauth/google/callback  platform=$platform  redirect_uri=$redirectUri  code_len=${code.length}');
     final json = await _client.postJson(
       '/api/v1/auth/oauth/google/callback',
       body: <String, dynamic>{
@@ -168,6 +171,7 @@ class AuthRemoteDataSource {
         if (redirectUri != null) 'redirect_uri': redirectUri,
       },
     );
+    debugPrint('[RemoteDataSource] POST /oauth/google/callback response: $json');
     return AuthTokensDto.fromJson(json);
   }
 

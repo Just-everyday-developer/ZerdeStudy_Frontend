@@ -4,6 +4,13 @@ import '../../app/routing/app_routes.dart';
 
 /// Handles OAuth return URLs on Flutter web when the browser path and GoRouter disagree.
 abstract final class OAuthWebBootstrap {
+  /// Set once GoRouter has successfully resolved to the callback route for the
+  /// current browser URL. `Uri.base` keeps the `?code=...` query around even
+  /// after the user navigates elsewhere (e.g. "Back to Login"), so without
+  /// this latch [redirectForGoRouter] would keep bouncing the user back to
+  /// the callback page forever, making navigation away from it impossible.
+  static bool _callbackConsumed = false;
+
   static String get initialLocation {
     if (!kIsWeb) {
       return AppRoutes.welcome;
@@ -14,7 +21,7 @@ abstract final class OAuthWebBootstrap {
   /// If Google/GitHub returned to `/auth/.../callback?code=...` but the app shows `#/welcome`,
   /// force navigation to the callback route so [OAuthCallbackPage] runs.
   static String? redirectForGoRouter(String matchedLocation) {
-    if (!kIsWeb) {
+    if (!kIsWeb || _callbackConsumed) {
       return null;
     }
 
@@ -30,6 +37,9 @@ abstract final class OAuthWebBootstrap {
     }
 
     if (matchedLocation == callbackPath) {
+      // Arrived at the callback page — stop intercepting future navigation
+      // (e.g. the user clicking "Back to Login" after a failed exchange).
+      _callbackConsumed = true;
       return null;
     }
 

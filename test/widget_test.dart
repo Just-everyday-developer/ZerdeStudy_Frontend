@@ -12,7 +12,6 @@ import 'package:frontend_flutter/app/routing/app_routes.dart';
 import 'package:frontend_flutter/app/routing/router.dart';
 import 'package:frontend_flutter/app/state/app_locale.dart';
 import 'package:frontend_flutter/app/state/demo_app_controller.dart';
-import 'package:frontend_flutter/app/state/demo_moderator_controller.dart';
 import 'package:frontend_flutter/core/common_widgets/inline_markdown_text.dart';
 import 'package:frontend_flutter/core/network/json_http_client.dart';
 import 'package:frontend_flutter/core/common_widgets/glow_card.dart';
@@ -29,14 +28,12 @@ import 'package:frontend_flutter/features/auth/domain/entities/auth_role.dart';
 import 'package:frontend_flutter/features/auth/domain/entities/auth_session.dart';
 import 'package:frontend_flutter/features/auth/domain/entities/auth_user.dart';
 import 'package:frontend_flutter/features/auth/domain/repositories/auth_repository.dart';
-import 'package:frontend_flutter/features/faq/presentation/pages/faq_page.dart';
 import 'package:frontend_flutter/features/home/presentation/pages/community_courses_page.dart';
 import 'package:frontend_flutter/features/home/presentation/pages/home_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/learn_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/lesson_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/practice_page.dart';
 import 'package:frontend_flutter/features/learning/presentation/pages/track_assessment_page.dart';
-import 'package:frontend_flutter/features/moderator/presentation/pages/moderator_shell_page.dart';
 import 'package:frontend_flutter/features/profile/presentation/pages/profile_page.dart';
 import 'package:frontend_flutter/main.dart';
 
@@ -347,31 +344,6 @@ void main() {
     expect(find.text('Overview'), findsOneWidget);
   });
 
-  testWidgets('moderator workspace renders comments and community sections', (
-    tester,
-  ) async {
-    await configureSurface(tester);
-    final container = await createContainer(
-      overrides: [
-        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
-      ],
-    );
-
-    await tester.pumpWidget(
-      buildTestApp(container, const ModeratorShellPage(initialTab: 3)),
-    );
-    await pumpScene(tester);
-
-    expect(find.text('Модерация комментариев'), findsOneWidget);
-
-    await tester.pumpWidget(
-      buildTestApp(container, const ModeratorShellPage(initialTab: 4)),
-    );
-    await pumpScene(tester);
-
-    expect(find.text('Управление community-контентом'), findsOneWidget);
-  });
-
   testWidgets('inline markdown text renders bold and code spans', (
     tester,
   ) async {
@@ -565,45 +537,6 @@ void main() {
     await pumpScene(tester);
 
     expect(find.text('Nice OOP midterm.'), findsOneWidget);
-  });
-
-  testWidgets('faq page submits a question to the moderator queue', (
-    tester,
-  ) async {
-    await configureSurface(tester);
-    final container = await createContainer();
-    container
-        .read(demoAppControllerProvider.notifier)
-        .changeLocale(AppLocale.en);
-
-    await tester.pumpWidget(buildTestApp(container, const FaqPage()));
-    await pumpScene(tester);
-
-    await tester.scrollUntilVisible(
-      find.text('Send to moderator'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await pumpScene(tester);
-
-    expect(find.text('Did not find your answer?'), findsOneWidget);
-
-    await tester.enterText(
-      find.byType(TextField).first,
-      'Can a moderator help me restore my certificate?',
-    );
-    await tester.tap(find.text('Send to moderator'));
-    await pumpScene(tester);
-
-    final submittedQuestions = container.read(demoModeratorFaqProvider);
-    expect(
-      submittedQuestions.first.question,
-      'Can a moderator help me restore my certificate?',
-    );
-    expect(
-      find.text('Can a moderator help me restore my certificate?'),
-      findsNothing,
-    );
   });
 
   testWidgets('learn discovery page shows search rails and frequent searches', (

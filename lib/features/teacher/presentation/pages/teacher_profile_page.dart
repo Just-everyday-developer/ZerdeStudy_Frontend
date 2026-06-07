@@ -13,6 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../teacher_text.dart';
 import '../widgets/teacher_studio_widgets.dart';
 
@@ -32,11 +34,34 @@ class _TeacherProfilePageState extends ConsumerState<TeacherProfilePage> {
     final locale = demoState.locale;
     final colors = context.appColors;
     final user = demoState.user;
-    final name = user?.name ?? 'Aigerim Tursynbek';
-    final email = user?.email ?? 'aigerim@zerdestudy.app';
+
+    // Real identity from the backend (/profiles/me): login → name, email, bio.
+    final backendProfile = ref
+        .watch(backendProfileProvider)
+        .maybeWhen(data: (p) => p, orElse: () => null);
+    final backendLogin = (backendProfile?.login ?? '').trim();
+    final backendBio = (backendProfile?.bio ?? '').trim();
+    final name = backendLogin.isNotEmpty
+        ? backendLogin
+        : (user?.name ?? '').trim().isNotEmpty
+            ? user!.name
+            : 'Преподаватель';
+    final email = (backendProfile?.email ?? '').isNotEmpty
+        ? backendProfile!.email
+        : (user?.email ?? 'teacher@zerdestudy.app');
     final initial = name.trim().isEmpty
         ? 'T'
         : name.trim().substring(0, 1).toUpperCase();
+
+    // Real count of courses authored by this teacher.
+    final myId = ref.watch(authControllerProvider).session?.user.id ?? '';
+    final courseCount = ref.watch(teacherBackendCoursesProvider).maybeWhen(
+          data: (list) {
+            final mine = list.where((c) => c.author.id == myId).length;
+            return mine > 0 ? mine : list.length;
+          },
+          orElse: () => 0,
+        );
 
     return TsPageScrollView(
       children: [
@@ -63,7 +88,7 @@ class _TeacherProfilePageState extends ConsumerState<TeacherProfilePage> {
           children: [
             TsKpiCard(
               label: _statCoursesLabel.resolve(locale),
-              value: '12',
+              value: '$courseCount',
               accent: colors.primary,
               subtitle: _statCoursesSub.resolve(locale),
             ),
@@ -116,7 +141,8 @@ class _TeacherProfilePageState extends ConsumerState<TeacherProfilePage> {
                 TsEyebrow(_bioEyebrow.resolve(locale)),
                 const SizedBox(height: 10),
                 Text(
-                  _bioBody.resolve(locale),
+                  // Use the teacher's own bio from the server when present.
+                  backendBio.isNotEmpty ? backendBio : _bioBody.resolve(locale),
                   style: TextStyle(
                     color: colors.textSecondary,
                     fontSize: 13.5,

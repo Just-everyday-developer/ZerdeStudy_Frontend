@@ -20,7 +20,7 @@ import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../teacher_text.dart';
 import 'teacher_analytics_page.dart';
-import 'teacher_course_builder_page.dart';
+import 'teacher_courses_page.dart';
 import 'teacher_dashboard_page.dart';
 import 'teacher_profile_page.dart';
 import 'teacher_qna_page.dart';
@@ -42,7 +42,7 @@ class TeacherShellPage extends ConsumerWidget {
 
     final page = switch (section) {
       TeacherSection.dashboard => const TeacherDashboardPage(),
-      TeacherSection.builder   => const TeacherCourseBuilderPage(),
+      TeacherSection.builder   => const TeacherCoursesPage(),
       TeacherSection.analytics => const TeacherAnalyticsPage(),
       TeacherSection.qna       => const TeacherQnaPage(),
       TeacherSection.profile   => const TeacherProfilePage(),
@@ -114,11 +114,11 @@ _Descriptor _descriptor(TeacherSection s) {
     case TeacherSection.builder:
       return _Descriptor(
         route: AppRoutes.teacherBuilder,
-        icon: Icons.account_tree_rounded,
+        icon: Icons.library_books_rounded,
         title: teacherText(
-          ru: 'Конструктор',
-          en: 'Course Builder',
-          kk: 'Курс құрастырушы',
+          ru: 'Мои курсы',
+          en: 'My Courses',
+          kk: 'Менің курстарым',
         ),
       );
     case TeacherSection.analytics:

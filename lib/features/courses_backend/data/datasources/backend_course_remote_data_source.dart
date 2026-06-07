@@ -182,6 +182,29 @@ class BackendCourseRemoteDataSource {
     return BackendLessonDto.fromJson(json);
   }
 
+  Future<BackendLessonDto> uploadLessonVideo({
+    required String accessToken,
+    required String lessonId,
+    required List<int> videoBytes,
+    required String fileName,
+    String? videoObjectKey,
+  }) async {
+    final fields = <String, String>{
+      if (videoObjectKey != null && videoObjectKey.trim().isNotEmpty)
+        'video_object_key': videoObjectKey.trim(),
+    };
+    final json = await _client.postMultipart(
+      '/api/v1/lesson/${lessonId.trim()}/video',
+      headers: _authHeaders(accessToken),
+      fields: fields,
+      fileField: 'video',
+      fileBytes: videoBytes,
+      fileName: fileName.trim().isEmpty ? 'lesson-video.mp4' : fileName.trim(),
+    );
+
+    return BackendLessonDto.fromJson(json);
+  }
+
   Future<BackendPracticeDto> fetchPracticeById({
     required String accessToken,
     required String practiceId,
@@ -307,6 +330,18 @@ class BackendCourseRemoteDataSource {
     return BackendQuizAnswerResultDto.fromJson(json);
   }
 
+  /// Issues (or fetches existing) PDF certificate for [courseId].
+  /// Returns a map with: certificate_number, issued_at, completed_at, download_url.
+  Future<JsonMap> issueCertificate({
+    required String accessToken,
+    required String courseId,
+  }) {
+    return _client.getJson(
+      '/api/v1/course/${courseId.trim()}/certificate',
+      headers: _authHeaders(accessToken),
+    );
+  }
+
   Future<BackendStreakDto> fetchStreak({required String accessToken}) async {
     final json = await _client.getJson(
       '/api/v1/streak',
@@ -343,6 +378,19 @@ class BackendCourseRemoteDataSource {
     return BackendCourseProgressDto.fromJson(json);
   }
 
+  Future<BackendCourseProgressDto> fetchCourseProgressForUser({
+    required String accessToken,
+    required String courseId,
+    required String userId,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/course/${courseId.trim()}/progress/${userId.trim()}',
+      headers: _authHeaders(accessToken),
+    );
+
+    return BackendCourseProgressDto.fromJson(json);
+  }
+
   /// Progress across all of the signed-in user's courses.
   Future<List<BackendCourseProgressDto>> fetchAllProgress({
     required String accessToken,
@@ -352,9 +400,19 @@ class BackendCourseRemoteDataSource {
       headers: _authHeaders(accessToken),
     );
 
-    return json
-        .map(BackendCourseProgressDto.fromJson)
-        .toList(growable: false);
+    return json.map(BackendCourseProgressDto.fromJson).toList(growable: false);
+  }
+
+  Future<List<BackendCourseProgressDto>> fetchAllProgressForUser({
+    required String accessToken,
+    required String userId,
+  }) async {
+    final json = await _client.getJsonList(
+      '/api/v1/progress/${userId.trim()}',
+      headers: _authHeaders(accessToken),
+    );
+
+    return json.map(BackendCourseProgressDto.fromJson).toList(growable: false);
   }
 
   Future<List<BackendAchievementDto>> fetchAchievements({
@@ -362,6 +420,18 @@ class BackendCourseRemoteDataSource {
   }) async {
     final json = await _client.getJsonList(
       '/api/v1/achievements',
+      headers: _authHeaders(accessToken),
+    );
+
+    return json.map(BackendAchievementDto.fromJson).toList(growable: false);
+  }
+
+  Future<List<BackendAchievementDto>> fetchAchievementsForUser({
+    required String accessToken,
+    required String userId,
+  }) async {
+    final json = await _client.getJsonList(
+      '/api/v1/achievements/${userId.trim()}',
       headers: _authHeaders(accessToken),
     );
 
@@ -407,10 +477,7 @@ class BackendCourseRemoteDataSource {
   Future<List<BackendDictionaryEntryDto>> fetchTags({
     required String accessToken,
   }) {
-    return _fetchDictionary(
-      '/api/v1/dictionary/tag',
-      accessToken: accessToken,
-    );
+    return _fetchDictionary('/api/v1/dictionary/tag', accessToken: accessToken);
   }
 
   Future<List<BackendDictionaryEntryDto>> fetchLocales({
@@ -455,10 +522,7 @@ class BackendCourseRemoteDataSource {
     return _client.postJson(
       '/api/v1/course/enrollment',
       headers: _authHeaders(accessToken),
-      body: <String, dynamic>{
-        'course_id': courseId,
-        'user_id': userId,
-      },
+      body: <String, dynamic>{'course_id': courseId, 'user_id': userId},
     );
   }
 

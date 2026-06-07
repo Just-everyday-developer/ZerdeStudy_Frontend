@@ -20,10 +20,7 @@ import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
 // Community Groups removed (no backend, fully hardcoded mock).
-// import '../../features/community/presentation/pages/community_page.dart';
-// import '../../features/community/presentation/pages/community_group_page.dart';
-// FAQ temporarily disabled.
-// import '../../features/faq/presentation/pages/faq_page.dart';
+// FAQ and Moderator removed (no backend, hardcoded mock).
 import '../../features/home/presentation/pages/community_course_detail_page.dart';
 import '../../features/home/presentation/pages/community_course_player_page.dart';
 import '../../features/home/presentation/pages/community_courses_page.dart';
@@ -35,7 +32,7 @@ import '../../features/learning/presentation/pages/track_assessment_page.dart';
 import '../../features/learning/presentation/pages/lesson_page.dart';
 import '../../features/learning/presentation/pages/practice_page.dart';
 import '../../features/learning/presentation/pages/track_page.dart';
-import '../../features/moderator/presentation/pages/moderator_shell_page.dart';
+import '../../features/admin/presentation/pages/admin_shell_page.dart';
 import '../../features/payment/presentation/pages/payment_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/teacher/presentation/pages/teacher_shell_page.dart';
@@ -120,16 +117,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         AppRoutes.githubCallback,
       }.contains(path);
       final isTeacherRoute = path.startsWith(AppRoutes.teacher);
-      final isModeratorRoute = path.startsWith(AppRoutes.moderator);
+      final isAdminRoute = path.startsWith(AppRoutes.admin);
       final primaryAuthenticatedRoute = switch (activeExperience) {
         AppExperience.student => AppRoutes.home,
         AppExperience.teacher => AppRoutes.teacher,
-        AppExperience.moderator => AppRoutes.moderator,
-        AppExperience.admin => AppRoutes.moderator,
+        AppExperience.admin => AppRoutes.admin,
       };
 
       if (!isReady) {
         return isAuthRoute ? null : AppRoutes.welcome;
+      }
+      // Never redirect away from an OAuth callback route — OAuthCallbackPage
+      // handles navigation itself after exchanging the code for tokens.
+      // Without this guard a stored session restored by _restoreSession would
+      // fire isAuthenticated=true and kick the user to home before the code
+      // exchange POST can complete.
+      if (path == AppRoutes.googleCallback || path == AppRoutes.githubCallback) {
+        return null;
       }
       if (!isAuthenticated) {
         return isAuthRoute ? null : AppRoutes.welcome;
@@ -141,14 +145,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (isAuthenticated && activeExperience == AppExperience.teacher) {
         return isTeacherRoute ? null : AppRoutes.teacher;
       }
-      if (isAuthenticated && activeExperience == AppExperience.moderator) {
-        return isModeratorRoute ? null : AppRoutes.moderator;
-      }
-      // Admin shares the moderator shell (with extra Users/Roles tabs).
       if (isAuthenticated && activeExperience == AppExperience.admin) {
-        return isModeratorRoute ? null : AppRoutes.moderator;
+        return isAdminRoute ? null : AppRoutes.admin;
       }
-      if (isTeacherRoute || isModeratorRoute) {
+      if (isTeacherRoute || isAdminRoute) {
         return AppRoutes.home;
       }
       return null;
@@ -342,13 +342,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) =>
             cyberTransition(state: state, child: const LeaderboardPage()),
       ),
-      // FAQ temporarily disabled.
-      // GoRoute(
-      //   path: AppRoutes.faq,
-      //   parentNavigatorKey: appRootNavigatorKey,
-      //   pageBuilder: (context, state) =>
-      //       cyberTransition(state: state, child: const FaqPage()),
-      // ),
       GoRoute(
         path: AppRoutes.courses,
         parentNavigatorKey: appRootNavigatorKey,
@@ -472,67 +465,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: AppRoutes.moderator,
+        path: AppRoutes.admin,
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const ModeratorShellPage(initialTab: 0),
+          child: const AdminShellPage(section: AdminSection.users),
         ),
       ),
       GoRoute(
-        path: AppRoutes.moderatorCourses,
+        path: AppRoutes.adminRoles,
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const ModeratorShellPage(initialTab: 1),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.moderatorReports,
-        parentNavigatorKey: appRootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const ModeratorShellPage(initialTab: 2),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.moderatorComments,
-        parentNavigatorKey: appRootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const ModeratorShellPage(initialTab: 3),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.moderatorCommunity,
-        parentNavigatorKey: appRootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const ModeratorShellPage(initialTab: 4),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.moderatorFaq,
-        parentNavigatorKey: appRootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const ModeratorShellPage(initialTab: 5),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.moderatorUsers,
-        parentNavigatorKey: appRootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const ModeratorShellPage(initialTab: 6),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.moderatorSystem,
-        parentNavigatorKey: appRootNavigatorKey,
-        pageBuilder: (context, state) => cyberTransition(
-          state: state,
-          child: const ModeratorShellPage(initialTab: 7),
+          child: const AdminShellPage(section: AdminSection.roles),
         ),
       ),
     ],

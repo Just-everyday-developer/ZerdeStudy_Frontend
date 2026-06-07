@@ -8,6 +8,7 @@ import '../../app/state/app_locale.dart';
 import '../../app/state/demo_app_controller.dart';
 import '../../features/app_guide/presentation/app_guide_controller.dart';
 import '../../features/app_guide/presentation/app_guide_target.dart';
+import '../../features/auth/presentation/providers/auth_controller.dart';
 import 'app_settings_panel.dart';
 import 'app_user_avatar.dart';
 import '../localization/app_localizations.dart';
@@ -98,6 +99,9 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
     final colors = context.appColors;
     final l10n = context.l10n;
     final state = ref.watch(demoAppControllerProvider);
+    final backendPhotoUrl = ref
+        .watch(backendProfileProvider)
+        .maybeWhen(data: (p) => p?.photoUrl, orElse: () => null);
     final destinations = <_ShellDestination>[
       _ShellDestination(
         label: l10n.text('tab_home'),
@@ -160,6 +164,7 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                         currentIndex: widget.navigationShell.currentIndex,
                         currentUserName: state.user?.name ?? 'Talgat',
                         currentUserAvatarBase64: state.user?.avatarBase64,
+                        currentUserPhotoUrl: backendPhotoUrl?.isNotEmpty == true ? backendPhotoUrl : null,
                         onDestinationSelected: _onDestinationSelected,
                         onBackTap: () => _handleBack(),
                         onSearchTap: () {
@@ -221,6 +226,7 @@ class _DesktopShellBar extends StatelessWidget {
     required this.currentIndex,
     required this.currentUserName,
     required this.currentUserAvatarBase64,
+    this.currentUserPhotoUrl,
     required this.onDestinationSelected,
     required this.onBackTap,
     required this.onSearchTap,
@@ -235,6 +241,7 @@ class _DesktopShellBar extends StatelessWidget {
   final int currentIndex;
   final String currentUserName;
   final String? currentUserAvatarBase64;
+  final String? currentUserPhotoUrl;
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onBackTap;
   final VoidCallback onSearchTap;
@@ -358,6 +365,7 @@ class _DesktopShellBar extends StatelessWidget {
               child: AppUserAvatar(
                 name: currentUserName,
                 avatarBase64: currentUserAvatarBase64,
+                photoUrl: currentUserPhotoUrl,
                 size: 36,
                 enableHero: true,
               ),

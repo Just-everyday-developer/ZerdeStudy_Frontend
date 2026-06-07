@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
@@ -15,20 +14,27 @@ class LeaderboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(demoAppControllerProvider);
-    final mockEntries = ref.watch(demoCatalogProvider).leaderboardFor(state);
-    // Prefer the live backend leaderboard; fall back to local demo data when
-    // unauthenticated, loading, or the backend returns nothing.
+    // Backend leaderboard only — no mock fallback. If the backend returns
+    // nothing (or is loading/unauthenticated) we honestly show an empty state
+    // instead of fake demo entries.
     final entries = ref
         .watch(backendOopLeaderboardProvider)
         .maybeWhen(
-          data: (list) => list.isNotEmpty ? list : mockEntries,
-          orElse: () => mockEntries,
+          data: (list) => list,
+          orElse: () => const <LeaderboardEntry>[],
         );
-    final podium = entries.take(3).toList(growable: false);
-    final rest = entries.skip(3).toList(growable: false);
     final colors = context.appColors;
     final compact = context.isCompactLayout;
+
+    if (entries.isEmpty) {
+      return AppPageScaffold(
+        title: compact ? context.l10n.text('leaderboard') : null,
+        child: const _EmptyLeaderboard(),
+      );
+    }
+
+    final podium = entries.take(3).toList(growable: false);
+    final rest = entries.skip(3).toList(growable: false);
 
     return AppPageScaffold(
       title: compact ? context.l10n.text('leaderboard') : null,
@@ -402,6 +408,49 @@ class _PodiumColumn extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EmptyLeaderboard extends StatelessWidget {
+  const _EmptyLeaderboard();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.emoji_events_outlined,
+              size: 64,
+              color: colors.textSecondary.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              context.l10n.text('leaderboard_empty_title'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.text('leaderboard_empty_subtitle'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colors.textSecondary,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

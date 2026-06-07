@@ -1,1 +1,1 @@
-enum AppExperience { student, teacher, moderator, admin }
+enum AppExperience { student, teacher, admin }

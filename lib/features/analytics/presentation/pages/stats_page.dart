@@ -116,7 +116,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                       child: _KPICard(
                         title: t(ru: 'Код с первой попытки', en: 'Code on 1st Attempt', kk: 'Бірінші әрекеттен код'),
                         value: '$quizPercentVal%',
-                        changeText: t(ru: '↑ 14% с прошлой недели', en: '↑ 14% vs last week', kk: '↑ 14% өткен аптадан'),
                         topIcon: Icons.check_circle_rounded,
                         accentColor: colors.success,
                         tooltipText: t(
@@ -134,7 +133,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                       child: _KPICard(
                         title: t(ru: 'Разобранные темы с ИИ', en: 'AI Topics Cleared', kk: 'ИИ-мен талданған тақырыптар'),
                         value: '$aiTopicsVal',
-                        changeText: t(ru: '↑ 5 с прошлой недели', en: '↑ 5 vs last week', kk: '↑ 5 өткен аптадан'),
                         topIcon: Icons.psychology_rounded,
                         accentColor: colors.accent,
                         tooltipText: t(
@@ -152,7 +150,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                       child: _KPICard(
                         title: t(ru: 'Скорость усвоения (XP)', en: 'Learning Speed (XP)', kk: 'Меңгеру жылдамдығы (XP)'),
                         value: '$liveXpVal XP',
-                        changeText: t(ru: '↑ 230 XP с прошлой недели', en: '↑ 230 XP vs last week', kk: '↑ 230 XP өткен аптадан'),
                         topIcon: Icons.bolt_rounded,
                         accentColor: colors.primary,
                         tooltipText: t(
@@ -203,7 +200,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                       child: _KPICard(
                         title: t(ru: 'Решённые задачи', en: 'Solved Tasks', kk: 'Шешілген есептер'),
                         value: '$solvedTasksVal',
-                        changeText: t(ru: '↑ 16 с прошлой недели', en: '↑ 16 vs last week', kk: '↑ 16 өткен аптадан'),
                         topIcon: Icons.assignment_turned_in_rounded,
                         accentColor: const Color(0xFF00E5FF),
                         tooltipText: t(
@@ -253,7 +249,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                       child: _KPICard(
                         title: t(ru: 'Код с первой попытки', en: 'Code on 1st Attempt', kk: 'Бірінші әрекеттен код'),
                         value: '$quizPercentVal%',
-                        changeText: t(ru: '↑ 14% с прошлой недели', en: '↑ 14% vs last week', kk: '↑ 14% өткен аптадан'),
                         topIcon: Icons.check_circle_rounded,
                         accentColor: colors.success,
                         tooltipText: t(
@@ -271,7 +266,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                       child: _KPICard(
                         title: t(ru: 'Разобранные темы с ИИ', en: 'AI Topics Cleared', kk: 'ИИ-мен талданған тақырыптар'),
                         value: '$aiTopicsVal',
-                        changeText: t(ru: '↑ 5 с прошлой недели', en: '↑ 5 vs last week', kk: '↑ 5 өткен аптадан'),
                         topIcon: Icons.psychology_rounded,
                         accentColor: colors.accent,
                         tooltipText: t(
@@ -293,7 +287,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                       child: _KPICard(
                         title: t(ru: 'Скорость усвоения (XP)', en: 'Learning Speed (XP)', kk: 'Меңгеру жылдамдығы (XP)'),
                         value: '$liveXpVal XP',
-                        changeText: t(ru: '↑ 230 XP с прошлой недели', en: '↑ 230 XP vs last week', kk: '↑ 230 XP өткен аптадан'),
                         topIcon: Icons.bolt_rounded,
                         accentColor: colors.primary,
                         tooltipText: t(
@@ -333,7 +326,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                 child: _KPICard(
                   title: t(ru: 'Решённые задачи', en: 'Solved Tasks', kk: 'Шешілген есептер'),
                   value: '$solvedTasksVal',
-                  changeText: t(ru: '↑ 16 с прошлой недели', en: '↑ 16 vs last week', kk: '↑ 16 өткен аптадан'),
                   topIcon: Icons.assignment_turned_in_rounded,
                   accentColor: const Color(0xFF00E5FF),
                   tooltipText: t(
@@ -373,7 +365,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                 child: _KPICard(
                   title: t(ru: 'Код с первой попытки', en: 'Code on 1st Attempt', kk: 'Бірінші әрекеттен код'),
                   value: '$quizPercentVal%',
-                  changeText: t(ru: '↑ 14% с прошлой недели', en: '↑ 14% vs last week', kk: '↑ 14% өткен аптадан'),
                   topIcon: Icons.check_circle_rounded,
                   accentColor: colors.success,
                   tooltipText: t(
@@ -389,7 +380,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                 child: _KPICard(
                   title: t(ru: 'Разобранные темы с ИИ', en: 'AI Topics Cleared', kk: 'ИИ-мен талданған тақырыптар'),
                   value: '$aiTopicsVal',
-                  changeText: t(ru: '↑ 5 с прошлой недели', en: '↑ 5 vs last week', kk: '↑ 5 өткен аптадан'),
                   topIcon: Icons.psychology_rounded,
                   accentColor: colors.accent,
                   tooltipText: t(
@@ -405,7 +395,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                 child: _KPICard(
                   title: t(ru: 'Скорость усвоения (XP)', en: 'Learning Speed (XP)', kk: 'Меңгеру жылдамдығы (XP)'),
                   value: '$liveXpVal XP',
-                  changeText: t(ru: '↑ 230 XP с прошлой недели', en: '↑ 230 XP vs last week', kk: '↑ 230 XP өткен аптадан'),
                   topIcon: Icons.bolt_rounded,
                   accentColor: colors.primary,
                   tooltipText: t(
@@ -440,7 +429,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                 child: _KPICard(
                   title: t(ru: 'Решённые задачи', en: 'Solved Tasks', kk: 'Шешілген есептер'),
                   value: '$solvedTasksVal',
-                  changeText: t(ru: '↑ 16 с прошлой недели', en: '↑ 16 vs last week', kk: '↑ 16 өткен аптадан'),
                   topIcon: Icons.assignment_turned_in_rounded,
                   accentColor: const Color(0xFF00E5FF),
                   tooltipText: t(
@@ -1112,7 +1100,6 @@ class _BreakdownRow extends StatelessWidget {
 class _KPICard extends StatelessWidget {
   final String title;
   final String value;
-  final String changeText;
   final IconData topIcon;
   final Color accentColor;
   final String tooltipText;
@@ -1120,7 +1107,6 @@ class _KPICard extends StatelessWidget {
   const _KPICard({
     required this.title,
     required this.value,
-    required this.changeText,
     required this.topIcon,
     required this.accentColor,
     required this.tooltipText,
@@ -1219,25 +1205,6 @@ class _KPICard extends StatelessWidget {
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
             ),
-          ),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Icon(
-                Icons.arrow_upward_rounded,
-                color: accentColor,
-                size: 11,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                changeText,
-                style: TextStyle(
-                  color: accentColor,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
           ),
           const SizedBox(height: 12),
         ],
@@ -2083,34 +2050,6 @@ class _LearningTimeCard extends ConsumerWidget {
                         color: colors.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(Icons.arrow_upward_rounded, color: colors.success, size: 11),
-                    const SizedBox(width: 2),
-                    Text(
-                      t(ru: '1 ч 25 мин', en: '1h 25m', kk: '1 с 25 м'),
-                      style: TextStyle(
-                        color: colors.success,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        t(ru: 'с прошлой недели', en: 'vs last week', kk: 'өткен аптадан'),
-                        style: TextStyle(
-                          color: colors.textSecondary.withValues(alpha: 0.5),
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
