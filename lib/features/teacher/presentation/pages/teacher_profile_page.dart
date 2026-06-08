@@ -82,27 +82,15 @@ class _TeacherProfilePageState extends ConsumerState<TeacherProfilePage> {
           ),
         ),
 
-        // ── Stat tiles ──────────────────────────────────────────────────
+        // ── Stat tile ───────────────────────────────────────────────────
         TsResponsiveGrid(
-          desktopCols: 3,
+          desktopCols: 1,
           children: [
             TsKpiCard(
               label: _statCoursesLabel.resolve(locale),
               value: '$courseCount',
               accent: colors.primary,
               subtitle: _statCoursesSub.resolve(locale),
-            ),
-            TsKpiCard(
-              label: _statLearnersLabel.resolve(locale),
-              value: '11.4k',
-              accent: colors.success,
-              subtitle: _statLearnersSub.resolve(locale),
-            ),
-            TsKpiCard(
-              label: _statYearsLabel.resolve(locale),
-              value: '4',
-              accent: colors.accent,
-              subtitle: _statYearsSub.resolve(locale),
             ),
           ],
         ),
@@ -547,27 +535,6 @@ final _statCoursesSub = teacherText(
   en: 'published and draft',
   kk: 'жарияланған және нобай',
 );
-final _statLearnersLabel = teacherText(
-  ru: 'Учеников охвачено',
-  en: 'Learners reached',
-  kk: 'Оқушылар қамтылды',
-);
-final _statLearnersSub = teacherText(
-  ru: 'за всё время на платформе',
-  en: 'all-time on platform',
-  kk: 'платформадағы барлық уақыт',
-);
-final _statYearsLabel = teacherText(
-  ru: 'Лет на платформе',
-  en: 'Years on platform',
-  kk: 'Жыл платформада',
-);
-final _statYearsSub = teacherText(
-  ru: 'с момента регистрации',
-  en: 'since onboarding',
-  kk: 'тіркелгеннен бері',
-);
-
 final _teachEyebrow =
     teacherText(ru: 'ЧТО Я ПРЕПОДАЮ', en: 'WHAT I TEACH', kk: 'НЕНІ ОҚЫТАМЫН');
 final _teachTitle = teacherText(

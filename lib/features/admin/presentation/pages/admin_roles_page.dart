@@ -102,7 +102,12 @@ class AdminRolesPage extends ConsumerWidget {
                 ),
               ),
               data: (roles) {
-                if (roles.isEmpty) {
+                // The "manager" role is retired — keep it out of the catalog
+                // even though the backend still returns it from /roles.
+                final visibleRoles = roles
+                    .where((role) => role.code.toLowerCase() != 'manager')
+                    .toList(growable: false);
+                if (visibleRoles.isEmpty) {
                   return Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(40),
@@ -123,7 +128,7 @@ class AdminRolesPage extends ConsumerWidget {
                 return Wrap(
                   spacing: 16,
                   runSpacing: 16,
-                  children: roles
+                  children: visibleRoles
                       .map((role) => _RoleCard(role: role, colors: colors))
                       .toList(),
                 );
@@ -213,6 +218,10 @@ class _RoleCard extends StatelessWidget {
               if (role.isDefault) _flag('по умолчанию', const Color(0xFF4CAF50)),
               if (role.isPrivileged) _flag('привилегии', _kAdminViolet),
               if (role.isSupport) _flag('поддержка', const Color(0xFF2196F3)),
+              // Keep an invisible chip when a role has no badges so every
+              // card reserves the same height and the grid stays aligned.
+              if (!role.isDefault && !role.isPrivileged && !role.isSupport)
+                Opacity(opacity: 0, child: _flag('—', Colors.transparent)),
             ],
           ),
         ],

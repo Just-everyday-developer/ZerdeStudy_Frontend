@@ -244,7 +244,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                     if (_currentStepIndex > 0)
                       Expanded(
                         child: AppButton.secondary(
-                          label: 'Previous',
+                          label: l10n.text('lesson_step_previous'),
                           onPressed: () => setState(() => _currentStepIndex--),
                         ),
                       ),
@@ -252,14 +252,14 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                     if (_currentStepIndex < steps.length - 1)
                       Expanded(
                         child: AppButton.primary(
-                          label: 'Next Step',
+                          label: l10n.text('next_step'),
                           onPressed: () => setState(() => _currentStepIndex++),
                         ),
                       )
                     else
                       Expanded(
                         child: AppButton.primary(
-                          label: 'Отправить',
+                          label: l10n.text('lesson_step_submit'),
                           icon: completed
                               ? Icons.check_circle_rounded
                               : Icons.done_rounded,

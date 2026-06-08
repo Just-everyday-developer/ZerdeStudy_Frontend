@@ -19,6 +19,7 @@ class PremiumCodeEditor extends ConsumerStatefulWidget {
     this.onSubmit,
     this.expectedOutput,
     this.isSubmitted = false,
+    this.showRunButton = true,
   });
 
   final String initialCode;
@@ -32,6 +33,12 @@ class PremiumCodeEditor extends ConsumerStatefulWidget {
   final String? expectedOutput;
   /// When true, Submit button shows a checkmark indicating already submitted.
   final bool isSubmitted;
+  /// Hides the editor's own "Run Code" header button — set this to false when
+  /// the host page already drives execution through the curriculum-service
+  /// `/practice/:id/run` backend (e.g. PracticePage's "Run draft"/"Submit"),
+  /// so code isn't sent to the local code-runner container twice via two
+  /// different paths with diverging results (XP, pass/fail, attempt id).
+  final bool showRunButton;
 
   @override
   ConsumerState<PremiumCodeEditor> createState() => _PremiumCodeEditorState();
@@ -139,64 +146,67 @@ class _PremiumCodeEditorState extends ConsumerState<PremiumCodeEditor> {
                       ],
                     ),
                     const Spacer(),
-                    // Run Button
-                    Tooltip(
-                      message: _isRunning ? 'Running...' : 'Run Code',
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _isRunning ? null : _runCode,
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: compactHeader ? 9 : 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _isRunning
-                                  ? Colors.white10
-                                  : Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.white24),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (_isRunning)
-                                  const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation(
-                                        Colors.white,
+                    // Run Button — hidden when the host page already drives
+                    // execution through the backend (see [showRunButton]).
+                    if (widget.showRunButton) ...[
+                      Tooltip(
+                        message: _isRunning ? 'Running...' : 'Run Code',
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _isRunning ? null : _runCode,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: compactHeader ? 9 : 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _isRunning
+                                    ? Colors.white10
+                                    : Colors.white.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.white24),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_isRunning)
+                                    const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation(
+                                          Colors.white,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    const Icon(
+                                      Icons.play_arrow_rounded,
+                                      size: 18,
+                                      color: Colors.white,
+                                    ),
+                                  if (!compactHeader) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _isRunning ? 'Running...' : 'Run Code',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                  )
-                                else
-                                  const Icon(
-                                    Icons.play_arrow_rounded,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                if (!compactHeader) ...[
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    _isRunning ? 'Running...' : 'Run Code',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
+                    ],
                     // Submit Button — runs code and notifies parent via onSubmit
                     if (widget.onSubmit != null) ...[
                       const SizedBox(width: 8),

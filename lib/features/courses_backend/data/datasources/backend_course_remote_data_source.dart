@@ -1,14 +1,17 @@
 import '../../../../core/network/json_http_client.dart';
 import '../models/backend_achievement_dto.dart';
+import '../models/backend_code_attempt_dto.dart';
 import '../models/backend_course_dto.dart';
 import '../models/backend_progress_dto.dart';
 import '../models/backend_lesson_dto.dart';
 import '../models/backend_module_dto.dart';
+import '../models/backend_notification_dto.dart';
 import '../models/backend_course_query.dart';
 import '../models/backend_practice_dto.dart';
 import '../models/backend_quiz_dto.dart';
 import '../models/backend_review_dto.dart';
 import '../models/backend_streak_dto.dart';
+import '../models/backend_student_statistics_dto.dart';
 
 class BackendCourseRemoteDataSource {
   BackendCourseRemoteDataSource(this._client);
@@ -217,17 +220,36 @@ class BackendCourseRemoteDataSource {
     return BackendPracticeDto.fromJson(json);
   }
 
-  Future<BackendPracticeDto> fetchPracticeByLessonId({
+  /// Lists all practice tasks attached to a lesson via curriculum-service's
+  /// `GET /lesson/:id/practice` (replaced the old `GET /practice?lesson_id=`
+  /// single-object lookup, which now 404s).
+  Future<List<BackendPracticeDto>> fetchPracticesForLesson({
     required String accessToken,
     required String lessonId,
   }) async {
-    final json = await _client.getJson(
-      '/api/v1/practice',
+    final items = await _client.getJsonList(
+      '/api/v1/lesson/${lessonId.trim()}/practice',
       headers: _authHeaders(accessToken),
-      queryParameters: <String, String>{'lesson_id': lessonId.trim()},
     );
 
-    return BackendPracticeDto.fromJson(json);
+    return items.map(BackendPracticeDto.fromJson).toList(growable: false);
+  }
+
+  Future<BackendPracticeDto?> fetchPracticeByLessonId({
+    required String accessToken,
+    required String lessonId,
+  }) async {
+    final items = await fetchPracticesForLesson(
+      accessToken: accessToken,
+      lessonId: lessonId,
+    );
+    if (items.isEmpty) {
+      return null;
+    }
+
+    final sorted = items.toList()
+      ..sort((a, b) => a.position.compareTo(b.position));
+    return sorted.first;
   }
 
   Future<BackendPracticeDto> createPractice({
@@ -265,6 +287,34 @@ class BackendCourseRemoteDataSource {
       '/api/v1/practice/${practiceId.trim()}',
       headers: _authHeaders(accessToken),
     );
+  }
+
+  /// Runs or submits code for a practice task via curriculum-service's
+  /// authoritative code-attempt flow (`POST /api/v1/practice/:id/run`).
+  /// [runType] is either `"run"` (draft, no XP) or `"submit"` (graded against
+  /// the task's expected output, awards XP on first pass).
+  Future<BackendCodeAttemptResultDto> runPractice({
+    required String accessToken,
+    required String practiceId,
+    required String courseId,
+    required String lessonId,
+    required String runType,
+    required String language,
+    required String code,
+  }) async {
+    final json = await _client.postJson(
+      '/api/v1/practice/${practiceId.trim()}/run',
+      headers: _authHeaders(accessToken),
+      body: <String, dynamic>{
+        'course_id': courseId.trim(),
+        'lesson_id': lessonId.trim(),
+        'run_type': runType,
+        'language': language,
+        'code': code,
+      },
+    );
+
+    return BackendCodeAttemptResultDto.fromJson(json);
   }
 
   Future<List<BackendQuizDto>> fetchQuizzesByLessonId({
@@ -349,6 +399,81 @@ class BackendCourseRemoteDataSource {
     );
 
     return BackendStreakDto.fromJson(json);
+  }
+
+  /// Fetches the aggregated learning statistics for the signed-in student
+  /// (`GET /api/v1/student/statistics`) — a single call that combines XP,
+  /// streaks, quiz/practice performance, 30-day activity, topic and
+  /// per-course progress, replacing several piecemeal local computations.
+  Future<BackendStudentStatisticsDto> fetchStudentStatistics({
+    required String accessToken,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/student/statistics',
+      headers: _authHeaders(accessToken),
+    );
+
+    return BackendStudentStatisticsDto.fromJson(json);
+  }
+
+  /// Lists in-app notifications for the signed-in user
+  /// (`GET /api/v1/notifications?limit=&offset=`).
+  Future<BackendNotificationListDto> fetchNotifications({
+    required String accessToken,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/notifications',
+      headers: _authHeaders(accessToken),
+      queryParameters: <String, String>{
+        'limit': '$limit',
+        'offset': '$offset',
+      },
+    );
+
+    return BackendNotificationListDto.fromJson(json);
+  }
+
+  /// Fetches just the unread notification count
+  /// (`GET /api/v1/notifications/unread-count`).
+  Future<int> fetchUnreadNotificationCount({required String accessToken}) async {
+    final json = await _client.getJson(
+      '/api/v1/notifications/unread-count',
+      headers: _authHeaders(accessToken),
+    );
+
+    return (json['unreadCount'] as num?)?.round() ?? 0;
+  }
+
+  /// Marks a single notification as read (`PATCH /api/v1/notifications/:id/read`).
+  Future<void> markNotificationRead({
+    required String accessToken,
+    required String notificationId,
+  }) {
+    return _client.patchJson(
+      '/api/v1/notifications/${notificationId.trim()}/read',
+      headers: _authHeaders(accessToken),
+    );
+  }
+
+  /// Marks every notification as read (`PATCH /api/v1/notifications/read-all`).
+  Future<void> markAllNotificationsRead({required String accessToken}) {
+    return _client.patchJson(
+      '/api/v1/notifications/read-all',
+      headers: _authHeaders(accessToken),
+    );
+  }
+
+  /// Deletes a notification (`DELETE /api/v1/notifications/:id`).
+  Future<void> deleteNotification({
+    required String accessToken,
+    required String notificationId,
+  }) {
+    return _client.deleteEmpty(
+      '/api/v1/notifications/${notificationId.trim()}',
+      headers: _authHeaders(accessToken),
+    );
   }
 
   /// Marks a lesson complete for the signed-in user and returns the updated

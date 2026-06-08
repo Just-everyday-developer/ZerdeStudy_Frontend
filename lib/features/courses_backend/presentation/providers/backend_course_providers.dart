@@ -19,11 +19,13 @@ import '../../data/models/backend_course_dto.dart';
 import '../../data/models/backend_progress_dto.dart';
 import '../../data/models/backend_lesson_dto.dart';
 import '../../data/models/backend_module_dto.dart';
+import '../../data/models/backend_notification_dto.dart';
 import '../../data/models/backend_course_query.dart';
 import '../../data/models/backend_practice_dto.dart';
 import '../../data/models/backend_quiz_dto.dart';
 import '../../data/models/backend_review_dto.dart';
 import '../../data/models/backend_streak_dto.dart';
+import '../../data/models/backend_student_statistics_dto.dart';
 
 final backendCourseAccessTokenProvider = Provider<String?>((ref) {
   return ref.watch(
@@ -1412,6 +1414,59 @@ final backendStreakProvider = FutureProvider<BackendStreakDto?>((ref) async {
     return await remote.fetchStreak(accessToken: accessToken);
   } catch (_) {
     return null;
+  }
+});
+
+final backendStudentStatisticsProvider =
+    FutureProvider<BackendStudentStatisticsDto?>((ref) async {
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return null;
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchStudentStatistics(accessToken: accessToken);
+      } catch (_) {
+        return null;
+      }
+    });
+
+/// Inbox list (`GET /notifications`) for the signed-in user, newest first.
+/// Returns an empty list when signed out or on failure — the bell/inbox UI
+/// treats that the same as "nothing to show".
+final backendNotificationsProvider =
+    FutureProvider<BackendNotificationListDto?>((ref) async {
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return null;
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        return await remote.fetchNotifications(accessToken: accessToken);
+      } catch (_) {
+        return null;
+      }
+    });
+
+/// Unread badge count (`GET /notifications/unread-count`) — kept separate
+/// from [backendNotificationsProvider] so the bell badge can refresh cheaply
+/// without re-fetching the full inbox list.
+final backendUnreadNotificationCountProvider = FutureProvider<int>((ref) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) {
+    return 0;
+  }
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+  try {
+    return await remote.fetchUnreadNotificationCount(accessToken: accessToken);
+  } catch (_) {
+    return 0;
   }
 });
 

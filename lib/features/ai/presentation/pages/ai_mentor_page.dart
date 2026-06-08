@@ -205,7 +205,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'AI Conversations',
+                        context.l10n.text('ai_chat_conversations'),
                         style: Theme.of(sheetCtx).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w900,
                             ),
@@ -508,7 +508,8 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      chatState.chatTitles[chatState.activeChatId] ?? 'AI Assistant',
+                      chatState.chatTitles[chatState.activeChatId] ??
+                          context.l10n.text('ai_chat_default_title'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
@@ -522,7 +523,7 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Chats', style: TextStyle(color: colors.primary, fontSize: 13, fontWeight: FontWeight.bold)),
+                          Text(context.l10n.text('ai_chat_list'), style: TextStyle(color: colors.primary, fontSize: 13, fontWeight: FontWeight.bold)),
                           const SizedBox(width: 2),
                           Icon(Icons.arrow_drop_down_rounded, color: colors.primary),
                         ],

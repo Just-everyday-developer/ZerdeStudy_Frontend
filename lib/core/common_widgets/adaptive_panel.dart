@@ -12,6 +12,7 @@ Future<T?> showAdaptivePanel<T>({
   if (context.isCompactLayout) {
     return showModalBottomSheet<T>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       isScrollControlled: isScrollControlled,
       builder: (context) {

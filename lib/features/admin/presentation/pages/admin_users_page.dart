@@ -65,12 +65,16 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
   }
 
   Future<void> _editRoles(AdminUserDto user) async {
+    // The "manager" role is retired — don't offer it as an assignable
+    // option even though the backend still returns it in the role list.
     final allRoles = ref
         .read(adminRolesProvider)
         .maybeWhen(
           data: (roles) => roles,
           orElse: () => const <AdminRoleDto>[],
-        );
+        )
+        .where((role) => role.code.toLowerCase() != 'manager')
+        .toList(growable: false);
     if (allRoles.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -78,11 +82,17 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
       return;
     }
 
+    final assignableIds = allRoles.map((role) => role.id).toSet();
     final selected = await showDialog<List<String>>(
       context: context,
       builder: (_) => _RoleEditorDialog(
         allRoles: allRoles,
-        initialRoleIds: user.roles.map((r) => r.id).toSet(),
+        // Drop any role the dialog doesn't show (e.g. the retired "manager"
+        // role) so saving doesn't silently keep it on the user.
+        initialRoleIds: user.roles
+            .map((r) => r.id)
+            .where(assignableIds.contains)
+            .toSet(),
         userName: user.displayName,
       ),
     );

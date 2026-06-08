@@ -4,10 +4,13 @@ class BackendPracticeDto {
   const BackendPracticeDto({
     required this.id,
     required this.lessonId,
+    required this.courseId,
     required this.position,
     required this.title,
     required this.summary,
     required this.brief,
+    required this.description,
+    required this.language,
     required this.starterCode,
     required this.successCriteria,
     required this.knowledgeChecks,
@@ -19,10 +22,16 @@ class BackendPracticeDto {
 
   final String id;
   final String lessonId;
+  final String courseId;
   final int position;
   final BackendLocalizedTextDto title;
   final BackendLocalizedTextDto summary;
   final BackendLocalizedTextDto brief;
+  /// Flat (non-localized) task description as stored by curriculum-service.
+  final String description;
+  /// Programming language the task expects (e.g. "java"), required by the
+  /// `/practice/:id/run` endpoint.
+  final String language;
   final String starterCode;
   final List<BackendLocalizedTextDto> successCriteria;
   final List<BackendLocalizedTextDto> knowledgeChecks;
@@ -42,10 +51,13 @@ class BackendPracticeDto {
     return BackendPracticeDto(
       id: '${json['id'] ?? ''}',
       lessonId: '${json['lesson_id'] ?? ''}',
+      courseId: '${json['course_id'] ?? ''}',
       position: (json['position'] as num?)?.round() ?? 0,
       title: BackendLocalizedTextDto.fromJson(json['title']),
       summary: BackendLocalizedTextDto.fromJson(json['summary']),
       brief: BackendLocalizedTextDto.fromJson(json['brief']),
+      description: json['description'] as String? ?? '',
+      language: json['language'] as String? ?? 'java',
       starterCode: json['starter_code'] as String? ?? '',
       successCriteria: parseLocales('success_criteria'),
       knowledgeChecks: parseLocales('knowledge_checks'),

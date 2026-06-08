@@ -18,6 +18,7 @@ class AppRoutes {
   static const String assessment = '/assessment';
   static const String stats = '/stats';
   static const String leaderboard = '/leaderboard';
+  static const String notifications = '/notifications';
   static const String faq = '/faq';
   static const String courses = '/courses';
   static const String coursePlayer = '/course-player';

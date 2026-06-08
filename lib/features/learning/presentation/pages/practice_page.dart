@@ -15,6 +15,7 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../ai/presentation/providers/ai_chat_controller.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
+import '../../../courses_backend/data/models/backend_code_attempt_dto.dart';
 import '../../../courses_backend/data/models/backend_practice_dto.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../../domain/models/code_execution.dart';
@@ -44,6 +45,8 @@ class _PracticePageState extends ConsumerState<PracticePage> {
   final List<String> _userComments = <String>[];
   String? _draftOutput;
   String _editorCode = '';
+  bool _isRunningOnBackend = false;
+  BackendCodeAttemptResultDto? _lastAttemptResult;
 
   final int _currentExamTaskIndex = 0;
   final Set<int> _completedExamTaskIndexes = <int>{};
@@ -216,30 +219,39 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                 ? practice.starterCode
                 : _editorCode,
             onCodeChanged: (code) => _editorCode = code,
-            onResult: (CodeExecutionResult result) {
-              _applyDraftOutput(practice, result);
-            },
+            // Execution for real practice tasks goes through the backend
+            // (`Run draft`/`Submit` below, wired to /practice/:id/run) — hide
+            // the editor's own button so code isn't run twice via two paths.
+            showRunButton: false,
           ),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: AppButton.secondary(
-                  label: 'Run draft',
+                  label: _isRunningOnBackend ? 'Running…' : 'Run draft',
                   icon: Icons.play_arrow_rounded,
-                  onPressed: completed
+                  onPressed: completed || _isRunningOnBackend
                       ? null
-                      : () => _runDraft(practice, locale),
+                      : () => _handleRunDraft(
+                          practice,
+                          locale,
+                          resolvedBackendPractice,
+                        ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: AppButton.primary(
-                  label: 'Submit',
+                  label: _isRunningOnBackend ? 'Running…' : 'Submit',
                   icon: Icons.send_rounded,
-                  onPressed: completed
+                  onPressed: completed || _isRunningOnBackend
                       ? null
-                      : () => _runDraft(practice, locale),
+                      : () => _handleSubmit(
+                          practice,
+                          locale,
+                          resolvedBackendPractice,
+                        ),
                 ),
               ),
             ],
@@ -257,12 +269,49 @@ class _PracticePageState extends ConsumerState<PracticePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Draft console',
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'Draft console',
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (_lastAttemptResult != null) ...[
+                        const SizedBox(width: 10),
+                        Icon(
+                          _lastAttemptResult!.passed
+                              ? Icons.check_circle_rounded
+                              : Icons.error_rounded,
+                          size: 16,
+                          color: _lastAttemptResult!.passed
+                              ? colors.success
+                              : colors.danger,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _lastAttemptResult!.passed
+                              ? 'Passed${_lastAttemptResult!.xpAwarded > 0 ? ' · +${_lastAttemptResult!.xpAwarded} XP' : ''}'
+                              : 'Not passed',
+                          style: TextStyle(
+                            color: _lastAttemptResult!.passed
+                                ? colors.success
+                                : colors.danger,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${_lastAttemptResult!.durationMs} ms',
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 8),
                   SelectableText(
@@ -361,17 +410,15 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             const SizedBox(height: 18),
           ],
           AppButton.primary(
-            label: completed ? 'Submitted' : 'Submit for review',
+            label: completed
+                ? 'Submitted'
+                : (_isRunningOnBackend ? 'Submitting…' : 'Submit for review'),
             icon: completed
                 ? Icons.check_circle_rounded
                 : Icons.verified_rounded,
-            onPressed: completed
+            onPressed: completed || _isRunningOnBackend
                 ? null
-                : () => _submitPractice(
-                    practice,
-                    locale,
-                    resolvedBackendPractice,
-                  ),
+                : () => _handleSubmit(practice, locale, resolvedBackendPractice),
           ),
           if (completed) ...[
             const SizedBox(height: 12),
@@ -495,6 +542,142 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     );
   }
 
+  /// Attempts to execute [practice]'s code against curriculum-service's
+  /// authoritative `/practice/:id/run` endpoint (records the attempt and,
+  /// for `runType: "submit"`, awards XP and grades against the server-side
+  /// `expected_output`). Returns true once the backend has handled the
+  /// request — including a failed/non-passing result — so the caller should
+  /// NOT fall back to local simulation. Returns false only when the backend
+  /// can't be reached (missing ids/token or a network error).
+  Future<bool> _tryBackendRun({
+    required PracticeTask practice,
+    required BackendPracticeDto? backendPractice,
+    required AppLocale locale,
+    required String runType,
+  }) async {
+    final accessToken = ref.read(backendCourseAccessTokenProvider)?.trim();
+    if (backendPractice == null ||
+        accessToken == null ||
+        accessToken.isEmpty ||
+        !_looksLikeUuid(backendPractice.id) ||
+        !_looksLikeUuid(backendPractice.courseId) ||
+        !_looksLikeUuid(backendPractice.lessonId)) {
+      return false;
+    }
+
+    final code = _editorCode.isEmpty ? practice.starterCode : _editorCode;
+    final challenge = practice.codeChallenge;
+    setState(() => _isRunningOnBackend = true);
+
+    try {
+      final remote = ref.read(backendCourseRemoteDataSourceProvider);
+      final result = await remote.runPractice(
+        accessToken: accessToken,
+        practiceId: backendPractice.id,
+        courseId: backendPractice.courseId,
+        lessonId: backendPractice.lessonId,
+        runType: runType,
+        language: backendPractice.language,
+        code: code,
+      );
+
+      if (!mounted) {
+        return true;
+      }
+
+      final consoleText = [
+        if (result.output.trim().isNotEmpty) result.output.trim(),
+        if (result.error.trim().isNotEmpty) result.error.trim(),
+      ].join('\n');
+
+      setState(() {
+        _isRunningOnBackend = false;
+        _lastAttemptResult = result;
+        _draftOutput = consoleText.isEmpty
+            ? 'The program produced no output.'
+            : consoleText;
+      });
+
+      if (runType == 'submit') {
+        if (result.passed) {
+          ref
+              .read(demoAppControllerProvider.notifier)
+              .completePractice(practice.id);
+          ref.invalidate(backendStreakProvider);
+          ref.invalidate(backendAchievementsProvider);
+          ref.invalidate(backendOopProgressProvider);
+          ref.invalidate(backendProfileProvider);
+          ref.invalidate(backendAllProgressProvider);
+
+          AppNotice.show(
+            context,
+            message: result.xpAwarded > 0
+                ? '+${result.xpAwarded} XP'
+                : (challenge?.successMessage.resolve(locale) ??
+                      '+${practice.xpReward} XP'),
+            type: AppNoticeType.success,
+          );
+        } else {
+          AppNotice.show(
+            context,
+            message:
+                challenge?.retryMessage.resolve(locale) ??
+                'Solution did not pass the check. Compare the output with what is expected and try again.',
+            type: AppNoticeType.error,
+          );
+        }
+      }
+
+      return true;
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isRunningOnBackend = false);
+      }
+      return false;
+    }
+  }
+
+  Future<void> _handleRunDraft(
+    PracticeTask practice,
+    AppLocale locale,
+    BackendPracticeDto? backendPractice,
+  ) async {
+    final handled = await _tryBackendRun(
+      practice: practice,
+      backendPractice: backendPractice,
+      locale: locale,
+      runType: 'run',
+    );
+    if (!handled) {
+      _runDraft(practice, locale);
+    }
+  }
+
+  Future<void> _handleSubmit(
+    PracticeTask practice,
+    AppLocale locale,
+    BackendPracticeDto? backendPractice,
+  ) async {
+    if (_selectedKnowledgeChecks.length < practice.knowledgeChecks.length) {
+      AppNotice.show(
+        context,
+        message: 'Answer all knowledge checks before submitting.',
+        type: AppNoticeType.error,
+      );
+      return;
+    }
+
+    final handled = await _tryBackendRun(
+      practice: practice,
+      backendPractice: backendPractice,
+      locale: locale,
+      runType: 'submit',
+    );
+    if (!handled) {
+      await _submitPractice(practice, locale, backendPractice);
+    }
+  }
+
   void _runDraft(PracticeTask practice, AppLocale locale) {
     final code = _editorCode.isEmpty ? practice.starterCode : _editorCode;
     final challenge = practice.codeChallenge;
@@ -516,33 +699,6 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       _draftOutput = code.trim().isEmpty
           ? 'Draft console is empty.'
           : 'Draft ready for review.';
-    });
-  }
-
-  void _applyDraftOutput(PracticeTask practice, CodeExecutionResult result) {
-    final output = [
-      if (result.stdout.trim().isNotEmpty) result.stdout.trim(),
-      if (result.stderr.trim().isNotEmpty) result.stderr.trim(),
-      if (result.error.trim().isNotEmpty) result.error.trim(),
-    ].join('\n');
-
-    final challenge = practice.codeChallenge;
-    final code = _editorCode.isEmpty ? practice.starterCode : _editorCode;
-    final normalizedCode = code.toLowerCase();
-    final simulatedOutput =
-        challenge != null &&
-            challenge.requiredSnippets.every(
-              (snippet) => normalizedCode.contains(snippet.toLowerCase()),
-            )
-        ? challenge.expectedOutput
-        : null;
-
-    setState(() {
-      _draftOutput =
-          simulatedOutput ??
-          (output.isEmpty
-              ? 'Draft console is empty. Add a print statement and run again.'
-              : output);
     });
   }
 

@@ -11,6 +11,7 @@ import '../../features/app_guide/presentation/app_guide_target.dart';
 import '../../features/auth/presentation/providers/auth_controller.dart';
 import 'app_settings_panel.dart';
 import 'app_user_avatar.dart';
+import 'notification_bell_button.dart';
 import '../localization/app_localizations.dart';
 import '../providers/course_search_focus_provider.dart';
 import '../theme/app_theme_colors.dart';
@@ -193,7 +194,28 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
 
             return Scaffold(
               backgroundColor: colors.background,
-              body: shellBody,
+              body: compact
+                  ? Stack(
+                      children: [
+                        shellBody,
+                        Positioned(
+                          top: 0,
+                          right: 4,
+                          child: SafeArea(
+                            bottom: false,
+                            child: Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: colors.surface.withValues(alpha: 0.85),
+                              ),
+                              child: const NotificationBellButton(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : shellBody,
               bottomNavigationBar: compact
                   ? AppGuideTarget(
                       id: AppGuideTargetIds.shellNavigation,
@@ -292,6 +314,8 @@ class _DesktopShellBar extends StatelessWidget {
               icon: Icon(Icons.search_rounded, color: colors.textPrimary),
               tooltip: context.l10n.text('search_courses'),
             ),
+            const SizedBox(width: 8),
+            const NotificationBellButton(),
             const SizedBox(width: 8),
             PopupMenuButton<AppLocale>(
               tooltip: context.l10n.text('locale'),

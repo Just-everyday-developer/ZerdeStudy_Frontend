@@ -32,6 +32,7 @@ import '../../features/learning/presentation/pages/track_assessment_page.dart';
 import '../../features/learning/presentation/pages/lesson_page.dart';
 import '../../features/learning/presentation/pages/practice_page.dart';
 import '../../features/learning/presentation/pages/track_page.dart';
+import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/admin/presentation/pages/admin_shell_page.dart';
 import '../../features/payment/presentation/pages/payment_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -341,6 +342,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) =>
             cyberTransition(state: state, child: const LeaderboardPage()),
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        parentNavigatorKey: appRootNavigatorKey,
+        pageBuilder: (context, state) =>
+            cyberTransition(state: state, child: const NotificationsPage()),
       ),
       GoRoute(
         path: AppRoutes.courses,

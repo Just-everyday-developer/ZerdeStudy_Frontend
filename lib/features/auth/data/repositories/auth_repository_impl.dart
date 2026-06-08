@@ -164,8 +164,8 @@ class AuthRepositoryImpl implements AuthRepository {
       _remote.getGoogleAuthUrl(redirectUri: redirectUri, platform: platform);
 
   @override
-  Future<String> getGithubAuthUrl({String? redirectUri}) =>
-      _remote.getGithubAuthUrl(redirectUri: redirectUri);
+  Future<String> getGithubAuthUrl({String? redirectUri, String? platform}) =>
+      _remote.getGithubAuthUrl(redirectUri: redirectUri, platform: platform);
 
   @override
   Future<AuthSession> googleCallback(

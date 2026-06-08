@@ -468,6 +468,21 @@ class AppLocalizations {
       AppLocale.en: 'Chat Title',
       AppLocale.kk: 'Чат атауы',
     },
+    'ai_chat_list': {
+      AppLocale.ru: 'Чаты',
+      AppLocale.en: 'Chats',
+      AppLocale.kk: 'Чаттар',
+    },
+    'ai_chat_conversations': {
+      AppLocale.ru: 'Беседы с AI',
+      AppLocale.en: 'AI Conversations',
+      AppLocale.kk: 'AI әңгімелері',
+    },
+    'ai_chat_default_title': {
+      AppLocale.ru: 'AI-ассистент',
+      AppLocale.en: 'AI Assistant',
+      AppLocale.kk: 'AI көмекшісі',
+    },
     'continue_learning': {
       AppLocale.ru: 'Продолжить обучение',
       AppLocale.en: 'Continue learning',
@@ -603,6 +618,11 @@ class AppLocalizations {
       AppLocale.ru: 'Лидерборд',
       AppLocale.en: 'Leaderboard',
       AppLocale.kk: 'Лидерборд',
+    },
+    'notifications': {
+      AppLocale.ru: 'Уведомления',
+      AppLocale.en: 'Notifications',
+      AppLocale.kk: 'Хабарландырулар',
     },
     'leaderboard_empty_title': {
       AppLocale.ru: 'Пока никого нет',
@@ -1421,10 +1441,9 @@ class AppLocalizations {
       AppLocale.kk: 'Сертификаттар',
     },
     'certificates_hint': {
-      AppLocale.ru: 'Сертификаты появляются после завершения мини-курсов.',
-      AppLocale.en: 'Certificates appear after finishing mini-courses.',
-      AppLocale.kk:
-          'Сертификаттар мини-курстар аяқталғаннан кейін пайда болады.',
+      AppLocale.ru: 'Появляются после завершения мини-курсов.',
+      AppLocale.en: 'Appear after finishing mini-courses.',
+      AppLocale.kk: 'Мини-курстар аяқталғаннан кейін пайда болады.',
     },
     'course_player_intro': {
       AppLocale.ru: 'Краткое введение',
@@ -1440,6 +1459,16 @@ class AppLocalizations {
       AppLocale.ru: 'Дальше',
       AppLocale.en: 'Next',
       AppLocale.kk: 'Келесі',
+    },
+    'lesson_step_previous': {
+      AppLocale.ru: 'Назад',
+      AppLocale.en: 'Previous',
+      AppLocale.kk: 'Артқа',
+    },
+    'lesson_step_submit': {
+      AppLocale.ru: 'Отправить',
+      AppLocale.en: 'Submit',
+      AppLocale.kk: 'Жіберу',
     },
     'course_player_task': {
       AppLocale.ru: 'Следующий шаг',

@@ -147,12 +147,14 @@ class AuthRemoteDataSource {
     return json['auth_url'] as String;
   }
 
-  Future<String> getGithubAuthUrl({String? redirectUri}) async {
+  Future<String> getGithubAuthUrl({String? redirectUri, String? platform}) async {
+    final queryParameters = <String, String>{};
+    if (redirectUri != null) queryParameters['redirect_uri'] = redirectUri;
+    if (platform != null) queryParameters['platform'] = platform;
+
     final json = await _client.getJson(
       '/api/v1/auth/oauth/github/url',
-      queryParameters: redirectUri != null
-          ? <String, String>{'redirect_uri': redirectUri}
-          : null,
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
     return json['auth_url'] as String;
   }

@@ -41,5 +41,5 @@ Set-ItemProperty -Path $root -Name "URL Protocol" -Value ""
 New-Item -Path "$root\shell\open\command" -Force | Out-Null
 Set-ItemProperty -Path "$root\shell\open\command" -Name "(Default)" -Value ("`"$ExePath`" `"%1`"")
 
-Write-Host "Registered $scheme:// -> $ExePath" -ForegroundColor Green
-Write-Host "Test it: start zerdestudy://auth/google/callback?code=test"
+Write-Host "Registered ${scheme}:// -> $ExePath" -ForegroundColor Green
+Write-Host "Test it: start ${scheme}://auth/google/callback?code=test"

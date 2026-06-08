@@ -38,7 +38,7 @@ abstract class AuthRepository {
   });
 
   Future<String> getGoogleAuthUrl({String? redirectUri, String? platform});
-  Future<String> getGithubAuthUrl({String? redirectUri});
+  Future<String> getGithubAuthUrl({String? redirectUri, String? platform});
   Future<AuthSession> googleCallback(
     String code, {
     String? platform,

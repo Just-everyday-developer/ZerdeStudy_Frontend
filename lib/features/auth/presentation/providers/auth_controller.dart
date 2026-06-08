@@ -224,8 +224,12 @@ class AuthController extends Notifier<AuthState> {
   Future<String?> signInWithGithub() async {
     state = state.copyWith(status: AuthStatus.submitting, errorMessage: null);
     try {
+      final platform = _getPlatform();
       final redirectUri = OAuthRedirectConfig.github();
-      final url = await ref.read(authRepositoryProvider).getGithubAuthUrl(redirectUri: redirectUri);
+      final url = await ref.read(authRepositoryProvider).getGithubAuthUrl(
+            redirectUri: redirectUri,
+            platform: platform,
+          );
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
         await launchUrl(

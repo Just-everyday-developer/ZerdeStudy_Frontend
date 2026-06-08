@@ -415,6 +415,7 @@ class _StatsPageState extends ConsumerState<StatsPage> {
               ),
               const SizedBox(height: 16),
               Container(
+                height: 280,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
@@ -447,12 +448,15 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                 height: 180,
                 child: _FavoriteTopicsCard(t: t, colors: colors),
               ),
-            ]
+            ],
+            const SizedBox(height: 16),
+            _StudentPerformanceSection(t: t, colors: colors),
           ] else ...[
             // ---------------- ORIGINAL DETAIL PROGRESS VIEW ----------------
             GlowCard(
               accent: colors.primary,
               child: _MetricsCarousel(
+                t: t,
                 xp: '$liveXpVal',
                 level: '${backendProfile?.level ?? state.level}',
                 xpToNextLevel: '${(500 - liveXpVal % 500)} XP',
@@ -709,7 +713,7 @@ class _StatsPageState extends ConsumerState<StatsPage> {
             ),
             const SizedBox(width: 4),
             _TabButton(
-              label: t(ru: 'Детальный прогресс', en: 'Detailed Progress', kk: 'Толық прогресс'),
+              label: t(ru: 'Прогресс', en: 'Progress', kk: 'Прогресс'),
               icon: Icons.auto_awesome_rounded,
               isActive: _selectedTab == StatsTab.progress,
               colors: colors,
@@ -859,6 +863,7 @@ class _TabButton extends StatelessWidget {
 // Metrics Carousel for detailed tab
 class _MetricsCarousel extends StatefulWidget {
   const _MetricsCarousel({
+    required this.t,
     required this.xp,
     required this.level,
     required this.xpToNextLevel,
@@ -869,6 +874,7 @@ class _MetricsCarousel extends StatefulWidget {
     required this.aiSessions,
   });
 
+  final String Function({required String ru, required String en, required String kk}) t;
   final String xp;
   final String level;
   final String xpToNextLevel;
@@ -896,22 +902,23 @@ class _MetricsCarouselState extends State<_MetricsCarousel> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
+    final t = widget.t;
     final List<List<Map<String, String>>> pagesData = [
       [
-        {'label': 'XP', 'value': widget.xp},
-        {'label': 'Level', 'value': widget.level},
+        {'label': t(ru: 'XP', en: 'XP', kk: 'XP'), 'value': widget.xp},
+        {'label': t(ru: 'Уровень', en: 'Level', kk: 'Деңгей'), 'value': widget.level},
       ],
       [
-        {'label': 'To next', 'value': widget.xpToNextLevel},
-        {'label': 'Streak', 'value': widget.streak},
+        {'label': t(ru: 'До уровня', en: 'To next', kk: 'Келесіге дейін'), 'value': widget.xpToNextLevel},
+        {'label': t(ru: 'Серия', en: 'Streak', kk: 'Серия'), 'value': widget.streak},
       ],
       [
-        {'label': 'Units', 'value': widget.completedUnits},
-        {'label': 'Achievements', 'value': widget.unlockedAchievements},
+        {'label': t(ru: 'Модули', en: 'Units', kk: 'Модульдер'), 'value': widget.completedUnits},
+        {'label': t(ru: 'Достижения', en: 'Achievements', kk: 'Жетістіктер'), 'value': widget.unlockedAchievements},
       ],
       [
-        {'label': 'Assessments', 'value': widget.passedAssessments},
-        {'label': 'AI sessions', 'value': widget.aiSessions},
+        {'label': t(ru: 'Оценивания', en: 'Assessments', kk: 'Бағалаулар'), 'value': widget.passedAssessments},
+        {'label': t(ru: 'Сессии с ИИ', en: 'AI sessions', kk: 'ИИ-мен сессиялар'), 'value': widget.aiSessions},
       ],
     ];
 
@@ -1048,16 +1055,24 @@ class _MetricTile extends StatelessWidget {
               letterSpacing: 1.1,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 10),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                ),
-            textAlign: TextAlign.center,
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+              ),
+            ),
           ),
         ],
       ),
@@ -2080,6 +2095,118 @@ class _LearningTimeCard extends ConsumerWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// Server-backed performance section: quiz/practice stats and topic progress
+// from `GET /api/v1/student/statistics`, hidden when the backend is unavailable.
+class _StudentPerformanceSection extends ConsumerWidget {
+  final String Function({required String ru, required String en, required String kk}) t;
+  final AppThemeColors colors;
+
+  const _StudentPerformanceSection({required this.t, required this.colors});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref
+        .watch(backendStudentStatisticsProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
+
+    if (stats == null) return const SizedBox.shrink();
+
+    final quiz = stats.quiz;
+    final practice = stats.practice;
+    final topTopics = [...stats.topics]
+      ..sort((a, b) => b.progressPercent.compareTo(a.progressPercent));
+
+    return GlowCard(
+      accent: colors.accent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.query_stats_rounded, color: colors.accent, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                t(ru: 'Серверная статистика', en: 'Server Statistics', kk: 'Сервер статистикасы'),
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _BreakdownRow(
+            label: t(ru: 'Тесты пройдено', en: 'Quizzes passed', kk: 'Тапсырылған тесттер'),
+            value: '${quiz.passedQuizzes}/${quiz.attemptedQuizzes} (${quiz.accuracyPercent}%)',
+          ),
+          _BreakdownRow(
+            label: t(ru: 'Запусков кода', en: 'Code runs', kk: 'Код іске қосулары'),
+            value: '${practice.runs}',
+          ),
+          _BreakdownRow(
+            label: t(ru: 'Практика сдана', en: 'Practice completed', kk: 'Аяқталған практика'),
+            value: '${practice.completedPractices}/${practice.attemptedPractices} (${practice.passRatePercent}%)',
+          ),
+          _BreakdownRow(
+            label: t(ru: 'XP за практику', en: 'XP from practice', kk: 'Практикадан алынған XP'),
+            value: '${practice.xpEarned} XP',
+          ),
+          if (topTopics.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              t(ru: 'Темы в работе', en: 'Topics in progress', kk: 'Жұмыстағы тақырыптар'),
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 12.5,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...topTopics.take(3).map(
+              (topic) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            topic.name.isNotEmpty ? topic.name : topic.code,
+                            style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          '${topic.progressPercent}%',
+                          style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: (topic.progressPercent / 100).clamp(0, 1).toDouble(),
+                        minHeight: 6,
+                        backgroundColor: colors.divider.withValues(alpha: 0.3),
+                        valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
