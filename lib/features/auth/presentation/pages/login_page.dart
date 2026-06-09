@@ -7,6 +7,7 @@ import 'package:frontend_flutter/app/state/demo_app_controller.dart';
 import 'package:frontend_flutter/core/common_widgets/app_notice.dart';
 import 'package:frontend_flutter/core/common_widgets/locale_selector.dart';
 import 'package:frontend_flutter/core/common_widgets/tech_text_field.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend_flutter/core/localization/app_localizations.dart';
 import 'package:frontend_flutter/core/theme/app_theme_colors.dart';
 
@@ -81,16 +82,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final error = await ref
         .read(authControllerProvider.notifier)
         .signInWithGoogle();
-    if (!mounted || error == null) {
-      return;
-    }
-    AppNotice.show(context, message: error, type: AppNoticeType.error);
-  }
-
-  Future<void> _signInWithGithub() async {
-    final error = await ref
-        .read(authControllerProvider.notifier)
-        .signInWithGithub();
     if (!mounted || error == null) {
       return;
     }
@@ -186,15 +177,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   children: [
                     SocialAuthButton(
                       label: l10n.text('google'),
-                      badgeText: 'G',
+                      badgeWidget: SvgPicture.asset(
+                        'assets/svgs/google_logo.svg',
+                        width: 20,
+                        height: 20,
+                      ),
                       accent: const Color(0xFF4285F4),
                       onTap: authState.isBusy ? null : _signInWithGoogle,
-                    ),
-                    SocialAuthButton(
-                      label: l10n.text('github'),
-                      badgeText: 'GH',
-                      accent: colors.textPrimary,
-                      onTap: authState.isBusy ? null : _signInWithGithub,
                     ),
                   ],
                 ),

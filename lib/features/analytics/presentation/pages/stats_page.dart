@@ -1,4 +1,5 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/state/app_locale.dart';
@@ -10,9 +11,8 @@ import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
+import '../../../courses_backend/data/models/backend_student_statistics_dto.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
-
-enum StatsTab { analytics, progress }
 
 class StatsPage extends ConsumerStatefulWidget {
   const StatsPage({super.key});
@@ -22,8 +22,6 @@ class StatsPage extends ConsumerStatefulWidget {
 }
 
 class _StatsPageState extends ConsumerState<StatsPage> {
-  StatsTab _selectedTab = StatsTab.analytics;
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(demoAppControllerProvider);
@@ -34,27 +32,26 @@ class _StatsPageState extends ConsumerState<StatsPage> {
     final colors = context.appColors;
     final locale = state.locale;
 
-    // Responsive breakpoints
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 1100;
     final isTablet = screenWidth >= 700 && screenWidth < 1100;
 
-    // Helper translation local function
     String t({required String ru, required String en, required String kk}) {
       if (locale == AppLocale.kk) return kk;
       if (locale == AppLocale.ru) return ru;
       return en;
     }
 
-    // Server profile — XP and streak from backend when available.
     final backendProfile = ref
         .watch(backendProfileProvider)
         .maybeWhen(data: (p) => p, orElse: () => null);
     final backendAchievements = ref
         .watch(backendAchievementsProvider)
         .maybeWhen(data: (list) => list, orElse: () => const <Achievement>[]);
+    final backendStats = ref
+        .watch(backendStudentStatisticsProvider)
+        .maybeWhen(data: (s) => s, orElse: () => null);
 
-    // Achievements: prefer server list; fall back to local catalog.
     final achievementList = backendAchievements.isNotEmpty
         ? backendAchievements
         : catalog.achievementsFor(state);
@@ -62,27 +59,19 @@ class _StatsPageState extends ConsumerState<StatsPage> {
         achievementList.where((a) => a.unlocked).length;
 
     final passedAssessments = catalog.passedAssessments(state);
-    final averageAssessment = catalog.averageBestAssessmentPercent(state);
     final aiSessions =
         state.aiMessages.where((m) => m.author == AiAuthor.user).length;
 
-    final completedPracticeCount = state.completedPracticeIds.length;
-    final completedLessonCount = state.completedLessonIds.length;
-    final totalSolvedTasks =
-        completedLessonCount + (completedPracticeCount * 3);
     final aiQueries =
         state.aiMessages.where((m) => m.author == AiAuthor.user).length;
 
-    // Real KPI values — no fake fallbacks.
     final quizPercentVal =
         (state.quizAccuracy * 100).round().clamp(0, 100);
     final liveXpVal = backendProfile?.xp ?? state.xp;
-    final solvedTasksVal = totalSolvedTasks;
     final aiTopicsVal = aiQueries;
     final streakDaysVal =
         backendProfile?.streak ?? backendStreak?.streak ?? state.streak;
 
-    // Mastery: 40 % quiz accuracy + 30 % course completion + 30 % XP (5 K target).
     final double completionRatio =
         catalog.totalCompletedUnits(state) / math.max(1, catalog.totalUnits());
     final double xpRatio = (liveXpVal / 5000.0).clamp(0.0, 1.0);
@@ -91,768 +80,229 @@ class _StatsPageState extends ConsumerState<StatsPage> {
         (accuracyRatio * 0.4 + completionRatio * 0.3 + xpRatio * 0.3)
             .clamp(0.0, 0.99);
 
+    final Widget kpiQuiz = _KPICard(
+      title: t(ru: 'Код с первой попытки', en: 'Code on 1st Attempt', kk: 'Бірінші әрекеттен код'),
+      value: '$quizPercentVal%',
+      topIcon: Icons.check_circle_rounded,
+      accentColor: colors.success,
+      tooltipText: t(
+        ru: 'Процент квизов и тестов, решенных правильно с первого раза.',
+        en: 'Percentage of quizzes and tests solved correctly on the first attempt.',
+        kk: 'Бірінші әрекеттен дұрыс шешілген квиздер мен тесттердің пайызы.',
+      ),
+    );
+    final Widget kpiAi = _KPICard(
+      title: t(ru: 'Разобранные темы с ИИ', en: 'AI Topics Cleared', kk: 'ИИ-мен талданған тақырыптар'),
+      value: '$aiTopicsVal',
+      topIcon: Icons.psychology_rounded,
+      accentColor: colors.accent,
+      tooltipText: t(
+        ru: 'Количество тем и вопросов, изученных совместно с ИИ-ментором.',
+        en: 'Number of topics and questions studied with the AI Mentor.',
+        kk: 'ИИ-ментормен бірге зерттелген тақырыптар мен сұрақтар саны.',
+      ),
+    );
+    final Widget kpiXp = _KPICard(
+      title: t(ru: 'Скорость усвоения (XP)', en: 'Learning Speed (XP)', kk: 'Меңгеру жылдамдығы (XP)'),
+      value: '$liveXpVal XP',
+      topIcon: Icons.bolt_rounded,
+      accentColor: colors.primary,
+      tooltipText: t(
+        ru: 'Набранные очки опыта (XP) за всё время обучения.',
+        en: 'Experience points (XP) earned over the entire learning journey.',
+        kk: 'Барлық оқу уақытында жиналған тәжірибе ұпайлары (XP).',
+      ),
+    );
+    final Widget kpiMastery = _MasteryIndexCard(t: t, colors: colors, value: masteryValue);
+
     return AppPageScaffold(
       title: context.l10n.text('stats'),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
         children: [
-          // Elegant Custom Tab Bar for switching views
-          _buildViewSelector(t, colors, isDesktop),
-          const SizedBox(height: 20),
-
-          // Render Selected View
-          if (_selectedTab == StatsTab.analytics) ...[
-            // ---------------- NEW ANALYTICS DASHBOARD VIEW ----------------
-            _buildHeaderZone(context, t, colors, isDesktop, isTablet, masteryValue),
-            const SizedBox(height: 24),
-
-            if (isDesktop) ...[
-              // ROW 1: 4 KPI Cards
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 230,
-                      child: _KPICard(
-                        title: t(ru: 'Код с первой попытки', en: 'Code on 1st Attempt', kk: 'Бірінші әрекеттен код'),
-                        value: '$quizPercentVal%',
-                        topIcon: Icons.check_circle_rounded,
-                        accentColor: colors.success,
-                        tooltipText: t(
-                          ru: 'Процент квизов и тестов, решенных правильно с первого раза.',
-                          en: 'Percentage of quizzes and tests solved correctly on the first attempt.',
-                          kk: 'Бірінші әрекеттен дұрыс шешілген квиздер мен тесттердің пайызы.',
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 230,
-                      child: _KPICard(
-                        title: t(ru: 'Разобранные темы с ИИ', en: 'AI Topics Cleared', kk: 'ИИ-мен талданған тақырыптар'),
-                        value: '$aiTopicsVal',
-                        topIcon: Icons.psychology_rounded,
-                        accentColor: colors.accent,
-                        tooltipText: t(
-                          ru: 'Количество тем и вопросов, изученных и разобранных совместно с ИИ-ментором.',
-                          en: 'Number of unique topics and questions studied together with the AI Mentor.',
-                          kk: 'ИИ-ментормен бірге зерттелген және талданған тақырыптар мен сұрақтар саны.',
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 230,
-                      child: _KPICard(
-                        title: t(ru: 'Скорость усвоения (XP)', en: 'Learning Speed (XP)', kk: 'Меңгеру жылдамдығы (XP)'),
-                        value: '$liveXpVal XP',
-                        topIcon: Icons.bolt_rounded,
-                        accentColor: colors.primary,
-                        tooltipText: t(
-                          ru: 'Динамика набора очков опыта (XP) за дни текущей недели.',
-                          en: 'Dynamics of experience points (XP) earned during the current week.',
-                          kk: 'Ағымдағы аптаның күндері бойынша тәжірибе ұпайларын (XP) жинау динамикасы.',
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 230,
-                      child: _MasteryIndexCard(
-                        t: t,
-                        colors: colors,
-                        value: masteryValue,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // ROW 2: Activity Heatmap & Solved Tasks Card
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Container(
-                      height: 280,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        color: colors.surface.withValues(alpha: 0.6),
-                        border: Border.all(color: colors.divider.withValues(alpha: 0.3)),
-                      ),
-                      child: _ActivityHeatmap(t: t, colors: colors),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: SizedBox(
-                      height: 280,
-                      child: _KPICard(
-                        title: t(ru: 'Решённые задачи', en: 'Solved Tasks', kk: 'Шешілген есептер'),
-                        value: '$solvedTasksVal',
-                        topIcon: Icons.assignment_turned_in_rounded,
-                        accentColor: const Color(0xFF00E5FF),
-                        tooltipText: t(
-                          ru: 'Количество успешно решенных упражнений, тестов и практических заданий.',
-                          en: 'Number of successfully completed exercises, quizzes, and code tasks.',
-                          kk: 'Сәтті орындалған жаттығулар, квиздер мен практикалық тапсырмалар саны.',
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // ROW 3: Streak, Learning Time & Favorite Topics
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 200,
-                      child: _StreakCard(t: t, colors: colors, streakVal: streakDaysVal),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 200,
-                      child: _LearningTimeCard(t: t, colors: colors),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 200,
-                      child: _FavoriteTopicsCard(t: t, colors: colors),
-                    ),
-                  ),
-                ],
-              ),
-            ] else if (isTablet) ...[
-              // TABLET LAYOUT: 2x2 grid for KPI, then larger cards stacked
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 220,
-                      child: _KPICard(
-                        title: t(ru: 'Код с первой попытки', en: 'Code on 1st Attempt', kk: 'Бірінші әрекеттен код'),
-                        value: '$quizPercentVal%',
-                        topIcon: Icons.check_circle_rounded,
-                        accentColor: colors.success,
-                        tooltipText: t(
-                          ru: 'Процент квизов и тестов, решенных правильно с первого раза.',
-                          en: 'Percentage of quizzes and tests solved correctly on the first attempt.',
-                          kk: 'Бірінші әрекеттен дұрыс шешілген квиздер мен тесттердің пайызы.',
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 220,
-                      child: _KPICard(
-                        title: t(ru: 'Разобранные темы с ИИ', en: 'AI Topics Cleared', kk: 'ИИ-мен талданған тақырыптар'),
-                        value: '$aiTopicsVal',
-                        topIcon: Icons.psychology_rounded,
-                        accentColor: colors.accent,
-                        tooltipText: t(
-                          ru: 'Количество тем и вопросов, изученных и разобранных совместно с ИИ-ментором.',
-                          en: 'Number of unique topics and questions studied together with the AI Mentor.',
-                          kk: 'ИИ-ментормен бірге зерттелген және талданған тақырыптар мен сұрақтар саны.',
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 220,
-                      child: _KPICard(
-                        title: t(ru: 'Скорость усвоения (XP)', en: 'Learning Speed (XP)', kk: 'Меңгеру жылдамдығы (XP)'),
-                        value: '$liveXpVal XP',
-                        topIcon: Icons.bolt_rounded,
-                        accentColor: colors.primary,
-                        tooltipText: t(
-                          ru: 'Динамика набора очков опыта (XP) за дни текущей недели.',
-                          en: 'Dynamics of experience points (XP) earned during the current week.',
-                          kk: 'Ағымдағы аптаның күндері бойынша тәжірибе ұпайларын (XP) жинау динамикасы.',
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 220,
-                      child: _MasteryIndexCard(
-                        t: t,
-                        colors: colors,
-                        value: masteryValue,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  color: colors.surface.withValues(alpha: 0.6),
-                  border: Border.all(color: colors.divider.withValues(alpha: 0.3)),
-                ),
-                child: _ActivityHeatmap(t: t, colors: colors),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 240,
-                child: _KPICard(
-                  title: t(ru: 'Решённые задачи', en: 'Solved Tasks', kk: 'Шешілген есептер'),
-                  value: '$solvedTasksVal',
-                  topIcon: Icons.assignment_turned_in_rounded,
-                  accentColor: const Color(0xFF00E5FF),
-                  tooltipText: t(
-                    ru: 'Количество успешно решенных упражнений, тестов и практических заданий.',
-                    en: 'Number of successfully completed exercises, quizzes, and code tasks.',
-                    kk: 'Сәтті орындалған жаттығулар, квиздер мен практикалық тапсырмалар саны.',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 200,
-                      child: _StreakCard(t: t, colors: colors, streakVal: streakDaysVal),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 200,
-                      child: _LearningTimeCard(t: t, colors: colors),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 200,
-                child: _FavoriteTopicsCard(t: t, colors: colors),
-              ),
-            ] else ...[
-              // MOBILE LAYOUT: Full scrollable card list
-              SizedBox(
-                height: 220,
-                child: _KPICard(
-                  title: t(ru: 'Код с первой попытки', en: 'Code on 1st Attempt', kk: 'Бірінші әрекеттен код'),
-                  value: '$quizPercentVal%',
-                  topIcon: Icons.check_circle_rounded,
-                  accentColor: colors.success,
-                  tooltipText: t(
-                    ru: 'Процент квизов и тестов, решенных правильно с первого раза.',
-                    en: 'Percentage of quizzes and tests solved correctly on the first attempt.',
-                    kk: 'Бірінші әрекеттен дұрыс шешілген квиздер мен тесттердің пайызы.',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 220,
-                child: _KPICard(
-                  title: t(ru: 'Разобранные темы с ИИ', en: 'AI Topics Cleared', kk: 'ИИ-мен талданған тақырыптар'),
-                  value: '$aiTopicsVal',
-                  topIcon: Icons.psychology_rounded,
-                  accentColor: colors.accent,
-                  tooltipText: t(
-                    ru: 'Количество тем и вопросов, изученных и разобранных совместно с ИИ-ментором.',
-                    en: 'Number of unique topics and questions studied together with the AI Mentor.',
-                    kk: 'ИИ-ментормен бірге зерттелген және талданған тақырыптар мен сұрақтар саны.',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 220,
-                child: _KPICard(
-                  title: t(ru: 'Скорость усвоения (XP)', en: 'Learning Speed (XP)', kk: 'Меңгеру жылдамдығы (XP)'),
-                  value: '$liveXpVal XP',
-                  topIcon: Icons.bolt_rounded,
-                  accentColor: colors.primary,
-                  tooltipText: t(
-                    ru: 'Динамика набора очков опыта (XP) за дни текущей недели.',
-                    en: 'Dynamics of experience points (XP) earned during the current week.',
-                    kk: 'Ағымдағы аптаның күндері бойынша тәжірибе ұпайларын (XP) жинау динамикасы.',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 240,
-                child: _MasteryIndexCard(
-                  t: t,
-                  colors: colors,
-                  value: masteryValue,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                height: 280,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  color: colors.surface.withValues(alpha: 0.6),
-                  border: Border.all(color: colors.divider.withValues(alpha: 0.3)),
-                ),
-                child: _ActivityHeatmap(t: t, colors: colors),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 220,
-                child: _KPICard(
-                  title: t(ru: 'Решённые задачи', en: 'Solved Tasks', kk: 'Шешілген есептер'),
-                  value: '$solvedTasksVal',
-                  topIcon: Icons.assignment_turned_in_rounded,
-                  accentColor: const Color(0xFF00E5FF),
-                  tooltipText: t(
-                    ru: 'Количество успешно решенных упражнений, тестов и практических заданий.',
-                    en: 'Number of successfully completed exercises, quizzes, and code tasks.',
-                    kk: 'Сәтті орындалған жаттығулар, квиздер мен практикалық тапсырмалар саны.',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _StreakCard(t: t, colors: colors, streakVal: streakDaysVal),
-              const SizedBox(height: 16),
-              _LearningTimeCard(t: t, colors: colors),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 180,
-                child: _FavoriteTopicsCard(t: t, colors: colors),
-              ),
-            ],
-            const SizedBox(height: 16),
-            _StudentPerformanceSection(t: t, colors: colors),
-          ] else ...[
-            // ---------------- ORIGINAL DETAIL PROGRESS VIEW ----------------
-            GlowCard(
-              accent: colors.primary,
-              child: _MetricsCarousel(
-                t: t,
-                xp: '$liveXpVal',
-                level: '${backendProfile?.level ?? state.level}',
-                xpToNextLevel: '${(500 - liveXpVal % 500)} XP',
-                streak: '${streakDaysVal}d',
-                completedUnits: '${catalog.totalCompletedUnits(state)}/${catalog.totalUnits()}',
-                unlockedAchievements: '$unlockedAchievements',
-                passedAssessments: '$passedAssessments/${state.assessmentResultsByTrackId.length}',
-                aiSessions: '$aiSessions',
-              ),
+          // Summary metrics carousel
+          GlowCard(
+            accent: colors.primary,
+            child: _MetricsCarousel(
+              t: t,
+              xp: '${backendStats?.summary.totalXp ?? liveXpVal}',
+              level: '${backendStats?.summary.level ?? backendProfile?.level ?? state.level}',
+              xpToNextLevel: '${200 - (backendStats?.summary.totalXp ?? liveXpVal) % 200} XP',
+              streak: '${backendStats?.summary.currentStreak ?? streakDaysVal}d',
+              completedUnits:
+                  '${backendStats?.summary.completedLessons ?? catalog.totalCompletedUnits(state)}'
+                  '/${backendStats?.summary.totalLessons ?? catalog.totalUnits()}',
+              unlockedAchievements: '${backendStats?.summary.achievements ?? unlockedAchievements}',
+              passedAssessments: '$passedAssessments/${state.assessmentResultsByTrackId.length}',
+              aiSessions: '$aiSessions',
             ),
-            const SizedBox(height: 16),
-            GlowCard(
-              accent: colors.primary,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    t(ru: 'Прогресс уровня', en: 'Level Progress', kk: 'Деңгей прогресі'),
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${liveXpVal % 500}/500 XP',
+          ),
+          const SizedBox(height: 16),
+
+          // Level progress
+          GlowCard(
+            accent: colors.primary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t(ru: 'Прогресс уровня', en: 'Level Progress', kk: 'Деңгей прогресі'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                () {
+                  final xp = backendStats?.summary.totalXp ?? liveXpVal;
+                  return Text(
+                    '${xp % 200}/200 XP',
                     style: TextStyle(color: colors.textSecondary, height: 1.4),
-                  ),
-                  const SizedBox(height: 14),
-                  BubbleProgressBar(
-                    value: (liveXpVal % 500) / 500.0,
+                  );
+                }(),
+                const SizedBox(height: 14),
+                () {
+                  final xp = backendStats?.summary.totalXp ?? liveXpVal;
+                  return BubbleProgressBar(
+                    value: (xp % 200) / 200.0,
                     color: colors.primary,
                     backgroundColor: colors.backgroundElevated,
-                    bubbleText: '${liveXpVal % 500}/500 XP',
-                  ),
-                ],
-              ),
+                    bubbleText: '${xp % 200}/200 XP',
+                  );
+                }(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // KPI cards – responsive grid
+          if (isDesktop) ...[
+            Row(
+              children: [
+                Expanded(child: SizedBox(height: 210, child: kpiQuiz)),
+                const SizedBox(width: 16),
+                Expanded(child: SizedBox(height: 210, child: kpiAi)),
+                const SizedBox(width: 16),
+                Expanded(child: SizedBox(height: 210, child: kpiXp)),
+                const SizedBox(width: 16),
+                Expanded(child: SizedBox(height: 210, child: kpiMastery)),
+              ],
             ),
             const SizedBox(height: 16),
-            GlowCard(
-              accent: colors.success,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    t(ru: 'Показатели обучения', en: 'XP & Learning Signals', kk: 'Оқу көрсеткіштері'),
-                    style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 200,
+                    child: _StreakCard(t: t, colors: colors, streakVal: streakDaysVal),
                   ),
-                  const SizedBox(height: 12),
-                  _BreakdownRow(
-                    label: t(ru: 'Пройденные уроки', en: 'Lessons completed', kk: 'Өтілген сабақтар'),
-                    value: '${state.completedLessonIds.length}',
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SizedBox(
+                    height: 200,
+                    child: _LearningTimeCard(t: t, colors: colors),
                   ),
-                  _BreakdownRow(
-                    label: t(ru: 'Решенные практики', en: 'Practices completed', kk: 'Шешілген практикалар'),
-                    value: '${state.completedPracticeIds.length}',
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SizedBox(
+                    height: 200,
+                    child: _FavoriteTopicsCard(t: t, colors: colors),
                   ),
-                  _BreakdownRow(
-                    label: t(ru: 'Решенные квизы', en: 'Quizzes solved', kk: 'Шешілген квиздер'),
-                    value: '${state.completedQuizIds.length}/${catalog.totalQuizzes()}',
-                  ),
-                  _BreakdownRow(
-                    label: t(ru: 'Лабораторные работы', en: 'Memory labs completed', kk: 'Зертханалық жұмыстар'),
-                    value: '${state.completedTrainerIds.length}/${catalog.totalTrainers()}',
-                  ),
-                  _BreakdownRow(
-                    label: t(ru: 'Точность ответов', en: 'Quiz accuracy', kk: 'Жауаптардың дәлдігі'),
-                    value: '${(state.quizAccuracy * 100).round()}%',
-                  ),
-                  _BreakdownRow(
-                    label: t(ru: 'Сессии с ИИ', en: 'AI sessions', kk: 'ИИ-мен сессиялар'),
-                    value: '$aiSessions',
-                  ),
-                  _BreakdownRow(
-                    label: t(ru: 'Пройденные тесты', en: 'Assessment passes', kk: 'Өтілген тесттер'),
-                    value: '$passedAssessments',
-                  ),
-                  _BreakdownRow(
-                    label: t(ru: 'Средний балл тестов', en: 'Assessment average', kk: 'Тесттердин орташа балы'),
-                    value: '$averageAssessment%',
-                  ),
-                  _BreakdownRow(
-                    label: t(ru: 'Попыток тестирования', en: 'Assessment attempts', kk: 'Тест тапсыру әрекеттері'),
-                    value: '${state.assessmentAttemptHistory.length}',
-                  ),
-                ],
-              ),
+                ),
+              ],
+            ),
+          ] else if (isTablet) ...[
+            Row(
+              children: [
+                Expanded(child: SizedBox(height: 200, child: kpiQuiz)),
+                const SizedBox(width: 16),
+                Expanded(child: SizedBox(height: 200, child: kpiAi)),
+              ],
             ),
             const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: SizedBox(height: 200, child: kpiXp)),
+                const SizedBox(width: 16),
+                Expanded(child: SizedBox(height: 200, child: kpiMastery)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 200,
+                    child: _StreakCard(t: t, colors: colors, streakVal: streakDaysVal),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SizedBox(
+                    height: 200,
+                    child: _LearningTimeCard(t: t, colors: colors),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(height: 180, child: _FavoriteTopicsCard(t: t, colors: colors)),
+          ] else ...[
+            SizedBox(height: 200, child: kpiQuiz),
+            const SizedBox(height: 16),
+            SizedBox(height: 200, child: kpiAi),
+            const SizedBox(height: 16),
+            SizedBox(height: 200, child: kpiXp),
+            const SizedBox(height: 16),
+            SizedBox(height: 220, child: kpiMastery),
+            const SizedBox(height: 16),
+            _StreakCard(t: t, colors: colors, streakVal: streakDaysVal),
+            const SizedBox(height: 16),
+            _LearningTimeCard(t: t, colors: colors),
+            const SizedBox(height: 16),
+            SizedBox(height: 180, child: _FavoriteTopicsCard(t: t, colors: colors)),
+          ],
+          const SizedBox(height: 16),
+
+          // Backend statistics
+          if (backendStats == null)
             GlowCard(
               accent: colors.primary,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    t(ru: 'Прогресс разделов', en: 'Zone progress', kk: 'Бөлімдер прогресі'),
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
-                  ...TrackZone.values.map((zone) {
-                    final zoneTitle = catalog.zoneTitle(zone).resolve(state.locale);
-                    final completed = catalog.completedUnitsForZone(state, zone);
-                    final total = catalog.totalUnitsForZone(zone);
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            zoneTitle,
-                            style: TextStyle(
-                              color: colors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '$completed / $total units',
-                            style: TextStyle(color: colors.textSecondary),
-                          ),
-                          const SizedBox(height: 8),
-                          BubbleProgressBar(
-                            value: total == 0 ? 0 : completed / total,
-                            height: 8,
-                            backgroundColor: colors.backgroundElevated,
-                            color: zone == TrackZone.computerScienceCore
-                                ? colors.primary
-                                : colors.accent,
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            GlowCard(
-              accent: colors.accent,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    t(ru: 'Разбор треков', en: 'Track breakdown', kk: 'Track breakdown'),
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
-                  ...catalog.tracks.map((track) {
-                    final progress = catalog.progressForTrack(state, track.id);
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            track.title.resolve(state.locale),
-                            style: TextStyle(
-                              color: colors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${progress.completedUnits}/${progress.totalUnits} units | ${progress.state.name} | assessment ${catalog.bestAssessmentPercentFor(state, track.id)}%',
-                            style: TextStyle(color: colors.textSecondary),
-                          ),
-                          const SizedBox(height: 8),
-                          BubbleProgressBar(
-                            value: progress.fraction,
-                            color: track.color,
-                            backgroundColor: colors.backgroundElevated,
-                            height: 8,
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            GlowCard(
-              accent: colors.success,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    t(ru: 'Недавние достижения', en: 'Recent milestones', kk: 'Соңғы жетістіктер'),
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 10),
-                  ...catalog.recentMilestonesFor(state).map(
-                        (milestone) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Icon(
-                                  Icons.bolt_rounded,
-                                  color: colors.success,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  milestone.resolve(state.locale),
-                                  style: TextStyle(
-                                    color: colors.textSecondary,
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(color: colors.primary),
+                      const SizedBox(height: 12),
+                      Text(
+                        t(
+                          ru: 'Загружаем статистику…',
+                          en: 'Loading statistics…',
+                          kk: 'Статистика жүктелуде…',
                         ),
+                        style: TextStyle(color: colors.textSecondary),
                       ),
-                ],
+                    ],
+                  ),
+                ),
               ),
-            ),
+            )
+          else ...[
+            _BackendLearningSignals(stats: backendStats, colors: colors, t: t),
+            if (backendStats.activity.any((d) => d.xp > 0)) ...[
+              const SizedBox(height: 16),
+              _BackendActivityChart(activity: backendStats.activity, colors: colors, t: t),
+            ],
+            if (backendStats.topics.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _BackendTopicsProgress(topics: backendStats.topics, colors: colors, t: t),
+            ],
+            if (backendStats.courseProgress.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _BackendCourseProgress(courses: backendStats.courseProgress, colors: colors, t: t),
+            ],
           ],
         ],
-      ),
-    );
-  }
-
-  // Sliding tab bar switcher
-  Widget _buildViewSelector(
-    String Function({required String ru, required String en, required String kk}) t,
-    AppThemeColors colors,
-    bool isDesktop,
-  ) {
-    return Align(
-      alignment: isDesktop ? Alignment.centerLeft : Alignment.center,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: colors.backgroundElevated.withValues(alpha: 0.8),
-          border: Border.all(color: colors.divider.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _TabButton(
-              label: t(ru: 'Аналитика', en: 'Analytics', kk: 'Аналитика'),
-              icon: Icons.analytics_rounded,
-              isActive: _selectedTab == StatsTab.analytics,
-              colors: colors,
-              onTap: () {
-                setState(() {
-                  _selectedTab = StatsTab.analytics;
-                });
-              },
-            ),
-            const SizedBox(width: 4),
-            _TabButton(
-              label: t(ru: 'Прогресс', en: 'Progress', kk: 'Прогресс'),
-              icon: Icons.auto_awesome_rounded,
-              isActive: _selectedTab == StatsTab.progress,
-              colors: colors,
-              onTap: () {
-                setState(() {
-                  _selectedTab = StatsTab.progress;
-                });
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Header Zone Layout Builder
-  Widget _buildHeaderZone(
-    BuildContext context,
-    String Function({required String ru, required String en, required String kk}) t,
-    AppThemeColors colors,
-    bool isDesktop,
-    bool isTablet,
-    double masteryValue,
-  ) {
-    final alertWidget = _HeaderAlertBadge(t: t, colors: colors, masteryValue: masteryValue);
-
-    if (isDesktop) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildDropdownButton(context, t, colors),
-          SizedBox(
-            width: 440,
-            child: alertWidget,
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildDropdownButton(context, t, colors),
-        const SizedBox(height: 14),
-        alertWidget,
-      ],
-    );
-  }
-
-  Widget _buildDropdownButton(
-    BuildContext context,
-    String Function({required String ru, required String en, required String kk}) t,
-    AppThemeColors colors,
-  ) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: colors.surfaceSoft.withValues(alpha: 0.8),
-          border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              t(ru: 'Эта неделя', en: 'This week', kk: 'Осы апта'),
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Icon(Icons.keyboard_arrow_down_rounded, color: colors.textSecondary, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Custom Sliding Tab Button
-class _TabButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isActive;
-  final AppThemeColors colors;
-  final VoidCallback onTap;
-
-  const _TabButton({
-    required this.label,
-    required this.icon,
-    required this.isActive,
-    required this.colors,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.fastOutSlowIn,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: isActive ? colors.primary : Colors.transparent,
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: colors.primary.withValues(alpha: 0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  )
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isActive ? Colors.white : colors.textSecondary,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? Colors.white : colors.textSecondary,
-                fontWeight: FontWeight.bold,
-                fontSize: 12.5,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1081,35 +531,6 @@ class _MetricTile extends StatelessWidget {
 }
 
 // Breakdown row for original progress tab
-class _BreakdownRow extends StatelessWidget {
-  const _BreakdownRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label, style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold)),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // KPI Card reusable shell with interactive Tooltip description
 class _KPICard extends StatelessWidget {
@@ -1470,317 +891,8 @@ class _HalfCircleGaugePainter extends CustomPainter {
 }
 
 // Header alert badge with live metrics
-class _HeaderAlertBadge extends ConsumerWidget {
-  final String Function({required String ru, required String en, required String kk}) t;
-  final AppThemeColors colors;
-  final double masteryValue;
-
-  const _HeaderAlertBadge({
-    required this.t,
-    required this.colors,
-    required this.masteryValue,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final valPercent = (masteryValue * 100).round();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: colors.primary.withValues(alpha: 0.08),
-        border: Border.all(color: colors.primary.withValues(alpha: 0.15)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  t(ru: 'Ваша готовность к ИТ-индустрии', en: 'Your IT Industry Readiness', kk: 'Сіздің ИТ-индустрияға дайындығыңыз'),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      '$valPercent%',
-                      style: TextStyle(
-                        color: colors.primary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        t(ru: 'готов к работе!', en: 'ready to hire!', kk: 'жұмысқа дайын!'),
-                        style: TextStyle(
-                          color: colors.textPrimary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Mini visual bars
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(5, (index) {
-              final heights = [10.0, 18.0, 14.0, 26.0, 21.0];
-              final isActive = index == 3;
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                width: 3,
-                height: heights[index],
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(99),
-                  color: isActive ? colors.primary : colors.primary.withValues(alpha: 0.4),
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // Activity Heatmap implementation connected to actual state.weeklyActivity
-class _ActivityHeatmap extends ConsumerWidget {
-  final String Function({required String ru, required String en, required String kk}) t;
-  final AppThemeColors colors;
-
-  const _ActivityHeatmap({required this.t, required this.colors});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(demoAppControllerProvider);
-    
-    final days = [
-      t(ru: 'Пн', en: 'Mo', kk: 'Дс'),
-      t(ru: 'Вт', en: 'Tu', kk: 'Сс'),
-      t(ru: 'Ср', en: 'We', kk: 'Бс'),
-      t(ru: 'Чт', en: 'Th', kk: 'Жс'),
-      t(ru: 'Пт', en: 'Fr', kk: 'Жм'),
-      t(ru: 'Сб', en: 'Sa', kk: 'Сн'),
-      t(ru: 'Вс', en: 'Su', kk: 'Жк'),
-    ];
-
-    final hourLabels = const ['00:00', '06:00', '12:00', '18:00', '23:00'];
-
-    // Map rows exactly to actual user weeklyActivity list!
-    final grid = List.generate(7, (r) {
-      final dayActivity = state.weeklyActivity.length > r ? state.weeklyActivity[r] : 0;
-      final random = math.Random(1337 + r);
-      return List.generate(24, (c) {
-        double intensity = 0.05;
-        if (dayActivity > 0) {
-          // peak biases during the day (noon and evening)
-          double hourBias = 0.08;
-          if (c >= 11 && c <= 14) hourBias += 0.42; // lunch break study
-          if (c >= 18 && c <= 21) hourBias += 0.58; // evening homework
-          
-          // scale intensity by actual activity counts
-          intensity = (random.nextDouble() * hourBias * (dayActivity * 0.45)).clamp(0.05, 1.0);
-        }
-        return intensity;
-      });
-    });
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              t(ru: 'Активность по дням', en: 'Daily Activity', kk: 'Күнделікті белсенділік'),
-              style: TextStyle(
-                color: colors.textSecondary,
-                fontSize: 13.5,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Tooltip(
-              message: t(
-                ru: 'Тепловая карта вашей активности по часам суток. Чем ярче ячейка, тем больше действий было совершено.',
-                en: 'Heatmap of your activity by hours of the day. The brighter the cell, the more actions were performed.',
-                kk: 'Тәулік сағаттары бойынша белсенділігіңіздің жылу картасы. Ұяшық неғұрлым ашық болса, соғұрлым көп әрекет жасалды.',
-              ),
-              textStyle: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-              decoration: BoxDecoration(
-                color: colors.backgroundElevated,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colors.divider, width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              triggerMode: TooltipTriggerMode.tap,
-              showDuration: const Duration(seconds: 4),
-              child: Icon(
-                Icons.help_outline_rounded,
-                color: colors.textSecondary.withValues(alpha: 0.4),
-                size: 14,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Day labels column
-              Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(7, (index) {
-                  return Expanded(
-                    child: Center(
-                      child: Text(
-                        days[index],
-                        style: TextStyle(
-                          color: colors.textSecondary.withValues(alpha: 0.7),
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(width: 10),
-              // Grid cells column
-              Expanded(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: List.generate(7, (r) {
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2.0),
-                              child: Row(
-                                children: List.generate(24, (c) {
-                                  final val = grid[r][c];
-                                  Color cellColor;
-                                  if (val < 0.15) {
-                                    cellColor = colors.backgroundElevated.withValues(alpha: 0.6);
-                                  } else {
-                                    cellColor = colors.accent.withValues(alpha: val.clamp(0.2, 1.0));
-                                  }
-
-                                  return Expanded(
-                                    child: Container(
-                                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: cellColor,
-                                        borderRadius: BorderRadius.circular(2.5),
-                                        boxShadow: val > 0.75
-                                            ? [
-                                                BoxShadow(
-                                                  color: colors.accent.withValues(alpha: 0.25),
-                                                  blurRadius: 3,
-                                                )
-                                              ]
-                                            : null,
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Hour labels row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(hourLabels.length, (index) {
-                        return Text(
-                          hourLabels[index],
-                          style: TextStyle(
-                            color: colors.textSecondary.withValues(alpha: 0.5),
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        // Legend row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              t(ru: 'Меньше', en: 'Less', kk: 'Азырақ'),
-              style: TextStyle(color: colors.textSecondary.withValues(alpha: 0.5), fontSize: 9.5, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 6),
-            ...List.generate(5, (index) {
-              final val = index / 4.0;
-              Color cellColor;
-              if (val < 0.1) {
-                cellColor = colors.backgroundElevated.withValues(alpha: 0.6);
-              } else {
-                cellColor = colors.accent.withValues(alpha: val.clamp(0.2, 1.0));
-              }
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: cellColor,
-                  borderRadius: BorderRadius.circular(1.5),
-                ),
-              );
-            }),
-            const SizedBox(width: 6),
-            Text(
-              t(ru: 'Больше', en: 'More', kk: 'Көбірек'),
-              style: TextStyle(color: colors.textSecondary.withValues(alpha: 0.5), fontSize: 9.5, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
 
 // Streak Card connected to actual state.streak and state.weeklyActivity
 class _StreakCard extends ConsumerWidget {
@@ -1797,7 +909,14 @@ class _StreakCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(demoAppControllerProvider);
-    final dates = const ['20.05', '21.05', '22.05', '23.05', '24.05', '25.05', '26.05'];
+    final now = DateTime.now();
+    final dates = List.generate(
+      7,
+      (i) {
+        final d = now.subtract(Duration(days: 6 - i));
+        return '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
+      },
+    );
     
     // Light up fires exactly on days user did tasks (weeklyActivity > 0)
     final actives = List.generate(7, (i) {
@@ -1807,7 +926,7 @@ class _StreakCard extends ConsumerWidget {
       return false;
     });
 
-    final bestStreak = state.maxStreak > 23 ? state.maxStreak : 23;
+    final bestStreak = state.maxStreak;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -2103,115 +1222,6 @@ class _LearningTimeCard extends ConsumerWidget {
 
 // Server-backed performance section: quiz/practice stats and topic progress
 // from `GET /api/v1/student/statistics`, hidden when the backend is unavailable.
-class _StudentPerformanceSection extends ConsumerWidget {
-  final String Function({required String ru, required String en, required String kk}) t;
-  final AppThemeColors colors;
-
-  const _StudentPerformanceSection({required this.t, required this.colors});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stats = ref
-        .watch(backendStudentStatisticsProvider)
-        .maybeWhen(data: (value) => value, orElse: () => null);
-
-    if (stats == null) return const SizedBox.shrink();
-
-    final quiz = stats.quiz;
-    final practice = stats.practice;
-    final topTopics = [...stats.topics]
-      ..sort((a, b) => b.progressPercent.compareTo(a.progressPercent));
-
-    return GlowCard(
-      accent: colors.accent,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.query_stats_rounded, color: colors.accent, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                t(ru: 'Серверная статистика', en: 'Server Statistics', kk: 'Сервер статистикасы'),
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _BreakdownRow(
-            label: t(ru: 'Тесты пройдено', en: 'Quizzes passed', kk: 'Тапсырылған тесттер'),
-            value: '${quiz.passedQuizzes}/${quiz.attemptedQuizzes} (${quiz.accuracyPercent}%)',
-          ),
-          _BreakdownRow(
-            label: t(ru: 'Запусков кода', en: 'Code runs', kk: 'Код іске қосулары'),
-            value: '${practice.runs}',
-          ),
-          _BreakdownRow(
-            label: t(ru: 'Практика сдана', en: 'Practice completed', kk: 'Аяқталған практика'),
-            value: '${practice.completedPractices}/${practice.attemptedPractices} (${practice.passRatePercent}%)',
-          ),
-          _BreakdownRow(
-            label: t(ru: 'XP за практику', en: 'XP from practice', kk: 'Практикадан алынған XP'),
-            value: '${practice.xpEarned} XP',
-          ),
-          if (topTopics.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              t(ru: 'Темы в работе', en: 'Topics in progress', kk: 'Жұмыстағы тақырыптар'),
-              style: TextStyle(
-                color: colors.textSecondary,
-                fontSize: 12.5,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...topTopics.take(3).map(
-              (topic) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            topic.name.isNotEmpty ? topic.name : topic.code,
-                            style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          '${topic.progressPercent}%',
-                          style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        value: (topic.progressPercent / 100).clamp(0, 1).toDouble(),
-                        minHeight: 6,
-                        backgroundColor: colors.divider.withValues(alpha: 0.3),
-                        valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
 
 // Favorite Topics Card connected to actual user completed categories and tracks in Learn section
 class _FavoriteTopicsCard extends ConsumerWidget {
@@ -2416,6 +1426,415 @@ class _FavoriteTopicsCard extends ConsumerWidget {
               }),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Progress tab: backend-driven widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+typedef _T = String Function({required String ru, required String en, required String kk});
+
+class _StatRow extends StatelessWidget {
+  const _StatRow({required this.label, required this.value, required this.colors});
+
+  final String label;
+  final String value;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: colors.textSecondary, fontSize: 13),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackendLearningSignals extends StatelessWidget {
+  const _BackendLearningSignals({
+    required this.stats,
+    required this.colors,
+    required this.t,
+  });
+
+  final BackendStudentStatisticsDto stats;
+  final AppThemeColors colors;
+  final _T t;
+
+  @override
+  Widget build(BuildContext context) {
+    final quiz = stats.quiz;
+    final practice = stats.practice;
+    final pct = quiz.accuracyPercent.clamp(0, 100);
+    final hasQuiz = quiz.attemptedQuizzes > 0;
+
+    return GlowCard(
+      accent: colors.primary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t(ru: 'Сигналы обучения', en: 'Learning Signals', kk: 'Оқу сигналдары'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 120,
+                height: 120,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    PieChart(
+                      PieChartData(
+                        sectionsSpace: 3,
+                        centerSpaceRadius: 38,
+                        sections: hasQuiz
+                            ? [
+                                PieChartSectionData(
+                                  value: pct.toDouble(),
+                                  color: colors.primary,
+                                  title: '',
+                                  radius: 22,
+                                ),
+                                PieChartSectionData(
+                                  value: (100 - pct).toDouble(),
+                                  color: colors.backgroundElevated,
+                                  title: '',
+                                  radius: 22,
+                                ),
+                              ]
+                            : [
+                                PieChartSectionData(
+                                  value: 1,
+                                  color: colors.backgroundElevated,
+                                  title: '',
+                                  radius: 22,
+                                ),
+                              ],
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          hasQuiz ? '$pct%' : '—',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          t(ru: 'точность', en: 'accuracy', kk: 'дәлдік'),
+                          style: TextStyle(fontSize: 9, color: colors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  children: [
+                    _StatRow(
+                      label: t(ru: 'Квизов пройдено', en: 'Quizzes passed', kk: 'Квиздер өтілді'),
+                      value: '${quiz.passedQuizzes}/${quiz.attemptedQuizzes}',
+                      colors: colors,
+                    ),
+                    _StatRow(
+                      label: t(ru: 'Запусков кода', en: 'Code runs', kk: 'Код іске қосулары'),
+                      value: '${practice.runs}',
+                      colors: colors,
+                    ),
+                    _StatRow(
+                      label: t(ru: 'Отправлений', en: 'Submissions', kk: 'Жіберулер'),
+                      value: '${practice.submissions}',
+                      colors: colors,
+                    ),
+                    _StatRow(
+                      label: t(ru: 'Практик завершено', en: 'Practices done', kk: 'Практикалар аяқталды'),
+                      value: '${practice.completedPractices}/${practice.attemptedPractices}',
+                      colors: colors,
+                    ),
+                    _StatRow(
+                      label: t(ru: 'XP за практику', en: 'Practice XP', kk: 'Практика XP'),
+                      value: '+${practice.xpEarned} XP',
+                      colors: colors,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackendActivityChart extends StatelessWidget {
+  const _BackendActivityChart({
+    required this.activity,
+    required this.colors,
+    required this.t,
+  });
+
+  final List<BackendStudentActivityDayDto> activity;
+  final AppThemeColors colors;
+  final _T t;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxXp = activity.isEmpty
+        ? 1.0
+        : activity.map((d) => d.xp).reduce(math.max).toDouble();
+    final barGroups = activity.asMap().entries.map((entry) {
+      final xp = entry.value.xp;
+      return BarChartGroupData(
+        x: entry.key,
+        barRods: [
+          BarChartRodData(
+            toY: xp.toDouble(),
+            color: xp > 0 ? colors.primary : colors.backgroundElevated,
+            width: 9,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+          ),
+        ],
+      );
+    }).toList();
+
+    return GlowCard(
+      accent: colors.primary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t(ru: 'Активность (30 дней)', en: 'Activity (30 days)', kk: 'Белсенділік (30 күн)'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            t(ru: 'XP по дням', en: 'XP per day', kk: 'Күн бойынша XP'),
+            style: TextStyle(fontSize: 12, color: colors.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 150,
+            child: BarChart(
+              BarChartData(
+                barGroups: barGroups,
+                borderData: FlBorderData(show: false),
+                gridData: const FlGridData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 20,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.round();
+                        if (idx < 0 || idx >= activity.length) {
+                          return const SizedBox.shrink();
+                        }
+                        if (idx % 7 != 0) return const SizedBox.shrink();
+                        final parts = activity[idx].date.split('-');
+                        if (parts.length < 3) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${parts[2]}/${parts[1]}',
+                            style: TextStyle(fontSize: 9, color: colors.textSecondary),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                maxY: maxXp < 1 ? 10 : maxXp * 1.25,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackendTopicsProgress extends StatelessWidget {
+  const _BackendTopicsProgress({
+    required this.topics,
+    required this.colors,
+    required this.t,
+  });
+
+  final List<BackendStudentTopicProgressDto> topics;
+  final AppThemeColors colors;
+  final _T t;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlowCard(
+      accent: colors.primary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t(ru: 'Прогресс по темам', en: 'Topics Progress', kk: 'Тақырыптар бойынша прогрес'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 14),
+          ...topics.map((topic) {
+            final pct = topic.progressPercent.clamp(0, 100) / 100.0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          topic.name,
+                          style: TextStyle(
+                            color: colors.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        '${topic.completedLessons}/${topic.totalLessons}',
+                        style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  BubbleProgressBar(
+                    value: pct,
+                    color: colors.primary,
+                    backgroundColor: colors.backgroundElevated,
+                    bubbleText: '${topic.progressPercent}%',
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackendCourseProgress extends StatelessWidget {
+  const _BackendCourseProgress({
+    required this.courses,
+    required this.colors,
+    required this.t,
+  });
+
+  final List<BackendStudentCourseDetailDto> courses;
+  final AppThemeColors colors;
+  final _T t;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlowCard(
+      accent: colors.primary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t(ru: 'Курсы', en: 'Courses', kk: 'Курстар'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 14),
+          ...courses.map((course) {
+            final pct = course.progressPercent.clamp(0, 100) / 100.0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          course.title,
+                          style: TextStyle(
+                            color: colors.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        '${course.completedLessons}/${course.totalLessons}',
+                        style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  BubbleProgressBar(
+                    value: pct,
+                    color: colors.primary,
+                    backgroundColor: colors.backgroundElevated,
+                    bubbleText: '${course.progressPercent}%',
+                  ),
+                  if (course.practiceRuns > 0 || course.practiceCompleted > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      t(
+                        ru: 'Практика: ${course.practiceCompleted} завершено / ${course.practiceRuns} запусков',
+                        en: 'Practice: ${course.practiceCompleted} completed / ${course.practiceRuns} runs',
+                        kk: 'Практика: ${course.practiceCompleted} аяқталды / ${course.practiceRuns} іске қосу',
+                      ),
+                      style: TextStyle(fontSize: 11, color: colors.textSecondary),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

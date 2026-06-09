@@ -53,15 +53,15 @@ abstract final class AppGuideCopy {
       AppLocale.ru =>
         hasCompleted
             ? 'Вы уже проходили тур. Его можно перезапустить в любой момент из этого блока.'
-            : 'Короткий маршрут по основным экранам, кнопкам, подсказкам и горячим клавишам.',
+            : 'Короткий маршрут по основным экранам, кнопкам и подсказкам.',
       AppLocale.en =>
         hasCompleted
             ? 'You have already completed the tour. Restart it any time from this section.'
-            : 'A short walkthrough of the main screens, actions, tips, and keyboard shortcuts.',
+            : 'A short walkthrough of the main screens, actions, and tips.',
       AppLocale.kk =>
         hasCompleted
             ? 'Сіз турды өтіп шықтыңыз. Оны осы бөлімнен кез келген уақытта қайта бастауға болады.'
-            : 'Негізгі экрандар, әрекеттер, кеңестер және пернелер тіркесімі бойынша қысқа шолу.',
+            : 'Негізгі экрандар, әрекеттер және кеңестер бойынша қысқа шолу.',
     };
   }
 
@@ -135,7 +135,6 @@ abstract final class AppGuideCopy {
               'Главная ведет к прогрессу и следующему шагу.',
               'Профиль хранит достижения, сертификаты и историю результатов.',
             ],
-            hotkeys: <String>['Alt + 1..5', 'Ctrl + Tab', 'Left / Right'],
           ),
           AppLocale.en => const AppGuidePanelCopy(
             title: 'Main navigation',
@@ -145,7 +144,6 @@ abstract final class AppGuideCopy {
               'Home keeps the current progress and next action in view.',
               'Profile stores achievements, certificates, and learning history.',
             ],
-            hotkeys: <String>['Alt + 1..5', 'Ctrl + Tab', 'Left / Right'],
           ),
           AppLocale.kk => const AppGuidePanelCopy(
             title: 'Негізгі навигация',
@@ -155,7 +153,6 @@ abstract final class AppGuideCopy {
               'Басты экранда прогресс пен келесі қадам көрінеді.',
               'Профильде жетістіктер, сертификаттар және оқу тарихы сақталады.',
             ],
-            hotkeys: <String>['Alt + 1..5', 'Ctrl + Tab', 'Left / Right'],
           ),
         };
       case AppGuideStepId.homeProgress:
@@ -196,9 +193,7 @@ abstract final class AppGuideCopy {
                 'Этот экран показывает, какие ветки уже пройдены, что в работе и куда логично двигаться дальше.',
             tips: <String>[
               'Нажимайте на узлы, чтобы открыть трек и перейти к модулям.',
-              'На больших экранах легенда справа помогает быстро читать статусы.',
             ],
-            hotkeys: <String>['Ctrl + T', 'Wheel / pinch'],
           ),
           AppLocale.en => const AppGuidePanelCopy(
             title: 'Knowledge tree',
@@ -206,9 +201,7 @@ abstract final class AppGuideCopy {
                 'This screen shows what is completed, what is in progress, and where the next learning branch starts.',
             tips: <String>[
               'Tap a node to open the related track and modules.',
-              'On larger screens the legend on the right helps decode statuses faster.',
             ],
-            hotkeys: <String>['Ctrl + T', 'Wheel / pinch'],
           ),
           AppLocale.kk => const AppGuidePanelCopy(
             title: 'Білім ағашы',
@@ -216,9 +209,7 @@ abstract final class AppGuideCopy {
                 'Бұл экран қай тармақ аяқталғанын, не жүріп жатқанын және келесі қадам қайда екенін көрсетеді.',
             tips: <String>[
               'Трек пен модульдерді ашу үшін түйіндерді басыңыз.',
-              'Үлкен экрандарда оң жақтағы легенда мәртебелерді тез оқуға көмектеседі.',
             ],
-            hotkeys: <String>['Ctrl + T', 'Wheel / pinch'],
           ),
         };
       case AppGuideStepId.learnDiscovery:
@@ -231,7 +222,6 @@ abstract final class AppGuideCopy {
               'Если знаете тему, начинайте с поиска, а затем уточняйте фильтрами.',
               'Горизонтальные полки ниже показывают популярные и рекомендованные подборки.',
             ],
-            hotkeys: <String>['Ctrl + K', 'Ctrl + L'],
           ),
           AppLocale.en => const AppGuidePanelCopy(
             title: 'Learn catalog',
@@ -241,7 +231,6 @@ abstract final class AppGuideCopy {
               'Start with search when you know the topic, then refine with filters.',
               'The rails below show popular and recommended collections.',
             ],
-            hotkeys: <String>['Ctrl + K', 'Ctrl + L'],
           ),
           AppLocale.kk => const AppGuidePanelCopy(
             title: 'Learn каталогы',
@@ -251,7 +240,6 @@ abstract final class AppGuideCopy {
               'Тақырып белгілі болса, алдымен іздеуден бастаңыз да, кейін фильтрлермен нақтылаңыз.',
               'Төмендегі жолақтарда танымал және ұсынылған жинақтар көрсетіледі.',
             ],
-            hotkeys: <String>['Ctrl + K', 'Ctrl + L'],
           ),
         };
       // communityGroups case removed — feature removed.
@@ -263,9 +251,7 @@ abstract final class AppGuideCopy {
                 'Сюда удобно приносить вопросы по теме, коду и задачам, когда нужен быстрый разбор или следующий шаг.',
             tips: <String>[
               'Поле внизу отправляет ваш запрос, а блоки выше содержат быстрые вопросы и статус ключа.',
-              'Личный API-ключ хранится локально на устройстве.',
             ],
-            hotkeys: <String>['Enter'],
           ),
           AppLocale.en => const AppGuidePanelCopy(
             title: 'AI mentor',
@@ -273,9 +259,7 @@ abstract final class AppGuideCopy {
                 'Bring topic, code, and task questions here when you need a quick explanation or the next step.',
             tips: <String>[
               'The composer sends prompts, while the cards above hold quick questions and key status.',
-              'Your personal API key is stored locally on the device.',
             ],
-            hotkeys: <String>['Enter'],
           ),
           AppLocale.kk => const AppGuidePanelCopy(
             title: 'AI-ментор',
@@ -283,38 +267,30 @@ abstract final class AppGuideCopy {
                 'Тақырып, код және тапсырма сұрақтарын жылдам түсіндіру не келесі қадам үшін осы жерге әкелуге болады.',
             tips: <String>[
               'Төмендегі өріс сұрауды жібереді, ал жоғарыдағы блоктарда дайын сұрақтар мен кілт күйі тұр.',
-              'Жеке API-кілті құрылғыда жергілікті түрде сақталады.',
             ],
-            hotkeys: <String>['Enter'],
           ),
         };
       case AppGuideStepId.profileOverview:
         return switch (locale) {
           AppLocale.ru => const AppGuidePanelCopy(
             title: 'Профиль и прогресс',
-            body:
-                'Здесь собраны XP, достижения, сертификаты, избранное и история ваших результатов.',
+            body: 'Здесь собраны XP, достижения, сертификаты, прогресс.',
             tips: <String>[
               'Эта часть помогает быстро понять, как идет обучение и что уже закрыто.',
-              'Кнопки ниже ведут к статистике, лидерборду и сервисным действиям.',
             ],
           ),
           AppLocale.en => const AppGuidePanelCopy(
             title: 'Profile and progress',
-            body:
-                'This area keeps XP, achievements, certificates, favorites, and your result history together.',
+            body: 'Here you will find XP, achievements, certificates, and progress.',
             tips: <String>[
               'It gives a quick read on how learning is going and what is already completed.',
-              'The buttons below open stats, leaderboard, and maintenance actions.',
             ],
           ),
           AppLocale.kk => const AppGuidePanelCopy(
             title: 'Профиль және прогресс',
-            body:
-                'Мұнда XP, жетістіктер, сертификаттар, таңдаулылар және нәтиже тарихы жиналған.',
+            body: 'Мұнда XP, жетістіктер, сертификаттар және прогресс жиналған.',
             tips: <String>[
               'Бұл бөлім оқу қалай жүріп жатқанын және не аяқталғанын тез көруге көмектеседі.',
-              'Төмендегі батырмалар статистика, лидерборд және сервистік әрекеттерді ашады.',
             ],
           ),
         };
@@ -323,29 +299,17 @@ abstract final class AppGuideCopy {
           AppLocale.ru => const AppGuidePanelCopy(
             title: 'Настройки и повтор',
             body:
-                'Если интерфейс подзабылся, откройте настройки: там собраны язык, тема, хоткеи и кнопка повторного запуска гайда.',
-            tips: <String>[
-              'Этот вход в настройки одинаково полезен на телефоне, десктопе и в вебе.',
-              'После реального первого входа сюда легко добавить автозапуск тура для новых пользователей.',
-            ],
+                'Если интерфейс подзабылся, откройте настройки: там собраны язык, тема и кнопка повторного запуска гайда.',
           ),
           AppLocale.en => const AppGuidePanelCopy(
             title: 'Settings and replay',
             body:
-                'If the interface gets fuzzy later, open Settings for language, theme, shortcuts, and the guide replay button.',
-            tips: <String>[
-              'This settings entry is useful on phone, desktop, and web.',
-              'Later it will be easy to connect this flow to first-login onboarding.',
-            ],
+                'If the interface gets fuzzy later, open Settings for language, theme, and the guide replay button.',
           ),
           AppLocale.kk => const AppGuidePanelCopy(
             title: 'Баптаулар және қайталау',
             body:
-                'Интерфейс ұмытылса, баптауларды ашыңыз: онда тіл, тақырып, пернелер тіркесімі және гидті қайта іске қосу бар.',
-            tips: <String>[
-              'Бұл кіру нүктесі телефонда, десктопта және вебте бірдей ыңғайлы.',
-              'Кейін осы жерге алғашқы кірудегі автоматты онбордингті қосу оңай болады.',
-            ],
+                'Интерфейс ұмытылса, баптауларды ашыңыз: онда тіл, тақырып және гидті қайта іске қосу бар.',
           ),
         };
       case AppGuideStepId.completion:

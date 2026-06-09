@@ -9,6 +9,7 @@ class TechTextField extends StatelessWidget {
     required this.icon,
     required this.controller,
     this.isObscure = false,
+    this.readOnly = false,
     this.textInputAction,
     this.onSubmitted,
   });
@@ -17,6 +18,7 @@ class TechTextField extends StatelessWidget {
   final IconData icon;
   final TextEditingController controller;
   final bool isObscure;
+  final bool readOnly;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
 
@@ -26,6 +28,7 @@ class TechTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: isObscure,
+      readOnly: readOnly,
       textInputAction: textInputAction,
       onSubmitted: onSubmitted,
       style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600),

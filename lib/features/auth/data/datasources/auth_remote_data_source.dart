@@ -109,7 +109,7 @@ class AuthRemoteDataSource {
       if (avatarBase64 != null) 'avatarBase64': avatarBase64,
     };
 
-    return _client.patchJson(
+    return _client.patchEmpty(
       '/api/v1/profiles/me',
       headers: <String, String>{'Authorization': 'Bearer $accessToken'},
       body: body,

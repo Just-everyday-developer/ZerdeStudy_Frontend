@@ -67,16 +67,15 @@ class HomePage extends ConsumerWidget {
           lastLogin: DateTime.now(),
         ).toSet();
     final catalog = ref.watch(demoCatalogProvider);
-    final currentTrack = catalog.trackById(state.currentTrackId);
-    // For the OOP track, overlay backend progress so the home card reflects
-    // real completed lessons (UUID IDs that the local catalog doesn't count).
+    final currentTrack = catalog.trackById('oop');
+    // Always show OOP as the current track; overlay backend progress so the
+    // home card reflects real completed lessons.
     final backendOopProgress = ref
         .watch(backendOopProgressProvider)
         .maybeWhen(data: (p) => p, orElse: () => null);
-    final localTrackProgress = catalog.progressForTrack(state, currentTrack.id);
+    final localTrackProgress = catalog.progressForTrack(state, 'oop');
     final currentProgress =
-        (state.currentTrackId == 'oop' &&
-            backendOopProgress != null &&
+        (backendOopProgress != null &&
             backendOopProgress.totalLessons > 0)
         ? TrackProgress(
             state: backendOopProgress.completedLessons == 0
@@ -99,23 +98,10 @@ class HomePage extends ConsumerWidget {
     final colors = context.appColors;
     final compact = context.isCompactLayout;
 
-    // Filter tracks with progress > 0 or current active track
-    final startedTracks = catalog.tracks.where((track) {
-      final progress = catalog.progressForTrack(state, track.id);
-      return progress.completedUnits > 0 || track.id == state.currentTrackId;
-    }).toList();
-
-    // Filter community courses with progress > 0 or enrolled
-    final startedCourses = catalog.communityCourses.where((course) {
-      final percent = catalog.coursePlayerCompletionPercent(state, course.id);
-      final enrolled = state.enrolledCommunityCourseIds.contains(course.id);
-      return percent > 0 || enrolled;
-    }).toList();
-
-    // Fallback if empty
-    if (startedCourses.isEmpty && catalog.communityCourses.isNotEmpty) {
-      startedCourses.add(catalog.communityCourses.first);
-    }
+    // Only OOP is a backend-integrated track — show it always.
+    // Local-only tracks (OS, Fundamentals, Frontend) are not shown here.
+    final oopTrack = catalog.trackById('oop');
+    final startedTracks = <LearningTrack>[oopTrack];
 
     final trackSectionTitle = switch (state.locale) {
       AppLocale.ru => 'Дерево знаний',
@@ -123,14 +109,10 @@ class HomePage extends ConsumerWidget {
       _ => 'Knowledge Tree',
     };
 
-    final courseSectionTitle = switch (state.locale) {
-      AppLocale.ru => 'Внешние курсы',
-      AppLocale.kk => 'Сыртқы курстар',
-      _ => 'External Courses',
-    };
-
     final trackCards = startedTracks.map((track) {
-      final progress = catalog.progressForTrack(state, track.id);
+      final progress = track.id == 'oop'
+          ? currentProgress
+          : catalog.progressForTrack(state, track.id);
       return Padding(
         padding: const EdgeInsets.only(bottom: 14),
         child: _CircularProgressCard(
@@ -155,26 +137,6 @@ class HomePage extends ConsumerWidget {
       );
     }).toList();
 
-    final courseCards = startedCourses.map((course) {
-      final percent = catalog.coursePlayerCompletionPercent(state, course.id);
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: _CircularProgressCard(
-          title: course.title.resolve(state.locale),
-          subtitle: course.subtitle.resolve(state.locale),
-          percent: percent,
-          color: course.color,
-          icon: Icons.school_rounded,
-          onTap: () {
-            if (catalog.isCourseEnrolled(state, course.id)) {
-              context.push(AppRoutes.coursePlayerById(course.id));
-            } else {
-              context.push(AppRoutes.courseById(course.id));
-            }
-          },
-        ),
-      );
-    }).toList();
 
     return AppPageScaffold(
       horizontalPadding: compact ? 0 : null,
@@ -254,28 +216,6 @@ class HomePage extends ConsumerWidget {
                   spacing: 16,
                   runSpacing: 16,
                   children: trackCards
-                      .map((card) => SizedBox(width: 340, child: card))
-                      .toList(),
-                ),
-              const SizedBox(height: 18),
-
-              // External Courses Section (Always below Knowledge Tree)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Text(
-                  courseSectionTitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-                ),
-              ),
-              if (compact)
-                ...courseCards
-              else
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: courseCards
                       .map((card) => SizedBox(width: 340, child: card))
                       .toList(),
                 ),

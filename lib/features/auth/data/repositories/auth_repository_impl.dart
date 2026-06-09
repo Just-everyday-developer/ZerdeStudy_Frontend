@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:frontend_flutter/core/network/api_exception.dart';
 import 'package:frontend_flutter/features/auth/domain/entities/auth_session.dart';
 import 'package:frontend_flutter/features/auth/domain/repositories/auth_repository.dart';
@@ -123,7 +124,7 @@ class AuthRepositoryImpl implements AuthRepository {
     String? email,
     String? avatarBase64,
   }) async {
-    final accessToken = _requireAccessToken();
+    final accessToken = await _freshAccessToken();
     await _remote.updateProfile(
       accessToken: accessToken,
       name: name,
@@ -138,12 +139,24 @@ class AuthRepositoryImpl implements AuthRepository {
     required String currentPassword,
     required String newPassword,
   }) async {
-    final accessToken = _requireAccessToken();
+    final accessToken = await _freshAccessToken();
     await _remote.changePassword(
       accessToken: accessToken,
       currentPassword: currentPassword,
       newPassword: newPassword,
     );
+  }
+
+  Future<String> _freshAccessToken() async {
+    try {
+      await refreshSession();
+    } on ApiException catch (e) {
+      debugPrint('[_freshAccessToken] refresh ApiException: ${e.code} / ${e.message}');
+    } catch (e, st) {
+      debugPrint('[_freshAccessToken] refresh non-ApiException: $e\n$st');
+      rethrow;
+    }
+    return _requireAccessToken();
   }
 
   String _requireAccessToken() {

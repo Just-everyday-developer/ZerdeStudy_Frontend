@@ -56,14 +56,19 @@ final aiChatControllerProvider =
     NotifierProvider<AiChatController, AiChatState>(AiChatController.new);
 
 class AiChatController extends Notifier<AiChatState> {
-  static const _storageKey = 'zerdestudy_ai_chat_history_v1';
-  static const _multichatStorageKey = 'zerdestudy_ai_multichat_history_v2';
+  static const _storageKeyBase = 'zerdestudy_ai_chat_history_v1';
+  static const _multichatStorageKeyBase = 'zerdestudy_ai_multichat_history_v2';
 
   late final SharedPreferences _preferences;
+  late final String _storageKey;
+  late final String _multichatStorageKey;
 
   @override
   AiChatState build() {
     _preferences = ref.watch(sharedPreferencesProvider);
+    final userId = ref.watch(authControllerProvider).user?.id ?? 'guest';
+    _storageKey = '${_storageKeyBase}_$userId';
+    _multichatStorageKey = '${_multichatStorageKeyBase}_$userId';
     // Queue asynchronous background sync to backend
     Future.microtask(_syncWithBackend);
     return _restoreState();

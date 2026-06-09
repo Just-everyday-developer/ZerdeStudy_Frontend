@@ -494,8 +494,8 @@ class AppLocalizations {
       AppLocale.kk: 'Кіру',
     },
     'signup': {
-      AppLocale.ru: 'Создать аккаунт',
-      AppLocale.en: 'Sign up',
+      AppLocale.ru: 'Зарегистрироваться',
+      AppLocale.en: 'Register',
       AppLocale.kk: 'Тіркелу',
     },
     'login_title': {
@@ -1954,6 +1954,51 @@ class AppLocalizations {
       AppLocale.ru: 'Сбросить',
       AppLocale.en: 'Clear',
       AppLocale.kk: 'Тазалау',
+    },
+    'personal_ai_key_title': {
+      AppLocale.ru: 'Персональный AI ключ',
+      AppLocale.en: 'Personal AI Key',
+      AppLocale.kk: 'Жеке AI кілті',
+    },
+    'personal_ai_key_default_desc': {
+      AppLocale.ru: 'Используется ключ приложения по умолчанию. Добавьте свой ключ, чтобы запросы списывались с вашего аккаунта провайдера.',
+      AppLocale.en: 'Using the app default AI key. Add your own key if you want requests billed to your provider account.',
+      AppLocale.kk: 'Қолданбаның әдепкі кілті қолданылуда. Сұраулар сіздің провайдер аккаунтыңызға есептелуі үшін өз кілтіңізді қосыңыз.',
+    },
+    'personal_ai_key_custom_desc': {
+      AppLocale.ru: 'Используется ваш сохранённый ключ:',
+      AppLocale.en: 'Using your saved provider key:',
+      AppLocale.kk: 'Сіздің сақталған кілтіңіз қолданылуда:',
+    },
+    'change_password_title': {
+      AppLocale.ru: 'Сменить пароль',
+      AppLocale.en: 'Change password',
+      AppLocale.kk: 'Құпия сөзді өзгерту',
+    },
+    'current_password': {
+      AppLocale.ru: 'Текущий пароль',
+      AppLocale.en: 'Current password',
+      AppLocale.kk: 'Ағымдағы құпия сөз',
+    },
+    'new_password': {
+      AppLocale.ru: 'Новый пароль',
+      AppLocale.en: 'New password',
+      AppLocale.kk: 'Жаңа құпия сөз',
+    },
+    'passwords_mismatch': {
+      AppLocale.ru: 'Пароли не совпадают',
+      AppLocale.en: "Passwords don't match",
+      AppLocale.kk: 'Құпия сөздер сәйкес келмейді',
+    },
+    'password_min_length': {
+      AppLocale.ru: 'Минимум 8 символов',
+      AppLocale.en: 'At least 8 characters',
+      AppLocale.kk: 'Кемінде 8 таңба',
+    },
+    'save': {
+      AppLocale.ru: 'Сохранить',
+      AppLocale.en: 'Save',
+      AppLocale.kk: 'Сақтау',
     },
   };
 }

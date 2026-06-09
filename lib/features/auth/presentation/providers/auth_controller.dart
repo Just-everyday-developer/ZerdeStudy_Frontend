@@ -341,11 +341,11 @@ class AuthController extends Notifier<AuthState> {
             email: email,
             avatarBase64: avatarBase64,
           );
-      ref.invalidate(backendProfileProvider);
       return null;
     } on ApiException catch (error) {
       return error.message;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[updateProfile] unexpected error: $e\n$st');
       return 'Unable to update your profile right now.';
     }
   }

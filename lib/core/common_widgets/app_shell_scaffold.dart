@@ -9,6 +9,7 @@ import '../../app/state/demo_app_controller.dart';
 import '../../features/app_guide/presentation/app_guide_controller.dart';
 import '../../features/app_guide/presentation/app_guide_target.dart';
 import '../../features/auth/presentation/providers/auth_controller.dart';
+import '../../features/courses_backend/presentation/providers/backend_course_providers.dart';
 import 'app_settings_panel.dart';
 import 'app_user_avatar.dart';
 import 'notification_bell_button.dart';
@@ -36,6 +37,13 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final guideState = ref.read(appGuideControllerProvider);
+      if (!guideState.hasCompleted && !guideState.isActive) {
+        ref.read(appGuideControllerProvider.notifier).startManual(context);
+      }
+    });
   }
 
   @override
@@ -100,6 +108,8 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
     final colors = context.appColors;
     final l10n = context.l10n;
     final state = ref.watch(demoAppControllerProvider);
+    // Pre-warm OOP backend progress so it's ready when the home page renders.
+    ref.watch(backendOopProgressProvider);
     final backendPhotoUrl = ref
         .watch(backendProfileProvider)
         .maybeWhen(data: (p) => p?.photoUrl, orElse: () => null);

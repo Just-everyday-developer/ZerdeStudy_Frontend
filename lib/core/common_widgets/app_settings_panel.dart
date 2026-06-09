@@ -273,7 +273,7 @@ class _AppSettingsPanelContentState
           Wrap(
               spacing: 8,
               runSpacing: 8,
-              alignment: WrapAlignment.start,
+              alignment: WrapAlignment.center,
               children: AppThemeMode.values
                   .map((mode) {
                     final selected = mode == state.themeMode;
@@ -309,7 +309,7 @@ class _AppSettingsPanelContentState
                       Icon(Icons.vpn_key_rounded, color: colors.primary, size: 20),
                       const SizedBox(width: 10),
                       Text(
-                        'Personal AI Key',
+                        l10n.text('personal_ai_key_title'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ],
@@ -317,8 +317,8 @@ class _AppSettingsPanelContentState
                   const SizedBox(height: 10),
                   Text(
                     hasCustomKey
-                        ? 'Using your saved provider key: $maskedKey'
-                        : 'Using the app default AI key. Add your own key if you want requests billed to your provider account.',
+                        ? '${l10n.text('personal_ai_key_custom_desc')} $maskedKey'
+                        : l10n.text('personal_ai_key_default_desc'),
                     style: TextStyle(color: colors.textSecondary, height: 1.45),
                   ),
                   const SizedBox(height: 12),
@@ -477,15 +477,6 @@ class _AppSettingsPanelContentState
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  l10n.text(
-                    notificationService.isSupported
-                        ? 'notifications_card_subtitle'
-                        : 'notifications_card_subtitle_unavailable',
-                  ),
-                  style: TextStyle(color: colors.textSecondary, height: 1.4),
-                ),
                 const SizedBox(height: 14),
                 FilledButton.icon(
                   onPressed:
@@ -515,7 +506,7 @@ class _AppSettingsPanelContentState
             child: OutlinedButton.icon(
               onPressed: _showChangePasswordDialog,
               icon: const Icon(Icons.lock_reset_rounded),
-              label: const Text('Сменить пароль'),
+              label: Text(l10n.text('change_password_title')),
             ),
           ),
         ],
@@ -560,12 +551,13 @@ class _ChangePasswordDialogInSettingsState
   }
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     if (_newCtrl.text != _confirmCtrl.text) {
-      setState(() => _error = 'Пароли не совпадают');
+      setState(() => _error = l10n.text('passwords_mismatch'));
       return;
     }
     if (_newCtrl.text.length < 8) {
-      setState(() => _error = 'Минимум 8 символов');
+      setState(() => _error = l10n.text('password_min_length'));
       return;
     }
     setState(() {
@@ -587,50 +579,84 @@ class _ChangePasswordDialogInSettingsState
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final l10n = context.l10n;
     return AlertDialog(
-      title: const Text('Сменить пароль'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
+      title: Row(
         children: [
-          TextField(
-            controller: _currentCtrl,
-            obscureText: true,
-            decoration: const InputDecoration(labelText: 'Текущий пароль'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _newCtrl,
-            obscureText: true,
-            decoration: const InputDecoration(labelText: 'Новый пароль'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _confirmCtrl,
-            obscureText: true,
-            decoration:
-                const InputDecoration(labelText: 'Подтвердите пароль'),
-          ),
-          if (_error.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(_error,
-                style: TextStyle(color: colors.danger, fontSize: 13)),
-          ],
+          Icon(Icons.lock_reset_rounded, color: colors.primary, size: 22),
+          const SizedBox(width: 10),
+          Text(l10n.text('change_password_title')),
         ],
+      ),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _currentCtrl,
+              obscureText: true,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: l10n.text('current_password'),
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _newCtrl,
+              obscureText: true,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: l10n.text('new_password'),
+                prefixIcon: const Icon(Icons.lock_rounded),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _confirmCtrl,
+              obscureText: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                labelText: l10n.text('confirm_password'),
+                prefixIcon: const Icon(Icons.lock_rounded),
+              ),
+            ),
+            if (_error.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.error_outline_rounded,
+                      color: colors.danger, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _error,
+                      style: TextStyle(color: colors.danger, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Отмена'),
+          child: Text(l10n.text('cancel')),
         ),
-        FilledButton(
+        FilledButton.icon(
           onPressed: _submitting ? null : _submit,
-          child: _submitting
+          icon: _submitting
               ? const SizedBox(
-                  width: 18,
-                  height: 18,
+                  width: 16,
+                  height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Сохранить'),
+              : const Icon(Icons.check_rounded, size: 18),
+          label: Text(l10n.text('save')),
         ),
       ],
     );

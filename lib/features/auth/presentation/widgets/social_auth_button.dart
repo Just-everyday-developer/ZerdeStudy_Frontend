@@ -6,15 +6,17 @@ class SocialAuthButton extends StatelessWidget {
   const SocialAuthButton({
     super.key,
     required this.label,
-    required this.badgeText,
     required this.accent,
     required this.onTap,
+    this.badgeText,
+    this.badgeWidget,
   });
 
   final String label;
-  final String badgeText;
   final Color accent;
   final VoidCallback? onTap;
+  final String? badgeText;
+  final Widget? badgeWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +43,14 @@ class SocialAuthButton extends StatelessWidget {
                 color: accent.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                badgeText,
-                style: TextStyle(color: accent, fontWeight: FontWeight.w800),
-              ),
+              child: badgeWidget ??
+                  Text(
+                    badgeText ?? '',
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
             ),
             const SizedBox(width: 12),
             Text(

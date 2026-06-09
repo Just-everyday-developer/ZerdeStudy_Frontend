@@ -8,6 +8,7 @@ import '../models/backend_module_dto.dart';
 import '../models/backend_notification_dto.dart';
 import '../models/backend_course_query.dart';
 import '../models/backend_practice_dto.dart';
+import '../models/backend_practice_submission_dto.dart';
 import '../models/backend_quiz_dto.dart';
 import '../models/backend_review_dto.dart';
 import '../models/backend_streak_dto.dart';
@@ -760,6 +761,94 @@ class BackendCourseRemoteDataSource {
       '/api/v1/review/${reviewId.trim()}',
       headers: _authHeaders(accessToken),
     );
+  }
+
+  // ── Practice submissions (student) ───────────────────────────────────────
+
+  /// Submit practice code for teacher review.
+  /// `POST /api/v1/practice/:id/submissions`
+  Future<BackendPracticeSubmissionDto> createPracticeSubmission({
+    required String accessToken,
+    required String practiceId,
+    required BackendCreatePracticeSubmissionRequest request,
+  }) async {
+    final json = await _client.postJson(
+      '/api/v1/practice/${practiceId.trim()}/submissions',
+      headers: _authHeaders(accessToken),
+      body: request.toJson(),
+    );
+    return BackendPracticeSubmissionDto.fromJson(json);
+  }
+
+  /// List the current student's own submissions.
+  /// `GET /api/v1/practice-submissions/my`
+  Future<List<BackendPracticeSubmissionDto>> fetchMySubmissions({
+    required String accessToken,
+  }) async {
+    final json = await _client.getJsonList(
+      '/api/v1/practice-submissions/my',
+      headers: _authHeaders(accessToken),
+    );
+    return json
+        .map(BackendPracticeSubmissionDto.fromJson)
+        .toList(growable: false);
+  }
+
+  /// Get a specific submission by ID (student view).
+  /// `GET /api/v1/practice-submissions/:id`
+  Future<BackendPracticeSubmissionDto> fetchMySubmission({
+    required String accessToken,
+    required String submissionId,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/practice-submissions/${submissionId.trim()}',
+      headers: _authHeaders(accessToken),
+    );
+    return BackendPracticeSubmissionDto.fromJson(json);
+  }
+
+  // ── Practice submissions (teacher) ───────────────────────────────────────
+
+  /// List all submissions queued for review (teacher/admin only).
+  /// `GET /api/v1/teacher/practice-submissions`
+  Future<List<BackendPracticeSubmissionDto>> fetchTeacherSubmissions({
+    required String accessToken,
+  }) async {
+    final json = await _client.getJsonList(
+      '/api/v1/teacher/practice-submissions',
+      headers: _authHeaders(accessToken),
+    );
+    return json
+        .map(BackendPracticeSubmissionDto.fromJson)
+        .toList(growable: false);
+  }
+
+  /// Get a single submission for review detail (teacher/admin only).
+  /// `GET /api/v1/teacher/practice-submissions/:id`
+  Future<BackendPracticeSubmissionDto> fetchTeacherSubmission({
+    required String accessToken,
+    required String submissionId,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/teacher/practice-submissions/${submissionId.trim()}',
+      headers: _authHeaders(accessToken),
+    );
+    return BackendPracticeSubmissionDto.fromJson(json);
+  }
+
+  /// Approve or request changes on a submission (teacher/admin only).
+  /// `PATCH /api/v1/teacher/practice-submissions/:id/review`
+  Future<BackendPracticeSubmissionDto> reviewPracticeSubmission({
+    required String accessToken,
+    required String submissionId,
+    required BackendReviewPracticeSubmissionRequest request,
+  }) async {
+    final json = await _client.patchJson(
+      '/api/v1/teacher/practice-submissions/${submissionId.trim()}/review',
+      headers: _authHeaders(accessToken),
+      body: request.toJson(),
+    );
+    return BackendPracticeSubmissionDto.fromJson(json);
   }
 
   Map<String, String> _authHeaders(String accessToken) {

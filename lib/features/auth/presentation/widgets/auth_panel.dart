@@ -56,7 +56,8 @@ class AuthPanel extends StatelessWidget {
                             Text(
                               title,
                               textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.headlineMedium,
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             const SizedBox(height: 10),
                             Text(

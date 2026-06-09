@@ -82,7 +82,7 @@ class NotificationsPage extends ConsumerWidget {
   }
 }
 
-class _NotificationTile extends ConsumerWidget {
+class _NotificationTile extends ConsumerStatefulWidget {
   const _NotificationTile({
     required this.notification,
     required this.t,
@@ -92,6 +92,17 @@ class _NotificationTile extends ConsumerWidget {
   final BackendNotificationDto notification;
   final _Translator t;
   final AppThemeColors colors;
+
+  @override
+  ConsumerState<_NotificationTile> createState() => _NotificationTileState();
+}
+
+class _NotificationTileState extends ConsumerState<_NotificationTile> {
+  bool _expanded = false;
+
+  BackendNotificationDto get notification => widget.notification;
+  _Translator get t => widget.t;
+  AppThemeColors get colors => widget.colors;
 
   IconData get _icon => switch (notification.type) {
     'achievement' => Icons.emoji_events_rounded,
@@ -129,7 +140,7 @@ class _NotificationTile extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     Future<void> markRead() async {
       if (notification.isRead) return;
       final remote = ref.read(backendCourseRemoteDataSourceProvider);
@@ -174,7 +185,10 @@ class _NotificationTile extends ConsumerWidget {
       onDismissed: (_) => delete(),
       child: GlowCard(
         accent: notification.isRead ? colors.divider : colors.primary,
-        onTap: notification.isRead ? null : markRead,
+        onTap: () {
+          setState(() => _expanded = !_expanded);
+          if (!notification.isRead) markRead();
+        },
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -225,15 +239,6 @@ class _NotificationTile extends ConsumerWidget {
                       ],
                     ],
                   ),
-                  if (notification.body.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      notification.body,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: colors.textSecondary, height: 1.35),
-                    ),
-                  ],
                   const SizedBox(height: 6),
                   Text(
                     _relativeTime(),
@@ -243,6 +248,13 @@ class _NotificationTile extends ConsumerWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  if (_expanded && notification.body.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      notification.body,
+                      style: TextStyle(color: colors.textSecondary, height: 1.4),
+                    ),
+                  ],
                 ],
               ),
             ),

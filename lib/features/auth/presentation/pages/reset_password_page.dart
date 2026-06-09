@@ -123,11 +123,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   }
 
   void _goBack() {
-    if (context.canPop()) {
-      context.pop();
-      return;
-    }
-    context.go(AppRoutes.forgotPassword);
+    context.go(AppRoutes.login);
   }
 
   @override
@@ -182,15 +178,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
             isPrimary: true,
             icon: Icons.lock_reset_rounded,
             onTap: authState.isBusy ? null : _submit,
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: _goBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-              label: Text(l10n.text('back_to_code')),
-            ),
           ),
         ],
       ),

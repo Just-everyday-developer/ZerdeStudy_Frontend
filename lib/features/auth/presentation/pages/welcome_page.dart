@@ -87,14 +87,6 @@ class WelcomePage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => context.push(AppRoutes.forgotPassword),
-                      child: Center(child: Text(l10n.text('forgot_password'))),
-                    ),
-                  ),
                 ],
               ),
             ),

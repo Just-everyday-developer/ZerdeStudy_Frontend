@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/state/app_locale.dart';
+import '../../../../core/common_widgets/adaptive_panel.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/data/models/backend_achievement_dto.dart';
@@ -112,9 +115,10 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
   }
 
   Future<void> _showUserDetails(AdminUserDto user) {
-    return showDialog<void>(
+    return showAdaptivePanel<void>(
       context: context,
-      builder: (_) => _UserDetailsDialog(user: user),
+      wideMaxWidth: 780,
+      builder: (ctx) => _UserDetailsPanel(user: user),
     );
   }
 
@@ -122,6 +126,8 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final usersAsync = ref.watch(adminUsersProvider);
+    // Pre-fetch roles so they're available instantly when user taps "Роли"
+    ref.watch(adminRolesProvider);
     final currentUserId =
         ref.watch(authControllerProvider).session?.user.id ?? '';
 
@@ -157,11 +163,22 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                 ),
                 IconButton(
                   tooltip: 'Обновить',
-                  onPressed: () => ref.invalidate(adminUsersProvider),
-                  icon: Icon(
-                    Icons.refresh_rounded,
-                    color: colors.textSecondary,
-                  ),
+                  onPressed: usersAsync.isLoading
+                      ? null
+                      : () => ref.invalidate(adminUsersProvider),
+                  icon: usersAsync.isLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.textSecondary,
+                          ),
+                        )
+                      : Icon(
+                          Icons.refresh_rounded,
+                          color: colors.textSecondary,
+                        ),
                 ),
               ],
             ),
@@ -299,13 +316,30 @@ class _SummaryRow extends StatelessWidget {
       );
     }
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+    final l10n = context.l10n;
+    final totalLabel = switch (l10n.locale) {
+      AppLocale.ru => 'Всего',
+      AppLocale.kk => 'Барлығы',
+      _ => 'Total',
+    };
+    final activeLabel = switch (l10n.locale) {
+      AppLocale.ru => 'Активны',
+      AppLocale.kk => 'Белсенді',
+      _ => 'Active',
+    };
+    final bannedLabel = switch (l10n.locale) {
+      AppLocale.ru => 'Заблокированы',
+      AppLocale.kk => 'Блокталған',
+      _ => 'Banned',
+    };
+
+    return Row(
       children: [
-        chip('Всего', '$total', colors.textPrimary),
-        chip('Активны', '$active', const Color(0xFF4CAF50)),
-        chip('Заблокированы', '$banned', const Color(0xFFF44336)),
+        Expanded(child: chip(totalLabel, '$total', colors.textPrimary)),
+        const SizedBox(width: 12),
+        Expanded(child: chip(activeLabel, '$active', const Color(0xFF4CAF50))),
+        const SizedBox(width: 12),
+        Expanded(child: chip(bannedLabel, '$banned', const Color(0xFFF44336))),
       ],
     );
   }
@@ -548,158 +582,239 @@ class _RoleChip extends StatelessWidget {
   }
 }
 
-class _UserDetailsDialog extends ConsumerWidget {
-  const _UserDetailsDialog({required this.user});
+class _UserDetailsPanel extends ConsumerWidget {
+  const _UserDetailsPanel({required this.user});
 
   final AdminUserDto user;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
+    final l10n = context.l10n;
     final detailsAsync = ref.watch(adminUserDetailsProvider(user.id));
 
-    return AlertDialog(
-      title: Text('Данные пользователя · ${user.displayName}'),
-      content: SizedBox(
-        width: 760,
-        child: detailsAsync.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (error, _) => _DetailsError(
-            message: '$error',
-            onRetry: () => ref.invalidate(adminUserDetailsProvider(user.id)),
-          ),
-          data: (details) {
-            if (details == null) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 32),
-                child: Text('Нет данных для выбранного пользователя.'),
-              );
-            }
+    final rolesLabel = switch (l10n.locale) {
+      AppLocale.ru => 'Роли',
+      AppLocale.kk => 'Рөлдер',
+      _ => 'Roles',
+    };
+    final achievementsLabel = switch (l10n.locale) {
+      AppLocale.ru => 'Достижения',
+      AppLocale.kk => 'Жетістіктер',
+      _ => 'Achievements',
+    };
+    final courseProgressLabel = switch (l10n.locale) {
+      AppLocale.ru => 'Прогресс по курсам',
+      AppLocale.kk => 'Курстар бойынша прогресс',
+      _ => 'Course progress',
+    };
+    final noRoleLabel = switch (l10n.locale) {
+      AppLocale.ru => 'без роли',
+      AppLocale.kk => 'рөлсіз',
+      _ => 'no role',
+    };
+    final refreshLabel = switch (l10n.locale) {
+      AppLocale.ru => 'Обновить',
+      AppLocale.kk => 'Жаңарту',
+      _ => 'Refresh',
+    };
+    final closeLabel = switch (l10n.locale) {
+      AppLocale.ru => 'Закрыть',
+      AppLocale.kk => 'Жабу',
+      _ => 'Close',
+    };
 
-            return SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _DetailsHeader(
-                    profile: details.profile,
-                    isActive: user.isActive,
-                    colors: colors,
+    return Container(
+      color: colors.background,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  user.displayName,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(height: 18),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, size: 20),
+                tooltip: refreshLabel,
+                onPressed: () =>
+                    ref.invalidate(adminUserDetailsProvider(user.id)),
+              ),
+            ],
+          ),
+          const Divider(height: 16),
+          Expanded(
+            child: detailsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _DetailsError(
+                message: '$error',
+                onRetry: () =>
+                    ref.invalidate(adminUserDetailsProvider(user.id)),
+              ),
+              data: (details) {
+                if (details == null) {
+                  return Center(
+                    child: Text(
+                      switch (l10n.locale) {
+                        AppLocale.ru => 'Нет данных для пользователя.',
+                        AppLocale.kk => 'Пайдаланушы деректері жоқ.',
+                        _ => 'No data for this user.',
+                      },
+                      style: TextStyle(color: colors.textSecondary),
+                    ),
+                  );
+                }
+
+                return SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _MetricTile(
-                        label: 'XP',
-                        value: '${details.profile.xp}',
+                      _DetailsHeader(
+                        profile: details.profile,
+                        isActive: user.isActive,
                         colors: colors,
                       ),
-                      _MetricTile(
-                        label: 'Level',
-                        value: '${details.profile.level}',
+                      const SizedBox(height: 18),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _MetricTile(
+                            label: 'XP',
+                            value: '${details.profile.xp}',
+                            colors: colors,
+                          ),
+                          _MetricTile(
+                            label: switch (l10n.locale) {
+                              AppLocale.ru => 'Уровень',
+                              AppLocale.kk => 'Деңгей',
+                              _ => 'Level',
+                            },
+                            value: '${details.profile.level}',
+                            colors: colors,
+                          ),
+                          _MetricTile(
+                            label: switch (l10n.locale) {
+                              AppLocale.ru => 'Серия',
+                              AppLocale.kk => 'Жол',
+                              _ => 'Streak',
+                            },
+                            value:
+                                '${details.profile.streak}/${details.profile.maxStreak}',
+                            colors: colors,
+                          ),
+                          _MetricTile(
+                            label: achievementsLabel,
+                            value:
+                                '${details.unlockedAchievements}/${details.achievements.length}',
+                            colors: colors,
+                          ),
+                          _MetricTile(
+                            label: switch (l10n.locale) {
+                              AppLocale.ru => 'Уроки',
+                              AppLocale.kk => 'Сабақтар',
+                              _ => 'Lessons',
+                            },
+                            value:
+                                '${details.completedLessons}/${details.totalLessons}',
+                            colors: colors,
+                          ),
+                          _MetricTile(
+                            label: switch (l10n.locale) {
+                              AppLocale.ru => 'Курсы',
+                              AppLocale.kk => 'Курстар',
+                              _ => 'Courses',
+                            },
+                            value: '${details.courseProgress.length}',
+                            colors: colors,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _SectionTitle(
+                        title: rolesLabel,
+                        trailing: '${details.roles.length}',
                         colors: colors,
                       ),
-                      _MetricTile(
-                        label: 'Streak',
-                        value:
-                            '${details.profile.streak}/${details.profile.maxStreak}',
-                        colors: colors,
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: details.roles.isEmpty
+                            ? [
+                                _RoleChip(
+                                  label: noRoleLabel,
+                                  colors: colors,
+                                  muted: true,
+                                ),
+                              ]
+                            : details.roles
+                                  .map(
+                                    (role) => _RoleChip(
+                                      label: role.code.isNotEmpty
+                                          ? role.code
+                                          : role.name,
+                                      colors: colors,
+                                    ),
+                                  )
+                                  .toList(growable: false),
                       ),
-                      _MetricTile(
-                        label: 'Achievements',
-                        value:
+                      const SizedBox(height: 20),
+                      _SectionTitle(
+                        title: achievementsLabel,
+                        trailing:
                             '${details.unlockedAchievements}/${details.achievements.length}',
                         colors: colors,
                       ),
-                      _MetricTile(
-                        label: 'Lessons',
-                        value:
-                            '${details.completedLessons}/${details.totalLessons}',
+                      const SizedBox(height: 8),
+                      _AchievementsPreview(
+                        achievements: details.achievements,
                         colors: colors,
                       ),
-                      _MetricTile(
-                        label: 'Courses',
-                        value: '${details.courseProgress.length}',
+                      const SizedBox(height: 20),
+                      _SectionTitle(
+                        title: courseProgressLabel,
+                        trailing: '${details.courseProgress.length}',
                         colors: colors,
+                      ),
+                      const SizedBox(height: 8),
+                      _ProgressPreview(
+                        progress: details.courseProgress,
+                        courseNames: details.courseNames,
+                        colors: colors,
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _kAdminViolet,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(closeLabel),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  _SectionTitle(
-                    title: 'Роли',
-                    trailing: '${details.roles.length}',
-                    colors: colors,
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: details.roles.isEmpty
-                        ? [
-                            _RoleChip(
-                              label: 'без роли',
-                              colors: colors,
-                              muted: true,
-                            ),
-                          ]
-                        : details.roles
-                              .map(
-                                (role) => _RoleChip(
-                                  label: role.code.isNotEmpty
-                                      ? role.code
-                                      : role.name,
-                                  colors: colors,
-                                ),
-                              )
-                              .toList(growable: false),
-                  ),
-                  const SizedBox(height: 20),
-                  _SectionTitle(
-                    title: 'Достижения',
-                    trailing:
-                        '${details.unlockedAchievements}/${details.achievements.length}',
-                    colors: colors,
-                  ),
-                  const SizedBox(height: 8),
-                  _AchievementsPreview(
-                    achievements: details.achievements,
-                    colors: colors,
-                  ),
-                  const SizedBox(height: 20),
-                  _SectionTitle(
-                    title: 'Прогресс по курсам',
-                    trailing: '${details.courseProgress.length}',
-                    colors: colors,
-                  ),
-                  const SizedBox(height: 8),
-                  _ProgressPreview(
-                    progress: details.courseProgress,
-                    courseNames: details.courseNames,
-                    colors: colors,
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton.icon(
-          onPressed: () => ref.invalidate(adminUserDetailsProvider(user.id)),
-          icon: const Icon(Icons.refresh_rounded, size: 18),
-          label: const Text('Обновить'),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: _kAdminViolet),
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Закрыть'),
-        ),
-      ],
     );
   }
 }

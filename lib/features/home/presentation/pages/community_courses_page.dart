@@ -241,7 +241,7 @@ class _CommunityCoursesPageState extends ConsumerState<CommunityCoursesPage> {
                       ),
                       const SizedBox(height: 20),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           TextButton(

@@ -22,6 +22,7 @@ import '../../data/models/backend_module_dto.dart';
 import '../../data/models/backend_notification_dto.dart';
 import '../../data/models/backend_course_query.dart';
 import '../../data/models/backend_practice_dto.dart';
+import '../../data/models/backend_practice_submission_dto.dart';
 import '../../data/models/backend_quiz_dto.dart';
 import '../../data/models/backend_review_dto.dart';
 import '../../data/models/backend_streak_dto.dart';
@@ -37,7 +38,18 @@ final backendCourseJsonHttpClientProvider = Provider<JsonHttpClient>((ref) {
   final client = ref.watch(authHttpClientProvider);
   final environment = ref.watch(appEnvironmentProvider);
 
-  return JsonHttpClient(client: client, uriResolver: environment.resolve);
+  return JsonHttpClient(
+    client: client,
+    uriResolver: environment.resolve,
+    onGetFreshToken: () async {
+      try {
+        await ref.read(authRepositoryProvider).refreshSession();
+        return ref.read(authControllerProvider).session?.accessToken;
+      } catch (_) {
+        return null;
+      }
+    },
+  );
 });
 
 final backendCourseRemoteDataSourceProvider =
@@ -1817,3 +1829,93 @@ LearningTrack _buildOopLearningTrack(List<LearningModule> modules) {
     modules: modules,
   );
 }
+
+// ── Practice submission providers ────────────────────────────────────────────
+
+/// Student: list of all my own practice submissions.
+/// Refreshes whenever the access token changes.
+final backendMyPracticeSubmissionsProvider =
+    FutureProvider<List<BackendPracticeSubmissionDto>>((ref) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) return const [];
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+  try {
+    return await remote.fetchMySubmissions(accessToken: accessToken);
+  } catch (_) {
+    return const [];
+  }
+});
+
+/// Student: single submission by ID.
+final backendMySubmissionProvider = FutureProvider.family<
+    BackendPracticeSubmissionDto?, String>((ref, submissionId) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) return null;
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+  try {
+    return await remote.fetchMySubmission(
+      accessToken: accessToken,
+      submissionId: submissionId,
+    );
+  } catch (_) {
+    return null;
+  }
+});
+
+/// Teacher/admin: queue of all submissions pending review.
+final backendTeacherSubmissionsProvider =
+    FutureProvider<List<BackendPracticeSubmissionDto>>((ref) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) return const [];
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+  try {
+    return await remote.fetchTeacherSubmissions(accessToken: accessToken);
+  } catch (_) {
+    return const [];
+  }
+});
+
+/// Teacher/admin: single submission detail by ID.
+final backendTeacherSubmissionProvider = FutureProvider.family<
+    BackendPracticeSubmissionDto?, String>((ref, submissionId) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) return null;
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+  try {
+    return await remote.fetchTeacherSubmission(
+      accessToken: accessToken,
+      submissionId: submissionId,
+    );
+  } catch (_) {
+    return null;
+  }
+});
+
+/// Resolves a user UUID to a display name via GET /api/v1/profiles/{userId}.
+/// Falls back to the raw userId if the request fails or the user is not authenticated.
+final backendUserDisplayNameProvider =
+    FutureProvider.family<String, String>((ref, userId) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) return userId;
+
+  final client = ref.watch(backendCourseJsonHttpClientProvider);
+  try {
+    final json = await client.getJson(
+      '/api/v1/profiles/${userId.trim()}',
+      headers: <String, String>{'Authorization': 'Bearer ${accessToken.trim()}'},
+    );
+    final name = json['name'] as String? ?? '';
+    final login = json['login'] as String? ?? '';
+    final email = json['email'] as String? ?? '';
+    if (name.trim().isNotEmpty) return name.trim();
+    if (login.trim().isNotEmpty) return login.trim();
+    final local = email.split('@').first.trim();
+    return local.isNotEmpty ? local : userId;
+  } catch (_) {
+    return userId;
+  }
+});

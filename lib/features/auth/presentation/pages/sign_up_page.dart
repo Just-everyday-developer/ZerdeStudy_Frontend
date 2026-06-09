@@ -7,6 +7,7 @@ import 'package:frontend_flutter/app/state/demo_app_controller.dart';
 import 'package:frontend_flutter/core/common_widgets/app_notice.dart';
 import 'package:frontend_flutter/core/common_widgets/locale_selector.dart';
 import 'package:frontend_flutter/core/common_widgets/tech_text_field.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend_flutter/core/localization/app_localizations.dart';
 import 'package:frontend_flutter/core/theme/app_theme_colors.dart';
 
@@ -84,16 +85,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     AppNotice.show(context, message: error, type: AppNoticeType.error);
   }
 
-  Future<void> _signInWithGithub() async {
-    final error = await ref
-        .read(authControllerProvider.notifier)
-        .signInWithGithub();
-    if (!mounted || error == null) {
-      return;
-    }
-    AppNotice.show(context, message: error, type: AppNoticeType.error);
-  }
-
   void _goBack() {
     if (context.canPop()) {
       context.pop();
@@ -107,7 +98,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     final l10n = context.l10n;
     final demoState = ref.watch(demoAppControllerProvider);
     final authState = ref.watch(authControllerProvider);
-    final colors = context.appColors;
 
     return AuthPanel(
       title: l10n.text('signup_title'),
@@ -168,15 +158,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   children: [
                     SocialAuthButton(
                       label: l10n.text('google'),
-                      badgeText: 'G',
+                      badgeWidget: SvgPicture.asset(
+                        'assets/svgs/google_logo.svg',
+                        width: 20,
+                        height: 20,
+                      ),
                       accent: const Color(0xFF4285F4),
                       onTap: authState.isBusy ? null : _signInWithGoogle,
-                    ),
-                    SocialAuthButton(
-                      label: l10n.text('github'),
-                      badgeText: 'GH',
-                      accent: colors.textPrimary,
-                      onTap: authState.isBusy ? null : _signInWithGithub,
                     ),
                   ],
                 ),

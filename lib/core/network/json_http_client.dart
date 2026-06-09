@@ -10,22 +10,28 @@ class JsonHttpClient {
   JsonHttpClient({
     required http.Client client,
     required Uri Function(String path) uriResolver,
+    this.onGetFreshToken,
   }) : _client = client,
        _uriResolver = uriResolver;
 
   final http.Client _client;
   final Uri Function(String path) _uriResolver;
 
+  /// Called on a 401 response. Should refresh the session and return the new
+  /// Bearer token value, or null if refresh is not possible.
+  final Future<String?> Function()? onGetFreshToken;
+
   Future<JsonMap> getJson(
     String path, {
     Map<String, String> headers = const <String, String>{},
     Map<String, String>? queryParameters,
   }) async {
-    final response = await _send(
-      () => _client.get(
+    final response = await _sendRetryable(
+      factory: (h) => _client.get(
         _resolveUri(path, queryParameters: queryParameters),
-        headers: headers,
+        headers: h,
       ),
+      headers: headers,
     );
     return _decodeJsonMap(response);
   }
@@ -35,11 +41,12 @@ class JsonHttpClient {
     Map<String, String> headers = const <String, String>{},
     Map<String, String>? queryParameters,
   }) async {
-    final response = await _send(
-      () => _client.get(
+    final response = await _sendRetryable(
+      factory: (h) => _client.get(
         _resolveUri(path, queryParameters: queryParameters),
-        headers: headers,
+        headers: h,
       ),
+      headers: headers,
     );
     return _decodeJsonList(response);
   }
@@ -49,15 +56,14 @@ class JsonHttpClient {
     Map<String, dynamic>? body,
     Map<String, String> headers = const <String, String>{},
   }) async {
-    final response = await _send(
-      () => _client.post(
+    final encodedBody = jsonEncode(body ?? const <String, dynamic>{});
+    final response = await _sendRetryable(
+      factory: (h) => _client.post(
         _uriResolver(path),
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-          ...headers,
-        },
-        body: jsonEncode(body ?? const <String, dynamic>{}),
+        headers: <String, String>{'Content-Type': 'application/json', ...h},
+        body: encodedBody,
       ),
+      headers: headers,
     );
     return _decodeJsonMap(response);
   }
@@ -70,17 +76,19 @@ class JsonHttpClient {
     required List<int> fileBytes,
     required String fileName,
   }) async {
-    final response = await _send(() async {
-      final request = http.MultipartRequest('POST', _uriResolver(path));
-      request.headers.addAll(headers);
-      request.fields.addAll(fields);
-      request.files.add(
-        http.MultipartFile.fromBytes(fileField, fileBytes, filename: fileName),
-      );
-
-      final streamed = await request.send();
-      return http.Response.fromStream(streamed);
-    });
+    final response = await _sendRetryable(
+      factory: (h) async {
+        final request = http.MultipartRequest('POST', _uriResolver(path));
+        request.headers.addAll(h);
+        request.fields.addAll(fields);
+        request.files.add(
+          http.MultipartFile.fromBytes(fileField, fileBytes, filename: fileName),
+        );
+        final streamed = await request.send();
+        return http.Response.fromStream(streamed);
+      },
+      headers: headers,
+    );
     return _decodeJsonMap(response);
   }
 
@@ -89,15 +97,14 @@ class JsonHttpClient {
     Map<String, dynamic>? body,
     Map<String, String> headers = const <String, String>{},
   }) async {
-    final response = await _send(
-      () => _client.put(
+    final encodedBody = jsonEncode(body ?? const <String, dynamic>{});
+    final response = await _sendRetryable(
+      factory: (h) => _client.put(
         _uriResolver(path),
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-          ...headers,
-        },
-        body: jsonEncode(body ?? const <String, dynamic>{}),
+        headers: <String, String>{'Content-Type': 'application/json', ...h},
+        body: encodedBody,
       ),
+      headers: headers,
     );
     return _decodeJsonMap(response);
   }
@@ -107,15 +114,14 @@ class JsonHttpClient {
     Map<String, dynamic>? body,
     Map<String, String> headers = const <String, String>{},
   }) async {
-    final response = await _send(
-      () => _client.patch(
+    final encodedBody = jsonEncode(body ?? const <String, dynamic>{});
+    final response = await _sendRetryable(
+      factory: (h) => _client.patch(
         _uriResolver(path),
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-          ...headers,
-        },
-        body: jsonEncode(body ?? const <String, dynamic>{}),
+        headers: <String, String>{'Content-Type': 'application/json', ...h},
+        body: encodedBody,
       ),
+      headers: headers,
     );
     return _decodeJsonMap(response);
   }
@@ -125,15 +131,30 @@ class JsonHttpClient {
     Map<String, dynamic>? body,
     Map<String, String> headers = const <String, String>{},
   }) async {
-    await _send(
-      () => _client.post(
+    final encodedBody = jsonEncode(body ?? const <String, dynamic>{});
+    await _sendRetryable(
+      factory: (h) => _client.post(
         _uriResolver(path),
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-          ...headers,
-        },
-        body: jsonEncode(body ?? const <String, dynamic>{}),
+        headers: <String, String>{'Content-Type': 'application/json', ...h},
+        body: encodedBody,
       ),
+      headers: headers,
+    );
+  }
+
+  Future<void> patchEmpty(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String> headers = const <String, String>{},
+  }) async {
+    final encodedBody = jsonEncode(body ?? const <String, dynamic>{});
+    await _sendRetryable(
+      factory: (h) => _client.patch(
+        _uriResolver(path),
+        headers: <String, String>{'Content-Type': 'application/json', ...h},
+        body: encodedBody,
+      ),
+      headers: headers,
     );
   }
 
@@ -141,14 +162,31 @@ class JsonHttpClient {
     String path, {
     Map<String, String> headers = const <String, String>{},
   }) async {
-    await _send(() => _client.delete(_uriResolver(path), headers: headers));
+    await _sendRetryable(
+      factory: (h) => _client.delete(_uriResolver(path), headers: h),
+      headers: headers,
+    );
   }
 
-  Future<http.Response> _send(Future<http.Response> Function() request) async {
+  Future<http.Response> _sendRetryable({
+    required Future<http.Response> Function(Map<String, String> headers) factory,
+    required Map<String, String> headers,
+  }) async {
     try {
-      final response = await request();
+      var response = await factory(headers);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return response;
+      }
+      if (response.statusCode == 401 && onGetFreshToken != null) {
+        final newToken = await onGetFreshToken!();
+        if (newToken != null) {
+          final fresh = Map<String, String>.from(headers)
+            ..['Authorization'] = 'Bearer $newToken';
+          response = await factory(fresh);
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            return response;
+          }
+        }
       }
       throw _exceptionFromResponse(response);
     } on ApiException {
@@ -167,9 +205,17 @@ class JsonHttpClient {
       return const <String, dynamic>{};
     }
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {
+      throw const ApiException(
+        statusCode: 0,
+        code: 'invalid_response',
+        message: 'Unexpected response payload.',
+      );
     }
 
     throw const ApiException(

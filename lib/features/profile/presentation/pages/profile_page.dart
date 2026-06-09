@@ -48,7 +48,6 @@ class ProfilePage extends ConsumerWidget {
     final effectiveLevel = backendProfile?.level ?? state.level;
     final effectiveStreak = backendProfile?.streak ?? state.streak;
     final effectiveMaxStreak = backendProfile?.maxStreak ?? state.maxStreak;
-    final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
     final l10n = context.l10n;
     // Prefer server-computed achievements; fall back to local demo data when
@@ -592,40 +591,6 @@ class ProfilePage extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: 12),
-          AppButton.secondary(
-            label: l10n.text('delete_history'),
-            icon: Icons.restart_alt_rounded,
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: Text(l10n.text('confirm_reset_title')),
-                  content: Text(l10n.text('confirm_reset_body')),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: Text(l10n.text('cancel')),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      child: Text(l10n.text('confirm_reset_action')),
-                    ),
-                  ],
-                ),
-              );
-              if (confirmed != true || !context.mounted) {
-                return;
-              }
-              controller.resetDemo();
-              AppNotice.show(
-                context,
-                message: l10n.text('reset_demo'),
-                type: AppNoticeType.success,
-              );
-            },
-          ),
-
         ],
       ),
     );
@@ -776,6 +741,7 @@ Future<void> _showEditProfileDialog(
     return;
   }
 
+  ref.invalidate(backendProfileProvider);
   ref
       .read(demoAppControllerProvider.notifier)
       .updateProfile(name: result.name, bio: result.bio, avatarBase64: result.avatarBase64);

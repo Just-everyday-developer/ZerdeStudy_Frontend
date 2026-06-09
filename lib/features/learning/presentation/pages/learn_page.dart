@@ -223,9 +223,8 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           TextButton(
                             onPressed: () {
@@ -241,13 +240,14 @@ class _LearnPageState extends ConsumerState<LearnPage> {
                             },
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
+                                horizontal: 12,
                                 vertical: 14,
                               ),
                               foregroundColor: context.appColors.textSecondary,
                             ),
                             child: Text(_clearFiltersLabel(l10n)),
                           ),
+                          const SizedBox(width: 8),
                           FilledButton(
                             onPressed: () {
                               setState(() {

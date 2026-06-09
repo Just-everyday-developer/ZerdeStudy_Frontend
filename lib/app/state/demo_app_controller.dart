@@ -101,7 +101,7 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void logout() {
     state = _withDerived(
-      state.copyWith(
+      _clearProgress(state).copyWith(
         activeExperience: AppExperience.student,
         isAuthenticated: false,
         isModerator: false,
@@ -143,8 +143,16 @@ class DemoAppController extends Notifier<DemoAppState> {
       return;
     }
 
+    // Clear per-user progress when a different account takes over.
+    final differentAccount =
+        mergedUser != null &&
+        state.user != null &&
+        state.user!.email.trim().toLowerCase() !=
+            mergedUser.email.trim().toLowerCase();
+    final base = differentAccount ? _clearProgress(state) : state;
+
     state = _withDerived(
-      state.copyWith(
+      base.copyWith(
         activeExperience: activeExperience,
         isAuthenticated: isAuthenticated,
         isModerator: isModerator,
@@ -1297,6 +1305,35 @@ class DemoAppController extends Notifier<DemoAppState> {
 
   void _persist() {
     _preferences.setString(_storageKey, jsonEncode(state.toJson()));
+  }
+
+  DemoAppState _clearProgress(DemoAppState base) {
+    return base.copyWith(
+      completedLessonIds: const <String>{},
+      startedLessonIds: const <String>{},
+      completedPracticeIds: const <String>{},
+      completedQuizIds: const <String>{},
+      completedTrainerIds: const <String>{},
+      completedTheoryIds: const <String>{},
+      completedCodeStepIds: const <String>{},
+      quizAnswerStats: const <String, QuizAnswerStat>{},
+      assessmentResultsByTrackId: const <String, TrackAssessmentResult>{},
+      assessmentAttemptHistory: const <AssessmentAttemptEntry>[],
+      learningHistory: const <LearningHistoryEntry>[],
+      viewedCommunityCourseIds: const <String>{},
+      savedCommunityCourseIds: const <String>{},
+      courseRatingsByCourseId: const <String, int>{},
+      enrolledCommunityCourseIds: const <String>{},
+      coursePlayerProgressByCourseId: const <String, CoursePlayerProgress>{},
+      xp: 0,
+      streak: 0,
+      maxStreak: 0,
+      dailyMissionDone: false,
+      weeklyActivity: const <int>[0, 0, 0, 0, 0, 0, 0],
+      aiMessages: const <AiMessage>[],
+      unlockedAchievementIds: const <String>{},
+      recommendedTrackIds: const <String>{},
+    );
   }
 
   bool _sameUser(DemoUser? left, DemoUser? right) {

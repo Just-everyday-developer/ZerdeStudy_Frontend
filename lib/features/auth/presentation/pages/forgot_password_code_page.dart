@@ -119,7 +119,6 @@ class _ForgotPasswordCodePageState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = ref.watch(demoAppControllerProvider);
-    final colors = context.appColors;
 
     return AuthPanel(
       title: l10n.text('verification_code_title'),
@@ -152,6 +151,7 @@ class _ForgotPasswordCodePageState
             hint: l10n.text('email'),
             icon: Icons.alternate_email_rounded,
             controller: _emailController,
+            readOnly: true,
           ),
           const SizedBox(height: 18),
           LayoutBuilder(
@@ -175,31 +175,12 @@ class _ForgotPasswordCodePageState
               );
             },
           ),
-          const SizedBox(height: 18),
-          Center(
-            child: Text(
-              _enteredCode.isEmpty ? '------' : _enteredCode,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: colors.textSecondary,
-                letterSpacing: 4,
-              ),
-            ),
-          ),
           const SizedBox(height: 22),
           TechActionButton(
             title: l10n.text('continue_to_password_reset'),
             isPrimary: true,
             icon: Icons.arrow_forward_rounded,
             onTap: _continue,
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: _goBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-              label: Text(l10n.text('change_email')),
-            ),
           ),
         ],
       ),

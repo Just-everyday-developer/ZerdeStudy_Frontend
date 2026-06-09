@@ -900,7 +900,7 @@ class FakeAuthRepository implements AuthRepository {
   }) async => 'https://example.com/google';
 
   @override
-  Future<String> getGithubAuthUrl({String? redirectUri}) async =>
+  Future<String> getGithubAuthUrl({String? redirectUri, String? platform}) async =>
       'https://example.com/github';
 
   @override

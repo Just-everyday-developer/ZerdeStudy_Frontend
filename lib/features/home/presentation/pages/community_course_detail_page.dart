@@ -111,7 +111,7 @@ class _CommunityCourseDetailPageState
       (r) => CommunityCourseReview(
         id: r.id,
         authorName: r.userId,
-        timeLabel: r.createdAt.toIso8601String(),
+        timeLabel: _formatReviewDate(r.createdAt),
         rating: r.rating,
         text: r.comment,
       ),
@@ -217,6 +217,10 @@ class _CommunityCourseDetailPageState
   String? get _authUserId => ref.read(
     authControllerProvider.select((state) => state.session?.user.id),
   );
+
+  static String _formatReviewDate(DateTime dt) {
+    return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+  }
 
   bool _canManageReview(CommunityCourseReview review) {
     final user = ref.read(authControllerProvider).session?.user;
@@ -1509,17 +1513,20 @@ class _WideCourseDetailLayout extends StatelessWidget {
                 child: SingleChildScrollView(
                   padding: EdgeInsets.zero,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      IconButton(
-                        onPressed: () => _goBackFromCourseDetail(context),
-                        icon: Icon(
-                          Icons.arrow_back_rounded,
-                          color: context.appColors.textPrimary,
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          onPressed: () => _goBackFromCourseDetail(context),
+                          icon: Icon(
+                            Icons.arrow_back_rounded,
+                            color: context.appColors.textPrimary,
+                          ),
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).backButtonTooltip,
                         ),
-                        tooltip: MaterialLocalizations.of(
-                          context,
-                        ).backButtonTooltip,
                       ),
                       const SizedBox(height: 8),
                       _DesktopHeroCard(
@@ -1948,7 +1955,7 @@ class _CompactInfoContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _CourseTextSection(
           title: context.l10n.text('course_about'),
@@ -2120,13 +2127,6 @@ class _CourseSidebar extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           AppButton.secondary(
-            label: l10n.text('course_preview_cta'),
-            icon: Icons.play_circle_outline_rounded,
-            maxWidth: 260,
-            onPressed: () {},
-          ),
-          const SizedBox(height: 12),
-          AppButton.secondary(
             label: saved
                 ? l10n.text('saved_to_profile')
                 : l10n.text('course_save_cta'),
@@ -2135,19 +2135,6 @@ class _CourseSidebar extends ConsumerWidget {
                 : Icons.favorite_border_rounded,
             maxWidth: 260,
             onPressed: onSave,
-          ),
-          const SizedBox(height: 18),
-          Text(
-            l10n.text('course_start_mode'),
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            course.facts.startModeLabel,
-            style: TextStyle(color: colors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 18),
           Container(
@@ -2627,7 +2614,10 @@ class _CourseCertificateSectionState
   }
 }
 
-class _CourseReviewsSection extends StatelessWidget {
+bool _isReviewUuid(String s) =>
+    s.length == 36 && s.contains('-') && !s.contains(' ');
+
+class _CourseReviewsSection extends ConsumerWidget {
   const _CourseReviewsSection({
     required this.course,
     required this.compact,
@@ -2655,7 +2645,7 @@ class _CourseReviewsSection extends StatelessWidget {
   final ValueChanged<String> onDeleteReview;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final distribution = [5, 4, 3, 2, 1];
     final maxCount = summary.ratingDistribution.values.fold<int>(
@@ -2746,8 +2736,13 @@ class _CourseReviewsSection extends StatelessWidget {
           onSubmit: onSubmitComment,
         ),
         const SizedBox(height: 18),
-        ...reviews.map(
-          (review) => Padding(
+        ...reviews.map((review) {
+          final resolvedName = _isReviewUuid(review.authorName)
+              ? ref
+                  .watch(backendUserDisplayNameProvider(review.authorName))
+                  .maybeWhen(data: (n) => n, orElse: () => '…')
+              : review.authorName;
+          return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Container(
               padding: const EdgeInsets.all(14),
@@ -2765,7 +2760,7 @@ class _CourseReviewsSection extends StatelessWidget {
                       CircleAvatar(
                         backgroundColor: course.color.withValues(alpha: 0.16),
                         child: Text(
-                          review.authorName.substring(0, 1),
+                          resolvedName.isNotEmpty ? resolvedName[0].toUpperCase() : '?',
                           style: TextStyle(
                             color: course.color,
                             fontWeight: FontWeight.w800,
@@ -2778,7 +2773,7 @@ class _CourseReviewsSection extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              review.authorName,
+                              resolvedName,
                               style: TextStyle(
                                 color: colors.textPrimary,
                                 fontWeight: FontWeight.w800,
@@ -2853,8 +2848,8 @@ class _CourseReviewsSection extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        ),
+          );
+        }),
       ],
     );
 
@@ -3513,16 +3508,14 @@ class _CourseLeaderboardPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final l10n = context.l10n;
-    final state = ref.watch(demoAppControllerProvider);
-    final catalog = ref.watch(demoCatalogProvider);
-
     final backendLeaderboardAsync = ref.watch(
       backendCourseLeaderboardProvider(courseId),
     );
     final leaderboard = backendLeaderboardAsync.maybeWhen(
-      data: (list) => list.isNotEmpty ? list : catalog.leaderboardFor(state),
-      orElse: () => catalog.leaderboardFor(state),
+      data: (list) => list,
+      orElse: () => <LeaderboardEntry>[],
     );
+    final isLoading = backendLeaderboardAsync.isLoading;
 
     final top3 = leaderboard.take(3).toList(growable: false);
     final rest = leaderboard.skip(3).toList(growable: false);
@@ -3589,11 +3582,26 @@ class _CourseLeaderboardPanel extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          if (leaderboard.isEmpty)
+          if (isLoading)
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: CircularProgressIndicator(color: courseColor),
+              ),
+            )
+          else if (leaderboard.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Text(
+                  switch (l10n.locale) {
+                    AppLocale.ru => 'Пока никто не записался на курс',
+                    AppLocale.kk => 'Әзірге курсқа ешкім тіркелмеген',
+                    _ => 'No students have enrolled yet',
+                  },
+                  style: TextStyle(color: colors.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
               ),
             )
           else ...[
