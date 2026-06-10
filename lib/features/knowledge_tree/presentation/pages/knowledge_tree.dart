@@ -439,64 +439,7 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
         ? 0
         : catalog.bestAssessmentPercentFor(state, track.id);
 
-    // For the OOP track use real backend progress so the bubble fills correctly.
-    final localProgress = track == null
-        ? null
-        : catalog.progressForTrack(state, track.id);
-    final backendOopProgress = track?.id == 'oop' ? oopProgress : null;
-    final progress =
-        (backendOopProgress != null &&
-            backendOopProgress.totalLessons > 0 &&
-            track?.id == 'oop')
-        ? TrackProgress(
-            state: backendOopProgress.completedLessons == 0
-                ? TrackAvailability.available
-                : backendOopProgress.completedLessons <
-                      backendOopProgress.totalLessons
-                ? TrackAvailability.inProgress
-                : TrackAvailability.completed,
-            completedUnits: backendOopProgress.completedLessons,
-            totalUnits: backendOopProgress.totalLessons,
-            completedQuizzes: backendOopProgress.passedQuizIds.length,
-            totalQuizzes: localProgress?.totalQuizzes ?? 0,
-            completedTrainers: 0,
-            totalTrainers: 0,
-            nextTarget: localProgress?.nextTarget,
-          )
-        : localProgress;
     final orbSize = node.radius * 2;
-
-    // Determine lesson-level status for this track node
-    final hasStartedLessons =
-        track != null &&
-        track.modules.any(
-          (m) => m.lessons.any((l) => state.startedLessonIds.contains(l.id)),
-        );
-    final hasCompletedLessons =
-        track != null &&
-        track.modules.any(
-          (m) => m.lessons.any((l) => state.completedLessonIds.contains(l.id)),
-        );
-    final hasCompletedPractice =
-        track != null &&
-        track.modules.any(
-          (m) =>
-              m.practice != null &&
-              state.completedPracticeIds.contains(m.practice!.id),
-        );
-
-    final trackStatusLabel = track == null
-        ? ''
-        : hasCompletedLessons || hasCompletedPractice
-        ? (state.locale == AppLocale.ru
-              ? 'Выполнен'
-              : (state.locale == AppLocale.kk ? 'Аяқталды' : 'Completed'))
-        : hasStartedLessons
-        ? (state.locale == AppLocale.ru
-              ? 'В процессе'
-              : (state.locale == AppLocale.kk ? 'Орындалуда' : 'In Progress'))
-        : '';
-    final statusHasBadge = trackStatusLabel.isNotEmpty;
     final hubIcon = node.id == 'root'
         ? Icons.hub_rounded
         : Icons.auto_awesome_rounded;
@@ -551,24 +494,7 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                             alpha: node.isHub ? 0.98 : 0.92,
                           );
 
-                    return progress != null && progress.fraction > 0
-                        ? LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            stops: [
-                              0.0,
-                              progress.fraction,
-                              progress.fraction,
-                              1.0,
-                            ],
-                            colors: [
-                              accent.withValues(alpha: isDark ? 0.5 : 0.28),
-                              accent.withValues(alpha: isDark ? 0.5 : 0.28),
-                              nodeBgStart,
-                              nodeBgEnd,
-                            ],
-                          )
-                        : LinearGradient(
+                    return LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [nodeBgStart, nodeBgEnd],
@@ -646,56 +572,6 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (track != null)
-              Positioned(
-                top: 6,
-                right: 4,
-                child: statusHasBadge
-                    ? Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: trackStatusLabel.isEmpty ? 0 : 8,
-                          vertical: trackStatusLabel.isEmpty ? 0 : 5,
-                        ),
-                        width: trackStatusLabel.isEmpty ? 12 : null,
-                        height: trackStatusLabel.isEmpty ? 12 : null,
-                        decoration: BoxDecoration(
-                          shape: trackStatusLabel.isEmpty
-                              ? BoxShape.circle
-                              : BoxShape.rectangle,
-                          borderRadius: trackStatusLabel.isEmpty
-                              ? null
-                              : BorderRadius.circular(999),
-                          color: colors.surfaceSoft.withValues(alpha: 0.96),
-                          border: Border.all(
-                            color: accent.withValues(alpha: 0.58),
-                          ),
-                        ),
-                        child: trackStatusLabel.isEmpty
-                            ? null
-                            : Text(
-                                trackStatusLabel,
-                                style: TextStyle(
-                                  color: accent,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 10,
-                                ),
-                              ),
-                      )
-                    : Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: accent,
-                          boxShadow: [
-                            BoxShadow(
-                              color: accent.withValues(alpha: 0.34),
-                              blurRadius: 10,
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
             if (track != null &&
                 bestPercent == 0 &&
                 availability != TrackAvailability.available &&

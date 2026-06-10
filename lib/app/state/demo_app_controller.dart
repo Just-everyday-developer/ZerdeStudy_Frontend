@@ -1126,6 +1126,14 @@ class DemoAppController extends Notifier<DemoAppState> {
     );
   }
 
+  // Track ids that were set by the old score-based completeDiagnostics logic —
+  // they are either non-existent or stale. Clear them so "Рекомендовано"
+  // badges only appear after the user takes the new backend-driven test.
+  static const _legacyRecommendedIds = <String>{
+    'mathematics', 'discrete_math', 'database_systems',
+    'system_design', 'ai', 'frontend',
+  };
+
   DemoAppState _migrateRestoredState(DemoAppState restored) {
     final needsDiscreteMathFocus =
         restored.currentTrackId == 'fundamentals' &&
@@ -1139,11 +1147,20 @@ class DemoAppController extends Notifier<DemoAppState> {
           message.author == AiAuthor.mentor &&
           message.text.contains('narrate the demo'),
     );
+    // Clear stale recommendations that were set before the diagnostic test was
+    // reworked — any set that contains legacy ids or has no overlap with the
+    // new sphere-to-track map should be wiped so badges start fresh.
+    final needsRecommendedCleanup =
+        restored.recommendedTrackIds.isNotEmpty &&
+        restored.recommendedTrackIds.any(
+          (id) => _legacyRecommendedIds.contains(id),
+        );
 
     if (!needsDiscreteMathFocus &&
         !needsRoleCleanup &&
         !needsGoalCleanup &&
-        !needsAiCleanup) {
+        !needsAiCleanup &&
+        !needsRecommendedCleanup) {
       return restored;
     }
 
@@ -1185,6 +1202,9 @@ class DemoAppController extends Notifier<DemoAppState> {
           : restored.focusedPracticeId,
       user: updatedUser,
       aiMessages: updatedMessages,
+      recommendedTrackIds: needsRecommendedCleanup
+          ? const <String>{}
+          : restored.recommendedTrackIds,
     );
   }
 
