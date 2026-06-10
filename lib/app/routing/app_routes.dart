@@ -34,6 +34,10 @@ class AppRoutes {
   static const String adminRoles = '/admin/roles';
   static const String diagnostics = '/diagnostics';
   static const String payment = '/payment';
+  static const String backendCoursePlayer = '/backend-course-player';
+
+  static String backendCoursePlayerById(String courseId) =>
+      '$backendCoursePlayer/$courseId';
   static const String googleCallback = '/auth/google/callback';
   static const String githubCallback = '/auth/github/callback';
 

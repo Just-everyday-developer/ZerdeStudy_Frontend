@@ -7,6 +7,7 @@ import '../models/backend_lesson_dto.dart';
 import '../models/backend_module_dto.dart';
 import '../models/backend_notification_dto.dart';
 import '../models/backend_course_query.dart';
+import '../models/backend_diagnostic_dto.dart';
 import '../models/backend_practice_dto.dart';
 import '../models/backend_practice_submission_dto.dart';
 import '../models/backend_quiz_dto.dart';
@@ -849,6 +850,51 @@ class BackendCourseRemoteDataSource {
       body: request.toJson(),
     );
     return BackendPracticeSubmissionDto.fromJson(json);
+  }
+
+  // ── Diagnostic "first-time" test ─────────────────────────────────────────
+
+  /// Fetch the active diagnostic test (questions never include correctness).
+  /// `GET /api/v1/student/diagnostic/test`
+  Future<DiagnosticTestDto> fetchDiagnosticTest({
+    required String accessToken,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/student/diagnostic/test',
+      headers: _authHeaders(accessToken),
+    );
+    return DiagnosticTestDto.fromJson(json);
+  }
+
+  /// Submit answers for server-side scoring and persistence.
+  /// `POST /api/v1/student/diagnostic/results`
+  Future<DiagnosticResultDto> submitDiagnosticResult({
+    required String accessToken,
+    required List<DiagnosticAnswerInput> answers,
+  }) async {
+    final json = await _client.postJson(
+      '/api/v1/student/diagnostic/results',
+      headers: _authHeaders(accessToken),
+      body: <String, dynamic>{
+        'answers': answers.map((a) => a.toJson()).toList(growable: false),
+      },
+    );
+    return DiagnosticResultDto.fromJson(json);
+  }
+
+  /// Fetch the current user's latest saved result, or null if never taken.
+  /// `GET /api/v1/student/diagnostic/results/my` (204 → null)
+  Future<DiagnosticResultDto?> fetchMyDiagnosticResult({
+    required String accessToken,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/student/diagnostic/results/my',
+      headers: _authHeaders(accessToken),
+    );
+    if (json.isEmpty || '${json['id'] ?? ''}'.isEmpty) {
+      return null;
+    }
+    return DiagnosticResultDto.fromJson(json);
   }
 
   Map<String, String> _authHeaders(String accessToken) {

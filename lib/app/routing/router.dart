@@ -22,6 +22,7 @@ import '../../features/auth/presentation/pages/welcome_page.dart';
 // Community Groups removed (no backend, fully hardcoded mock).
 // FAQ and Moderator removed (no backend, hardcoded mock).
 import '../../features/home/presentation/pages/community_course_detail_page.dart';
+import '../../features/home/presentation/pages/backend_course_player_page.dart';
 import '../../features/home/presentation/pages/community_course_player_page.dart';
 import '../../features/home/presentation/pages/community_courses_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
@@ -385,6 +386,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: CommunityCoursePlayerPage(
             courseId: state.pathParameters['courseId'] ?? '',
             skipIntro: state.uri.queryParameters['skipIntro'] == '1',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.backendCoursePlayer}/:courseId',
+        parentNavigatorKey: appRootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: BackendCoursePlayerPage(
+            courseId: state.pathParameters['courseId'] ?? '',
           ),
         ),
       ),

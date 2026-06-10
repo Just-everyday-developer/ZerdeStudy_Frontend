@@ -20,6 +20,7 @@ import '../../../courses_backend/data/models/backend_practice_dto.dart';
 import '../../../courses_backend/data/models/backend_practice_submission_dto.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../../domain/models/code_execution.dart';
+import '../../infrastructure/services/code_runner_service.dart';
 import '../widgets/premium_code_editor.dart';
 
 /// Legacy demo exam flow kept for fallback when the catalog practice is missing.
@@ -182,6 +183,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     final colors = context.appColors;
     final locale = state.locale;
     final challenge = practice.codeChallenge;
+    final mySubmissionsAsync = ref.watch(backendMyPracticeSubmissionsProvider);
 
     return AppPageScaffold(
       title: practice.title.resolve(locale),
@@ -344,6 +346,20 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                   ),
                 ],
               ),
+            ),
+          ],
+          if (resolvedBackendPractice?.checkType.trim().toLowerCase() == 'manual') ...[
+            const SizedBox(height: 14),
+            mySubmissionsAsync.maybeWhen(
+              data: (submissions) {
+                final mySubmissions = submissions
+                    .where((s) => s.practiceId == resolvedBackendPractice!.id)
+                    .toList()
+                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                if (mySubmissions.isEmpty) return const SizedBox.shrink();
+                return _SubmissionReviewCard(submission: mySubmissions.first);
+              },
+              orElse: () => const SizedBox.shrink(),
             ),
           ],
           const SizedBox(height: 18),
@@ -670,7 +686,41 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       runType: 'run',
     );
     if (!handled) {
-      _runDraft(practice, locale);
+      await _runWithCodeRunner(practice, backendPractice);
+    }
+  }
+
+  Future<void> _runWithCodeRunner(
+    PracticeTask practice,
+    BackendPracticeDto? backendPractice,
+  ) async {
+    final code = _editorCode.isEmpty ? practice.starterCode : _editorCode;
+    final language = backendPractice?.language.trim().toLowerCase() ?? 'go';
+
+    setState(() => _isRunningOnBackend = true);
+    try {
+      final runner = ref.read(codeRunnerServiceProvider);
+      final result = await runner.runCode(
+        CodeExecutionRequest(language: language, code: code),
+      );
+      if (!mounted) return;
+
+      final output = [
+        if (result.stdout.trim().isNotEmpty) result.stdout.trim(),
+        if (result.error.trim().isNotEmpty) result.error.trim(),
+      ].join('\n');
+
+      setState(() {
+        _isRunningOnBackend = false;
+        _draftOutput = output.isEmpty ? 'The program produced no output.' : output;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isRunningOnBackend = false;
+          _draftOutput = 'Code runner unavailable. Check your connection.';
+        });
+      }
     }
   }
 
@@ -746,6 +796,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       setState(() => _isRunningOnBackend = false);
       ref.invalidate(backendOopProgressProvider);
       ref.invalidate(backendAllProgressProvider);
+      ref.invalidate(backendMyPracticeSubmissionsProvider);
 
       AppNotice.show(
         context,
@@ -759,30 +810,6 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       }
       return false;
     }
-  }
-
-  void _runDraft(PracticeTask practice, AppLocale locale) {
-    final code = _editorCode.isEmpty ? practice.starterCode : _editorCode;
-    final challenge = practice.codeChallenge;
-    final normalizedCode = code.toLowerCase();
-
-    if (challenge != null) {
-      final hasStructure = challenge.requiredSnippets.every(
-        (snippet) => normalizedCode.contains(snippet.toLowerCase()),
-      );
-      setState(() {
-        _draftOutput = hasStructure
-            ? challenge.expectedOutput
-            : 'Draft console is empty. Add the missing class structure and run again.';
-      });
-      return;
-    }
-
-    setState(() {
-      _draftOutput = code.trim().isEmpty
-          ? 'Draft console is empty.'
-          : 'Draft ready for review.';
-    });
   }
 
   Future<void> _submitPractice(
@@ -1012,6 +1039,97 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                     }
                   },
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubmissionReviewCard extends ConsumerWidget {
+  const _SubmissionReviewCard({required this.submission});
+
+  final BackendPracticeSubmissionDto submission;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final statusColor = switch (submission.status) {
+      'approved' => colors.success,
+      'changes_requested' => Colors.orange,
+      'in_review' => colors.accent,
+      _ => colors.textSecondary,
+    };
+    final statusIcon = switch (submission.status) {
+      'approved' => Icons.check_circle_rounded,
+      'changes_requested' => Icons.pending_actions_rounded,
+      'in_review' => Icons.hourglass_top_rounded,
+      _ => Icons.schedule_rounded,
+    };
+    final statusLabel = switch (submission.status) {
+      'approved' => 'Одобрено',
+      'changes_requested' => 'Требуются правки',
+      'in_review' => 'На проверке',
+      _ => 'Ожидает проверки',
+    };
+
+    String? formattedDate;
+    if (submission.reviewedAt != null) {
+      final dt = submission.reviewedAt!;
+      final day = dt.day.toString().padLeft(2, '0');
+      final month = dt.month.toString().padLeft(2, '0');
+      formattedDate = 'Проверено: $day.$month.${dt.year}';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: statusColor.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(statusIcon, color: statusColor, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Ревью преподавателя · $statusLabel',
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              if (submission.status != 'approved')
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  tooltip: 'Обновить',
+                  color: colors.textSecondary,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () =>
+                      ref.invalidate(backendMyPracticeSubmissionsProvider),
+                ),
+            ],
+          ),
+          if (submission.teacherComment.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              submission.teacherComment.trim(),
+              style: TextStyle(color: colors.textPrimary, height: 1.45),
+            ),
+          ],
+          if (formattedDate != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              formattedDate,
+              style: TextStyle(color: colors.textSecondary, fontSize: 12),
+            ),
+          ],
         ],
       ),
     );

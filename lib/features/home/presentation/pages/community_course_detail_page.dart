@@ -472,28 +472,28 @@ class _CommunityCourseDetailPageState
       await backendEnrollCourse(ref, course.id);
       _invalidateEnrollmentProviders();
       if (!context.mounted) return;
-      await _openBackendPreview(context, course);
+      context.push(AppRoutes.backendCoursePlayerById(course.id));
       return;
     }
 
-    // Paid/enrolled courses must always be openable. Prefer the player when the
-    // course actually has lessons; otherwise fall back to the backend preview
-    // panel so the user is never stuck on the detail page.
+    // Paid/enrolled courses must always be openable. Prefer the demo player
+    // when lessons are in the local catalog; otherwise open the backend player.
     if (alreadyEnrolled) {
       if (course.supportsCoursePlayer) {
         context.push(AppRoutes.coursePlayerById(course.id));
         return;
       }
-      await _openBackendPreview(context, course);
+      context.push(AppRoutes.backendCoursePlayerById(course.id));
       return;
     }
 
     if (!course.supportsCoursePlayer) {
-      AppNotice.show(
-        context,
-        message: context.l10n.text('course_preview_notice'),
-        type: AppNoticeType.info,
-      );
+      // Backend-only course: enroll and open the backend player.
+      controller.enrollCommunityCourse(course.id, courseOverride: course);
+      await backendEnrollCourse(ref, course.id);
+      _invalidateEnrollmentProviders();
+      if (!context.mounted) return;
+      context.push(AppRoutes.backendCoursePlayerById(course.id));
       return;
     }
 
@@ -607,16 +607,6 @@ class _CommunityCourseDetailPageState
     ref.invalidate(backendOopProgressProvider);
   }
 
-  Future<void> _openBackendPreview(
-    BuildContext context,
-    CommunityCourse course,
-  ) {
-    return showAdaptivePanel<void>(
-      context: context,
-      wideMaxWidth: 1100,
-      builder: (context) => _BackendCoursePreviewPanel(course: course),
-    );
-  }
 }
 
 bool _courseHasPlayableLessons(CommunityCourse course) {

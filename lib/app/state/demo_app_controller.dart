@@ -330,21 +330,26 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
-  void completeDiagnostics({required int score}) {
+  void completeDiagnostics({
+    required int score,
+    Set<String>? recommendedTrackIds,
+  }) {
     final completedLessonIds = Set<String>.from(state.completedLessonIds);
     final completedPracticeIds = Set<String>.from(state.completedPracticeIds);
 
+    // The diagnostic test now drives recommendations from the knowledge tree:
+    // the page maps the user's strongest spheres to real track ids and passes
+    // them in. Tree "Recommended" badges therefore appear ONLY after the test.
+    // The score-based branch is a safe fallback for older callers.
     final Set<String> recommended;
-    if (score < 6) {
+    if (recommendedTrackIds != null && recommendedTrackIds.isNotEmpty) {
+      recommended = recommendedTrackIds;
+    } else if (score < 6) {
       recommended = {'mathematics', 'discrete_math', 'oop'};
     } else if (score < 11) {
-      recommended = {
-        'algorithms_data_structures',
-        'database_systems',
-        'frontend',
-      };
+      recommended = {'algorithms_data_structures', 'databases', 'frontend'};
     } else {
-      recommended = {'operating_systems', 'system_design', 'ai'};
+      recommended = {'operating_systems', 'backend', 'machine_learning'};
     }
 
     state = _withDerived(

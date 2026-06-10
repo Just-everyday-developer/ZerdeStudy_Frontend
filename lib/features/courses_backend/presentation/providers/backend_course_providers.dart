@@ -19,6 +19,7 @@ import '../../data/models/backend_lesson_dto.dart';
 import '../../data/models/backend_module_dto.dart';
 import '../../data/models/backend_notification_dto.dart';
 import '../../data/models/backend_course_query.dart';
+import '../../data/models/backend_diagnostic_dto.dart';
 import '../../data/models/backend_practice_dto.dart';
 import '../../data/models/backend_practice_submission_dto.dart';
 import '../../data/models/backend_quiz_dto.dart';
@@ -1900,6 +1901,33 @@ final backendTeacherSubmissionProvider =
           accessToken: accessToken,
           submissionId: submissionId,
         );
+      } catch (_) {
+        return null;
+      }
+    });
+
+// ── Diagnostic "first-time" test providers ───────────────────────────────────
+
+/// The active diagnostic test (questions carry no correctness flags).
+final backendDiagnosticTestProvider = FutureProvider<DiagnosticTestDto?>((
+  ref,
+) async {
+  final accessToken = ref.watch(backendCourseAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) return null;
+
+  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+  return remote.fetchDiagnosticTest(accessToken: accessToken);
+});
+
+/// The current user's latest saved diagnostic result, or null if never taken.
+final backendMyDiagnosticResultProvider =
+    FutureProvider<DiagnosticResultDto?>((ref) async {
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) return null;
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+      try {
+        return await remote.fetchMyDiagnosticResult(accessToken: accessToken);
       } catch (_) {
         return null;
       }

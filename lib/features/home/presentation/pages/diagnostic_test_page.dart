@@ -1,755 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
+import '../../../../app/state/demo_catalog.dart';
+import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/bubble_progress_bar.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../courses_backend/data/models/backend_diagnostic_dto.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 
-enum QuestionType {
-  singleChoice,
-  multipleChoice,
-  fillInTheBlank,
-  matchingPairs,
-}
+/// Maps each diagnostic sphere to the knowledge-tree tracks it recommends.
+/// Recommendations and the tree "Recommended" badges are both driven from here,
+/// so they always point at real nodes that exist in the knowledge tree.
+const Map<String, List<String>> kSphereToTrackIds = <String, List<String>>{
+  'backend': ['backend'],
+  'algorithms': ['algorithms_data_structures'],
+  'oop': ['oop'],
+  'databases': ['databases'],
+  'data_ai': ['machine_learning', 'ai_theory', 'probability_statistics_analytics'],
+  'devops': ['sre_devops', 'system_administration'],
+  'security': ['cybersecurity', 'information_security_foundations'],
+  'systems': ['operating_systems', 'computer_architecture', 'networking_protocols'],
+};
 
-enum DifficultyLevel { easy, medium, hard }
-
-extension DifficultyLevelWeight on DifficultyLevel {
-  int get weight => switch (this) {
-        DifficultyLevel.easy => 1,
-        DifficultyLevel.medium => 2,
-        DifficultyLevel.hard => 3,
-      };
-
-  String localizedLabel(AppLocale locale) {
-    return switch (this) {
-      DifficultyLevel.easy => switch (locale) {
-          AppLocale.ru => 'Базовый',
-          AppLocale.kk => 'Бастапқы',
-          _ => 'Easy',
-        },
-      DifficultyLevel.medium => switch (locale) {
-          AppLocale.ru => 'Средний',
-          AppLocale.kk => 'Орташа',
-          _ => 'Medium',
-        },
-      DifficultyLevel.hard => switch (locale) {
-          AppLocale.ru => 'Продвинутый',
-          AppLocale.kk => 'Жоғары',
-          _ => 'Hard',
-        },
-    };
+/// Strongest spheres (score > 0) → recommended knowledge-tree track ids.
+/// Takes the top [maxSpheres] spheres and their mapped tracks, capped at [cap].
+Set<String> recommendedTrackIdsForResult(
+  DiagnosticResultDto result, {
+  int maxSpheres = 3,
+  int cap = 5,
+}) {
+  final topSlugs = result.spheresByStrength
+      .where((s) => s.score > 0)
+      .map((s) => s.sphere.slug)
+      .take(maxSpheres)
+      .toList(growable: false);
+  final ids = <String>{};
+  for (final slug in topSlugs) {
+    for (final id in kSphereToTrackIds[slug] ?? const <String>[]) {
+      if (ids.length >= cap) break;
+      ids.add(id);
+    }
   }
+  return ids;
 }
 
-class DiagnosticTopic {
-  const DiagnosticTopic({
-    required this.key,
-    required this.ru,
-    required this.kk,
-    required this.en,
-  });
-
-  final String key;
-  final String ru;
-  final String kk;
-  final String en;
-
-  String resolve(AppLocale locale) {
-    return switch (locale) {
-      AppLocale.ru => ru,
-      AppLocale.kk => kk,
-      _ => en,
-    };
-  }
-}
-
-const DiagnosticTopic _topicOOP = DiagnosticTopic(
-  key: 'oop',
-  ru: 'ООП и проектирование',
-  kk: 'ООП және жобалау',
-  en: 'OOP & Design',
-);
-const DiagnosticTopic _topicAlgorithms = DiagnosticTopic(
-  key: 'algorithms',
-  ru: 'Алгоритмы и структуры данных',
-  kk: 'Алгоритмдер және деректер құрылымы',
-  en: 'Algorithms & Data Structures',
-);
-const DiagnosticTopic _topicDatabases = DiagnosticTopic(
-  key: 'databases',
-  ru: 'Базы данных',
-  kk: 'Деректер базасы',
-  en: 'Databases',
-);
-const DiagnosticTopic _topicNetworking = DiagnosticTopic(
-  key: 'networking',
-  ru: 'Сети и веб-протоколы',
-  kk: 'Желілер және веб-протоколдар',
-  en: 'Networking & Web',
-);
-const DiagnosticTopic _topicOperatingSystems = DiagnosticTopic(
-  key: 'operating_systems',
-  ru: 'Операционные системы и память',
-  kk: 'Операциялық жүйелер және жад',
-  en: 'Operating Systems & Memory',
-);
-const DiagnosticTopic _topicArchitecture = DiagnosticTopic(
-  key: 'architecture',
-  ru: 'Архитектура компьютеров',
-  kk: 'Компьютер архитектурасы',
-  en: 'Computer Architecture',
-);
-const DiagnosticTopic _topicCloud = DiagnosticTopic(
-  key: 'cloud',
-  ru: 'Облачные технологии',
-  kk: 'Бұлттық технологиялар',
-  en: 'Cloud Computing',
-);
-const DiagnosticTopic _topicSecurity = DiagnosticTopic(
-  key: 'security',
-  ru: 'Информационная безопасность',
-  kk: 'Ақпараттық қауіпсіздік',
-  en: 'Information Security',
-);
-const DiagnosticTopic _topicAI = DiagnosticTopic(
-  key: 'ai_ml',
-  ru: 'Искусственный интеллект и ML',
-  kk: 'Жасанды интеллект және ML',
-  en: 'AI & Machine Learning',
-);
-const DiagnosticTopic _topicSoftwareEngineering = DiagnosticTopic(
-  key: 'software_engineering',
-  ru: 'Инженерные практики',
-  kk: 'Инженерлік тәжірибелер',
-  en: 'Software Engineering Practices',
-);
-
-class DiagnosticQuestion {
-  const DiagnosticQuestion({
-    required this.id,
-    required this.type,
-    required this.title,
-    required this.options, // For single/multiple choice
-    required this.correctIndices, // For single/multiple choice
-    required this.leftItems, // For matching pairs
-    required this.rightItems, // For matching pairs
-    required this.correctMapping, // For matching pairs
-    required this.correctBlanks, // For fill in the blanks
-    required this.blankOptions, // For fill in the blanks
-    required this.difficulty,
-    required this.topic,
-  });
-
-  final String id;
-  final QuestionType type;
-  final LocalizedText title;
-  final List<LocalizedText>? options;
-  final List<int>? correctIndices;
-  final List<LocalizedText>? leftItems;
-  final List<LocalizedText>? rightItems;
-  final Map<int, int>? correctMapping;
-  final List<int>? correctBlanks;
-  final List<LocalizedText>? blankOptions;
-  final DifficultyLevel difficulty;
-  final DiagnosticTopic topic;
-}
-
-class LocalizedText {
-  const LocalizedText({
-    required this.ru,
-    required this.kk,
-    required this.en,
-  });
-
-  final String ru;
-  final String kk;
-  final String en;
-
-  String resolve(AppLocale locale) {
-    return switch (locale) {
-      AppLocale.ru => ru,
-      AppLocale.kk => kk,
-      _ => en,
-    };
-  }
-}
-
-// 15 Multilingual High-Quality Questions covering computer science and software engineering core
-final List<DiagnosticQuestion> _questionsPool = [
-  // 1. OOP principles (Single choice)
-  DiagnosticQuestion(
-    id: 'q1',
-    type: QuestionType.singleChoice,
-    title: LocalizedText(
-      ru: "Какой фундаментальный принцип ООП скрывает внутренние детали реализации класса и защищает данные от прямого доступа?",
-      kk: "Сыныптың ішкі жүзеге асыру мәліметтерін жасыратын және деректерді тікелей қатынасудан қорғайтын ООП-тың қандай негізгі принципі бар?",
-      en: "Which fundamental OOP principle hides internal class implementation details and protects data from direct access?",
-    ),
-    options: [
-      LocalizedText(ru: "Инкапсуляция", kk: "Инкапсуляция", en: "Encapsulation"),
-      LocalizedText(ru: "Наследование", kk: "Мұрагерлік", en: "Inheritance"),
-      LocalizedText(ru: "Полиморфизм", kk: "Полиморфизм", en: "Polymorphism"),
-      LocalizedText(ru: "Абстракция", kk: "Абстракция", en: "Abstraction"),
-    ],
-    correctIndices: [0],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.easy,
-    topic: _topicOOP,
-  ),
-  // 2. Polymorphism & Inheritance (Multiple choice)
-  DiagnosticQuestion(
-    id: 'q2',
-    type: QuestionType.multipleChoice,
-    title: LocalizedText(
-      ru: "Выберите ВСЕ верные утверждения о полиморфизме и наследовании:",
-      kk: "Полиморфизм және мұрагерлік туралы БАРЛЫҚ дұрыс тұжырымдарды таңдаңыз:",
-      en: "Select ALL true statements about polymorphism and inheritance:",
-    ),
-    options: [
-      LocalizedText(
-        ru: "Наследование позволяет повторно использовать код родительского класса",
-        kk: "Мұрагерлік ата-аналық сыныптың кодын қайта пайдалануға мүмкіндік береді",
-        en: "Inheritance allows reusing parent class code",
-      ),
-      LocalizedText(
-        ru: "Полиморфизм позволяет объектам разных классов реагировать на один и тот же вызов метода по-разному",
-        kk: "Полиморфизм әртүрлі сыныптардың объектілеріне бірдей әдіс шақыруына әртүрлі жауап беруге мүмкіндік береді",
-        en: "Polymorphism allows objects of different classes to respond to the same method call differently",
-      ),
-      LocalizedText(
-        ru: "Приватные методы класса всегда наследуются и могут быть переопределены",
-        kk: "Сыныптың жеке (private) әдістері әрқашан мұрагерлікке беріледі және қайта анықталады",
-        en: "Private class methods are always inherited and can be overridden",
-      ),
-      LocalizedText(
-        ru: "Переопределение метода (Overriding) происходит во время компиляции",
-        kk: "Әдісті қайта анықтау (Overriding) компиляция кезінде орындалады",
-        en: "Method overriding occurs at compile time",
-      ),
-      LocalizedText(
-        ru: "Класс может наследоваться только от одного класса в стандартной модели единичного наследования (как в Java)",
-        kk: "Сынып бір мұрагерлік моделінде (мысалы, Java-да) тек бір сыныптан ғана мұра ала алады",
-        en: "A class can only inherit from a single class in a standard single-inheritance model (like in Java)",
-      ),
-    ],
-    correctIndices: [0, 1, 4],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.hard,
-    topic: _topicOOP,
-  ),
-  // 3. Big O Notation (Single choice, 6 options)
-  DiagnosticQuestion(
-    id: 'q3',
-    type: QuestionType.singleChoice,
-    title: LocalizedText(
-      ru: "Какова временная сложность худшего случая для быстрого поиска элемента в сбалансированном бинарном дереве поиска (BST)?",
-      kk: "Балансталған екілік іздеу ағашында (BST) элементті жылдам іздеу үшін ең нашар жағдайдағы уақыт күрделілігі қандай?",
-      en: "What is the worst-case time complexity of looking up an element in a balanced Binary Search Tree (BST)?",
-    ),
-    options: [
-      LocalizedText(ru: "O(1)", kk: "O(1)", en: "O(1)"),
-      LocalizedText(ru: "O(log n)", kk: "O(log n)", en: "O(log n)"),
-      LocalizedText(ru: "O(n)", kk: "O(n)", en: "O(n)"),
-      LocalizedText(ru: "O(n log n)", kk: "O(n log n)", en: "O(n log n)"),
-      LocalizedText(ru: "O(n²)", kk: "O(n²)", en: "O(n²)"),
-      LocalizedText(ru: "O(2ⁿ)", kk: "O(2ⁿ)", en: "O(2ⁿ)"),
-    ],
-    correctIndices: [1],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.medium,
-    topic: _topicAlgorithms,
-  ),
-  // 4. Database Normalization (Multiple choice, 6 options)
-  DiagnosticQuestion(
-    id: 'q4',
-    type: QuestionType.multipleChoice,
-    title: LocalizedText(
-      ru: "Какие цели преследует нормализация реляционных баз данных? Выберите все подходящие:",
-      kk: "Реляциялық деректер базасын нормализациялау қандай мақсаттарды көздейді? Сәйкес келетіндердің бәрін таңдаңыз:",
-      en: "What are the goals of relational database normalization? Select all that apply:",
-    ),
-    options: [
-      LocalizedText(
-        ru: "Минимизация избыточности (дублирования) данных",
-        kk: "Деректердің артықшылығын (дубликатталуын) азайту",
-        en: "Minimizing data redundancy (duplication)",
-      ),
-      LocalizedText(
-        ru: "Ускорение выполнения абсолютно всех сложных SELECT запросов с JOIN",
-        kk: "JOIN көмегімен барлық күрделі SELECT сұраныстарының орындалуын жылдамдату",
-        en: "Speeding up execution of absolutely all complex SELECT queries with JOINs",
-      ),
-      LocalizedText(
-        ru: "Устранение аномалий вставки, обновления и удаления данных",
-        kk: "Деректерді кірістіру, жаңарту және жою аномалияларын жою",
-        en: "Eliminating insertion, update, and deletion anomalies",
-      ),
-      LocalizedText(
-        ru: "Обеспечение целостности данных",
-        kk: "Деректердің тұтастығын қамтамасыз ету",
-        en: "Ensuring data integrity",
-      ),
-      LocalizedText(
-        ru: "Автоматическое физическое шифрование жесткого диска",
-        kk: "Қатты дискіні автоматты түрде физикалық шифрлау",
-        en: "Automatic physical hard drive encryption",
-      ),
-      LocalizedText(
-        ru: "Организация логической структуры таблиц на основе функциональных зависимостей",
-        kk: "Функционалдық тәуелділіктер негізінде кестелердің логикалық құрылымын ұйымдастыру",
-        en: "Organizing the logical table structure based on functional dependencies",
-      ),
-    ],
-    correctIndices: [0, 2, 3, 5],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.hard,
-    topic: _topicDatabases,
-  ),
-  // 5. Web Protocols HTTP vs HTTPS (Single choice, 5 options)
-  DiagnosticQuestion(
-    id: 'q5',
-    type: QuestionType.singleChoice,
-    title: LocalizedText(
-      ru: "В чем основное отличие протокола HTTPS от базового HTTP?",
-      kk: "HTTPS протоколының негізгі HTTP протоколынан басты айырмашылығы неде?",
-      en: "What is the primary difference between HTTPS and basic HTTP?",
-    ),
-    options: [
-      LocalizedText(
-        ru: "HTTPS использует TLS/SSL для шифрования данных и аутентификации сервера",
-        kk: "HTTPS деректерді шифрлау және серверді аутентификациялау үшін TLS/SSL пайдаланады",
-        en: "HTTPS uses TLS/SSL for data encryption and server authentication",
-      ),
-      LocalizedText(
-        ru: "HTTPS работает на транспортном уровне, а HTTP — на прикладном",
-        kk: "HTTPS көлік (transport) деңгейінде, ал HTTP қолданбалы (application) деңгейде жұмыс істейді",
-        en: "HTTPS operates at the transport layer, while HTTP operates at the application layer",
-      ),
-      LocalizedText(
-        ru: "HTTPS поддерживает передачу файлов только в формате ZIP",
-        kk: "HTTPS тек ZIP форматындағы файлдарды тасымалдауды қолдайды",
-        en: "HTTPS only supports transmitting files in ZIP format",
-      ),
-      LocalizedText(
-        ru: "HTTPS не поддерживает куки (Cookies) для сохранения сессий",
-        kk: "HTTPS сессияларды сақтау үшін cookie файлдарын қолдамайды",
-        en: "HTTPS does not support Cookies for maintaining sessions",
-      ),
-      LocalizedText(
-        ru: "HTTPS является устаревшим протоколом, замененным на HTTP/3",
-        kk: "HTTPS — ескірген протокол, оның орнына HTTP/3 келді",
-        en: "HTTPS is an obsolete protocol replaced by HTTP/3",
-      ),
-    ],
-    correctIndices: [0],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.easy,
-    topic: _topicNetworking,
-  ),
-  // 6. Operating Systems Threads vs Processes (Multiple choice, 5 options)
-  DiagnosticQuestion(
-    id: 'q6',
-    type: QuestionType.multipleChoice,
-    title: LocalizedText(
-      ru: "Выберите ВСЕ верные утверждения о процессах и потоках в операционных системах:",
-      kk: "Операциялық жүйелердегі процестер мен ағындар туралы БАРЛЫҚ дұрыс тұжырымдарды таңдаңыз:",
-      en: "Select ALL true statements about processes and threads in operating systems:",
-    ),
-    options: [
-      LocalizedText(
-        ru: "Процессы изолированы друг от друга и не делят адресное пространство по умолчанию",
-        kk: "Процестер бір-бірінен оқшауланған және әдепкі бойынша мекенжай кеңістігін бөліспейді",
-        en: "Processes are isolated from each other and do not share address space by default",
-      ),
-      LocalizedText(
-        ru: "Потоки одного процесса делят общую память и ресурсы этого процесса",
-        kk: "Бір процестің ағындары осы процестің жалпы жадын және ресурстарын бөліседі",
-        en: "Threads of the same process share that process's memory and resources",
-      ),
-      LocalizedText(
-        ru: "Создание и переключение потоков обычно требует больше накладных расходов ОС, чем процессов",
-        kk: "Ағындарды құру және ауыстыру әдетте процестерге қарағанда ОЖ үшін көп шығынды қажет етеді",
-        en: "Creating and switching threads typically incurs more OS overhead than processes",
-      ),
-      LocalizedText(
-        ru: "Потоки не могут выполняться параллельно на многоядерных процессорах",
-        kk: "Ағындар көп ядролы процессорларда параллель орындала алмайды",
-        en: "Threads cannot execute concurrently on multi-core CPUs",
-      ),
-      LocalizedText(
-        ru: "Падение одного потока может привести к аварийному завершению всего процесса",
-        kk: "Бір ағынның құлауы бүкіл процестің авариялық аяқталуына әкелуі мүмкін",
-        en: "The crash of a single thread can cause the entire process to terminate abruptly",
-      ),
-    ],
-    correctIndices: [0, 1, 4],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.hard,
-    topic: _topicOperatingSystems,
-  ),
-  // 7. Computer Architecture Cache Memory (Single choice, 4 options)
-  DiagnosticQuestion(
-    id: 'q7',
-    type: QuestionType.singleChoice,
-    title: LocalizedText(
-      ru: "Какова основная цель использования сверхоперативной памяти (кэша L1/L2/L3) в современных процессорах?",
-      kk: "Қазіргі процессорларда өте жылдам жадты (L1/L2/L3 кэш) пайдаланудың басты мақсаты қандай?",
-      en: "What is the primary purpose of using cache memory (L1/L2/L3) in modern CPUs?",
-    ),
-    options: [
-      LocalizedText(
-        ru: "Сокращение среднего времени доступа к данным из оперативной памяти (RAM)",
-        kk: "Жедел жадтан (RAM) деректерге қол жеткізудің орташа уақытын қысқарту",
-        en: "Reducing the average time to access data from main memory (RAM)",
-      ),
-      LocalizedText(
-        ru: "Увеличение общей емкости постоянного жесткого диска",
-        kk: "Тұрақты қатты дискінің жалпы сыйымдылығын арттыру",
-        en: "Increasing the total capacity of the hard drive",
-      ),
-      LocalizedText(
-        ru: "Повышение безопасности при передаче пакетов по сети",
-        kk: "Желі арқылы пакеттерді тасымалдау кезінде қауіпсіздікті арттыру",
-        en: "Improving security during packet transmission over the network",
-      ),
-      LocalizedText(
-        ru: "Охлаждение физических кристаллов процессора при высокой нагрузке",
-        kk: "Жоғары жүктеме кезінде процессордың физикалық кристалдарын салқындату",
-        en: "Cooling the physical CPU chips under high loads",
-      ),
-    ],
-    correctIndices: [0],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.easy,
-    topic: _topicArchitecture,
-  ),
-  // 8. Software Design Patterns (Matching pairs)
-  DiagnosticQuestion(
-    id: 'q8',
-    type: QuestionType.matchingPairs,
-    title: LocalizedText(
-      ru: "Установите соответствие между паттерном проектирования и его основным назначением:",
-      kk: "Жобалау үлгісі (pattern) мен оның негізгі мақсаты арасындағы сәйкестікті орнатыңыз:",
-      en: "Match the design pattern with its primary purpose:",
-    ),
-    options: null,
-    correctIndices: null,
-    leftItems: [
-      LocalizedText(ru: "Singleton", kk: "Singleton", en: "Singleton"),
-      LocalizedText(ru: "Observer", kk: "Observer", en: "Observer"),
-      LocalizedText(ru: "Factory Method", kk: "Factory Method", en: "Factory Method"),
-    ],
-    rightItems: [
-      LocalizedText(
-        ru: "Гарантирует создание единственного экземпляра класса в системе",
-        kk: "Жүйеде сыныптың тек бір ғана данасының жасалуын қамтамасыз етеді",
-        en: "Guarantees that a class has only one instance across the system",
-      ),
-      LocalizedText(
-        ru: "Организует рассылку уведомлений об изменении состояния зависимым объектам",
-        kk: "Тәуелді объектілерге күйдің өзгеруі туралы хабарландыруларды таратуды ұйымдастырады",
-        en: "Notifies dependent objects automatically when state changes",
-      ),
-      LocalizedText(
-        ru: "Делегирует создание объектов дочерним классам через общий интерфейс",
-        kk: "Объектілерді құруды ортақ интерфейс арқылы еншілес сыныптарға тапсырады",
-        en: "Delegates object creation to subclasses through a common interface",
-      ),
-    ],
-    correctMapping: {0: 0, 1: 1, 2: 2},
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.medium,
-    topic: _topicOOP,
-  ),
-  // 9. Cloud Computing models (Fill in the blanks)
-  DiagnosticQuestion(
-    id: 'q9',
-    type: QuestionType.fillInTheBlank,
-    title: LocalizedText(
-      ru: "В облачных вычислениях модель, предоставляющая виртуальные серверы, сети и диски, называется {blank}, в то время как модель, предоставляющая готовую среду для запуска кода без заботы об ОС, называется {blank}.",
-      kk: "Бұлттық есептеулерде виртуалды серверлерді, желілерді және дискілерді ұсынатын модель {blank} деп аталады, ал ОЖ туралы алаңдамай-ақ кодты іске қосуға дайын ортаны ұсынатын модель {blank} деп аталады.",
-      en: "In cloud computing, the model providing virtual servers, networks, and storage is called {blank}, while the model providing a ready environment to run code without worrying about the OS is called {blank}.",
-    ),
-    options: null,
-    correctIndices: null,
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: [0, 1], // IaaS (0), PaaS (1)
-    blankOptions: [
-      LocalizedText(ru: "IaaS", kk: "IaaS", en: "IaaS"),
-      LocalizedText(ru: "PaaS", kk: "PaaS", en: "PaaS"),
-      LocalizedText(ru: "SaaS", kk: "SaaS", en: "SaaS"),
-    ],
-    difficulty: DifficultyLevel.medium,
-    topic: _topicCloud,
-  ),
-  // 10. Cryptography Public vs Private Key (Single choice, 5 options)
-  DiagnosticQuestion(
-    id: 'q10',
-    type: QuestionType.singleChoice,
-    title: LocalizedText(
-      ru: "В асимметричном шифровании, если Алиса хочет отправить Бобу зашифрованное сообщение, какой ключ она должна использовать для шифрования?",
-      kk: "Асимметриялық шифрлауда, егер Алиса Бобқа шифрланған хабарлама жібергісі келсе, ол шифрлау үшін қандай кілтті пайдалануы керек?",
-      en: "In asymmetric encryption, if Alice wants to send Bob an encrypted message, which key should she use to encrypt it?",
-    ),
-    options: [
-      LocalizedText(
-        ru: "Публичный (открытый) ключ Боба",
-        kk: "Бобтың жария (ашық) кілті",
-        en: "Bob's public key",
-      ),
-      LocalizedText(
-        ru: "Приватный (секретный) ключ Алисы",
-        kk: "Алисаның жеке (құпия) кілті",
-        en: "Alice's private key",
-      ),
-      LocalizedText(
-        ru: "Приватный (секретный) ключ Боба",
-        kk: "Бобтың жеке (құпия) кілті",
-        en: "Bob's private key",
-      ),
-      LocalizedText(
-        ru: "Публичный (открытый) ключ Алисы",
-        kk: "Алисаның жария (ашық) кілті",
-        en: "Alice's public key",
-      ),
-      LocalizedText(
-        ru: "Общий симметричный сессионный ключ",
-        kk: "Ортақ симметриялық сессиялық кілт",
-        en: "A shared symmetric session key",
-      ),
-    ],
-    correctIndices: [0],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.medium,
-    topic: _topicSecurity,
-  ),
-  // 11. Artificial Intelligence & ML types (Multiple choice, 6 options)
-  DiagnosticQuestion(
-    id: 'q11',
-    type: QuestionType.multipleChoice,
-    title: LocalizedText(
-      ru: "Какие задачи относятся к машинному обучению с учителем (Supervised Learning)? Выберите все верные:",
-      kk: "Мұғаліммен оқыту (Supervised Learning) тапсырмаларына не жатады? Барлық дұрыс жауапты таңдаңыз:",
-      en: "Which tasks belong to Supervised Learning in machine learning? Select all that apply:",
-    ),
-    options: [
-      LocalizedText(
-        ru: "Предсказание цен на недвижимость по известным характеристикам (Регрессия)",
-        kk: "Белгілі сипаттамалар бойынша жылжымайтын мүлік бағасын болжау (Регрессия)",
-        en: "Predicting real estate prices based on historical labeled features (Regression)",
-      ),
-      LocalizedText(
-        ru: "Классификация входящих писем на спам и не-спам по размеченной выборке",
-        kk: "Кіріс хаттарды белгіленген таңдау бойынша спам және спам емес деп жіктеу",
-        en: "Classifying incoming emails into spam and not-spam using a labeled dataset",
-      ),
-      LocalizedText(
-        ru: "Группировка клиентов интернет-магазина без предварительных меток (Кластеризация)",
-        kk: "Алдын ала белгілерсіз интернет-дүкен клиенттерін топтастыру (Кластерлеу)",
-        en: "Grouping online store customers without predefined labels (Clustering)",
-      ),
-      LocalizedText(
-        ru: "Обучение робота ходьбе методом проб и ошибок с получением наград (Reinforcement)",
-        kk: "Марапаттар алу арқылы роботты сынақ пен қателік әдісімен жүруге үйрету (Reinforcement)",
-        en: "Training a robot to walk via trial and error with reward feedback (Reinforcement)",
-      ),
-      LocalizedText(
-        ru: "Распознавание рукописных цифр на основе обучающего набора MNIST",
-        kk: "MNIST үйрету жиынтығы негізінде қолмен жазылған цифрларды тану",
-        en: "Recognizing handwritten digits using the MNIST training set",
-      ),
-      LocalizedText(
-        ru: "Понижение размерности признаков методом главных компонент (PCA)",
-        kk: "Басты компоненттер әдісімен (PCA) белгілердің өлшемін азайту",
-        en: "Reducing feature dimensions using Principal Component Analysis (PCA)",
-      ),
-    ],
-    correctIndices: [0, 1, 4],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.hard,
-    topic: _topicAI,
-  ),
-  // 12. Data Structures Stack vs Queue (Single choice, 4 options)
-  DiagnosticQuestion(
-    id: 'q12',
-    type: QuestionType.singleChoice,
-    title: LocalizedText(
-      ru: "Каков основной принцип работы классической структуры данных 'Стек' (Stack)?",
-      kk: "Классикалық 'Стек' (Stack) деректер құрылымының негізгі жұмыс принципі қандай?",
-      en: "What is the primary operational principle of a classic 'Stack' data structure?",
-    ),
-    options: [
-      LocalizedText(ru: "FIFO (First In, First Out)", kk: "FIFO (First In, First Out)", en: "FIFO (First In, First Out)"),
-      LocalizedText(ru: "LIFO (Last In, First Out)", kk: "LIFO (Last In, First Out)", en: "LIFO (Last In, First Out)"),
-      LocalizedText(ru: "LILO (Last In, Last Out)", kk: "LILO (Last In, Last Out)", en: "LILO (Last In, Last Out)"),
-      LocalizedText(
-        ru: "Случайный доступ по индексу (Random Access)",
-        kk: "Индекс бойынша кездейсоқ қатынасу (Random Access)",
-        en: "Random access by index",
-      ),
-    ],
-    correctIndices: [1],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.easy,
-    topic: _topicAlgorithms,
-  ),
-  // 13. Software Engineering Agile principles (Multiple choice, 5 options)
-  DiagnosticQuestion(
-    id: 'q13',
-    type: QuestionType.multipleChoice,
-    title: LocalizedText(
-      ru: "Какие из перечисленных ценностей задекларированы в Agile Manifesto? Выберите все верные:",
-      kk: "Төменде көрсетілген құндылықтардың қайсысы Agile манифесінде жарияланған? Барлық дұрыс жауапты таңдаңыз:",
-      en: "Which of the following values are declared in the Agile Manifesto? Select all that apply:",
-    ),
-    options: [
-      LocalizedText(
-        ru: "Люди и взаимодействие важнее процессов и инструментов",
-        kk: "Адамдар мен өзара әрекеттесу процестер мен құралдардан маңыздырақ",
-        en: "Individuals and interactions over processes and tools",
-      ),
-      LocalizedText(
-        ru: "Работающий продукт важнее исчерпывающей документации",
-        kk: "Жұмыс істеп тұрған өнім толық құжаттамадан маңыздырақ",
-        en: "Working software over comprehensive documentation",
-      ),
-      LocalizedText(
-        ru: "Следование первоначальному плану важнее, чем адаптация к изменениям",
-        kk: "Бастапқы жоспарды орындау өзгерістерге бейімделуден маңыздырақ",
-        en: "Following a plan over responding to change",
-      ),
-      LocalizedText(
-        ru: "Сотрудничество с заказчиком важнее согласования условий контракта",
-        kk: "Тапсырыс берушімен ынтымақтастық келісімшарт шарттарын келісуден маңыздырақ",
-        en: "Customer collaboration over contract negotiation",
-      ),
-      LocalizedText(
-        ru: "Использование самых дорогих инструментов важнее квалификации сотрудников",
-        kk: "Ең қымбат құралдарды пайдалану қызметкерлердің біліктілігінен маңыздырақ",
-        en: "Using the most expensive tools over team qualification",
-      ),
-    ],
-    correctIndices: [0, 1, 3],
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.medium,
-    topic: _topicSoftwareEngineering,
-  ),
-  // 14. Network Topologies (Matching pairs)
-  DiagnosticQuestion(
-    id: 'q14',
-    type: QuestionType.matchingPairs,
-    title: LocalizedText(
-      ru: "Установите соответствие между сетевой топологией и ее характерной особенностью:",
-      kk: "Желілік топология мен оның сипатты ерекшелігі арасындағы сәйкестікті орнатыңыз:",
-      en: "Match the network topology with its key characteristic:",
-    ),
-    options: null,
-    correctIndices: null,
-    leftItems: [
-      LocalizedText(ru: "Звезда (Star)", kk: "Жұлдыз (Star)", en: "Star"),
-      LocalizedText(ru: "Кольцо (Ring)", kk: "Сақина (Ring)", en: "Ring"),
-      LocalizedText(ru: "Шина (Bus)", kk: "Шина (Bus)", en: "Bus"),
-    ],
-    rightItems: [
-      LocalizedText(
-        ru: "Все устройства подключены к единому центральному узлу (коммутатору)",
-        kk: "Барлық құрылғылар бір орталық түйінге (коммутаторға) қосылған",
-        en: "All devices connect to a single central hub (switch)",
-      ),
-      LocalizedText(
-        ru: "Данные передаются по кругу в одном направлении через каждого соседа",
-        kk: "Деректер шеңбер бойымен бір бағытта әрбір көрші арқылы беріледі",
-        en: "Data travels in a single direction circular path through each node",
-      ),
-      LocalizedText(
-        ru: "Все устройства используют один общий коаксиальный кабель для передачи данных",
-        kk: "Барлық құрылғылар деректерді беру үшін бір ортақ коаксиалды кабельді пайдаланады",
-        en: "All devices share a single common coaxial cable for data transmission",
-      ),
-    ],
-    correctMapping: {0: 0, 1: 1, 2: 2},
-    correctBlanks: null,
-    blankOptions: null,
-    difficulty: DifficultyLevel.medium,
-    topic: _topicNetworking,
-  ),
-  // 15. Memory Management (Fill in the blanks)
-  DiagnosticQuestion(
-    id: 'q15',
-    type: QuestionType.fillInTheBlank,
-    title: LocalizedText(
-      ru: "В управлении памятью область, используемая для локальных переменных функций и вызовов методов, называется {blank}, тогда как динамически выделяемая память для объектов называется {blank}.",
-      kk: "Жадты басқаруда функциялардың жергілікті айнымалылары мен әдіс шақырулары үшін пайдаланылатын аймақ {blank} деп аталады, ал объектілер үшін динамикалық бөлінетін жад {blank} деп аталады.",
-      en: "In memory management, the region used for function local variables and method call stack frames is called the {blank}, while dynamically allocated memory for objects is called the {blank}.",
-    ),
-    options: null,
-    correctIndices: null,
-    leftItems: null,
-    rightItems: null,
-    correctMapping: null,
-    correctBlanks: [0, 1], // Stack (0), Heap (1)
-    blankOptions: [
-      LocalizedText(ru: "Стек (Stack)", kk: "Стек (Stack)", en: "Stack"),
-      LocalizedText(ru: "Куча (Heap)", kk: "Үйінді (Heap)", en: "Heap"),
-      LocalizedText(ru: "Регистр (Register)", kk: "Регистр (Register)", en: "Register"),
-    ],
-    difficulty: DifficultyLevel.easy,
-    topic: _topicOperatingSystems,
-  ),
-];
-
-const int _maxDiagnosticScore = 28;
-
+/// First-time diagnostic test.
+///
+/// Loads its questions from the backend (`/student/diagnostic/test`), never
+/// reveals which answers are right or wrong, scores entirely on the server
+/// and shows a colourful per-sphere breakdown plus recommended courses.
 class DiagnosticTestPage extends ConsumerStatefulWidget {
   const DiagnosticTestPage({super.key});
 
@@ -761,1174 +65,789 @@ class _DiagnosticTestPageState extends ConsumerState<DiagnosticTestPage> {
   AppLocale? _overrideLocale;
 
   int _currentIndex = 0;
-  bool _isFinished = false;
+  // questionId -> selected option ids
+  final Map<String, Set<String>> _answers = <String, Set<String>>{};
 
-  // Single/Multiple Choice state
-  final Set<int> _selectedIndices = {};
+  bool _isSubmitting = false;
+  String? _submitError;
+  DiagnosticResultDto? _result;
 
-  // Matching Pairs state
-  int? _selectedLeftIndex;
-  final Map<int, int> _userMatches = {}; // leftIndex -> rightIndex
-
-  // Fill in the blanks state
-  final Map<int, int> _userBlanks = {}; // blankIndex -> blankOptionIndex
-
-  // Feedback states
-  bool _hasChecked = false;
-  bool _isCorrect = false;
-  int _score = 0;
-
-  // Weighted scoring + per-topic / per-difficulty tracking
-  int _weightedScore = 0;
-  final Map<String, int> _topicScored = {}; // topicKey -> points earned
-  final Map<String, int> _topicMaxPossible = {}; // topicKey -> max points
-  final Map<DifficultyLevel, int> _difficultyScored = {
-    DifficultyLevel.easy: 0,
-    DifficultyLevel.medium: 0,
-    DifficultyLevel.hard: 0,
+  String _t(AppLocale l, String ru, String en, String kk) => switch (l) {
+    AppLocale.ru => ru,
+    AppLocale.kk => kk,
+    AppLocale.en => en,
   };
-  final Map<DifficultyLevel, int> _difficultyCorrect = {
-    DifficultyLevel.easy: 0,
-    DifficultyLevel.medium: 0,
-    DifficultyLevel.hard: 0,
-  };
-
-  void _accumulateMaxPossible() {
-    if (_topicMaxPossible.isNotEmpty) return;
-    for (final question in _questionsPool) {
-      _topicMaxPossible[question.topic.key] =
-          (_topicMaxPossible[question.topic.key] ?? 0) +
-              question.difficulty.weight;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final riverpodLocale = ref.watch(demoAppControllerProvider.select((s) => s.locale));
-    final activeLocale = _overrideLocale ?? riverpodLocale;
-
-    if (_isFinished) {
-      _accumulateMaxPossible();
-      return _buildResultPage(context, colors, activeLocale);
-    }
-
-    final question = _questionsPool[_currentIndex];
+    final riverpodLocale = ref.watch(
+      demoAppControllerProvider.select((s) => s.locale),
+    );
+    final locale = _overrideLocale ?? riverpodLocale;
+    final testAsync = ref.watch(backendDiagnosticTestProvider);
 
     return AppPageScaffold(
-      title: activeLocale == AppLocale.ru
-          ? 'Диагностический тест'
-          : (activeLocale == AppLocale.kk ? 'Диагностикалық тест' : 'Diagnostic Test'),
-      actions: [
-        // Language switcher pill button
-        Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: PopupMenuButton<AppLocale>(
-            offset: const Offset(0, 44),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            color: colors.surfaceSoft,
-            icon: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: colors.primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: colors.primary.withValues(alpha: 0.25)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+      title: _t(
+        locale,
+        'Диагностический тест',
+        'Diagnostic Test',
+        'Диагностикалық тест',
+      ),
+      actions: [_buildLanguageSwitcher(colors, locale)],
+      child: testAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => _buildLoadError(colors, locale),
+        data: (test) {
+          if (test == null || test.questions.isEmpty) {
+            return _buildLoadError(colors, locale);
+          }
+          if (_result != null) {
+            return _ResultView(
+              result: _result!,
+              locale: locale,
+              colors: colors,
+              onRetake: _retake,
+            );
+          }
+          return _buildQuestionFlow(context, test, colors, locale);
+        },
+      ),
+    );
+  }
+
+  // ── Question flow ──────────────────────────────────────────────────────────
+
+  Widget _buildQuestionFlow(
+    BuildContext context,
+    DiagnosticTestDto test,
+    AppThemeColors colors,
+    AppLocale locale,
+  ) {
+    final question = test.questions[_currentIndex];
+    final total = test.questions.length;
+    final isLast = _currentIndex == total - 1;
+    final selected = _answers[question.id] ?? const <String>{};
+    final canProceed = selected.isNotEmpty && !_isSubmitting;
+    final sphere = _sphereFor(test, question.sphereSlug);
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 720),
+          margin: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
                 children: [
-                  Icon(Icons.language_rounded, color: colors.primary, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    activeLocale.code.toUpperCase(),
-                    style: TextStyle(
+                  Expanded(
+                    child: BubbleProgressBar(
+                      value: (_currentIndex + 1) / total,
+                      height: 8,
+                      backgroundColor: colors.surfaceSoft,
                       color: colors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(width: 2),
-                  Icon(Icons.arrow_drop_down_rounded, color: colors.primary, size: 16),
+                  const SizedBox(width: 14),
+                  Text(
+                    '${_currentIndex + 1} / $total',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ),
-            ),
-            onSelected: (locale) {
-              setState(() {
-                _overrideLocale = locale;
-              });
-            },
-            itemBuilder: (context) => [
-              _buildLangItem(AppLocale.ru, 'Русский'),
-              _buildLangItem(AppLocale.kk, 'Қазақша'),
-              _buildLangItem(AppLocale.en, 'English'),
-            ],
-          ),
-        ),
-      ],
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 720),
-            margin: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Progress Bar
-                Row(
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [colors.surface, colors.surfaceSoft],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: colors.surfaceSoft, width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: BubbleProgressBar(
-                        value: (_currentIndex + 1) / _questionsPool.length,
-                        height: 8,
-                        backgroundColor: colors.surfaceSoft,
-                        color: colors.primary,
+                    if (sphere != null) _sphereTag(sphere, locale),
+                    if (sphere != null) const SizedBox(height: 16),
+                    Text(
+                      question.prompt.resolve(locale),
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        height: 1.4,
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Text(
-                      '${_currentIndex + 1} / ${_questionsPool.length}',
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
+                    if (question.isMultipleChoice) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _t(
+                          locale,
+                          '💡 Можно выбрать несколько вариантов',
+                          '💡 You can select several options',
+                          '💡 Бірнеше нұсқаны таңдауға болады',
+                        ),
+                        style: TextStyle(
+                          color: colors.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 22),
+                    ...question.options.map(
+                      (option) => _buildOption(
+                        question,
+                        option,
+                        selected.contains(option.id),
+                        colors,
+                        locale,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-  
-                // Main Question card
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [colors.surface, colors.surfaceSoft],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: colors.surfaceSoft, width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Question text
-                      Text(
-                        question.title.resolve(activeLocale),
-                        style: TextStyle(
-                          color: colors.textPrimary,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          height: 1.4,
+              ),
+              if (_submitError != null) ...[
+                const SizedBox(height: 14),
+                _buildInlineError(_submitError!, colors),
+              ],
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  if (_currentIndex > 0) ...[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => setState(() => _currentIndex--),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          side: BorderSide(color: colors.divider),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          _t(locale, 'Назад', 'Back', 'Артқа'),
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 24),
-  
-                      // Render options based on type
-                      if (question.type == QuestionType.singleChoice ||
-                          question.type == QuestionType.multipleChoice)
-                        _buildChoiceOptions(question, activeLocale, colors)
-                      else if (question.type == QuestionType.matchingPairs)
-                        _buildMatchingPairsWidget(question, activeLocale, colors)
-                      else if (question.type == QuestionType.fillInTheBlank)
-                        _buildFillInTheBlanksWidget(question, activeLocale, colors),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-  
-                // Feedback Container
-                if (_hasChecked) _buildFeedbackContainer(question, activeLocale, colors),
-  
-                const SizedBox(height: 16),
-  
-                // Action button
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _canProceedOrCheck() ? () => _onActionButtonPressed(question) : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colors.primary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: colors.surfaceSoft,
-                      disabledForegroundColor: colors.textSecondary.withValues(alpha: 0.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
                     ),
-                    child: Text(
-                      _hasChecked
-                          ? (activeLocale == AppLocale.ru
-                              ? 'Продолжить'
-                              : (activeLocale == AppLocale.kk ? 'Жалғастыру' : 'Continue'))
-                          : (activeLocale == AppLocale.ru
-                              ? 'Проверить ответ'
-                              : (activeLocale == AppLocale.kk ? 'Жауапты тексеру' : 'Check Answer')),
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  PopupMenuItem<AppLocale> _buildLangItem(AppLocale locale, String label) {
-    return PopupMenuItem<AppLocale>(
-      value: locale,
-      child: Text(
-        label,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-      ),
-    );
-  }
-
-  bool _canProceedOrCheck() {
-    if (_hasChecked) return true;
-    final question = _questionsPool[_currentIndex];
-    if (question.type == QuestionType.singleChoice || question.type == QuestionType.multipleChoice) {
-      return _selectedIndices.isNotEmpty;
-    } else if (question.type == QuestionType.matchingPairs) {
-      return _userMatches.length == question.leftItems!.length;
-    } else if (question.type == QuestionType.fillInTheBlank) {
-      return _userBlanks.length == question.correctBlanks!.length;
-    }
-    return false;
-  }
-
-  void _onActionButtonPressed(DiagnosticQuestion question) {
-    if (_hasChecked) {
-      // Proceed to next question or finish
-      setState(() {
-        if (_currentIndex + 1 < _questionsPool.length) {
-          _currentIndex++;
-          _selectedIndices.clear();
-          _selectedLeftIndex = null;
-          _userMatches.clear();
-          _userBlanks.clear();
-          _hasChecked = false;
-        } else {
-          _isFinished = true;
-          // Commit results to provider state
-          ref.read(demoAppControllerProvider.notifier).completeDiagnostics(score: _score);
-        }
-      });
-    } else {
-      // Validate the answers
-      bool correct = false;
-      if (question.type == QuestionType.singleChoice) {
-        correct = _selectedIndices.length == 1 &&
-            _selectedIndices.first == question.correctIndices!.first;
-      } else if (question.type == QuestionType.multipleChoice) {
-        final correctSet = Set<int>.from(question.correctIndices!);
-        correct = _selectedIndices.length == correctSet.length &&
-            _selectedIndices.every((i) => correctSet.contains(i));
-      } else if (question.type == QuestionType.matchingPairs) {
-        correct = true;
-        question.correctMapping!.forEach((left, right) {
-          if (_userMatches[left] != right) {
-            correct = false;
-          }
-        });
-      } else if (question.type == QuestionType.fillInTheBlank) {
-        correct = true;
-        for (int i = 0; i < question.correctBlanks!.length; i++) {
-          if (_userBlanks[i] != question.correctBlanks![i]) {
-            correct = false;
-          }
-        }
-      }
-
-      setState(() {
-        _hasChecked = true;
-        _isCorrect = correct;
-        if (correct) {
-          _score++;
-          final weight = question.difficulty.weight;
-          _weightedScore += weight;
-          _difficultyScored[question.difficulty] =
-              (_difficultyScored[question.difficulty] ?? 0) + weight;
-          _difficultyCorrect[question.difficulty] =
-              (_difficultyCorrect[question.difficulty] ?? 0) + 1;
-          _topicScored[question.topic.key] =
-              (_topicScored[question.topic.key] ?? 0) + weight;
-        }
-      });
-    }
-  }
-
-  Widget _buildChoiceOptions(
-    DiagnosticQuestion question,
-    AppLocale locale,
-    AppThemeColors colors,
-  ) {
-    return Column(
-      children: List.generate(question.options!.length, (index) {
-        final option = question.options![index];
-        final isSelected = _selectedIndices.contains(index);
-        final isCorrectOption = question.correctIndices!.contains(index);
-
-        Color borderCol = colors.surfaceSoft;
-        Color bgCol = Colors.transparent;
-
-        if (_hasChecked) {
-          if (isCorrectOption) {
-            borderCol = Colors.green.withValues(alpha: 0.8);
-            bgCol = Colors.green.withValues(alpha: 0.08);
-          } else if (isSelected) {
-            borderCol = Colors.red.withValues(alpha: 0.8);
-            bgCol = Colors.red.withValues(alpha: 0.08);
-          }
-        } else if (isSelected) {
-          borderCol = colors.primary;
-          bgCol = colors.primary.withValues(alpha: 0.05);
-        }
-
-        final isMultiple = question.type == QuestionType.multipleChoice;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          child: InkWell(
-            onTap: _hasChecked
-                ? null
-                : () {
-                    setState(() {
-                      if (isMultiple) {
-                        if (_selectedIndices.contains(index)) {
-                          _selectedIndices.remove(index);
-                        } else {
-                          _selectedIndices.add(index);
-                        }
-                      } else {
-                        _selectedIndices.clear();
-                        _selectedIndices.add(index);
-                      }
-                    });
-                  },
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: bgCol,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderCol, width: 1.5),
-              ),
-              child: Row(
-                children: [
-                  // Indicator circle or square
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: isMultiple ? BoxShape.rectangle : BoxShape.circle,
-                      borderRadius: isMultiple ? BorderRadius.circular(4) : null,
-                      border: Border.all(
-                        color: isSelected ? colors.primary : colors.textSecondary.withValues(alpha: 0.5),
-                        width: 2,
-                      ),
-                      color: isSelected ? colors.primary : Colors.transparent,
-                    ),
-                    child: isSelected
-                        ? Icon(
-                            isMultiple ? Icons.check_rounded : Icons.fiber_manual_record_rounded,
-                            size: isMultiple ? 14 : 10,
-                            color: Colors.white,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 14),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
-                    child: Text(
-                      option.resolve(locale),
-                      style: TextStyle(
-                        color: isSelected ? colors.textPrimary : colors.textPrimary.withValues(alpha: 0.85),
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: canProceed
+                          ? () => _onProceed(test, isLast)
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        backgroundColor: colors.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: colors.surfaceSoft,
+                        disabledForegroundColor: colors.textSecondary.withValues(
+                          alpha: 0.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
                       ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              isLast
+                                  ? _t(
+                                      locale,
+                                      'Завершить',
+                                      'Finish',
+                                      'Аяқтау',
+                                    )
+                                  : _t(locale, 'Далее', 'Next', 'Келесі'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
-                  if (_hasChecked && isCorrectOption)
-                    const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
-                  if (_hasChecked && isSelected && !isCorrectOption)
-                    const Icon(Icons.cancel_rounded, color: Colors.red, size: 20),
                 ],
               ),
-            ),
+            ],
           ),
-        );
-      }),
+        ),
+      ),
     );
   }
 
-  Widget _buildMatchingPairsWidget(
-    DiagnosticQuestion question,
-    AppLocale locale,
+  Widget _buildOption(
+    DiagnosticQuestionDto question,
+    DiagnosticOptionDto option,
+    bool isSelected,
     AppThemeColors colors,
-  ) {
-    final lefts = question.leftItems!;
-    final rights = question.rightItems!;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (!_hasChecked)
-          Text(
-            locale == AppLocale.ru
-                ? "💡 Выберите элемент слева, затем его соответствие справа:"
-                : (locale == AppLocale.kk
-                    ? "💡 Сол жақтағы элементті, сосын оң жақтағы сәйкестікті таңдаңыз:"
-                    : "💡 Choose an item on the left, then its match on the right:"),
-            style: TextStyle(color: colors.primary, fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left items
-            Expanded(
-              child: Column(
-                children: List.generate(lefts.length, (leftIdx) {
-                  final text = lefts[leftIdx].resolve(locale);
-                  final isMatched = _userMatches.containsKey(leftIdx);
-                  final isSelected = _selectedLeftIndex == leftIdx;
-
-                  Color borderCol = colors.surfaceSoft;
-                  Color bgCol = Colors.transparent;
-
-                  if (isSelected) {
-                    borderCol = colors.primary;
-                    bgCol = colors.primary.withValues(alpha: 0.05);
-                  } else if (isMatched) {
-                    borderCol = colors.primary.withValues(alpha: 0.4);
-                    bgCol = colors.primary.withValues(alpha: 0.02);
-                  }
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: InkWell(
-                      onTap: _hasChecked
-                          ? null
-                          : () {
-                              setState(() {
-                                _selectedLeftIndex = leftIdx;
-                              });
-                            },
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: bgCol,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: borderCol, width: 1.5),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: BoxDecoration(
-                                color: colors.primary.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '${leftIdx + 1}',
-                                style: TextStyle(
-                                  color: colors.primary,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                text,
-                                style: TextStyle(
-                                  color: colors.textPrimary,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Right items
-            Expanded(
-              child: Column(
-                children: List.generate(rights.length, (rightIdx) {
-                  final text = rights[rightIdx].resolve(locale);
-                  // Find if matched
-                  int matchedLeftIdx = -1;
-                  _userMatches.forEach((l, r) {
-                    if (r == rightIdx) matchedLeftIdx = l;
-                  });
-
-                  Color borderCol = colors.surfaceSoft;
-                  Color bgCol = Colors.transparent;
-
-                  if (matchedLeftIdx != -1) {
-                    if (_hasChecked) {
-                      final correctRight = question.correctMapping![matchedLeftIdx];
-                      if (correctRight == rightIdx) {
-                        borderCol = Colors.green.withValues(alpha: 0.8);
-                        bgCol = Colors.green.withValues(alpha: 0.08);
-                      } else {
-                        borderCol = Colors.red.withValues(alpha: 0.8);
-                        bgCol = Colors.red.withValues(alpha: 0.08);
-                      }
-                    } else {
-                      borderCol = colors.primary;
-                      bgCol = colors.primary.withValues(alpha: 0.05);
-                    }
-                  }
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: InkWell(
-                      onTap: _hasChecked
-                          ? null
-                          : () {
-                              if (_selectedLeftIndex == null) return;
-                              setState(() {
-                                // Match them
-                                _userMatches[_selectedLeftIndex!] = rightIdx;
-                                _selectedLeftIndex = null;
-                              });
-                            },
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: bgCol,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: borderCol, width: 1.5),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (matchedLeftIdx != -1)
-                              Container(
-                                margin: const EdgeInsets.only(right: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: colors.primary,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '${matchedLeftIdx + 1}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            Expanded(
-                              child: Text(
-                                text,
-                                style: TextStyle(
-                                  color: colors.textPrimary,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ],
-        ),
-        if (_userMatches.isNotEmpty && !_hasChecked)
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _userMatches.clear();
-                  _selectedLeftIndex = null;
-                });
-              },
-              icon: Icon(Icons.refresh_rounded, size: 16, color: colors.primary),
-              label: Text(
-                locale == AppLocale.ru
-                    ? 'Сбросить пары'
-                    : (locale == AppLocale.kk ? 'Жұптарды тастау' : 'Reset pairs'),
-                style: TextStyle(color: colors.primary, fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ),
-          )
-      ],
-    );
-  }
-
-  Widget _buildFillInTheBlanksWidget(
-    DiagnosticQuestion question,
     AppLocale locale,
-    AppThemeColors colors,
   ) {
-    final titleText = question.title.resolve(locale);
-    final segments = titleText.split('{blank}');
-
-    final children = <Widget>[];
-
-    for (int i = 0; i < segments.length; i++) {
-      children.add(
-        Text(
-          segments[i],
-          style: TextStyle(
-            color: colors.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            height: 1.5,
-          ),
-        ),
-      );
-
-      if (i < segments.length - 1) {
-        final blankIdx = i;
-        final selectedValIdx = _userBlanks[blankIdx];
-
-        final isCorrect = selectedValIdx == question.correctBlanks![blankIdx];
-
-        Color borderCol = colors.primary.withValues(alpha: 0.5);
-        Color bgCol = colors.surfaceSoft;
-
-        if (_hasChecked) {
-          borderCol = isCorrect ? Colors.green : Colors.red;
-          bgCol = isCorrect ? Colors.green.withValues(alpha: 0.08) : Colors.red.withValues(alpha: 0.08);
-        }
-
-        children.add(
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: bgCol,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderCol, width: 1.5),
+    final isMultiple = question.isMultipleChoice;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: _isSubmitting ? null : () => _toggleOption(question, option.id),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? colors.primary.withValues(alpha: 0.07)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? colors.primary : colors.surfaceSoft,
+              width: 1.5,
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: selectedValIdx,
-                dropdownColor: colors.surfaceSoft,
-                hint: Text(
-                  '_____',
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: isMultiple ? BoxShape.rectangle : BoxShape.circle,
+                  borderRadius: isMultiple ? BorderRadius.circular(5) : null,
+                  border: Border.all(
+                    color: isSelected
+                        ? colors.primary
+                        : colors.textSecondary.withValues(alpha: 0.5),
+                    width: 2,
+                  ),
+                  color: isSelected ? colors.primary : Colors.transparent,
+                ),
+                child: isSelected
+                    ? Icon(
+                        isMultiple
+                            ? Icons.check_rounded
+                            : Icons.fiber_manual_record_rounded,
+                        size: isMultiple ? 15 : 11,
+                        color: Colors.white,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  option.label.resolve(locale),
                   style: TextStyle(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w900,
+                    color: colors.textPrimary.withValues(
+                      alpha: isSelected ? 1 : 0.85,
+                    ),
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                   ),
                 ),
-                style: TextStyle(
-                  color: _hasChecked ? (isCorrect ? Colors.green : Colors.red) : colors.primary,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 14,
-                ),
-                onChanged: _hasChecked
-                    ? null
-                    : (val) {
-                        if (val != null) {
-                          setState(() {
-                            _userBlanks[blankIdx] = val;
-                          });
-                        }
-                      },
-                items: List.generate(question.blankOptions!.length, (idx) {
-                  return DropdownMenuItem<int>(
-                    value: idx,
-                    child: Text(question.blankOptions![idx].resolve(locale)),
-                  );
-                }),
               ),
-            ),
+            ],
           ),
-        );
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: children,
+        ),
       ),
     );
   }
 
-  Widget _buildFeedbackContainer(
-    DiagnosticQuestion question,
-    AppLocale locale,
-    AppThemeColors colors,
-  ) {
-    final bgCol = _isCorrect ? Colors.green.withValues(alpha: 0.12) : Colors.red.withValues(alpha: 0.12);
-    final borderCol = _isCorrect ? Colors.green.withValues(alpha: 0.4) : Colors.red.withValues(alpha: 0.4);
-    final textCol = _isCorrect ? Colors.green : Colors.red;
-
-    String headerText = '';
-    String subText = '';
-
-    if (_isCorrect) {
-      headerText = locale == AppLocale.ru
-          ? '🎉 Великолепно! Вы ответили верно.'
-          : (locale == AppLocale.kk ? '🎉 Керемет! Сіз дұрыс жауап бердіңіз.' : '🎉 Excellent! Correct answer.');
-    } else {
-      headerText = locale == AppLocale.ru
-          ? '❌ К сожалению, ответ неверный.'
-          : (locale == AppLocale.kk ? '❌ Өкінішке орай, жауап бұрыс.' : '❌ Unfortunately, incorrect answer.');
-
-      // Build what was correct text
-      if (question.type == QuestionType.singleChoice || question.type == QuestionType.multipleChoice) {
-        final list = question.correctIndices!.map((i) => question.options![i].resolve(locale)).join(', ');
-        subText = locale == AppLocale.ru
-            ? 'Правильный(е) ответ(ы): $list'
-            : (locale == AppLocale.kk ? 'Дұрыс жауап(тар): $list' : 'Correct answer(s): $list');
-      } else if (question.type == QuestionType.matchingPairs) {
-        final list = question.correctMapping!.entries.map((entry) {
-          final leftStr = question.leftItems![entry.key].resolve(locale);
-          final rightStr = question.rightItems![entry.value].resolve(locale);
-          return '$leftStr ➔ $rightStr';
-        }).join('\n');
-        subText = '${locale == AppLocale.ru ? 'Правильные пары:' : (locale == AppLocale.kk ? 'Дұрыс жұптар:' : 'Correct matches:')}\n$list';
-      } else if (question.type == QuestionType.fillInTheBlank) {
-        final list = question.correctBlanks!.map((idx) => question.blankOptions![idx].resolve(locale)).join(', ');
-        subText = locale == AppLocale.ru
-            ? 'Правильные вставки: $list'
-            : (locale == AppLocale.kk ? 'Дұрыс кірістірулер: $list' : 'Correct insertions: $list');
-      }
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgCol,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderCol, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            headerText,
-            style: TextStyle(
-              color: textCol,
-              fontSize: 14.5,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          if (subText.isNotEmpty) ...[
-            const SizedBox(height: 8),
+  Widget _sphereTag(DiagnosticSphereDto sphere, AppLocale locale) {
+    final accent = _hexColor(sphere.accentColor, Colors.blue);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: accent.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_sphereIcon(sphere.icon), size: 15, color: accent),
+            const SizedBox(width: 7),
             Text(
-              subText,
+              sphere.name.resolve(locale),
               style: TextStyle(
-                color: colors.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                height: 1.4,
+                color: accent,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _toggleOption(DiagnosticQuestionDto question, String optionId) {
+    final set = _answers.putIfAbsent(question.id, () => <String>{});
+    setState(() {
+      _submitError = null;
+      if (question.isMultipleChoice) {
+        if (!set.remove(optionId)) {
+          set.add(optionId);
+        }
+      } else {
+        set
+          ..clear()
+          ..add(optionId);
+      }
+    });
+  }
+
+  Future<void> _onProceed(DiagnosticTestDto test, bool isLast) async {
+    if (!isLast) {
+      setState(() => _currentIndex++);
+      return;
+    }
+    await _submit(test);
+  }
+
+  Future<void> _submit(DiagnosticTestDto test) async {
+    final accessToken = ref.read(backendCourseAccessTokenProvider)?.trim();
+    if (accessToken == null || accessToken.isEmpty) {
+      setState(() {
+        _submitError = 'auth';
+      });
+      return;
+    }
+
+    final answers = test.questions
+        .map(
+          (q) => DiagnosticAnswerInput(
+            questionId: q.id,
+            selectedOptionIds: (_answers[q.id] ?? const <String>{}).toList(),
+          ),
+        )
+        .toList(growable: false);
+
+    setState(() {
+      _isSubmitting = true;
+      _submitError = null;
+    });
+
+    try {
+      final remote = ref.read(backendCourseRemoteDataSourceProvider);
+      final result = await remote.submitDiagnosticResult(
+        accessToken: accessToken,
+        answers: answers,
+      );
+      // Drive XP + knowledge-tree recommendations from the sphere result.
+      ref
+          .read(demoAppControllerProvider.notifier)
+          .completeDiagnostics(
+            score: result.correctCount,
+            recommendedTrackIds: recommendedTrackIdsForResult(result),
+          );
+      ref.invalidate(backendMyDiagnosticResultProvider);
+      if (!mounted) return;
+      setState(() {
+        _result = result;
+        _isSubmitting = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _submitError = 'submit';
+      });
+    }
+  }
+
+  void _retake() {
+    setState(() {
+      _result = null;
+      _currentIndex = 0;
+      _answers.clear();
+      _submitError = null;
+    });
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  DiagnosticSphereDto? _sphereFor(DiagnosticTestDto test, String slug) {
+    for (final s in test.spheres) {
+      if (s.slug == slug) return s;
+    }
+    return null;
+  }
+
+  Widget _buildInlineError(String kind, AppThemeColors colors) {
+    final locale = _overrideLocale ?? ref.read(demoAppControllerProvider).locale;
+    final message = kind == 'auth'
+        ? _t(
+            locale,
+            'Войдите в аккаунт, чтобы сохранить результат.',
+            'Sign in to save your result.',
+            'Нәтижені сақтау үшін аккаунтқа кіріңіз.',
+          )
+        : _t(
+            locale,
+            'Не удалось отправить ответы. Проверьте соединение и попробуйте снова.',
+            'Could not submit your answers. Check your connection and try again.',
+            'Жауаптарды жіберу мүмкін болмады. Байланысты тексеріп, қайталаңыз.',
+          );
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildResultPage(
-    BuildContext context,
-    AppThemeColors colors,
-    AppLocale locale,
-  ) {
-    // Beginner: < 12 weighted points
-    // Intermediate: 12 – 20 weighted points
-    // Advanced: >= 21 weighted points
-    final isAdvanced = _weightedScore >= 21;
-    final isIntermediate = !isAdvanced && _weightedScore >= 12;
-
-    final levelText = isAdvanced
-        ? switch (locale) {
-            AppLocale.ru => 'Продвинутый уровень (Advanced)',
-            AppLocale.kk => 'Жоғары деңгей (Advanced)',
-            _ => 'Advanced Level',
-          }
-        : isIntermediate
-            ? switch (locale) {
-                AppLocale.ru => 'Средний уровень (Intermediate)',
-                AppLocale.kk => 'Орташа деңгей (Intermediate)',
-                _ => 'Intermediate Level',
-              }
-            : switch (locale) {
-                AppLocale.ru => 'Базовый уровень (Beginner)',
-                AppLocale.kk => 'Бастапқы деңгей (Beginner)',
-                _ => 'Beginner Level',
-              };
-
-    final levelHint = isAdvanced
-        ? switch (locale) {
-            AppLocale.ru =>
-              'Уверенно владеете базой и решаете сложные задачи. Сфокусируйтесь на углублённых темах и системном дизайне.',
-            AppLocale.kk =>
-              'Базаны жақсы білесіз және күрделі мәселелерді шешесіз. Тереңдетілген тақырыптарға және жүйелік дизайнға назар аударыңыз.',
-            _ =>
-              'Confident with the fundamentals and tackling complex problems. Focus on advanced topics and system design.',
-          }
-        : isIntermediate
-            ? switch (locale) {
-                AppLocale.ru =>
-                  'Хорошая база, но есть пробелы. Прокачайте слабые темы ниже и переходите к практическим проектам.',
-                AppLocale.kk =>
-                  'Жақсы база, бірақ кемшіліктер бар. Төмендегі әлсіз тақырыптарды күшейтіп, тәжірибелік жобаларға көшіңіз.',
-                _ =>
-                  'Solid base with some gaps. Strengthen the weak topics below, then move to project-based practice.',
-              }
-            : switch (locale) {
-                AppLocale.ru =>
-                  'Начните с основ. Двигайтесь от базовых тем к сложным — для каждой темы есть отдельный модуль в Дереве Знаний.',
-                AppLocale.kk =>
-                  'Негіздерден бастаңыз. Базалық тақырыптардан күрделіге өтіңіз — әр тақырып үшін Білім ағашында жеке модуль бар.',
-                _ =>
-                  'Start with fundamentals. Move from basic to complex topics — each has its own module in the Knowledge Tree.',
-              };
-
-    final backButtonText = switch (locale) {
-      AppLocale.ru => 'Вернуться на главную',
-      AppLocale.kk => 'Басты бетке оралу',
-      _ => 'Return to Home',
-    };
-
-    // Pick weakest topics (lowest mastery %), max 3
-    final weakTopics = _weakestTopics();
-
-    return AppPageScaffold(
-      title: switch (locale) {
-        AppLocale.ru => 'Результаты тестирования',
-        AppLocale.kk => 'Тестілеу нәтижелері',
-        _ => 'Diagnostic Results',
-      },
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 660),
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [colors.surface, colors.surfaceSoft],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: colors.primary.withValues(alpha: 0.2),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.primary.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  spreadRadius: 2,
-                ),
-              ],
+  Widget _buildLoadError(AppThemeColors colors, AppLocale locale) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 56,
+              color: colors.textSecondary,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(
-                  Icons.emoji_events_rounded,
+            const SizedBox(height: 16),
+            Text(
+              _t(
+                locale,
+                'Не удалось загрузить тест',
+                'Could not load the test',
+                'Тестті жүктеу мүмкін болмады',
+              ),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _t(
+                locale,
+                'Проверьте подключение к интернету и попробуйте снова.',
+                'Check your internet connection and try again.',
+                'Интернет байланысын тексеріп, қайталап көріңіз.',
+              ),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: colors.textSecondary, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => ref.invalidate(backendDiagnosticTestProvider),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(_t(locale, 'Повторить', 'Retry', 'Қайталау')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageSwitcher(AppThemeColors colors, AppLocale activeLocale) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: PopupMenuButton<AppLocale>(
+        offset: const Offset(0, 44),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: colors.surfaceSoft,
+        icon: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: colors.primary.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.language_rounded, color: colors.primary, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                activeLocale.label,
+                style: TextStyle(
                   color: colors.primary,
-                  size: 72,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Icon(
+                Icons.arrow_drop_down_rounded,
+                color: colors.primary,
+                size: 16,
+              ),
+            ],
+          ),
+        ),
+        onSelected: (locale) => setState(() => _overrideLocale = locale),
+        itemBuilder: (context) => const [
+          PopupMenuItem(value: AppLocale.ru, child: Text('Русский')),
+          PopupMenuItem(value: AppLocale.kk, child: Text('Қазақша')),
+          PopupMenuItem(value: AppLocale.en, child: Text('English')),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Result view ────────────────────────────────────────────────────────────
+
+class _ResultView extends ConsumerWidget {
+  const _ResultView({
+    required this.result,
+    required this.locale,
+    required this.colors,
+    required this.onRetake,
+  });
+
+  final DiagnosticResultDto result;
+  final AppLocale locale;
+  final AppThemeColors colors;
+  final VoidCallback onRetake;
+
+  String _t(String ru, String en, String kk) => switch (locale) {
+    AppLocale.ru => ru,
+    AppLocale.kk => kk,
+    AppLocale.en => en,
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final levelMeta = _levelMeta(result.level);
+    final strongest = result.spheresByStrength;
+    final topSpheres = strongest
+        .where((s) => s.score > 0)
+        .take(3)
+        .toList(growable: false);
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 680),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildLevelHero(levelMeta),
+              const SizedBox(height: 22),
+              if (topSpheres.isNotEmpty) ...[
+                _sectionTitle(
+                  _t(
+                    'Ваши сильнейшие сферы',
+                    'Your strongest spheres',
+                    'Сіздің күшті салаларыңыз',
+                  ),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  switch (locale) {
-                    AppLocale.ru => 'Диагностика завершена',
-                    AppLocale.kk => 'Диагностика аяқталды',
-                    _ => 'Diagnostics completed',
-                  },
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _ScoreSummaryBlock(
-                  weighted: _weightedScore,
-                  maxWeighted: _maxDiagnosticScore,
-                  rawCorrect: _score,
-                  totalQuestions: _questionsPool.length,
-                  levelText: levelText,
-                  levelHint: levelHint,
-                  isAdvanced: isAdvanced,
-                  isIntermediate: isIntermediate,
-                  colors: colors,
-                  locale: locale,
-                ),
+                _buildTopSpheres(topSpheres),
                 const SizedBox(height: 24),
-                _DifficultyBreakdown(
-                  difficultyCorrect: _difficultyCorrect,
-                  locale: locale,
-                  colors: colors,
+              ],
+              _sectionTitle(
+                _t(
+                  'Статистика по сферам',
+                  'Breakdown by sphere',
+                  'Салалар бойынша статистика',
                 ),
-                const SizedBox(height: 24),
-                _TopicMasteryList(
-                  topicScored: _topicScored,
-                  topicMaxPossible: _topicMaxPossible,
-                  locale: locale,
-                  colors: colors,
-                ),
-                if (weakTopics.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    switch (locale) {
-                      AppLocale.ru => 'Рекомендуем подтянуть:',
-                      AppLocale.kk => 'Күшейтуді ұсынамыз:',
-                      _ => 'Recommended areas to strengthen:',
-                    },
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ...weakTopics.map(
-                    (entry) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
+              ),
+              const SizedBox(height: 12),
+              ...strongest.map(_buildSphereBar),
+              const SizedBox(height: 24),
+              _RecommendedCourses(
+                result: result,
+                locale: locale,
+                colors: colors,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onRetake,
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: Text(
+                        _t('Пройти заново', 'Retake', 'Қайта өту'),
                       ),
-                      decoration: BoxDecoration(
-                        color: colors.primary.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: colors.primary.withValues(alpha: 0.15),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        foregroundColor: colors.textSecondary,
+                        side: BorderSide(color: colors.divider),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.bolt_rounded,
-                            color: colors.primary,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              entry.topic.resolve(locale),
-                              style: TextStyle(
-                                color: colors.textPrimary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13.5,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            '${(entry.mastery * 100).round()}%',
-                            style: TextStyle(
-                              color: colors.primary,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        backgroundColor: colors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        _t(
+                          'Вернуться на главную',
+                          'Back to home',
+                          'Басты бетке',
+                        ),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                   ),
                 ],
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      backButtonText,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  List<_WeakTopicEntry> _weakestTopics() {
-    final entries = <_WeakTopicEntry>[];
-    final seenTopics = <String, DiagnosticTopic>{};
-    for (final question in _questionsPool) {
-      seenTopics.putIfAbsent(question.topic.key, () => question.topic);
-    }
-    seenTopics.forEach((key, topic) {
-      final scored = _topicScored[key] ?? 0;
-      final maxPossible = _topicMaxPossible[key] ?? 0;
-      if (maxPossible == 0) return;
-      final mastery = scored / maxPossible;
-      if (mastery < 0.7) {
-        entries.add(_WeakTopicEntry(topic: topic, mastery: mastery));
-      }
-    });
-    entries.sort((a, b) => a.mastery.compareTo(b.mastery));
-    return entries.take(3).toList(growable: false);
-  }
-}
-
-class _WeakTopicEntry {
-  const _WeakTopicEntry({required this.topic, required this.mastery});
-  final DiagnosticTopic topic;
-  final double mastery;
-}
-
-class _ScoreSummaryBlock extends StatelessWidget {
-  const _ScoreSummaryBlock({
-    required this.weighted,
-    required this.maxWeighted,
-    required this.rawCorrect,
-    required this.totalQuestions,
-    required this.levelText,
-    required this.levelHint,
-    required this.isAdvanced,
-    required this.isIntermediate,
-    required this.colors,
-    required this.locale,
-  });
-
-  final int weighted;
-  final int maxWeighted;
-  final int rawCorrect;
-  final int totalQuestions;
-  final String levelText;
-  final String levelHint;
-  final bool isAdvanced;
-  final bool isIntermediate;
-  final AppThemeColors colors;
-  final AppLocale locale;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = isAdvanced
-        ? Colors.green
-        : isIntermediate
-            ? colors.primary
-            : Colors.orange;
-    final percent = maxWeighted == 0 ? 0.0 : weighted / maxWeighted;
+  Widget _buildLevelHero(_LevelMeta meta) {
+    final percent = result.percent;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accent.withValues(alpha: 0.25)),
+        gradient: LinearGradient(
+          colors: [
+            meta.color.withValues(alpha: 0.22),
+            meta.color.withValues(alpha: 0.06),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: meta.color.withValues(alpha: 0.4), width: 1.5),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      levelText,
-                      style: TextStyle(
-                        color: accent,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${switch (locale) {
-                        AppLocale.ru => 'Очки',
-                        AppLocale.kk => 'Ұпай',
-                        _ => 'Points',
-                      }}: $weighted / $maxWeighted · ${switch (locale) {
-                        AppLocale.ru => 'верно',
-                        AppLocale.kk => 'дұрыс',
-                        _ => 'correct',
-                      }}: $rawCorrect / $totalQuestions',
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '${(percent * 100).round()}%',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: meta.color.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(meta.icon, color: meta.color, size: 40),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
+          Text(
+            _t('Тест завершён', 'Test completed', 'Тест аяқталды'),
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            meta.label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: meta.color,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: percent,
-              minHeight: 8,
-              backgroundColor: accent.withValues(alpha: 0.18),
-              valueColor: AlwaysStoppedAnimation<Color>(accent),
+              minHeight: 10,
+              backgroundColor: meta.color.withValues(alpha: 0.18),
+              valueColor: AlwaysStoppedAnimation<Color>(meta.color),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _heroStat(
+                '${(percent * 100).round()}%',
+                _t('Общий балл', 'Overall', 'Жалпы балл'),
+                meta.color,
+              ),
+              _heroStat(
+                '${result.totalScore} / ${result.maxScore}',
+                _t('Очки', 'Points', 'Ұпай'),
+                colors.textPrimary,
+              ),
+              _heroStat(
+                '${result.correctCount} / ${result.questionCount}',
+                _t('Верно', 'Correct', 'Дұрыс'),
+                colors.textPrimary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           Text(
-            levelHint,
+            meta.hint,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: colors.textPrimary,
               fontSize: 12.5,
@@ -1940,197 +859,393 @@ class _ScoreSummaryBlock extends StatelessWidget {
       ),
     );
   }
-}
 
-class _DifficultyBreakdown extends StatelessWidget {
-  const _DifficultyBreakdown({
-    required this.difficultyCorrect,
-    required this.locale,
-    required this.colors,
-  });
-
-  final Map<DifficultyLevel, int> difficultyCorrect;
-  final AppLocale locale;
-  final AppThemeColors colors;
-
-  int _totalForLevel(DifficultyLevel level) {
-    return _questionsPool.where((q) => q.difficulty == level).length;
+  Widget _heroStat(String value, String label, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: colors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final rows = DifficultyLevel.values.map((level) {
-      final correct = difficultyCorrect[level] ?? 0;
-      final total = _totalForLevel(level);
-      final accent = switch (level) {
-        DifficultyLevel.easy => Colors.green,
-        DifficultyLevel.medium => colors.primary,
-        DifficultyLevel.hard => Colors.deepOrange,
-      };
-      final percent = total == 0 ? 0.0 : correct / total;
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 96,
-              child: Text(
-                level.localizedLabel(locale),
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12.5,
+  Widget _buildTopSpheres(List<DiagnosticResultSphereDto> spheres) {
+    return Row(
+      children: [
+        for (var i = 0; i < spheres.length; i++) ...[
+          if (i > 0) const SizedBox(width: 10),
+          Expanded(child: _topSphereCard(spheres[i])),
+        ],
+      ],
+    );
+  }
+
+  Widget _topSphereCard(DiagnosticResultSphereDto entry) {
+    final accent = _hexColor(entry.sphere.accentColor, colors.primary);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        children: [
+          Icon(_sphereIcon(entry.sphere.icon), color: accent, size: 26),
+          const SizedBox(height: 8),
+          Text(
+            entry.sphere.name.resolve(locale),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${(entry.mastery * 100).round()}%',
+            style: TextStyle(
+              color: accent,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSphereBar(DiagnosticResultSphereDto entry) {
+    final accent = _hexColor(entry.sphere.accentColor, colors.primary);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(_sphereIcon(entry.sphere.icon), size: 16, color: accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  entry.sphere.name.resolve(locale),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: percent,
-                  minHeight: 8,
-                  backgroundColor: accent.withValues(alpha: 0.18),
-                  valueColor: AlwaysStoppedAnimation<Color>(accent),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 48,
-              child: Text(
-                '$correct / $total',
-                textAlign: TextAlign.right,
+              const SizedBox(width: 8),
+              Text(
+                '${entry.score} / ${entry.maxScore}',
                 style: TextStyle(
                   color: colors.textSecondary,
-                  fontWeight: FontWeight.w800,
                   fontSize: 12,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-            ),
-          ],
-        ),
-      );
-    }).toList(growable: false);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          switch (locale) {
-            AppLocale.ru => 'Результат по сложности',
-            AppLocale.kk => 'Күрделілік бойынша нәтиже',
-            _ => 'Performance by difficulty',
-          },
-          style: TextStyle(
-            color: colors.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${(entry.mastery * 100).round()}%',
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 10),
-        ...rows,
-      ],
+          const SizedBox(height: 7),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: entry.mastery,
+              minHeight: 8,
+              backgroundColor: accent.withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(accent),
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: colors.textPrimary,
+        fontSize: 16,
+        fontWeight: FontWeight.w900,
+      ),
+    );
+  }
+
+  _LevelMeta _levelMeta(String level) {
+    return switch (level) {
+      'advanced' => _LevelMeta(
+        label: _t(
+          'Продвинутый уровень',
+          'Advanced level',
+          'Жоғары деңгей',
+        ),
+        hint: _t(
+          'Отличный результат! Сфокусируйтесь на углублённых темах и проектах в сильных сферах.',
+          'Great result! Focus on advanced topics and projects in your strong spheres.',
+          'Тамаша нәтиже! Күшті салаларда тереңдетілген тақырыптар мен жобаларға назар аударыңыз.',
+        ),
+        color: const Color(0xFF22C55E),
+        icon: Icons.emoji_events_rounded,
+      ),
+      'intermediate' => _LevelMeta(
+        label: _t(
+          'Средний уровень',
+          'Intermediate level',
+          'Орташа деңгей',
+        ),
+        hint: _t(
+          'Хорошая база! Подтяните слабые сферы и переходите к практическим курсам.',
+          'Solid base! Strengthen weaker spheres and move to hands-on courses.',
+          'Жақсы негіз! Әлсіз салаларды күшейтіп, тәжірибелік курстарға көшіңіз.',
+        ),
+        color: const Color(0xFF6C8CFF),
+        icon: Icons.trending_up_rounded,
+      ),
+      _ => _LevelMeta(
+        label: _t(
+          'Начальный уровень',
+          'Beginner level',
+          'Бастапқы деңгей',
+        ),
+        hint: _t(
+          'Отличный старт! Начните с рекомендованных курсов по вашим интересам.',
+          'Great start! Begin with the recommended courses for your interests.',
+          'Тамаша бастама! Қызығушылығыңызға сай ұсынылған курстардан бастаңыз.',
+        ),
+        color: const Color(0xFFF59E0B),
+        icon: Icons.rocket_launch_rounded,
+      ),
+    };
   }
 }
 
-class _TopicMasteryList extends StatelessWidget {
-  const _TopicMasteryList({
-    required this.topicScored,
-    required this.topicMaxPossible,
+// ── Recommended courses ──────────────────────────────────────────────────────
+
+class _RecommendedCourses extends ConsumerWidget {
+  const _RecommendedCourses({
+    required this.result,
     required this.locale,
     required this.colors,
   });
 
-  final Map<String, int> topicScored;
-  final Map<String, int> topicMaxPossible;
+  final DiagnosticResultDto result;
   final AppLocale locale;
   final AppThemeColors colors;
 
+  String _t(String ru, String en, String kk) => switch (locale) {
+    AppLocale.ru => ru,
+    AppLocale.kk => kk,
+    AppLocale.en => en,
+  };
+
   @override
-  Widget build(BuildContext context) {
-    final seenTopics = <String, DiagnosticTopic>{};
-    for (final question in _questionsPool) {
-      seenTopics.putIfAbsent(question.topic.key, () => question.topic);
-    }
-    final entries = seenTopics.entries.map((e) {
-      final scored = topicScored[e.key] ?? 0;
-      final maxPossible = topicMaxPossible[e.key] ?? 0;
-      final mastery = maxPossible == 0 ? 0.0 : scored / maxPossible;
-      return MapEntry(e.value, mastery);
-    }).toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catalog = ref.watch(demoCatalogProvider);
+    final tracks = _pickTracks(catalog);
+    if (tracks.isEmpty) return const SizedBox.shrink();
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          switch (locale) {
-            AppLocale.ru => 'Освоение по темам',
-            AppLocale.kk => 'Тақырыптарды меңгеру',
-            _ => 'Topic mastery',
-          },
+          _t(
+            'Рекомендуем из дерева знаний',
+            'Recommended from your knowledge tree',
+            'Білім ағашынан ұсынамыз',
+          ),
           style: TextStyle(
             color: colors.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
           ),
         ),
-        const SizedBox(height: 10),
-        ...entries.map((entry) {
-          final mastery = entry.value;
-          final accent = mastery >= 0.7
-              ? Colors.green
-              : mastery >= 0.4
-                  ? colors.primary
-                  : Colors.orange;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    entry.key.resolve(locale),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 88,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: mastery,
-                      minHeight: 6,
-                      backgroundColor: accent.withValues(alpha: 0.18),
-                      valueColor: AlwaysStoppedAnimation<Color>(accent),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 38,
-                  child: Text(
-                    '${(mastery * 100).round()}%',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      color: accent,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 11.5,
-                    ),
-                  ),
-                ),
-              ],
+        const SizedBox(height: 4),
+        Text(
+          _t(
+            'Эти ветки дерева подсвечены под ваши сильнейшие сферы',
+            'These tree branches are highlighted for your strongest spheres',
+            'Бұл тармақтар сіздің күшті салаларыңызға қарай белгіленді',
+          ),
+          style: TextStyle(
+            color: colors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...tracks.map((track) => _trackCard(context, track)),
+        const SizedBox(height: 4),
+        TextButton.icon(
+          onPressed: () => context.go(AppRoutes.tree),
+          icon: const Icon(Icons.account_tree_rounded, size: 18),
+          label: Text(
+            _t(
+              'Открыть дерево знаний',
+              'Open the knowledge tree',
+              'Білім ағашын ашу',
             ),
-          );
-        }),
+          ),
+          style: TextButton.styleFrom(foregroundColor: colors.accent),
+        ),
       ],
     );
   }
+
+  /// Resolves recommended track ids (strongest spheres → tree tracks) into real
+  /// [LearningTrack]s from the catalog, preserving the recommendation order.
+  List<LearningTrack> _pickTracks(DemoCatalog catalog) {
+    final ids = recommendedTrackIdsForResult(result);
+    final byId = <String, LearningTrack>{
+      for (final track in catalog.tracks) track.id: track,
+    };
+    final picked = <LearningTrack>[];
+    for (final id in ids) {
+      final track = byId[id];
+      if (track != null) picked.add(track);
+    }
+    return picked;
+  }
+
+  Widget _trackCard(BuildContext context, LearningTrack track) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.trackById(track.id)),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: colors.surfaceSoft.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: track.color.withValues(alpha: 0.45)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: track.color.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(track.icon, color: track.color, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      track.title.resolve(locale),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      track.subtitle.resolve(locale),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: colors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
+
+// ── Shared helpers ───────────────────────────────────────────────────────────
+
+class _LevelMeta {
+  const _LevelMeta({
+    required this.label,
+    required this.hint,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final String hint;
+  final Color color;
+  final IconData icon;
+}
+
+Color _hexColor(String hex, Color fallback) {
+  var h = hex.trim().replaceAll('#', '');
+  if (h.length == 6) h = 'FF$h';
+  final value = int.tryParse(h, radix: 16);
+  return value == null ? fallback : Color(value);
+}
+
+IconData _sphereIcon(String key) => switch (key) {
+  'dns' => Icons.dns_rounded,
+  'account_tree' => Icons.account_tree_rounded,
+  'category' => Icons.category_rounded,
+  'storage' => Icons.storage_rounded,
+  'psychology' => Icons.psychology_rounded,
+  'cloud' => Icons.cloud_rounded,
+  'shield' => Icons.shield_rounded,
+  'memory' => Icons.memory_rounded,
+  _ => Icons.bubble_chart_rounded,
+};

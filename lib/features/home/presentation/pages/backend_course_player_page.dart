@@ -193,7 +193,8 @@ class _CompactLayout extends StatelessWidget {
       children: [
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: selectedLessonId,
+          key: ValueKey<String>(selectedLessonId),
+          initialValue: selectedLessonId,
           decoration: InputDecoration(
             labelText: context.l10n.text('course_tab_modules'),
             border: const OutlineInputBorder(),
