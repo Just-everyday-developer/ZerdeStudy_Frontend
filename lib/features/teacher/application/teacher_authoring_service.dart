@@ -273,34 +273,26 @@ class TeacherAuthoringService {
   Future<void> createPractice({
     required String lessonId,
     required int position,
-    required LocalizedInput title,
-    required LocalizedInput summary,
-    required LocalizedInput brief,
+    required String title,
+    required String description,
+    required String language,
     required String starterCode,
-    required List<LocalizedInput> successCriteria,
-    required List<LocalizedInput> knowledgeChecks,
-    required LocalizedInput promptSuggestion,
+    required String expectedOutput,
     required int xpReward,
+    String checkType = 'manual',
   }) {
     return _remote.createPractice(
       accessToken: _accessToken,
       body: <String, dynamic>{
         'lesson_id': lessonId,
         'position': position,
-        'title': title.toJson(),
-        'summary': summary.toJson(),
-        'brief': brief.toJson(),
+        'title': title,
+        'description': description,
+        'language': language,
         'starter_code': starterCode,
-        'success_criteria': successCriteria
-            .where((c) => !c.isEmpty)
-            .map((c) => c.toJson())
-            .toList(),
-        'knowledge_checks': knowledgeChecks
-            .where((c) => !c.isEmpty)
-            .map((c) => c.toJson())
-            .toList(),
-        'prompt_suggestion': promptSuggestion.toJson(),
+        'expected_output': expectedOutput,
         'xp_reward': xpReward,
+        'check_type': checkType,
       },
     );
   }

@@ -10,16 +10,17 @@ class AppEnvironment {
     required this.gatewayBaseUrl,
     required this.codeRunnerBaseUrl,
     required this.aiServiceBaseUrl,
+    this.codeRunnerViaGateway = false,
     this.aiServiceViaGateway = false,
     this.aiServiceAuthToken = '',
   });
 
   static const String _defaultGatewayPort = '8090';
-  static const String _defaultCodeRunnerPort = '8091';
 
   final String gatewayBaseUrl;
   final String codeRunnerBaseUrl;
   final String aiServiceBaseUrl;
+  final bool codeRunnerViaGateway;
   final bool aiServiceViaGateway;
   final String aiServiceAuthToken;
 
@@ -38,10 +39,9 @@ class AppEnvironment {
     return AppEnvironment(
       gatewayBaseUrl: gatewayBaseUrl,
       codeRunnerBaseUrl: _normalizeBaseUrl(
-        codeRunnerOverride.isNotEmpty
-            ? codeRunnerOverride
-            : _sameHostWithPort(gatewayBaseUrl, _defaultCodeRunnerPort),
+        codeRunnerOverride.isNotEmpty ? codeRunnerOverride : gatewayBaseUrl,
       ),
+      codeRunnerViaGateway: codeRunnerOverride.isEmpty,
       aiServiceBaseUrl: _normalizeBaseUrl(
         aiServiceOverride.isNotEmpty ? aiServiceOverride : gatewayBaseUrl,
       ),
@@ -66,7 +66,13 @@ class AppEnvironment {
   }
 
   Uri resolveCodeRunner(String path) {
-    return Uri.parse(codeRunnerBaseUrl).resolve(path);
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    if (codeRunnerViaGateway) {
+      return Uri.parse(
+        gatewayBaseUrl,
+      ).resolve('/api/v1/code-runner$normalizedPath');
+    }
+    return Uri.parse(codeRunnerBaseUrl).resolve(normalizedPath);
   }
 
   static String _defaultBaseUrlForPort(String port) {
@@ -92,18 +98,5 @@ class AppEnvironment {
       return trimmed.substring(0, trimmed.length - 1);
     }
     return trimmed;
-  }
-
-  static String _sameHostWithPort(String baseUrl, String port) {
-    final uri = Uri.tryParse(baseUrl);
-    final parsedPort = int.tryParse(port);
-    if (uri == null ||
-        parsedPort == null ||
-        uri.scheme.isEmpty ||
-        uri.host.isEmpty) {
-      return _defaultBaseUrlForPort(port);
-    }
-
-    return Uri(scheme: uri.scheme, host: uri.host, port: parsedPort).toString();
   }
 }

@@ -67,7 +67,7 @@ class _KnowledgeTreeViewport extends ConsumerStatefulWidget {
 class _KnowledgeTreeViewportState
     extends ConsumerState<_KnowledgeTreeViewport> {
   static const double _windowsFixedScale = 0.64;
-  static const double _webDesktopScaleBoost = 2.05;
+  static const double _webDesktopScaleBoost = 2.18;
 
   final TransformationController _controller = TransformationController();
   Size? _lastViewportSize;
@@ -129,11 +129,25 @@ class _KnowledgeTreeViewportState
     _didInitialFit = true;
   }
 
-  double _minScale(bool compact) => compact ? _fitScale * 0.7 : _fitScale;
+  double _minScale({required bool compact, required bool webDesktopViewport}) {
+    if (compact) {
+      return _fitScale * 0.7;
+    }
+    if (webDesktopViewport) {
+      return _fitScale * 0.86;
+    }
+    return _fitScale;
+  }
 
-  double _maxScale(bool compact) => compact
-      ? math.max(_fitScale * 7.0, 3.5)
-      : math.max(_fitScale * 1.65, 1.2);
+  double _maxScale({required bool compact, required bool webDesktopViewport}) {
+    if (compact) {
+      return math.max(_fitScale * 7.0, 3.5);
+    }
+    if (webDesktopViewport) {
+      return math.max(_fitScale * 1.35, 1.05);
+    }
+    return math.max(_fitScale * 1.65, 1.2);
+  }
 
   double _initialScaleForViewport(
     Size viewport, {
@@ -280,11 +294,18 @@ class _KnowledgeTreeViewportState
                                 child: InteractiveViewer(
                                   transformationController: _controller,
                                   constrained: false,
-                                  minScale: _minScale(compact),
+                                  minScale: _minScale(
+                                    compact: compact,
+                                    webDesktopViewport: webDesktopViewport,
+                                  ),
                                   maxScale: windowsFixedViewport
                                       ? _windowsFixedScale
-                                      : _maxScale(compact),
-                                  scaleEnabled: compact,
+                                      : _maxScale(
+                                          compact: compact,
+                                          webDesktopViewport:
+                                              webDesktopViewport,
+                                        ),
+                                  scaleEnabled: compact || webDesktopViewport,
                                   panEnabled: true,
                                   trackpadScrollCausesScale: true,
                                   boundaryMargin: EdgeInsets.symmetric(
@@ -423,16 +444,17 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
         ? null
         : catalog.progressForTrack(state, track.id);
     final backendOopProgress = track?.id == 'oop' ? oopProgress : null;
-    final progress = (backendOopProgress != null &&
+    final progress =
+        (backendOopProgress != null &&
             backendOopProgress.totalLessons > 0 &&
             track?.id == 'oop')
         ? TrackProgress(
             state: backendOopProgress.completedLessons == 0
                 ? TrackAvailability.available
                 : backendOopProgress.completedLessons <
-                        backendOopProgress.totalLessons
-                    ? TrackAvailability.inProgress
-                    : TrackAvailability.completed,
+                      backendOopProgress.totalLessons
+                ? TrackAvailability.inProgress
+                : TrackAvailability.completed,
             completedUnits: backendOopProgress.completedLessons,
             totalUnits: backendOopProgress.totalLessons,
             completedQuizzes: backendOopProgress.passedQuizIds.length,
@@ -443,24 +465,37 @@ class _KnowledgeTreeNodeCard extends StatelessWidget {
           )
         : localProgress;
     final orbSize = node.radius * 2;
-    
+
     // Determine lesson-level status for this track node
-    final hasStartedLessons = track != null && track.modules.any(
-      (m) => m.lessons.any((l) => state.startedLessonIds.contains(l.id)),
-    );
-    final hasCompletedLessons = track != null && track.modules.any(
-      (m) => m.lessons.any((l) => state.completedLessonIds.contains(l.id)),
-    );
-    final hasCompletedPractice = track != null && track.modules.any(
-      (m) => m.practice != null && state.completedPracticeIds.contains(m.practice!.id),
-    );
-    
-    final trackStatusLabel = track == null ? '' 
+    final hasStartedLessons =
+        track != null &&
+        track.modules.any(
+          (m) => m.lessons.any((l) => state.startedLessonIds.contains(l.id)),
+        );
+    final hasCompletedLessons =
+        track != null &&
+        track.modules.any(
+          (m) => m.lessons.any((l) => state.completedLessonIds.contains(l.id)),
+        );
+    final hasCompletedPractice =
+        track != null &&
+        track.modules.any(
+          (m) =>
+              m.practice != null &&
+              state.completedPracticeIds.contains(m.practice!.id),
+        );
+
+    final trackStatusLabel = track == null
+        ? ''
         : hasCompletedLessons || hasCompletedPractice
-            ? (state.locale == AppLocale.ru ? 'Выполнен' : (state.locale == AppLocale.kk ? 'Аяқталды' : 'Completed'))
-            : hasStartedLessons
-                ? (state.locale == AppLocale.ru ? 'В процессе' : (state.locale == AppLocale.kk ? 'Орындалуда' : 'In Progress'))
-                : '';
+        ? (state.locale == AppLocale.ru
+              ? 'Выполнен'
+              : (state.locale == AppLocale.kk ? 'Аяқталды' : 'Completed'))
+        : hasStartedLessons
+        ? (state.locale == AppLocale.ru
+              ? 'В процессе'
+              : (state.locale == AppLocale.kk ? 'Орындалуда' : 'In Progress'))
+        : '';
     final statusHasBadge = trackStatusLabel.isNotEmpty;
     final hubIcon = node.id == 'root'
         ? Icons.hub_rounded

@@ -6,7 +6,7 @@ class CodeExecutionRequest {
     required this.language,
     required this.code,
     this.stdin = '',
-    this.timeoutMs = 5000,
+    this.timeoutMs = 60000,
   });
 
   final String language;

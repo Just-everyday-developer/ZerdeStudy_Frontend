@@ -221,14 +221,16 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         height: 4,
-                        margin: EdgeInsets.only(right: i < steps.length - 1 ? 4 : 0),
+                        margin: EdgeInsets.only(
+                          right: i < steps.length - 1 ? 4 : 0,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(999),
                           color: done
                               ? colors.success
                               : active
-                                  ? colors.primary
-                                  : colors.surfaceSoft,
+                              ? colors.primary
+                              : colors.surfaceSoft,
                         ),
                       ),
                     );
@@ -245,7 +247,8 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                         final isActive = _currentStepIndex == index;
                         final isStepCompleted = _isStepCompleted(step, state);
                         return GestureDetector(
-                          onTap: () => setState(() => _currentStepIndex = index),
+                          onTap: () =>
+                              setState(() => _currentStepIndex = index),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             height: 36,
@@ -255,8 +258,8 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                               color: isActive
                                   ? colors.success
                                   : isStepCompleted
-                                      ? colors.success.withValues(alpha: 0.3)
-                                      : colors.surfaceSoft,
+                                  ? colors.success.withValues(alpha: 0.3)
+                                  : colors.surfaceSoft,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isActive
@@ -271,8 +274,8 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                                 isActive
                                     ? Colors.white
                                     : isStepCompleted
-                                        ? colors.success
-                                        : colors.textSecondary,
+                                    ? colors.success
+                                    : colors.textSecondary,
                               ),
                             ),
                           ),
@@ -309,112 +312,117 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                   l10n,
                   locale,
                 ),
-                const SizedBox(height: 24),
-                // Navigation Buttons
-                Row(
-                  children: [
-                    if (_currentStepIndex > 0)
-                      Expanded(
-                        child: AppButton.secondary(
-                          label: l10n.text('lesson_step_previous'),
-                          onPressed: () => setState(() => _currentStepIndex--),
+                if (currentStep.kind != LessonStepKind.code) ...[
+                  const SizedBox(height: 24),
+                  // Navigation Buttons
+                  Row(
+                    children: [
+                      if (_currentStepIndex > 0)
+                        Expanded(
+                          child: AppButton.secondary(
+                            label: l10n.text('lesson_step_previous'),
+                            onPressed: () =>
+                                setState(() => _currentStepIndex--),
+                          ),
                         ),
-                      ),
-                    if (_currentStepIndex > 0) const SizedBox(width: 12),
-                    if (_currentStepIndex < steps.length - 1)
-                      Expanded(
-                        child: AppButton.primary(
-                          label: l10n.text('next_step'),
-                          onPressed: () => setState(() => _currentStepIndex++),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: AppButton.primary(
-                          label: l10n.text('lesson_step_submit'),
-                          icon: completed
-                              ? Icons.check_circle_rounded
-                              : Icons.done_rounded,
-                          onPressed: () async {
-                            controller.completeLesson(widget.lessonId);
-                            // Backend: record lesson completion server-side.
-                            // Progress, XP and streak are tracked by the
-                            // curriculum service via this endpoint. Only real
-                            // backend lessons (UUID ids) are synced.
-                            try {
-                              final accessToken = ref.read(
-                                backendCourseAccessTokenProvider,
-                              );
-                              if (accessToken != null &&
-                                  accessToken.trim().isNotEmpty &&
-                                  _isBackendId(widget.lessonId)) {
-                                final remote = ref.read(
-                                  backendCourseRemoteDataSourceProvider,
+                      if (_currentStepIndex > 0) const SizedBox(width: 12),
+                      if (_currentStepIndex < steps.length - 1)
+                        Expanded(
+                          child: AppButton.primary(
+                            label: l10n.text('next_step'),
+                            onPressed: () =>
+                                setState(() => _currentStepIndex++),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: AppButton.primary(
+                            label: l10n.text('lesson_step_submit'),
+                            icon: completed
+                                ? Icons.check_circle_rounded
+                                : Icons.done_rounded,
+                            onPressed: () async {
+                              controller.completeLesson(widget.lessonId);
+                              // Backend: record lesson completion server-side.
+                              // Progress, XP and streak are tracked by the
+                              // curriculum service via this endpoint. Only real
+                              // backend lessons (UUID ids) are synced.
+                              try {
+                                final accessToken = ref.read(
+                                  backendCourseAccessTokenProvider,
                                 );
-                                await remote.completeLesson(
-                                  accessToken: accessToken,
-                                  lessonId: widget.lessonId,
-                                );
+                                if (accessToken != null &&
+                                    accessToken.trim().isNotEmpty &&
+                                    _isBackendId(widget.lessonId)) {
+                                  final remote = ref.read(
+                                    backendCourseRemoteDataSourceProvider,
+                                  );
+                                  await remote.completeLesson(
+                                    accessToken: accessToken,
+                                    lessonId: widget.lessonId,
+                                  );
+                                }
+                              } catch (_) {
+                                // Backend unavailable — keep local progress; the
+                                // completion will not be reflected on the server.
                               }
-                            } catch (_) {
-                              // Backend unavailable — keep local progress; the
-                              // completion will not be reflected on the server.
-                            }
-                            ref.invalidate(backendStreakProvider);
-                            ref.invalidate(backendOopProgressProvider);
-                            ref.invalidate(backendAllProgressProvider);
-                            ref.invalidate(backendAchievementsProvider);
-                            ref.invalidate(backendProfileProvider);
-                            if (!context.mounted) {
-                              return;
-                            }
+                              ref.invalidate(backendStreakProvider);
+                              ref.invalidate(backendOopProgressProvider);
+                              ref.invalidate(backendAllProgressProvider);
+                              ref.invalidate(backendAchievementsProvider);
+                              ref.invalidate(backendProfileProvider);
+                              if (!context.mounted) {
+                                return;
+                              }
 
-                            // Use backend XP if already latched; otherwise
-                            // re-read the provider (may have loaded by now).
-                            final xp =
-                                _backendXpReward ??
-                                ref
-                                    .read(
-                                      backendOopLessonItemProvider(
-                                        widget.lessonId,
-                                      ),
-                                    )
-                                    .maybeWhen(
-                                      data: (l) => l?.xpReward,
-                                      orElse: () => null,
-                                    ) ??
-                                lesson.xpReward;
-                            AppNotice.show(
-                              context,
-                              message: '+$xp XP',
-                              type: AppNoticeType.success,
-                            );
-                            // Fire an OS notification (Android/iOS/Windows/…)
-                            final notifTitle = switch (locale) {
-                              AppLocale.ru => 'Урок завершён! 🎉',
-                              AppLocale.kk => 'Сабақ аяқталды! 🎉',
-                              AppLocale.en => 'Lesson completed! 🎉',
-                            };
-                            final notifBody = switch (locale) {
-                              AppLocale.ru =>
-                                'Вы заработали +$xp XP. Так держать!',
-                              AppLocale.kk =>
-                                'Сіз +$xp XP жинадыңыз. Жарайсыз!',
-                              AppLocale.en => 'You earned +$xp XP. Keep it up!',
-                            };
-                            ref
-                                .read(localNotificationServiceProvider)
-                                .showNotification(
-                                  id: 5001,
-                                  title: notifTitle,
-                                  body: notifBody,
-                                  payload: 'lesson:${widget.lessonId}',
-                                );
-                          },
+                              // Use backend XP if already latched; otherwise
+                              // re-read the provider (may have loaded by now).
+                              final xp =
+                                  _backendXpReward ??
+                                  ref
+                                      .read(
+                                        backendOopLessonItemProvider(
+                                          widget.lessonId,
+                                        ),
+                                      )
+                                      .maybeWhen(
+                                        data: (l) => l?.xpReward,
+                                        orElse: () => null,
+                                      ) ??
+                                  lesson.xpReward;
+                              AppNotice.show(
+                                context,
+                                message: '+$xp XP',
+                                type: AppNoticeType.success,
+                              );
+                              // Fire an OS notification (Android/iOS/Windows/…)
+                              final notifTitle = switch (locale) {
+                                AppLocale.ru => 'Урок завершён! 🎉',
+                                AppLocale.kk => 'Сабақ аяқталды! 🎉',
+                                AppLocale.en => 'Lesson completed! 🎉',
+                              };
+                              final notifBody = switch (locale) {
+                                AppLocale.ru =>
+                                  'Вы заработали +$xp XP. Так держать!',
+                                AppLocale.kk =>
+                                  'Сіз +$xp XP жинадыңыз. Жарайсыз!',
+                                AppLocale.en =>
+                                  'You earned +$xp XP. Keep it up!',
+                              };
+                              ref
+                                  .read(localNotificationServiceProvider)
+                                  .showNotification(
+                                    id: 5001,
+                                    title: notifTitle,
+                                    body: notifBody,
+                                    payload: 'lesson:${widget.lessonId}',
+                                  );
+                            },
+                          ),
                         ),
-                      ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -544,7 +552,11 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               const SizedBox(height: 14),
               Text(
                 lesson.summary.resolve(locale),
-                style: TextStyle(color: colors.textSecondary, height: 1.5, fontSize: 14),
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  height: 1.5,
+                  fontSize: 14,
+                ),
               ),
             ],
             const SizedBox(height: 20),
@@ -556,16 +568,26 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.auto_stories_rounded, color: colors.primary, size: 22),
+                      Icon(
+                        Icons.auto_stories_rounded,
+                        color: colors.primary,
+                        size: 22,
+                      ),
                       const SizedBox(width: 10),
-                      Text(l10n.text('lesson_theory'), style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        l10n.text('lesson_theory'),
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 14),
                   ...lesson.theoryContent
                       .resolve(locale)
                       .split('\n\n')
-                      .map((paragraph) => _TheoryParagraph(text: paragraph, colors: colors)),
+                      .map(
+                        (paragraph) =>
+                            _TheoryParagraph(text: paragraph, colors: colors),
+                      ),
                 ],
               ),
             ),
@@ -582,7 +604,9 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                 unawaited(
                   ref
                       .read(aiChatControllerProvider.notifier)
-                      .sendMessage(lesson.promptSuggestion.resolve(state2.locale)),
+                      .sendMessage(
+                        lesson.promptSuggestion.resolve(state2.locale),
+                      ),
                 );
               },
             ),
@@ -1266,7 +1290,11 @@ class _OptionTile extends StatelessWidget {
 }
 
 class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.icon, required this.label, required this.colors});
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+    required this.colors,
+  });
 
   final IconData icon;
   final String label;

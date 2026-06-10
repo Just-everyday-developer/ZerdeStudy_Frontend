@@ -470,11 +470,24 @@ CommunityCourse buildCommunityCourse({
       instructors ?? _defaultInstructors(author: author, title: title);
   final resolvedModules =
       moduleSections ??
-      _defaultModuleSections(
-        title: title,
-        subtitle: subtitle,
-        lessons: lessons,
-      );
+      (lessons.isEmpty
+          ? const <CommunityCourseModuleSection>[]
+          : _defaultModuleSections(
+              title: title,
+              subtitle: subtitle,
+              lessons: lessons,
+            ));
+  final resolvedCoursePlayerModules =
+      coursePlayerModules ??
+      (lessons.isEmpty
+          ? const <CoursePlayerModule>[]
+          : _defaultCoursePlayerModules(
+              id: id,
+              title: title,
+              subtitle: subtitle,
+              tags: tags,
+              lessons: lessons,
+            ));
   final resolvedFacts =
       facts ??
       _defaultFacts(
@@ -525,16 +538,10 @@ CommunityCourse buildCommunityCourse({
     updates: updates ?? _defaultUpdates(title: title),
     facts: resolvedFacts,
     offer: offer ?? _defaultOffer(estimatedHours: estimatedHours, level: level),
-    supportsCoursePlayer: supportsCoursePlayer,
-    coursePlayerModules:
-        coursePlayerModules ??
-        _defaultCoursePlayerModules(
-          id: id,
-          title: title,
-          subtitle: subtitle,
-          tags: tags,
-          lessons: lessons,
-        ),
+    supportsCoursePlayer:
+        supportsCoursePlayer &&
+        resolvedCoursePlayerModules.any((module) => module.lessons.isNotEmpty),
+    coursePlayerModules: resolvedCoursePlayerModules,
   );
 }
 
@@ -576,28 +583,16 @@ List<CommunityCourseInstructor> _defaultInstructors({
   required CommunityCourseAuthor author,
   required String title,
 }) {
+  final bio = author.summary.contains('@') ? '' : author.summary;
   return <CommunityCourseInstructor>[
     CommunityCourseInstructor(
       id: author.id,
       name: author.name,
       role: author.role,
-      bio:
-          '${author.name} teaches $title with a product-minded focus on clarity, iteration, and confident delivery.',
+      bio: bio,
       courseCount: author.courseCount,
-      studentCount: author.studentCount == 0
-          ? author.followersCount * 8
-          : author.studentCount,
+      studentCount: author.studentCount,
       rating: author.rating,
-    ),
-    CommunityCourseInstructor(
-      id: '${author.id}_mentor_team',
-      name: 'ZerdeStudy Mentor Team',
-      role: 'Course Editors',
-      bio:
-          'The internal mentor team packages examples, reviews the explanations, and keeps each course polished and clear.',
-      courseCount: 12,
-      studentCount: author.followersCount * 5,
-      rating: 4.9,
     ),
   ];
 }

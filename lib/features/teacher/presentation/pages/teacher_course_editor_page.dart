@@ -6,12 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/data/models/backend_course_dto.dart';
 import '../../../courses_backend/data/models/backend_lesson_dto.dart';
 import '../../../courses_backend/data/models/backend_module_dto.dart';
 import '../../../payment/data/models/order_models.dart';
 import '../../../payment/presentation/providers/payment_providers.dart';
 import '../../application/teacher_authoring_service.dart';
+
+Future<TeacherAuthoringService?> _freshService(WidgetRef ref) async {
+  await ref.read(authControllerProvider.notifier).refreshSession();
+  return ref.read(teacherAuthoringServiceProvider);
+}
 
 /// Manages modules → lessons → quizzes/practice for one backend course.
 class TeacherCourseEditorPage extends ConsumerWidget {
@@ -104,52 +110,20 @@ class TeacherCourseEditorPage extends ConsumerWidget {
   }
 
   Future<void> _addModule(BuildContext context, WidgetRef ref) async {
-    final titleCtrl = TextEditingController();
-    final summaryCtrl = TextEditingController();
-    final ok = await showDialog<bool>(
+    final result = await showModalBottomSheet<_ModuleFormResult>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Новый модуль'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleCtrl,
-              decoration: const InputDecoration(labelText: 'Название модуля'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: summaryCtrl,
-              decoration: const InputDecoration(labelText: 'Краткое описание'),
-              maxLines: 2,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Отмена'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Создать'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _ModuleSheet(),
     );
-
-    if (ok != true) {
-      titleCtrl.dispose();
-      summaryCtrl.dispose();
-      return;
-    }
-    final service = ref.read(teacherAuthoringServiceProvider);
+    if (result == null) return;
+    final service = await _freshService(ref);
     if (service == null || !context.mounted) return;
     try {
       await service.createModule(
         courseId: course.id,
-        title: titleCtrl.text.trim(),
-        summary: summaryCtrl.text.trim(),
+        title: result.title,
+        summary: result.summary,
       );
       ref.invalidate(teacherModulesProvider(course.id));
       if (context.mounted) {
@@ -167,12 +141,159 @@ class TeacherCourseEditorPage extends ConsumerWidget {
           type: AppNoticeType.error,
         );
       }
-    } finally {
-      titleCtrl.dispose();
-      summaryCtrl.dispose();
     }
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Module sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ModuleFormResult {
+  const _ModuleFormResult({required this.title, required this.summary});
+  final String title;
+  final String summary;
+}
+
+class _ModuleSheet extends StatefulWidget {
+  const _ModuleSheet();
+  @override
+  State<_ModuleSheet> createState() => _ModuleSheetState();
+}
+
+class _ModuleSheetState extends State<_ModuleSheet> {
+  final _title = TextEditingController();
+  final _summary = TextEditingController();
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _summary.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.view_module_rounded, color: colors.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Новый модуль',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _SheetField(label: 'Название модуля', ctrl: _title, colors: colors),
+            const SizedBox(height: 12),
+            _SheetField(
+              label: 'Краткое описание',
+              ctrl: _summary,
+              colors: colors,
+              maxLines: 2,
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                if (_title.text.trim().isEmpty) return;
+                Navigator.pop(
+                  context,
+                  _ModuleFormResult(
+                    title: _title.text.trim(),
+                    summary: _summary.text.trim(),
+                  ),
+                );
+              },
+              child: const Text('Создать модуль', style: TextStyle(fontSize: 15)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetField extends StatelessWidget {
+  const _SheetField({
+    required this.label,
+    required this.ctrl,
+    required this.colors,
+    this.maxLines = 1,
+  });
+  final String label;
+  final TextEditingController ctrl;
+  final AppThemeColors colors;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: ctrl,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: colors.surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colors.divider),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colors.divider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colors.primary, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _CoursePricePanel extends ConsumerStatefulWidget {
   const _CoursePricePanel({required this.courseId});
@@ -340,12 +461,13 @@ class _CoursePricePanelState extends ConsumerState<_CoursePricePanel> {
       return;
     }
 
-    final service = ref.read(teacherAuthoringServiceProvider);
+    setState(() => _saving = true);
+    final service = await _freshService(ref);
+    if (!mounted) return;
     if (service == null) {
+      setState(() => _saving = false);
       return;
     }
-
-    setState(() => _saving = true);
     try {
       final saved = await service.saveCoursePrice(
         courseId: widget.courseId,
@@ -396,6 +518,7 @@ class _ModuleCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final lessonsAsync = ref.watch(teacherLessonsProvider(module.id));
+    final title = module.title.isEmpty ? 'Без названия' : module.title;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -407,37 +530,87 @@ class _ModuleCard extends ConsumerWidget {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          tilePadding: const EdgeInsets.fromLTRB(12, 4, 8, 4),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          leading: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '${index + 1}',
+              style: TextStyle(
+                color: colors.primary,
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+              ),
+            ),
+          ),
           title: Text(
-            'Модуль ${index + 1}: ${module.title.isEmpty ? "Без названия" : module.title}',
-            style: const TextStyle(fontWeight: FontWeight.w700),
+            title,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
           ),
           subtitle: module.summary.isNotEmpty
               ? Text(
                   module.summary,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
                 )
               : null,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              InkWell(
+                onTap: () => _deleteModule(context, ref),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    color: colors.danger.withValues(alpha: 0.7),
+                    size: 18,
+                  ),
+                ),
+              ),
+              const Icon(Icons.expand_more_rounded),
+            ],
+          ),
           children: [
             lessonsAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.all(12),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (e, _) => Text('Ошибка уроков: $e'),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  'Ошибка уроков: $e',
+                  style: TextStyle(color: colors.danger, fontSize: 12),
+                ),
+              ),
               data: (lessons) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (var i = 0; i < lessons.length; i++)
-                    _LessonTile(index: i, lesson: lessons[i]),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _addLesson(context, ref, lessons.length),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Добавить урок'),
+                  if (lessons.isNotEmpty) ...[
+                    for (var i = 0; i < lessons.length; i++)
+                      _LessonTile(index: i, lesson: lessons[i]),
+                    const SizedBox(height: 4),
+                  ],
+                  OutlinedButton.icon(
+                    onPressed: () => _addLesson(context, ref, lessons.length),
+                    icon: const Icon(Icons.add_rounded, size: 16),
+                    label: const Text('Добавить урок'),
+                    style: OutlinedButton.styleFrom(
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                   ),
                 ],
@@ -447,6 +620,44 @@ class _ModuleCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _deleteModule(BuildContext context, WidgetRef ref) async {
+    final colors = context.appColors;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить модуль?'),
+        content: Text(
+          'Модуль «${module.title.isEmpty ? "Без названия" : module.title}» и все его уроки будут удалены.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+    final service = await _freshService(ref);
+    if (service == null || !context.mounted) return;
+    try {
+      await service.deleteModule(module.id);
+      ref.invalidate(teacherModulesProvider(courseId));
+      if (context.mounted) {
+        AppNotice.show(context, message: 'Модуль удалён', type: AppNoticeType.success);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppNotice.show(context, message: 'Ошибка: $e', type: AppNoticeType.error);
+      }
+    }
   }
 
   Future<void> _addLesson(
@@ -461,7 +672,7 @@ class _ModuleCard extends ConsumerWidget {
       builder: (ctx) => _LessonForm(position: position),
     );
     if (result == null) return;
-    final service = ref.read(teacherAuthoringServiceProvider);
+    final service = await _freshService(ref);
     if (service == null || !context.mounted) return;
     try {
       final lesson = await service.createLesson(
@@ -589,12 +800,14 @@ class _LessonTile extends ConsumerWidget {
   }
 
   Future<void> _addQuiz(BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<_QuizFormResult>(
+    final result = await showModalBottomSheet<_QuizFormResult>(
       context: context,
-      builder: (ctx) => const _QuizDialog(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _QuizSheet(),
     );
     if (result == null) return;
-    final service = ref.read(teacherAuthoringServiceProvider);
+    final service = await _freshService(ref);
     if (service == null) return;
     try {
       await service.createQuiz(
@@ -606,50 +819,39 @@ class _LessonTile extends ConsumerWidget {
         explanation: LocalizedInput(ru: result.explanation),
       );
       if (context.mounted) {
-        AppNotice.show(
-          context,
-          message: 'Квиз добавлен',
-          type: AppNoticeType.success,
-        );
+        AppNotice.show(context, message: 'Квиз добавлен', type: AppNoticeType.success);
       }
     } catch (e) {
       if (context.mounted) {
-        AppNotice.show(
-          context,
-          message: 'Ошибка: $e',
-          type: AppNoticeType.error,
-        );
+        AppNotice.show(context, message: 'Ошибка: $e', type: AppNoticeType.error);
       }
     }
   }
 
   Future<void> _addPractice(BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<_PracticeFormResult>(
+    final result = await showModalBottomSheet<_PracticeFormResult>(
       context: context,
-      builder: (ctx) => const _PracticeDialog(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _PracticeSheet(),
     );
     if (result == null) return;
-    final service = ref.read(teacherAuthoringServiceProvider);
+    final service = await _freshService(ref);
     if (service == null) return;
     try {
       await service.createPractice(
         lessonId: lesson.id,
-        position: 1, // backend requires position > 0 for practices
-        title: LocalizedInput(ru: result.title),
-        summary: LocalizedInput(ru: result.title),
-        brief: LocalizedInput(ru: result.brief),
+        position: 1,
+        title: result.title,
+        description: result.description,
+        language: result.language,
         starterCode: result.starterCode,
-        successCriteria: [LocalizedInput(ru: result.successCriteria)],
-        knowledgeChecks: [LocalizedInput(ru: result.knowledgeCheck)],
-        promptSuggestion: LocalizedInput(ru: result.brief),
+        expectedOutput: result.expectedOutput,
         xpReward: result.xpReward,
+        checkType: result.checkType,
       );
       if (context.mounted) {
-        AppNotice.show(
-          context,
-          message: 'Практика добавлена',
-          type: AppNoticeType.success,
-        );
+        AppNotice.show(context, message: 'Практика добавлена', type: AppNoticeType.success);
       }
     } catch (e) {
       if (context.mounted) {
@@ -706,7 +908,7 @@ Future<void> _uploadLessonVideo(
   final picked = await _pickLessonVideo(context);
   if (picked == null) return;
 
-  final service = ref.read(teacherAuthoringServiceProvider);
+  final service = await _freshService(ref);
   if (service == null) return;
 
   try {
@@ -958,7 +1160,7 @@ class _LessonFormState extends State<_LessonForm> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Quiz dialog
+// Quiz bottom sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _QuizFormResult {
@@ -974,19 +1176,16 @@ class _QuizFormResult {
   final String explanation;
 }
 
-class _QuizDialog extends StatefulWidget {
-  const _QuizDialog();
+class _QuizSheet extends StatefulWidget {
+  const _QuizSheet();
   @override
-  State<_QuizDialog> createState() => _QuizDialogState();
+  State<_QuizSheet> createState() => _QuizSheetState();
 }
 
-class _QuizDialogState extends State<_QuizDialog> {
+class _QuizSheetState extends State<_QuizSheet> {
   final _question = TextEditingController();
   final _explanation = TextEditingController();
-  final List<TextEditingController> _options = List.generate(
-    3,
-    (_) => TextEditingController(),
-  );
+  final List<TextEditingController> _options = List.generate(4, (_) => TextEditingController());
   int _correct = 0;
 
   @override
@@ -999,206 +1198,497 @@ class _QuizDialogState extends State<_QuizDialog> {
     super.dispose();
   }
 
+  void _submit() {
+    final opts = _options.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList();
+    if (_question.text.trim().isEmpty || opts.length < 2) return;
+    Navigator.pop(
+      context,
+      _QuizFormResult(
+        question: _question.text.trim(),
+        options: opts,
+        correctIndex: _correct.clamp(0, opts.length - 1),
+        explanation: _explanation.text.trim(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return AlertDialog(
-      title: const Text('Новый квиз'),
-      content: SizedBox(
-        width: 460,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _question,
-                decoration: const InputDecoration(labelText: 'Вопрос'),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 12),
-              ..._options.asMap().entries.map((e) {
-                final isCorrect = e.key == _correct;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        tooltip: 'Отметить верным',
-                        onPressed: () => setState(() => _correct = e.key),
-                        icon: Icon(
-                          isCorrect
-                              ? Icons.check_circle_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          color: isCorrect
-                              ? colors.success
-                              : colors.textSecondary,
-                        ),
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.88),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // handle + header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.divider,
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      Expanded(
-                        child: TextField(
-                          controller: e.value,
-                          decoration: InputDecoration(
-                            hintText:
-                                'Вариант ${e.key + 1}'
-                                '${isCorrect ? " (верный)" : ""}',
-                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.quiz_rounded, color: colors.primary, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Новый квиз',
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
                   ),
-                );
-              }),
-              const SizedBox(height: 4),
-              TextField(
-                controller: _explanation,
-                decoration: const InputDecoration(labelText: 'Пояснение'),
-                maxLines: 2,
+                  const SizedBox(height: 20),
+                ],
               ),
-            ],
-          ),
+            ),
+            // scrollable body
+            Flexible(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                shrinkWrap: true,
+                children: [
+                  _SheetField(label: 'Вопрос', ctrl: _question, colors: colors, maxLines: 2),
+                  const SizedBox(height: 16),
+                  Text(
+                    'ВАРИАНТЫ ОТВЕТОВ',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ..._options.asMap().entries.map((e) {
+                    final isCorrect = e.key == _correct;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => setState(() => _correct = e.key),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              width: 28, height: 28,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isCorrect
+                                    ? colors.success.withValues(alpha: 0.15)
+                                    : colors.surface,
+                                border: Border.all(
+                                  color: isCorrect ? colors.success : colors.divider,
+                                  width: isCorrect ? 2 : 1,
+                                ),
+                              ),
+                              child: isCorrect
+                                  ? Icon(Icons.check_rounded, size: 16, color: colors.success)
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: e.value,
+                              decoration: InputDecoration(
+                                hintText: 'Вариант ${e.key + 1}${isCorrect ? " (верный)" : ""}',
+                                filled: true,
+                                fillColor: isCorrect
+                                    ? colors.success.withValues(alpha: 0.06)
+                                    : colors.surface,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: isCorrect ? colors.success : colors.divider,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: isCorrect ? colors.success : colors.divider,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: isCorrect ? colors.success : colors.primary,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                  _SheetField(label: 'Пояснение (опц.)', ctrl: _explanation, colors: colors, maxLines: 2),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _submit,
+                child: const Text('Добавить квиз', style: TextStyle(fontSize: 15)),
+              ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final opts = _options
-                .map((c) => c.text.trim())
-                .where((t) => t.isNotEmpty)
-                .toList();
-            if (_question.text.trim().isEmpty || opts.length < 2) return;
-            Navigator.pop(
-              context,
-              _QuizFormResult(
-                question: _question.text.trim(),
-                options: opts,
-                correctIndex: _correct.clamp(0, opts.length - 1),
-                explanation: _explanation.text.trim(),
-              ),
-            );
-          },
-          child: const Text('Добавить'),
-        ),
-      ],
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Practice dialog
+// Practice bottom sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PracticeFormResult {
   _PracticeFormResult({
     required this.title,
-    required this.brief,
+    required this.description,
+    required this.language,
     required this.starterCode,
-    required this.successCriteria,
-    required this.knowledgeCheck,
+    required this.expectedOutput,
     required this.xpReward,
+    required this.checkType,
   });
   final String title;
-  final String brief;
+  final String description;
+  final String language;
   final String starterCode;
-  final String successCriteria;
-  final String knowledgeCheck;
+  final String expectedOutput;
   final int xpReward;
+  final String checkType;
 }
 
-class _PracticeDialog extends StatefulWidget {
-  const _PracticeDialog();
+class _PracticeSheet extends StatefulWidget {
+  const _PracticeSheet();
   @override
-  State<_PracticeDialog> createState() => _PracticeDialogState();
+  State<_PracticeSheet> createState() => _PracticeSheetState();
 }
 
-class _PracticeDialogState extends State<_PracticeDialog> {
+class _PracticeSheetState extends State<_PracticeSheet> {
   final _title = TextEditingController();
-  final _brief = TextEditingController();
+  final _description = TextEditingController();
   final _code = TextEditingController();
-  final _criteria = TextEditingController();
-  final _check = TextEditingController();
+  final _expectedOutput = TextEditingController();
   final _xp = TextEditingController(text: '40');
+  String _language = 'go';
+  String _checkType = 'manual';
+
+  static const _languages = ['go', 'python', 'java', 'javascript', 'kotlin', 'cpp'];
 
   @override
   void dispose() {
-    for (final c in [_title, _brief, _code, _criteria, _check, _xp]) {
+    for (final c in [_title, _description, _code, _expectedOutput, _xp]) {
       c.dispose();
     }
     super.dispose();
   }
 
+  void _submit() {
+    if (_title.text.trim().isEmpty) return;
+    Navigator.pop(
+      context,
+      _PracticeFormResult(
+        title: _title.text.trim(),
+        description: _description.text.trim(),
+        language: _language,
+        starterCode: _code.text.trim(),
+        expectedOutput: _expectedOutput.text.trim(),
+        xpReward: int.tryParse(_xp.text.trim()) ?? 40,
+        checkType: _checkType,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Новая практика'),
-      content: SizedBox(
-        width: 460,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _title,
-                decoration: const InputDecoration(labelText: 'Название'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _brief,
-                decoration: const InputDecoration(labelText: 'Условие задания'),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _code,
-                decoration: const InputDecoration(labelText: 'Стартовый код'),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _criteria,
-                decoration: const InputDecoration(labelText: 'Критерий успеха'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _check,
-                decoration: const InputDecoration(labelText: 'Проверка знаний'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _xp,
-                decoration: const InputDecoration(labelText: 'XP'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+    final colors = context.appColors;
+
+    Widget sectionLabel(String text, IconData icon) => Padding(
+      padding: const EdgeInsets.only(bottom: 10, top: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 15, color: colors.primary),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
           ),
+        ],
+      ),
+    );
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.92),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.divider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.code_rounded, color: colors.primary, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Новая практика',
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                shrinkWrap: true,
+                children: [
+                  sectionLabel('ОСНОВНОЕ', Icons.info_outline_rounded),
+                  _SheetField(label: 'Название задания', ctrl: _title, colors: colors),
+                  const SizedBox(height: 10),
+                  _SheetField(
+                    label: 'Условие / описание',
+                    ctrl: _description,
+                    colors: colors,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  sectionLabel('КОД', Icons.terminal_rounded),
+                  // Language picker
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _languages.map((lang) {
+                      final selected = lang == _language;
+                      return GestureDetector(
+                        onTap: () => setState(() => _language = lang),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? colors.primary.withValues(alpha: 0.15)
+                                : colors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: selected ? colors.primary : colors.divider,
+                              width: selected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Text(
+                            lang,
+                            style: TextStyle(
+                              color: selected ? colors.primary : colors.textSecondary,
+                              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  _SheetField(
+                    label: 'Стартовый код (опц.)',
+                    ctrl: _code,
+                    colors: colors,
+                    maxLines: 4,
+                  ),
+                  const SizedBox(height: 10),
+                  _SheetField(
+                    label: 'Ожидаемый вывод (опц.)',
+                    ctrl: _expectedOutput,
+                    colors: colors,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+                  sectionLabel('ПРОВЕРКА', Icons.checklist_rounded),
+                  // Check type toggle
+                  Row(
+                    children: [
+                      _CheckTypeChip(
+                        label: 'Вручную',
+                        icon: Icons.person_rounded,
+                        selected: _checkType == 'manual',
+                        colors: colors,
+                        onTap: () => setState(() => _checkType = 'manual'),
+                      ),
+                      const SizedBox(width: 10),
+                      _CheckTypeChip(
+                        label: 'Авто',
+                        icon: Icons.play_circle_outline_rounded,
+                        selected: _checkType == 'auto',
+                        colors: colors,
+                        onTap: () => setState(() => _checkType = 'auto'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: 140,
+                    child: TextField(
+                      controller: _xp,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'XP награда',
+                        filled: true,
+                        fillColor: colors.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: colors.divider),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: colors.divider),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: colors.primary, width: 1.5),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _submit,
+                child: const Text('Добавить практику', style: TextStyle(fontSize: 15)),
+              ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
+    );
+  }
+}
+
+class _CheckTypeChip extends StatelessWidget {
+  const _CheckTypeChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.colors,
+    required this.onTap,
+  });
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final AppThemeColors colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? colors.primary.withValues(alpha: 0.15) : colors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? colors.primary : colors.divider,
+            width: selected ? 1.5 : 1,
+          ),
         ),
-        FilledButton(
-          onPressed: () {
-            if (_title.text.trim().isEmpty) return;
-            Navigator.pop(
-              context,
-              _PracticeFormResult(
-                title: _title.text.trim(),
-                brief: _brief.text.trim(),
-                starterCode: _code.text.trim(),
-                successCriteria: _criteria.text.trim(),
-                knowledgeCheck: _check.text.trim(),
-                xpReward: int.tryParse(_xp.text.trim()) ?? 40,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: selected ? colors.primary : colors.textSecondary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? colors.primary : colors.textSecondary,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                fontSize: 13,
               ),
-            );
-          },
-          child: const Text('Добавить'),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

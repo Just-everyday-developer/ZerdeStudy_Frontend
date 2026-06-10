@@ -2,17 +2,35 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/config/app_environment.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../domain/models/code_execution.dart';
 
 final codeRunnerServiceProvider = Provider<CodeRunnerService>((ref) {
   final environment = ref.watch(appEnvironmentProvider);
-  return CodeRunnerService(baseUrl: environment.codeRunnerBaseUrl);
+  final accessToken =
+      ref
+          .watch(
+            authControllerProvider.select(
+              (state) => state.session?.accessToken,
+            ),
+          )
+          ?.trim() ??
+      '';
+  return CodeRunnerService(
+    uriResolver: environment.resolveCodeRunner,
+    authToken: accessToken,
+  );
 });
 
 class CodeRunnerService {
-  CodeRunnerService({required String baseUrl}) : _baseUrl = baseUrl;
+  CodeRunnerService({
+    required Uri Function(String path) uriResolver,
+    required String authToken,
+  }) : _uriResolver = uriResolver,
+       _authToken = authToken;
 
-  final String _baseUrl;
+  final Uri Function(String path) _uriResolver;
+  final String _authToken;
 
   /// Runs the provided code using the microservice
   Future<CodeExecutionResult> runCode(CodeExecutionRequest request) async {
@@ -25,8 +43,11 @@ class CodeRunnerService {
     try {
       final response = await http
           .post(
-            Uri.parse(_baseUrl).resolve('/run'),
-            headers: <String, String>{'Content-Type': 'application/json'},
+            _uriResolver('/run'),
+            headers: <String, String>{
+              'Content-Type': 'application/json',
+              if (_authToken.isNotEmpty) 'Authorization': 'Bearer $_authToken',
+            },
             body: jsonEncode({
               'language': request.language,
               'code': request.code,

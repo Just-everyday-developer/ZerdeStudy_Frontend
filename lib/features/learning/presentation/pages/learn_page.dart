@@ -578,8 +578,6 @@ class _CompactCourseRail extends ConsumerWidget {
       children: [
         CourseDiscoverySectionHeader(
           title: section.title,
-          actionLabel: viewAllLabel,
-          onActionTap: onViewAllTap,
         ),
         const SizedBox(height: 18),
         SizedBox(

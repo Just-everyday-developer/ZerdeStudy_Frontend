@@ -82,6 +82,14 @@ class _CommunityCoursePlayerPageState
     final controller = ref.read(demoAppControllerProvider.notifier);
     final catalog = ref.watch(demoCatalogProvider);
     final course = catalog.courseById(widget.courseId);
+    final lessons = <CoursePlayerLesson>[
+      for (final module in course.coursePlayerModules) ...module.lessons,
+    ];
+
+    if (lessons.isEmpty) {
+      return _courseInDevelopmentPage(context, course);
+    }
+
     final progress = catalog.coursePlayerProgressFor(state, widget.courseId);
     final lesson = catalog.currentCourseLessonFor(state, widget.courseId);
 
@@ -92,9 +100,6 @@ class _CommunityCoursePlayerPageState
       );
     }
 
-    final lessons = <CoursePlayerLesson>[
-      for (final module in course.coursePlayerModules) ...module.lessons,
-    ];
     final totalPoints = catalog.totalCoursePlayerPoints(course.id);
     final earnedPoints = catalog.earnedCoursePlayerPoints(state, course.id);
     final percent = catalog.coursePlayerCompletionPercent(state, course.id);
@@ -178,6 +183,54 @@ class _CommunityCoursePlayerPageState
                 Expanded(child: content),
               ],
             ),
+    );
+  }
+
+  Widget _courseInDevelopmentPage(
+    BuildContext context,
+    CommunityCourse course,
+  ) {
+    final locale = context.l10n.locale;
+    final colors = context.appColors;
+
+    return AppPageScaffold(
+      title: course.title.resolve(locale),
+      maxContentWidth: 900,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 40),
+        children: [
+          _courseBackButton(context),
+          const SizedBox(height: 14),
+          GlowCard(
+            accent: course.color,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.construction_rounded, color: course.color, size: 36),
+                const SizedBox(height: 16),
+                Text(
+                  _courseInDevelopmentTitle(locale),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  course.title.resolve(locale),
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _courseInDevelopmentBody(locale),
+                  style: TextStyle(color: colors.textSecondary, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1473,5 +1526,24 @@ String _thinkingLabel(AppLocale locale) {
     AppLocale.ru => 'Формирую ответ...',
     AppLocale.en => 'Preparing the answer...',
     AppLocale.kk => 'Жауап дайындалып жатыр...',
+  };
+}
+
+String _courseInDevelopmentTitle(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Курс в разработке',
+    AppLocale.en => 'Course in development',
+    AppLocale.kk => 'Курс әзірленуде',
+  };
+}
+
+String _courseInDevelopmentBody(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru =>
+      'Модули и уроки пока не заполнены. Когда автор добавит материалы, курс появится здесь.',
+    AppLocale.en =>
+      'Modules and lessons have not been filled yet. Once the author adds content, the course will appear here.',
+    AppLocale.kk =>
+      'Модульдер мен сабақтар әлі толтырылмаған. Автор материалдарды қосқанда, курс осы жерде пайда болады.',
   };
 }

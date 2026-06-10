@@ -91,7 +91,6 @@ class _CommunityCourseDetailPageState
         ),
       );
     }
-    final saved = state.savedCommunityCourseIds.contains(widget.courseId);
     final enrolled = state.enrolledCommunityCourseIds.contains(widget.courseId);
     final userRating = state.courseRatingsByCourseId[widget.courseId];
     final reviewSummary = catalog.displayCourseReviewSummaryForCourse(
@@ -107,6 +106,10 @@ class _CommunityCourseDetailPageState
       data: (reviews) => reviews,
       orElse: () => const <BackendReviewDto>[],
     );
+    final currentUserId = _authUserId;
+    final hasAlreadyReviewed =
+        currentUserId != null &&
+        backendReviews.any((r) => r.userId == currentUserId);
     final backendMappedReviews = backendReviews.map(
       (r) => CommunityCourseReview(
         id: r.id,
@@ -132,16 +135,12 @@ class _CommunityCourseDetailPageState
             child: context.isCompactLayout
                 ? _CompactCourseDetailLayout(
                     course: course,
-                    saved: saved,
                     enrolled: enrolled,
                     reviewSummary: reviewSummary,
                     userRating: userRating,
                     reviews: reviews,
+                    hasAlreadyReviewed: hasAlreadyReviewed,
                     commentController: _reviewController,
-                    onSave: () => controller.toggleSavedCommunityCourse(
-                      widget.courseId,
-                      course: course,
-                    ),
                     onRate: (stars) => controller.rateCommunityCourse(
                       widget.courseId,
                       stars,
@@ -162,16 +161,12 @@ class _CommunityCourseDetailPageState
                   )
                 : _WideCourseDetailLayout(
                     course: course,
-                    saved: saved,
                     enrolled: enrolled,
                     reviewSummary: reviewSummary,
                     userRating: userRating,
                     reviews: reviews,
+                    hasAlreadyReviewed: hasAlreadyReviewed,
                     commentController: _reviewController,
-                    onSave: () => controller.toggleSavedCommunityCourse(
-                      widget.courseId,
-                      course: course,
-                    ),
                     onRate: (stars) => controller.rateCommunityCourse(
                       widget.courseId,
                       stars,
@@ -463,6 +458,15 @@ class _CommunityCourseDetailPageState
     bool useBackendPreview = false,
     bool alreadyEnrolled = false,
   }) async {
+    if (!_courseHasPlayableLessons(course)) {
+      AppNotice.show(
+        context,
+        message: _courseInDevelopmentDescription(context.l10n.locale),
+        type: AppNoticeType.info,
+      );
+      return;
+    }
+
     if (useBackendPreview) {
       controller.enrollCommunityCourse(course.id, courseOverride: course);
       await backendEnrollCourse(ref, course.id);
@@ -613,6 +617,29 @@ class _CommunityCourseDetailPageState
       builder: (context) => _BackendCoursePreviewPanel(course: course),
     );
   }
+}
+
+bool _courseHasPlayableLessons(CommunityCourse course) {
+  return course.coursePlayerModules.any((module) => module.lessons.isNotEmpty);
+}
+
+String _courseInDevelopmentTitle(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => 'Курс в разработке',
+    AppLocale.en => 'Course in development',
+    AppLocale.kk => 'Курс әзірленуде',
+  };
+}
+
+String _courseInDevelopmentDescription(AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru =>
+      'Модули и уроки пока не заполнены. Когда автор добавит материалы, курс появится здесь.',
+    AppLocale.en =>
+      'Modules and lessons have not been filled yet. Once the author adds content, the course will appear here.',
+    AppLocale.kk =>
+      'Модульдер мен сабақтар әлі толтырылмаған. Автор материалдарды қосқанда, курс осы жерде пайда болады.',
+  };
 }
 
 class _BackendCoursePreviewPanel extends ConsumerStatefulWidget {
@@ -1045,53 +1072,36 @@ class _BackendPreviewLessonContent extends StatelessWidget {
               ],
               if (backendQuizzes.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                ...backendQuizzes.take(3).map((quiz) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.quiz_rounded, color: course.color, size: 18),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _resolveBackendText(quiz.question, locale),
-                            style: TextStyle(
-                              color: colors.textSecondary,
-                              height: 1.45,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                ...backendQuizzes.map(
+                  (quiz) => _BackendQuizCard(
+                    quiz: quiz,
+                    locale: locale,
+                    accent: course.color,
+                  ),
+                ),
               ],
               if (backendPractice != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.terminal_rounded,
-                      color: colors.success,
-                      size: 18,
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.terminal_rounded),
+                  label: Text(
+                    _resolveBackendText(
+                      backendPractice!.title,
+                      locale,
+                      fallback: 'Code practice',
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _resolveBackendText(
-                          backendPractice!.title,
-                          locale,
-                          fallback: backendPractice!.starterCode,
-                        ),
-                        style: TextStyle(
-                          color: colors.textSecondary,
-                          height: 1.45,
-                        ),
-                      ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colors.success,
+                    side: BorderSide(
+                      color: colors.success.withValues(alpha: 0.45),
                     ),
-                  ],
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    context.push(AppRoutes.practiceById(backendPractice!.id));
+                  },
                 ),
               ],
             ],
@@ -1178,62 +1188,66 @@ class _BackendPreviewLessonContent extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        GlowCard(
-          accent: colors.primary,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.l10n.text('lesson_code_example'),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  color: colors.backgroundElevated,
-                  border: Border.all(color: colors.divider),
+        if (codeSnippet.trim().isNotEmpty) ...[
+          const SizedBox(height: 16),
+          GlowCard(
+            accent: colors.primary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.text('lesson_code_example'),
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-                child: SelectableText(
-                  codeSnippet,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontFamily: 'monospace',
-                    height: 1.5,
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    color: colors.backgroundElevated,
+                    border: Border.all(color: colors.divider),
+                  ),
+                  child: SelectableText(
+                    codeSnippet,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontFamily: 'monospace',
+                      height: 1.5,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                context.l10n.text('lesson_expected_output'),
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: colors.surfaceSoft,
-                ),
-                child: SelectableText(
-                  exampleOutput,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w700,
+                if (exampleOutput.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    context.l10n.text('lesson_expected_output'),
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ),
-            ],
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: colors.surfaceSoft,
+                    ),
+                    child: SelectableText(
+                      exampleOutput,
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -1326,13 +1340,12 @@ class _PreviewStatChip extends StatelessWidget {
 class _CompactCourseDetailLayout extends StatelessWidget {
   const _CompactCourseDetailLayout({
     required this.course,
-    required this.saved,
     required this.enrolled,
     required this.reviewSummary,
     required this.reviews,
     required this.userRating,
+    required this.hasAlreadyReviewed,
     required this.commentController,
-    required this.onSave,
     required this.onRate,
     required this.onSubmitComment,
     required this.canManageReview,
@@ -1342,13 +1355,12 @@ class _CompactCourseDetailLayout extends StatelessWidget {
   });
 
   final CommunityCourse course;
-  final bool saved;
   final bool enrolled;
   final CommunityCourseReviewSummary reviewSummary;
   final List<CommunityCourseReview> reviews;
   final int? userRating;
+  final bool hasAlreadyReviewed;
   final TextEditingController commentController;
-  final VoidCallback onSave;
   final ValueChanged<int> onRate;
   final VoidCallback onSubmitComment;
   final bool Function(CommunityCourseReview review) canManageReview;
@@ -1389,8 +1401,6 @@ class _CompactCourseDetailLayout extends StatelessWidget {
                       course: course,
                       enrolled: enrolled,
                       reviewSummary: reviewSummary,
-                      userRating: userRating,
-                      onRate: onRate,
                       onPrimaryTap: onPrimaryTap,
                     ),
                     const SizedBox(height: 16),
@@ -1438,6 +1448,7 @@ class _CompactCourseDetailLayout extends StatelessWidget {
               summary: reviewSummary,
               reviews: reviews,
               userRating: userRating,
+              hasAlreadyReviewed: hasAlreadyReviewed,
               commentController: commentController,
               onRate: onRate,
               onSubmitComment: onSubmitComment,
@@ -1457,13 +1468,12 @@ class _CompactCourseDetailLayout extends StatelessWidget {
 class _WideCourseDetailLayout extends StatelessWidget {
   const _WideCourseDetailLayout({
     required this.course,
-    required this.saved,
     required this.enrolled,
     required this.reviewSummary,
     required this.reviews,
     required this.userRating,
+    required this.hasAlreadyReviewed,
     required this.commentController,
-    required this.onSave,
     required this.onRate,
     required this.onSubmitComment,
     required this.canManageReview,
@@ -1473,13 +1483,12 @@ class _WideCourseDetailLayout extends StatelessWidget {
   });
 
   final CommunityCourse course;
-  final bool saved;
   final bool enrolled;
   final CommunityCourseReviewSummary reviewSummary;
   final List<CommunityCourseReview> reviews;
   final int? userRating;
+  final bool hasAlreadyReviewed;
   final TextEditingController commentController;
-  final VoidCallback onSave;
   final ValueChanged<int> onRate;
   final VoidCallback onSubmitComment;
   final bool Function(CommunityCourseReview review) canManageReview;
@@ -1562,6 +1571,7 @@ class _WideCourseDetailLayout extends StatelessWidget {
                         summary: reviewSummary,
                         reviews: reviews,
                         userRating: userRating,
+                        hasAlreadyReviewed: hasAlreadyReviewed,
                         commentController: commentController,
                         onRate: onRate,
                         onSubmitComment: onSubmitComment,
@@ -1579,12 +1589,8 @@ class _WideCourseDetailLayout extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: _CourseSidebar(
                     course: course,
-                    saved: saved,
                     enrolled: enrolled,
                     reviewSummary: reviewSummary,
-                    userRating: userRating,
-                    onSave: onSave,
-                    onRate: onRate,
                     onPrimaryTap: onPrimaryTap,
                   ),
                 ),
@@ -1614,7 +1620,6 @@ class _DesktopHeroCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1680,84 +1685,6 @@ class _DesktopHeroCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 18),
-          Expanded(
-            flex: 2,
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    course.color.withValues(alpha: 0.24),
-                    colors.surfaceSoft,
-                    colors.surface,
-                  ],
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(22),
-                        color: colors.backgroundElevated,
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircleAvatar(
-                              radius: 34,
-                              backgroundColor: colors.surface.withValues(
-                                alpha: 0.94,
-                              ),
-                              child: Icon(
-                                Icons.play_arrow_rounded,
-                                size: 38,
-                                color: course.color,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              context.l10n.text('course_preview_cta'),
-                              style: TextStyle(
-                                color: colors.textPrimary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Icon(Icons.star_rounded, color: course.color, size: 20),
-                      const SizedBox(width: 6),
-                      Text(
-                        reviewSummary.averageRating.toStringAsFixed(1),
-                        style: TextStyle(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        '${reviewSummary.reviewCount} ${context.l10n.text('course_reviews_count')}',
-                        style: TextStyle(color: colors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -1769,16 +1696,12 @@ class _MobileHeroCard extends ConsumerWidget {
     required this.course,
     required this.enrolled,
     required this.reviewSummary,
-    required this.userRating,
-    required this.onRate,
     required this.onPrimaryTap,
   });
 
   final CommunityCourse course;
   final bool enrolled;
   final CommunityCourseReviewSummary reviewSummary;
-  final int? userRating;
-  final ValueChanged<int> onRate;
   final VoidCallback onPrimaryTap;
 
   @override
@@ -1813,44 +1736,56 @@ class _MobileHeroCard extends ConsumerWidget {
             style: titleStyle,
           ),
           const SizedBox(height: 18),
-          AppButton.primary(
-            label: enrolled
-                ? context.l10n.text('course_open_cta')
-                : context.l10n.text('course_primary_cta'),
-            icon: Icons.play_circle_fill_rounded,
-            maxWidth: null,
-            onPressed: onPrimaryTap,
-          ),
-          if (!enrolled) ...[
-            const SizedBox(height: 10),
-            Consumer(
-              builder: (context, ref, _) {
-                final backendPrice = _resolveBackendPriceAmount(ref, course.id);
-                if (backendPrice == null) {
-                  return const SizedBox.shrink();
-                }
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: AppButton.primary(
-                    label: switch (context.l10n.locale) {
-                      AppLocale.ru => 'Оплатить курс',
-                      AppLocale.kk => 'Курсты төлеу',
-                      _ => 'Pay for course',
-                    },
-                    icon: Icons.payment_rounded,
-                    maxWidth: null,
-                    onPressed: () {
-                      final route = AppRoutes.paymentById(
-                        courseId: course.id,
-                        amount: backendPrice,
-                      );
-                      context.push(route);
-                    },
+          Consumer(
+            builder: (context, ref, _) {
+              if (!_courseHasPlayableLessons(course)) {
+                return AppButton.primary(
+                  label: _courseInDevelopmentTitle(context.l10n.locale),
+                  icon: Icons.construction_rounded,
+                  maxWidth: null,
+                  onPressed: null,
+                );
+              }
+
+              final priceAsync = ref.watch(coursePriceProvider(course.id));
+              final priceAmount = priceAsync.maybeWhen(
+                data: (price) =>
+                    (price != null && price.amount > 0) ? price.amount : null,
+                orElse: () => null,
+              );
+              if (enrolled) {
+                return AppButton.primary(
+                  label: context.l10n.text('course_open_cta'),
+                  icon: Icons.play_circle_fill_rounded,
+                  maxWidth: null,
+                  onPressed: onPrimaryTap,
+                );
+              }
+              if (priceAmount != null) {
+                return AppButton.primary(
+                  label: switch (context.l10n.locale) {
+                    AppLocale.ru => 'Оплатить курс',
+                    AppLocale.kk => 'Курсты төлеу',
+                    _ => 'Pay for course',
+                  },
+                  icon: Icons.payment_rounded,
+                  maxWidth: null,
+                  onPressed: () => context.push(
+                    AppRoutes.paymentById(
+                      courseId: course.id,
+                      amount: priceAmount,
+                    ),
                   ),
                 );
-              },
-            ),
-          ],
+              }
+              return AppButton.primary(
+                label: context.l10n.text('course_primary_cta'),
+                icon: Icons.play_circle_fill_rounded,
+                maxWidth: null,
+                onPressed: onPrimaryTap,
+              );
+            },
+          ),
           AppButton.secondary(
             label: switch (context.l10n.locale) {
               AppLocale.ru => 'Топ учеников',
@@ -1986,22 +1921,14 @@ class _CompactTabHeaderDelegate extends SliverPersistentHeaderDelegate {
 class _CourseSidebar extends ConsumerWidget {
   const _CourseSidebar({
     required this.course,
-    required this.saved,
     required this.enrolled,
     required this.reviewSummary,
-    required this.userRating,
-    required this.onSave,
-    required this.onRate,
     required this.onPrimaryTap,
   });
 
   final CommunityCourse course;
-  final bool saved;
   final bool enrolled;
   final CommunityCourseReviewSummary reviewSummary;
-  final int? userRating;
-  final VoidCallback onSave;
-  final ValueChanged<int> onRate;
   final VoidCallback onPrimaryTap;
 
   @override
@@ -2035,42 +1962,56 @@ class _CourseSidebar extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          AppButton.primary(
-            label: enrolled
-                ? l10n.text('course_open_cta')
-                : l10n.text('course_primary_cta'),
-            icon: Icons.play_circle_fill_rounded,
-            maxWidth: 260,
-            onPressed: onPrimaryTap,
-          ),
-          if (!enrolled)
-            Consumer(
-              builder: (context, ref, _) {
-                final backendPrice = _resolveBackendPriceAmount(ref, course.id);
-                if (backendPrice == null) {
-                  return const SizedBox.shrink();
-                }
-                return Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: AppButton.primary(
-                    label: switch (l10n.locale) {
-                      AppLocale.ru => 'Оплатить курс',
-                      AppLocale.kk => 'Курсты төлеу',
-                      _ => 'Pay for course',
-                    },
-                    icon: Icons.payment_rounded,
-                    maxWidth: 260,
-                    onPressed: () {
-                      final route = AppRoutes.paymentById(
-                        courseId: course.id,
-                        amount: backendPrice,
-                      );
-                      context.push(route);
-                    },
+          Consumer(
+            builder: (context, ref, _) {
+              if (!_courseHasPlayableLessons(course)) {
+                return AppButton.primary(
+                  label: _courseInDevelopmentTitle(l10n.locale),
+                  icon: Icons.construction_rounded,
+                  maxWidth: 260,
+                  onPressed: null,
+                );
+              }
+
+              final priceAsync = ref.watch(coursePriceProvider(course.id));
+              final priceAmount = priceAsync.maybeWhen(
+                data: (price) =>
+                    (price != null && price.amount > 0) ? price.amount : null,
+                orElse: () => null,
+              );
+              if (enrolled) {
+                return AppButton.primary(
+                  label: l10n.text('course_open_cta'),
+                  icon: Icons.play_circle_fill_rounded,
+                  maxWidth: 260,
+                  onPressed: onPrimaryTap,
+                );
+              }
+              if (priceAmount != null) {
+                return AppButton.primary(
+                  label: switch (l10n.locale) {
+                    AppLocale.ru => 'Оплатить курс',
+                    AppLocale.kk => 'Курсты төлеу',
+                    _ => 'Pay for course',
+                  },
+                  icon: Icons.payment_rounded,
+                  maxWidth: 260,
+                  onPressed: () => context.push(
+                    AppRoutes.paymentById(
+                      courseId: course.id,
+                      amount: priceAmount,
+                    ),
                   ),
                 );
-              },
-            ),
+              }
+              return AppButton.primary(
+                label: l10n.text('course_primary_cta'),
+                icon: Icons.play_circle_fill_rounded,
+                maxWidth: 260,
+                onPressed: onPrimaryTap,
+              );
+            },
+          ),
           const SizedBox(height: 12),
           AppButton.secondary(
             label: switch (l10n.locale) {
@@ -2089,17 +2030,6 @@ class _CourseSidebar extends ConsumerWidget {
                 course.color,
               );
             },
-          ),
-          const SizedBox(height: 12),
-          AppButton.secondary(
-            label: saved
-                ? l10n.text('saved_to_profile')
-                : l10n.text('course_save_cta'),
-            icon: saved
-                ? Icons.check_circle_rounded
-                : Icons.favorite_border_rounded,
-            maxWidth: 260,
-            onPressed: onSave,
           ),
           const SizedBox(height: 18),
           Container(
@@ -2246,6 +2176,10 @@ class _CourseProgramSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasProgram = course.moduleSections.any(
+      (section) => section.items.isNotEmpty,
+    );
+
     if (compact) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
@@ -2264,12 +2198,18 @@ class _CourseProgramSection extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 14),
-                ...course.moduleSections.map(
-                  (section) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: _ProgramSectionCard(section: section, compact: true),
+                if (!hasProgram)
+                  _CourseInDevelopmentNotice(accent: course.color)
+                else
+                  ...course.moduleSections.map(
+                    (section) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _ProgramSectionCard(
+                        section: section,
+                        compact: true,
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -2286,10 +2226,61 @@ class _CourseProgramSection extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 14),
-          ...course.moduleSections.map(
-            (section) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: _ProgramSectionCard(section: section, compact: false),
+          if (!hasProgram)
+            _CourseInDevelopmentNotice(accent: course.color)
+          else
+            ...course.moduleSections.map(
+              (section) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _ProgramSectionCard(section: section, compact: false),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CourseInDevelopmentNotice extends StatelessWidget {
+  const _CourseInDevelopmentNotice({required this.accent});
+
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final locale = context.l10n.locale;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: colors.backgroundElevated,
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.construction_rounded, color: accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _courseInDevelopmentTitle(locale),
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _courseInDevelopmentDescription(locale),
+                  style: TextStyle(color: colors.textSecondary, height: 1.45),
+                ),
+              ],
             ),
           ),
         ],
@@ -2406,13 +2397,15 @@ class _CourseTeachersSection extends StatelessWidget {
                                 label:
                                     '${context.l10n.text('courses_label')} ${instructor.courseCount}',
                               ),
-                              _TeacherPill(
-                                label:
-                                    '${context.l10n.text('followers')} ${instructor.studentCount}',
-                              ),
-                              _TeacherPill(
-                                label: instructor.rating.toStringAsFixed(1),
-                              ),
+                              if (instructor.studentCount > 0)
+                                _TeacherPill(
+                                  label:
+                                      '${context.l10n.text('followers')} ${instructor.studentCount}',
+                                ),
+                              if (instructor.rating > 0)
+                                _TeacherPill(
+                                  label: instructor.rating.toStringAsFixed(1),
+                                ),
                             ],
                           ),
                         ],
@@ -2453,8 +2446,7 @@ class _CourseCertificateSectionState
       _error = null;
     });
 
-    final accessToken = ref
-        .read(backendCourseAccessTokenProvider);
+    final accessToken = ref.read(backendCourseAccessTokenProvider);
     if (accessToken == null || accessToken.isEmpty) {
       setState(() {
         _loading = false;
@@ -2518,18 +2510,24 @@ class _CourseCertificateSectionState
           ),
           if (widget.course.facts.hasCertificate) ...[
             const SizedBox(height: 16),
-            if (_certNumber != null && _downloadUrl != null &&
+            if (_certNumber != null &&
+                _downloadUrl != null &&
                 _downloadUrl!.isNotEmpty) ...[
               Row(
                 children: [
-                  Icon(Icons.workspace_premium_rounded,
-                      color: colors.success, size: 18),
+                  Icon(
+                    Icons.workspace_premium_rounded,
+                    color: colors.success,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Сертификат $_certNumber выдан',
                       style: TextStyle(
-                          color: colors.success, fontWeight: FontWeight.w700),
+                        color: colors.success,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
@@ -2547,15 +2545,19 @@ class _CourseCertificateSectionState
                 label: const Text('Скачать PDF'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: colors.success,
-                  side: BorderSide(color: colors.success.withValues(alpha: 0.5)),
+                  side: BorderSide(
+                    color: colors.success.withValues(alpha: 0.5),
+                  ),
                 ),
               ),
             ] else ...[
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(_error!,
-                      style: TextStyle(color: colors.danger, fontSize: 13)),
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: colors.danger, fontSize: 13),
+                  ),
                 ),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
@@ -2567,7 +2569,8 @@ class _CourseCertificateSectionState
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2))
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.workspace_premium_rounded, size: 18),
                 label: Text(buttonLabel),
               ),
@@ -2589,6 +2592,7 @@ class _CourseReviewsSection extends ConsumerWidget {
     required this.summary,
     required this.reviews,
     required this.userRating,
+    required this.hasAlreadyReviewed,
     required this.commentController,
     required this.onRate,
     required this.onSubmitComment,
@@ -2602,6 +2606,7 @@ class _CourseReviewsSection extends ConsumerWidget {
   final CommunityCourseReviewSummary summary;
   final List<CommunityCourseReview> reviews;
   final int? userRating;
+  final bool hasAlreadyReviewed;
   final TextEditingController commentController;
   final ValueChanged<int> onRate;
   final VoidCallback onSubmitComment;
@@ -2689,23 +2694,27 @@ class _CourseReviewsSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 18),
-        _CourseRatingEditor(
-          rating: userRating,
-          accent: course.color,
-          onRate: onRate,
-        ),
-        const SizedBox(height: 12),
-        _ReviewFeedbackComposer(
-          accent: course.color,
-          controller: commentController,
-          onSubmit: onSubmitComment,
-        ),
+        if (hasAlreadyReviewed)
+          _AlreadyReviewedBanner(accent: course.color)
+        else ...[
+          _CourseRatingEditor(
+            rating: userRating,
+            accent: course.color,
+            onRate: onRate,
+          ),
+          const SizedBox(height: 12),
+          _ReviewFeedbackComposer(
+            accent: course.color,
+            controller: commentController,
+            onSubmit: onSubmitComment,
+          ),
+        ],
         const SizedBox(height: 18),
         ...reviews.map((review) {
           final resolvedName = _isReviewUuid(review.authorName)
               ? ref
-                  .watch(backendUserDisplayNameProvider(review.authorName))
-                  .maybeWhen(data: (n) => n, orElse: () => '…')
+                    .watch(backendUserDisplayNameProvider(review.authorName))
+                    .maybeWhen(data: (n) => n, orElse: () => '…')
               : review.authorName;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -2725,7 +2734,9 @@ class _CourseReviewsSection extends ConsumerWidget {
                       CircleAvatar(
                         backgroundColor: course.color.withValues(alpha: 0.16),
                         child: Text(
-                          resolvedName.isNotEmpty ? resolvedName[0].toUpperCase() : '?',
+                          resolvedName.isNotEmpty
+                              ? resolvedName[0].toUpperCase()
+                              : '?',
                           style: TextStyle(
                             color: course.color,
                             fontWeight: FontWeight.w800,
@@ -2834,6 +2845,50 @@ class _CourseReviewsSection extends ConsumerWidget {
       );
     }
     return GlowCard(accent: course.color, child: content);
+  }
+}
+
+class _AlreadyReviewedBanner extends StatelessWidget {
+  const _AlreadyReviewedBanner({required this.accent});
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_rounded, color: accent, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Вы уже оценили этот курс',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Отзыв можно оставить только один раз.',
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -3021,6 +3076,187 @@ String _reviewCommentHint(AppLocale locale) {
     AppLocale.en => 'Write a comment',
     AppLocale.kk => 'Пікір жазыңыз',
   };
+}
+
+class _BackendQuizCard extends StatefulWidget {
+  const _BackendQuizCard({
+    required this.quiz,
+    required this.locale,
+    required this.accent,
+  });
+
+  final BackendQuizDto quiz;
+  final AppLocale locale;
+  final Color accent;
+
+  @override
+  State<_BackendQuizCard> createState() => _BackendQuizCardState();
+}
+
+class _BackendQuizCardState extends State<_BackendQuizCard> {
+  int? _selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final quiz = widget.quiz;
+    final locale = widget.locale;
+    final accent = widget.accent;
+    final question = _resolveBackendText(quiz.question, locale);
+    final sortedOptions = [...quiz.options]
+      ..sort((a, b) => a.position.compareTo(b.position));
+    final answered = _selected != null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: colors.surfaceSoft.withValues(alpha: 0.7),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.quiz_rounded, color: accent, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  question,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (sortedOptions.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...sortedOptions.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final opt = entry.value;
+              final optText = _resolveBackendText(opt.text, locale);
+              final isSelected = _selected == idx;
+              final isCorrect = idx == quiz.correctAnswerIndex;
+
+              Color bg = colors.backgroundElevated;
+              Color border = colors.divider;
+              Color textColor = colors.textPrimary;
+
+              if (answered) {
+                if (isSelected && isCorrect) {
+                  bg = colors.success.withValues(alpha: 0.14);
+                  border = colors.success;
+                  textColor = colors.success;
+                } else if (isSelected && !isCorrect) {
+                  bg = colors.danger.withValues(alpha: 0.12);
+                  border = colors.danger;
+                  textColor = colors.danger;
+                } else if (!isSelected && isCorrect) {
+                  bg = colors.success.withValues(alpha: 0.07);
+                  border = colors.success.withValues(alpha: 0.35);
+                }
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: answered
+                      ? null
+                      : () => setState(() => _selected = idx),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: bg,
+                      border: Border.all(color: border),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '${String.fromCharCode(65 + idx)}.',
+                          style: TextStyle(
+                            color: answered && (isSelected || isCorrect)
+                                ? textColor
+                                : colors.textSecondary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            optText,
+                            style: TextStyle(
+                              color: textColor,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (answered && isSelected)
+                          Icon(
+                            isCorrect
+                                ? Icons.check_circle_rounded
+                                : Icons.cancel_rounded,
+                            size: 16,
+                            color: isCorrect ? colors.success : colors.danger,
+                          ),
+                        if (answered && !isSelected && isCorrect)
+                          Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 16,
+                            color: colors.success.withValues(alpha: 0.6),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+          if (answered)
+            Builder(
+              builder: (context) {
+                final explanation = _resolveBackendText(
+                  quiz.explanation,
+                  locale,
+                );
+                if (explanation.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: accent.withValues(alpha: 0.08),
+                    ),
+                    child: Text(
+                      explanation,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 String _resolveBackendText(
@@ -3224,11 +3460,6 @@ class _ProgramSectionCard extends StatelessWidget {
                             runSpacing: 8,
                             children: [
                               _TeacherPill(label: entry.value.durationLabel),
-                              _TeacherPill(label: '${entry.value.viewerCount}'),
-                              if (!compact)
-                                _TeacherPill(
-                                  label: '${entry.value.helpfulCount}',
-                                ),
                             ],
                           ),
                         ],
@@ -3766,7 +3997,10 @@ class _ModalLeaderboardPodium extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactList(List<LeaderboardEntry> entries, AppThemeColors colors) {
+  Widget _buildCompactList(
+    List<LeaderboardEntry> entries,
+    AppThemeColors colors,
+  ) {
     return Column(
       children: entries.asMap().entries.map((e) {
         final rank = e.key;
@@ -3783,7 +4017,11 @@ class _ModalLeaderboardPodium extends StatelessWidget {
                 backgroundColor: mc.withValues(alpha: 0.2),
                 child: Text(
                   entry.name.isEmpty ? '?' : entry.name[0].toUpperCase(),
-                  style: TextStyle(color: mc, fontWeight: FontWeight.w900, fontSize: 16),
+                  style: TextStyle(
+                    color: mc,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -3801,7 +4039,11 @@ class _ModalLeaderboardPodium extends StatelessWidget {
               ),
               Text(
                 '${entry.xp} XP',
-                style: TextStyle(color: mc, fontWeight: FontWeight.w700, fontSize: 13),
+                style: TextStyle(
+                  color: mc,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -3834,29 +4076,14 @@ class _CoursePriceLabel extends ConsumerWidget {
         if (price == null || price.amount <= 0) {
           return Text(l10n.text('course_price_free'), style: effectiveStyle);
         }
-        return Text(
-          '${price.amount} ${price.currency}',
-          style: effectiveStyle,
-        );
+        return Text('${price.amount} ${price.currency}', style: effectiveStyle);
       },
       loading: () => Text(
         l10n.text('course_price_loading'),
-        style: effectiveStyle?.copyWith(
-          color: context.appColors.textSecondary,
-        ),
+        style: effectiveStyle?.copyWith(color: context.appColors.textSecondary),
       ),
       error: (_, __) =>
           Text(l10n.text('course_price_free'), style: effectiveStyle),
     );
   }
-}
-
-/// Reads the backend course price synchronously when available.
-/// Returns null if the price has not yet been resolved or the course is free.
-int? _resolveBackendPriceAmount(WidgetRef ref, String courseId) {
-  final priceAsync = ref.read(coursePriceProvider(courseId));
-  return priceAsync.maybeWhen(
-    data: (price) => (price != null && price.amount > 0) ? price.amount : null,
-    orElse: () => null,
-  );
 }

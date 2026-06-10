@@ -11,6 +11,7 @@ import '../../../../core/common_widgets/adaptive_panel.dart';
 import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
+import '../../../../core/common_widgets/app_user_avatar.dart';
 import '../teacher_text.dart';
 import 'teacher_analytics_page.dart';
 import 'teacher_dashboard_page.dart';
@@ -31,6 +32,12 @@ class TeacherShellPage extends ConsumerWidget {
     final colors = context.appColors;
     final authController = ref.read(authControllerProvider.notifier);
     final compact = MediaQuery.sizeOf(context).width < 900;
+    final profile = ref.watch(backendProfileProvider).asData?.value;
+    final displayName = (profile?.login.trim().isNotEmpty == true
+            ? profile!.login
+            : demoState.user?.name)
+        ?.trim() ?? 'Teacher';
+    final photoUrl = profile?.photoUrl ?? '';
 
     final page = switch (section) {
       TeacherSection.dashboard => const TeacherDashboardPage(),
@@ -60,7 +67,8 @@ class TeacherShellPage extends ConsumerWidget {
             child: _LeftRail(
               current: section,
               locale: locale,
-              userName: demoState.user?.name ?? 'Teacher',
+              userName: displayName,
+              photoUrl: photoUrl,
               onSectionTap: (s) => context.go(_descriptor(s).route),
               onOpenSettings: () => _showTeacherSettings(context, ref),
               onLogout: () async {
@@ -358,6 +366,7 @@ class _LeftRail extends StatelessWidget {
     required this.current,
     required this.locale,
     required this.userName,
+    required this.photoUrl,
     required this.onSectionTap,
     required this.onOpenSettings,
     required this.onLogout,
@@ -365,6 +374,7 @@ class _LeftRail extends StatelessWidget {
   final TeacherSection current;
   final AppLocale locale;
   final String userName;
+  final String photoUrl;
   final ValueChanged<TeacherSection> onSectionTap;
   final VoidCallback onOpenSettings;
   final VoidCallback onLogout;
@@ -392,7 +402,7 @@ class _LeftRail extends StatelessWidget {
               ),
             const Spacer(),
             const Divider(height: 1),
-            _UserCard(name: userName, onLogout: onLogout),
+            _UserCard(name: userName, photoUrl: photoUrl, onLogout: onLogout),
             ListTile(
               onTap: onOpenSettings,
               leading: Icon(Icons.tune_rounded, color: colors.textSecondary, size: 18),
@@ -517,14 +527,14 @@ class _NavItem extends StatelessWidget {
 }
 
 class _UserCard extends StatelessWidget {
-  const _UserCard({required this.name, required this.onLogout});
+  const _UserCard({required this.name, required this.photoUrl, required this.onLogout});
   final String name;
+  final String photoUrl;
   final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'T';
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
       child: Container(
@@ -536,23 +546,7 @@ class _UserCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [colors.accent, colors.accent.withValues(alpha: 0.55)],
-                ),
-                borderRadius: BorderRadius.circular(7),
-              ),
-              alignment: Alignment.center,
-              child: Text(initial,
-                  style: const TextStyle(
-                      color: Color(0xFF1b0e02),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12)),
-            ),
+            AppUserAvatar(name: name, photoUrl: photoUrl, size: 32),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

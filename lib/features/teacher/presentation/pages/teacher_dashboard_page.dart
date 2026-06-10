@@ -6,6 +6,7 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../courses_backend/data/models/backend_course_dto.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../../../teacher/application/teacher_authoring_service.dart';
 import '../teacher_text.dart';
@@ -24,7 +25,11 @@ class TeacherDashboardPage extends ConsumerWidget {
     final demoState = ref.watch(demoAppControllerProvider);
     final coursesAsync = ref.watch(teacherBackendCoursesProvider);
     final colors = context.appColors;
-    final firstName = (demoState.user?.name ?? '').split(' ').first;
+    final profile = ref.watch(backendProfileProvider).asData?.value;
+    final firstName = (profile?.login.trim().isNotEmpty == true
+            ? profile!.login
+            : (demoState.user?.name ?? ''))
+        .trim();
 
     return TsPageScrollView(
       children: [

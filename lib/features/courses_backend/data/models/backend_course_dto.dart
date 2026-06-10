@@ -62,12 +62,14 @@ class BackendCourseAuthorDto {
   const BackendCourseAuthorDto({
     required this.id,
     required this.email,
+    required this.login,
     required this.roles,
     required this.isActive,
   });
 
   final String id;
   final String email;
+  final String login;
   final List<BackendCourseAuthorRoleDto> roles;
   final bool isActive;
 
@@ -77,6 +79,7 @@ class BackendCourseAuthorDto {
     return BackendCourseAuthorDto(
       id: '${json['id'] ?? ''}',
       email: json['email'] as String? ?? '',
+      login: json['login'] as String? ?? '',
       roles: rawRoles
           .whereType<Map>()
           .map(

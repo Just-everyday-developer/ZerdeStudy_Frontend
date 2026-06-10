@@ -198,12 +198,16 @@ final teacherBackendCoursesProvider = FutureProvider<List<BackendCourseDto>>((
   }
 
   final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+  final profileAsync = ref.watch(backendProfileProvider);
+  final profileId = profileAsync.asData?.value?.id ?? '';
 
   try {
-    return await remote.fetchCourses(
+    final all = await remote.fetchCourses(
       accessToken: accessToken,
-      query: const BackendCourseQuery(statusCode: '', limit: 100),
+      query: const BackendCourseQuery(statusCode: '', limit: 200),
     );
+    if (profileId.isEmpty) return all;
+    return all.where((c) => c.author.id == profileId).toList(growable: false);
   } catch (_) {
     return const <BackendCourseDto>[];
   }
@@ -555,9 +559,7 @@ CommunityCourse adaptBackendCourseToDetailedCommunityCourse(
     isPopular: true,
     isRecommended: false,
     tags: tags,
-    lessons: lessonPreviews.isEmpty
-        ? _lessonPreviewsForCourse(course, title)
-        : lessonPreviews,
+    lessons: lessonPreviews,
     supportsCoursePlayer: localizedModules.any(
       (module) => module.lessons.isNotEmpty,
     ),
@@ -761,13 +763,13 @@ BackendDictionaryEntryDto? _entryForValue(
   return null;
 }
 
-String _authorDisplayName(String email) {
-  final localPart = email.split('@').first.trim();
-  if (localPart.isEmpty) {
-    return 'Backend author';
-  }
+String _authorDisplayName(String login, String email) {
+  final src = login.trim().isNotEmpty
+      ? login.trim()
+      : email.split('@').first.trim();
+  if (src.isEmpty) return 'Backend author';
 
-  final words = localPart
+  final words = src
       .replaceAll(RegExp(r'[._-]+'), ' ')
       .split(RegExp(r'\s+'))
       .where((word) => word.isNotEmpty)
@@ -882,7 +884,7 @@ CommunityCourseAuthor _authorForCourse(
     id: course.author.id.isEmpty
         ? 'backend-author-${course.id}'
         : course.author.id,
-    name: _authorDisplayName(course.author.email),
+    name: _authorDisplayName(course.author.login, course.author.email),
     role: _authorRoleLabel(course.author),
     accentLabel: course.topic?.name.isNotEmpty == true
         ? course.topic!.name

@@ -1294,7 +1294,7 @@ List<CommunityCourse> buildDiscoveryCourses() {
           isPopular: seed.isPopular,
           isRecommended: seed.isRecommended,
           tags: seed.tags,
-          lessons: seed.customLessons ?? _defaultCourseLessons(seed.title),
+          lessons: seed.customLessons ?? const <CommunityCourseLessonPreview>[],
           supportsCoursePlayer: _flagshipCourseIds.contains(seed.id),
           audience: seed.customAudience,
           requirements: seed.customRequirements,
@@ -1303,23 +1303,6 @@ List<CommunityCourse> buildDiscoveryCourses() {
         ),
       )
       .toList(growable: false);
-}
-
-List<CommunityCourseLessonPreview> _defaultCourseLessons(String title) {
-  return <CommunityCourseLessonPreview>[
-    buildCourseLesson(
-      '$title: foundations',
-      'Build the mental model and vocabulary you need before diving deeper.',
-    ),
-    buildCourseLesson(
-      '$title: worked examples',
-      'Study compact examples and the reasoning behind the decisions.',
-    ),
-    buildCourseLesson(
-      '$title: apply the pattern',
-      'Turn the idea into a repeatable workflow you can explain to others.',
-    ),
-  ];
 }
 
 class _DiscoveryCourseSeed {
