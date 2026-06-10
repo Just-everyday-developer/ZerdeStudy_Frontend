@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final appEnvironmentProvider = Provider<AppEnvironment>((ref) {
@@ -15,7 +14,7 @@ class AppEnvironment {
     this.aiServiceAuthToken = '',
   });
 
-  static const String _defaultGatewayPort = '8090';
+  static const String _deployedGatewayUrl = 'http://159.89.11.22:8090';
 
   final String gatewayBaseUrl;
   final String codeRunnerBaseUrl;
@@ -31,9 +30,7 @@ class AppEnvironment {
     const aiServiceAuthToken = String.fromEnvironment('AI_SERVICE_AUTH_TOKEN');
 
     final gatewayBaseUrl = _normalizeBaseUrl(
-      gatewayOverride.isNotEmpty
-          ? gatewayOverride
-          : _defaultBaseUrlForPort(_defaultGatewayPort),
+      gatewayOverride.isNotEmpty ? gatewayOverride : _deployedGatewayUrl,
     );
 
     return AppEnvironment(
@@ -73,23 +70,6 @@ class AppEnvironment {
       ).resolve('/api/v1/code-runner$normalizedPath');
     }
     return Uri.parse(codeRunnerBaseUrl).resolve(normalizedPath);
-  }
-
-  static String _defaultBaseUrlForPort(String port) {
-    if (kIsWeb) {
-      return 'http://localhost:$port';
-    }
-
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'http://10.0.2.2:$port';
-      case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
-      case TargetPlatform.windows:
-      case TargetPlatform.linux:
-      case TargetPlatform.fuchsia:
-        return 'http://localhost:$port';
-    }
   }
 
   static String _normalizeBaseUrl(String raw) {
