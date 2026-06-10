@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/state/app_locale.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
+import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
@@ -11,6 +12,14 @@ import '../../../courses_backend/data/models/backend_progress_dto.dart';
 import '../../data/models/admin_role_dto.dart';
 import '../../data/models/admin_user_dto.dart';
 import '../providers/admin_providers.dart';
+
+String _adminStr(BuildContext context, {required String ru, required String kk, required String en}) {
+  return switch (context.l10n.locale) {
+    AppLocale.ru => ru,
+    AppLocale.kk => kk,
+    _ => en,
+  };
+}
 
 const Color _kAdminViolet = Color(0xFF8E24AA);
 
@@ -125,16 +134,32 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final compact = context.isCompactLayout;
     final usersAsync = ref.watch(adminUsersProvider);
     // Pre-fetch roles so they're available instantly when user taps "Роли"
     ref.watch(adminRolesProvider);
     final currentUserId =
         ref.watch(authControllerProvider).session?.user.id ?? '';
 
+    final titleStr = _adminStr(context,
+        ru: 'Управление пользователями',
+        kk: 'Пайдаланушыларды басқару',
+        en: 'User Management');
+    final subtitleStr = _adminStr(context,
+        ru: 'Список зарегистрированных пользователей, управление ролями и статусами.',
+        kk: 'Тіркелген пайдаланушылар тізімі, рөлдер мен мәртебелерді басқару.',
+        en: 'List of registered users, role and status management.');
+    final refreshStr = _adminStr(context, ru: 'Обновить', kk: 'Жаңарту', en: 'Refresh');
+    final searchStr = _adminStr(context,
+        ru: 'Поиск по имени, email или роли',
+        kk: 'Аты, email немесе рөлі бойынша іздеу',
+        en: 'Search by name, email or role');
+    final emptyStr = _adminStr(context, ru: 'Никого не найдено', kk: 'Ешкім табылмады', en: 'Nobody found');
+
     return Scaffold(
       backgroundColor: colors.background,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(compact ? 16 : 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -145,24 +170,20 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Управление пользователями',
+                        titleStr,
                         style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                            ?.copyWith(fontWeight: FontWeight.w800, fontSize: compact ? 18 : null),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Список всех зарегистрированных пользователей, '
-                        'управление ролями и статусами.',
-                        style: TextStyle(
-                          color: colors.textSecondary,
-                          fontSize: 13,
-                        ),
+                        subtitleStr,
+                        style: TextStyle(color: colors.textSecondary, fontSize: 13),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Обновить',
+                  tooltip: refreshStr,
                   onPressed: usersAsync.isLoading
                       ? null
                       : () => ref.invalidate(adminUsersProvider),
@@ -170,15 +191,9 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                       ? SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: colors.textSecondary,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: colors.textSecondary),
                         )
-                      : Icon(
-                          Icons.refresh_rounded,
-                          color: colors.textSecondary,
-                        ),
+                      : Icon(Icons.refresh_rounded, color: colors.textSecondary),
                 ),
               ],
             ),
@@ -203,17 +218,9 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                     : users
                           .where(
                             (u) =>
-                                u.displayName.toLowerCase().contains(
-                                  normalizedQuery,
-                                ) ||
-                                u.email.toLowerCase().contains(
-                                  normalizedQuery,
-                                ) ||
-                                u.roles.any(
-                                  (r) => r.code.toLowerCase().contains(
-                                    normalizedQuery,
-                                  ),
-                                ),
+                                u.displayName.toLowerCase().contains(normalizedQuery) ||
+                                u.email.toLowerCase().contains(normalizedQuery) ||
+                                u.roles.any((r) => r.code.toLowerCase().contains(normalizedQuery)),
                           )
                           .toList(growable: false);
 
@@ -226,7 +233,7 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                       onChanged: (value) => setState(() => _query = value),
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.search_rounded),
-                        hintText: 'Поиск по имени, email или роли',
+                        hintText: searchStr,
                         filled: true,
                         fillColor: colors.surface,
                         border: OutlineInputBorder(
@@ -258,10 +265,7 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 32),
                         child: Center(
-                          child: Text(
-                            'Никого не найдено',
-                            style: TextStyle(color: colors.textSecondary),
-                          ),
+                          child: Text(emptyStr, style: TextStyle(color: colors.textSecondary)),
                         ),
                       ),
                   ],
@@ -366,181 +370,176 @@ class _UserRowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = user.isActive
-        ? const Color(0xFF4CAF50)
-        : const Color(0xFFF44336);
+    final statusColor = user.isActive ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
+    final selfLabel = _adminStr(context, ru: 'Вы', kk: 'Сіз', en: 'You');
+    final noRoleLabel = _adminStr(context, ru: 'без роли', kk: 'рөлсіз', en: 'no role');
+    final activeLabel = _adminStr(context, ru: 'Активен', kk: 'Белсенді', en: 'Active');
+    final blockedLabel = _adminStr(context, ru: 'Заблокирован', kk: 'Блокталған', en: 'Blocked');
+    final detailsTooltip = _adminStr(context, ru: 'Детали пользователя', kk: 'Пайдаланушы мәліметтері', en: 'User details');
+    final rolesLabel = _adminStr(context, ru: 'Роли', kk: 'Рөлдер', en: 'Roles');
+    final cantChangeSelf = _adminStr(context, ru: 'Нельзя изменить свой статус', kk: 'Өз мәртебеңізді өзгертуге болмайды', en: 'Cannot change own status');
+    final blockLabel = _adminStr(context, ru: 'Заблокировать', kk: 'Блоктау', en: 'Block');
+    final unblockLabel = _adminStr(context, ru: 'Разблокировать', kk: 'Блоктан шығару', en: 'Unblock');
+    final lvLabel = _adminStr(context, ru: 'ур.', kk: 'деңг.', en: 'lv.');
+    final statusText = user.isActive ? activeLabel : blockedLabel;
+
+    Widget infoSection() => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                user.displayName,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+            ),
+            if (isSelf) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _kAdminViolet.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  selfLabel,
+                  style: const TextStyle(color: _kAdminViolet, fontSize: 10, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(user.email, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: colors.textSecondary, fontSize: 12.5)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            if (user.roles.isEmpty)
+              _RoleChip(label: noRoleLabel, colors: colors, muted: true)
+            else
+              ...user.roles.map((r) => _RoleChip(label: r.code.isNotEmpty ? r.code : r.name, colors: colors)),
+            _RoleChip(label: 'XP ${user.xp} · $lvLabel ${user.level}', colors: colors, muted: true),
+          ],
+        ),
+      ],
+    );
+
+    Widget statusDot() => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: statusColor)),
+        const SizedBox(width: 6),
+        Text(statusText, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.w600)),
+      ],
+    );
+
+    Widget actionsRow() => busy
+        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4))
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: detailsTooltip,
+                onPressed: onViewDetails,
+                iconSize: 20,
+                visualDensity: VisualDensity.compact,
+                icon: Icon(Icons.visibility_outlined, color: colors.textSecondary),
+              ),
+              OutlinedButton.icon(
+                onPressed: onEditRoles,
+                icon: const Icon(Icons.shield_outlined, size: 15),
+                label: Text(rolesLabel, style: const TextStyle(fontSize: 13)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _kAdminViolet,
+                  side: BorderSide(color: _kAdminViolet.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Tooltip(
+                message: isSelf ? cantChangeSelf : (user.isActive ? blockLabel : unblockLabel),
+                child: Switch(
+                  value: user.isActive,
+                  activeThumbColor: const Color(0xFF4CAF50),
+                  onChanged: isSelf ? null : (_) => onToggleStatus(),
+                ),
+              ),
+            ],
+          );
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colors.divider),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: _kAdminViolet.withValues(alpha: 0.12),
-            child: Text(
-              user.displayName.isNotEmpty
-                  ? user.displayName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(
-                color: _kAdminViolet,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cardCompact = constraints.maxWidth < 520;
+          if (cardCompact) {
+            // Mobile: avatar+info on top, status+actions on bottom
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: _kAdminViolet.withValues(alpha: 0.12),
                       child: Text(
-                        user.displayName,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
+                        user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
+                        style: const TextStyle(color: _kAdminViolet, fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                     ),
-                    if (isSelf) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _kAdminViolet.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'Вы',
-                          style: TextStyle(
-                            color: _kAdminViolet,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
+                    const SizedBox(width: 12),
+                    Expanded(child: infoSection()),
                   ],
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  user.email,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: colors.textSecondary, fontSize: 12.5),
-                ),
                 const SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                Row(
                   children: [
-                    if (user.roles.isEmpty)
-                      _RoleChip(label: 'без роли', colors: colors, muted: true)
-                    else
-                      ...user.roles.map(
-                        (r) => _RoleChip(
-                          label: r.code.isNotEmpty ? r.code : r.name,
-                          colors: colors,
-                        ),
-                      ),
-                    _RoleChip(
-                      label: 'XP ${user.xp} · ур. ${user.level}',
-                      colors: colors,
-                      muted: true,
-                    ),
+                    statusDot(),
+                    const Spacer(),
+                    actionsRow(),
                   ],
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            );
+          }
+          // Desktop: horizontal layout
+          return Row(
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: _kAdminViolet.withValues(alpha: 0.12),
+                child: Text(
+                  user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
+                  style: const TextStyle(color: _kAdminViolet, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(child: infoSection()),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: statusColor,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    user.isActive ? 'Активен' : 'Заблокирован',
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  statusDot(),
+                  const SizedBox(height: 8),
+                  actionsRow(),
                 ],
               ),
-              const SizedBox(height: 8),
-              if (busy)
-                const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2.4),
-                )
-              else
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: 'Детали пользователя',
-                      onPressed: onViewDetails,
-                      icon: Icon(
-                        Icons.visibility_outlined,
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    OutlinedButton.icon(
-                      onPressed: onEditRoles,
-                      icon: const Icon(Icons.shield_outlined, size: 16),
-                      label: const Text('Роли'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _kAdminViolet,
-                        side: BorderSide(
-                          color: _kAdminViolet.withValues(alpha: 0.4),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Tooltip(
-                      message: isSelf
-                          ? 'Нельзя изменить свой статус'
-                          : (user.isActive
-                                ? 'Заблокировать'
-                                : 'Разблокировать'),
-                      child: Switch(
-                        value: user.isActive,
-                        activeThumbColor: const Color(0xFF4CAF50),
-                        onChanged: isSelf ? null : (_) => onToggleStatus(),
-                      ),
-                    ),
-                  ],
-                ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }

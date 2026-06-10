@@ -1387,11 +1387,9 @@ class _CompactCourseDetailLayout extends StatelessWidget {
                     const SizedBox(height: 4),
                     _MobileHeroCard(
                       course: course,
-                      saved: saved,
                       enrolled: enrolled,
                       reviewSummary: reviewSummary,
                       userRating: userRating,
-                      onSave: onSave,
                       onRate: onRate,
                       onPrimaryTap: onPrimaryTap,
                     ),
@@ -1769,21 +1767,17 @@ class _DesktopHeroCard extends StatelessWidget {
 class _MobileHeroCard extends ConsumerWidget {
   const _MobileHeroCard({
     required this.course,
-    required this.saved,
     required this.enrolled,
     required this.reviewSummary,
     required this.userRating,
-    required this.onSave,
     required this.onRate,
     required this.onPrimaryTap,
   });
 
   final CommunityCourse course;
-  final bool saved;
   final bool enrolled;
   final CommunityCourseReviewSummary reviewSummary;
   final int? userRating;
-  final VoidCallback onSave;
   final ValueChanged<int> onRate;
   final VoidCallback onPrimaryTap;
 
@@ -1812,40 +1806,11 @@ class _MobileHeroCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              InkWell(
-                onTap: () => Navigator.of(context).maybePop(),
-                borderRadius: BorderRadius.circular(999),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4, right: 10),
-                  child: Icon(
-                    Icons.arrow_back_rounded,
-                    color: colors.textPrimary,
-                    size: 24,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  course.title.en,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: titleStyle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: onSave,
-                icon: Icon(
-                  saved
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                  color: saved ? course.color : colors.textPrimary,
-                ),
-              ),
-            ],
+          Text(
+            course.title.en,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: titleStyle,
           ),
           const SizedBox(height: 18),
           AppButton.primary(
@@ -3727,7 +3692,9 @@ class _ModalLeaderboardPodium extends StatelessWidget {
                   ),
                 );
               }).toList(),
-            ),
+            )
+          else
+            _buildCompactList(top3, colors),
           if (rest.isNotEmpty) ...[
             const SizedBox(height: 14),
             Divider(height: 1, color: colors.divider),
@@ -3796,6 +3763,50 @@ class _ModalLeaderboardPodium extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildCompactList(List<LeaderboardEntry> entries, AppThemeColors colors) {
+    return Column(
+      children: entries.asMap().entries.map((e) {
+        final rank = e.key;
+        final entry = e.value;
+        final mc = _podiumColors[rank];
+        return Padding(
+          padding: EdgeInsets.only(bottom: rank < entries.length - 1 ? 12 : 0),
+          child: Row(
+            children: [
+              Text(_medals[rank], style: const TextStyle(fontSize: 22)),
+              const SizedBox(width: 12),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: mc.withValues(alpha: 0.2),
+                child: Text(
+                  entry.name.isEmpty ? '?' : entry.name[0].toUpperCase(),
+                  style: TextStyle(color: mc, fontWeight: FontWeight.w900, fontSize: 16),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  entry.name,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                '${entry.xp} XP',
+                style: TextStyle(color: mc, fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

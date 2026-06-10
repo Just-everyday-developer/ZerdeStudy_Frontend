@@ -193,10 +193,11 @@ class AuthController extends Notifier<AuthState> {
     try {
       final platform = _getPlatform();
       final redirectUri = OAuthRedirectConfig.google();
-      final url = await ref.read(authRepositoryProvider).getGoogleAuthUrl(
+      final rawUrl = await ref.read(authRepositoryProvider).getGoogleAuthUrl(
             redirectUri: redirectUri,
             platform: platform,
           );
+      final url = _patchLocalhostUrl(rawUrl);
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
         await launchUrl(
@@ -210,7 +211,7 @@ class AuthController extends Notifier<AuthState> {
         state = const AuthState.unauthenticated();
         return null;
       } else {
-        throw Exception('Could not launch Google Auth URL');
+        throw Exception('Couldn\'t launch Google Auth URL: $url');
       }
     } catch (e) {
       state = state.copyWith(
@@ -226,10 +227,11 @@ class AuthController extends Notifier<AuthState> {
     try {
       final platform = _getPlatform();
       final redirectUri = OAuthRedirectConfig.github();
-      final url = await ref.read(authRepositoryProvider).getGithubAuthUrl(
+      final rawUrl = await ref.read(authRepositoryProvider).getGithubAuthUrl(
             redirectUri: redirectUri,
             platform: platform,
           );
+      final url = _patchLocalhostUrl(rawUrl);
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
         await launchUrl(
@@ -240,7 +242,7 @@ class AuthController extends Notifier<AuthState> {
         state = const AuthState.unauthenticated();
         return null;
       } else {
-        throw Exception('Could not launch Github Auth URL');
+        throw Exception('Couldn\'t launch GitHub Auth URL: $url');
       }
     } catch (e) {
       state = state.copyWith(
@@ -249,6 +251,20 @@ class AuthController extends Notifier<AuthState> {
       );
       return e.toString();
     }
+  }
+
+  /// On mobile, replace 127.0.0.1/localhost with the actual gateway host so
+  /// the phone's browser can reach the backend OAuth bridge.
+  String _patchLocalhostUrl(String url) {
+    if (kIsWeb) return url;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    final host = uri.host;
+    if (host != '127.0.0.1' && host != 'localhost') return url;
+    final gatewayBase = ref.read(appEnvironmentProvider).gatewayBaseUrl;
+    final gatewayHost = Uri.tryParse(gatewayBase)?.host ?? host;
+    if (gatewayHost == host) return url;
+    return url.replaceFirst('$host:${uri.port}', '$gatewayHost:${uri.port}');
   }
 
   Future<String?> handleGoogleCallback(String code) {

@@ -1,15 +1,18 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../../../core/config/app_environment.dart';
 import '../../domain/models/code_execution.dart';
 
 final codeRunnerServiceProvider = Provider<CodeRunnerService>((ref) {
-  return CodeRunnerService();
+  final environment = ref.watch(appEnvironmentProvider);
+  return CodeRunnerService(baseUrl: environment.codeRunnerBaseUrl);
 });
 
 class CodeRunnerService {
-  // Base URL for the code-runner microservice (Docker container)
-  static const String _baseUrl = 'http://localhost:8091';
+  CodeRunnerService({required String baseUrl}) : _baseUrl = baseUrl;
+
+  final String _baseUrl;
 
   /// Runs the provided code using the microservice
   Future<CodeExecutionResult> runCode(CodeExecutionRequest request) async {
@@ -20,16 +23,16 @@ class CodeRunnerService {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/run'),
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'language': request.language,
-          'code': request.code,
-        }),
-      ).timeout(Duration(milliseconds: request.timeoutMs + 1000));
+      final response = await http
+          .post(
+            Uri.parse(_baseUrl).resolve('/run'),
+            headers: <String, String>{'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'language': request.language,
+              'code': request.code,
+            }),
+          )
+          .timeout(Duration(milliseconds: request.timeoutMs + 1000));
 
       if (response.statusCode == 200) {
         return CodeExecutionResult.fromJson(

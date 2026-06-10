@@ -5,6 +5,7 @@ class BackendModuleDto {
     required this.title,
     required this.summary,
     required this.locale,
+    required this.position,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -14,6 +15,7 @@ class BackendModuleDto {
   final String title;
   final String summary;
   final String locale;
+  final int position;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -24,6 +26,7 @@ class BackendModuleDto {
       title: json['title'] as String? ?? '',
       summary: json['summary'] as String? ?? '',
       locale: json['locale'] as String? ?? '',
+      position: (json['position'] as num?)?.round() ?? 0,
       createdAt:
           DateTime.tryParse('${json['created_at'] ?? ''}') ??
           DateTime.fromMillisecondsSinceEpoch(0),

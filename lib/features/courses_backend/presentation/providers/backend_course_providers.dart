@@ -8,8 +8,6 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_catalog.dart';
 import '../../../../app/state/demo_catalog_support.dart';
 import '../../../../app/state/demo_models.dart';
-import '../../../../app/state/oop_code_tasks.dart';
-import '../../../../app/state/oop_quiz_data.dart';
 import '../../../../core/config/app_environment.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/json_http_client.dart';
@@ -184,6 +182,7 @@ final backendCourseCatalogProvider =
 
         return courses
             .map(adaptBackendCourseToCommunityCourse)
+            .where((c) => c.id != _oopCourseBackendId)
             .toList(growable: false);
       } catch (_) {
         return const <CommunityCourse>[];
@@ -303,24 +302,31 @@ final backendCourseLeaderboardProvider =
           courseId: normalizedCourseId,
         );
 
-        final entries = response.map((json) {
-          final xp = (json['xp'] as num?)?.toInt() ?? 0;
-          final userId = json['user_id'] as String? ?? 'Unknown';
-          final isCurrentUser =
-              currentUserId != null && currentUserId.isNotEmpty && userId == currentUserId;
-          final shortId = userId.length >= 4 ? userId.substring(0, 4) : userId;
+        final entries =
+            response
+                .map((json) {
+                  final xp = (json['xp'] as num?)?.toInt() ?? 0;
+                  final userId = json['user_id'] as String? ?? 'Unknown';
+                  final isCurrentUser =
+                      currentUserId != null &&
+                      currentUserId.isNotEmpty &&
+                      userId == currentUserId;
+                  final shortId = userId.length >= 4
+                      ? userId.substring(0, 4)
+                      : userId;
 
-          return LeaderboardEntry(
-            id: userId,
-            name: isCurrentUser ? 'You' : 'Learner $shortId',
-            xp: xp,
-            level: (xp / 100).floor() + 1,
-            role: 'Learner',
-            focus: 'Course',
-            isCurrentUser: isCurrentUser,
-          );
-        }).toList(growable: true)
-          ..sort((a, b) => b.xp.compareTo(a.xp));
+                  return LeaderboardEntry(
+                    id: userId,
+                    name: isCurrentUser ? 'You' : 'Learner $shortId',
+                    xp: xp,
+                    level: (xp / 100).floor() + 1,
+                    role: 'Learner',
+                    focus: 'Course',
+                    isCurrentUser: isCurrentUser,
+                  );
+                })
+                .toList(growable: true)
+              ..sort((a, b) => b.xp.compareTo(a.xp));
 
         return entries;
       } catch (_) {
@@ -338,10 +344,7 @@ final backendCourseLeaderboardProvider =
 /// sent to the server; local demo courses are silently skipped.
 ///
 /// Returns null on success, or an error message string on failure.
-Future<String?> backendEnrollCourse(
-  WidgetRef ref,
-  String courseId,
-) async {
+Future<String?> backendEnrollCourse(WidgetRef ref, String courseId) async {
   if (!_looksLikeUuid(courseId)) return null;
 
   final accessToken = ref.read(backendCourseAccessTokenProvider);
@@ -1303,7 +1306,10 @@ final backendAchievementsProvider = FutureProvider<List<Achievement>>((
         .map(
           (dto) => Achievement(
             id: dto.id,
-            title: _localizedTextFromBackend(dto.title, fallback: 'Achievement'),
+            title: _localizedTextFromBackend(
+              dto.title,
+              fallback: 'Achievement',
+            ),
             description: _localizedTextFromBackend(
               dto.description,
               fallback: '',
@@ -1407,12 +1413,11 @@ final backendAllProgressProvider =
     });
 
 /// Progress for the fully integrated OOP course.
-final backendOopProgressProvider =
-    FutureProvider<BackendCourseProgressDto?>((ref) {
-      return ref.watch(
-        backendCourseProgressProvider(_oopCourseBackendId).future,
-      );
-    });
+final backendOopProgressProvider = FutureProvider<BackendCourseProgressDto?>((
+  ref,
+) {
+  return ref.watch(backendCourseProgressProvider(_oopCourseBackendId).future);
+});
 
 final backendStreakProvider = FutureProvider<BackendStreakDto?>((ref) async {
   final accessToken = ref.watch(backendCourseAccessTokenProvider);
@@ -1487,6 +1492,13 @@ PracticeTask mergePracticeWithBackend({
   required BackendPracticeDto backendPractice,
   required String localeCode,
 }) {
+  final successCriteriaFallback = mockPractice.successCriteria.isNotEmpty
+      ? mockPractice.successCriteria.first.en
+      : '';
+  final knowledgeChecksFallback = mockPractice.knowledgeChecks.isNotEmpty
+      ? mockPractice.knowledgeChecks.first.en
+      : '';
+
   return PracticeTask(
     id: backendPractice.id.isNotEmpty ? backendPractice.id : mockPractice.id,
     trackId: mockPractice.trackId,
@@ -1512,7 +1524,7 @@ PracticeTask mergePracticeWithBackend({
               .map(
                 (item) => _localizedTextFromBackend(
                   item,
-                  fallback: mockPractice.successCriteria.first.en,
+                  fallback: successCriteriaFallback,
                 ),
               )
               .toList(growable: false),
@@ -1522,7 +1534,7 @@ PracticeTask mergePracticeWithBackend({
               .map(
                 (item) => _localizedTextFromBackend(
                   item,
-                  fallback: mockPractice.knowledgeChecks.first.en,
+                  fallback: knowledgeChecksFallback,
                 ),
               )
               .toList(growable: false),
@@ -1565,15 +1577,13 @@ final backendOopTrackProvider = FutureProvider<LearningTrack?>((ref) async {
       localeCode: 'en',
     );
     final modules =
-        allModules
-            .where((m) => m.courseId == _oopCourseBackendId)
-            .toList()
-          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        allModules.where((m) => m.courseId == _oopCourseBackendId).toList()
+          ..sort((a, b) => a.position.compareTo(b.position));
 
     if (modules.isEmpty) return null;
 
     final learningModules = await Future.wait(
-      modules.indexed.map((e) => _fetchOopModule(remote, e.$2, accessToken, moduleIndex: e.$1)),
+      modules.map((module) => _fetchOopModule(remote, module, accessToken)),
     );
     return _buildOopLearningTrack(learningModules);
   } catch (_) {
@@ -1582,40 +1592,45 @@ final backendOopTrackProvider = FutureProvider<LearningTrack?>((ref) async {
 });
 
 /// Finds a LessonItem by UUID inside the loaded OOP track.
-final backendOopLessonItemProvider =
-    FutureProvider.family<LessonItem?, String>((ref, lessonId) async {
-      if (!_looksLikeUuid(lessonId)) return null;
-      final track = await ref.watch(backendOopTrackProvider.future);
-      if (track == null) return null;
-      for (final module in track.modules) {
-        for (final lesson in module.lessons) {
-          if (lesson.id == lessonId) return lesson;
-        }
+final backendOopLessonItemProvider = FutureProvider.family<LessonItem?, String>(
+  (ref, lessonId) async {
+    if (!_looksLikeUuid(lessonId)) return null;
+    final track = await ref.watch(backendOopTrackProvider.future);
+    if (track == null) return null;
+    for (final module in track.modules) {
+      for (final lesson in module.lessons) {
+        if (lesson.id == lessonId) return lesson;
       }
-      return null;
-    });
+    }
+    return null;
+  },
+);
 
 Future<LearningModule> _fetchOopModule(
   BackendCourseRemoteDataSource remote,
   BackendModuleDto module,
-  String accessToken, {
-  int moduleIndex = 0,
-}) async {
-  final lessons =
-      (await remote.fetchLessonsForModule(
-            accessToken: accessToken,
-            moduleId: module.id,
-          ))
-          .toList()
-        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  String accessToken,
+) async {
+  final lessons = (await remote.fetchLessonsForModule(
+    accessToken: accessToken,
+    moduleId: module.id,
+  )).toList()..sort((a, b) => a.position.compareTo(b.position));
 
-  final practice = lessons.isNotEmpty
-      ? await _safeFetchPracticeDto(
-          remote,
-          accessToken: accessToken,
-          lessonId: lessons.last.id,
-        )
-      : null;
+  final practicesPerLesson = await Future.wait(
+    lessons.map(
+      (lesson) => _safeFetchPracticeDtos(
+        remote,
+        accessToken: accessToken,
+        lessonId: lesson.id,
+      ),
+    ),
+  );
+  final practices = practicesPerLesson
+      .expand((items) => items)
+      .map(
+        (practice) => _adaptBackendPracticeDto(practice, moduleId: module.id),
+      )
+      .toList(growable: false);
 
   // Fetch quizzes for every lesson in parallel; failures silently return [].
   final quizzesPerLesson = await Future.wait(
@@ -1633,8 +1648,6 @@ Future<LearningModule> _fetchOopModule(
     (i) => _adaptBackendLessonDto(
       lessons[i],
       moduleId: module.id,
-      moduleIndex: moduleIndex,
-      lessonIndex: i,
       backendQuizzes: quizzesPerLesson[i],
     ),
   );
@@ -1649,13 +1662,10 @@ Future<LearningModule> _fetchOopModule(
       kk: module.summary,
     ),
     lessons: lessonItems,
-    practice:
-        practice != null
-            ? _adaptBackendPracticeDto(practice, moduleId: module.id)
-            : null,
+    practice: practices.isNotEmpty ? practices.first : null,
+    practices: practices,
   );
 }
-
 
 /// Fetches quizzes for a lesson, returning an empty list on any error.
 Future<List<BackendQuizDto>> _safeFetchQuizzes(
@@ -1683,14 +1693,8 @@ LessonQuiz _quizFromBackend(BackendQuizDto dto) {
 
   return LessonQuiz(
     id: dto.id,
-    title: _localizedTextFromBackend(
-      dto.question,
-      fallback: 'Quiz question',
-    ),
-    prompt: _localizedTextFromBackend(
-      dto.question,
-      fallback: 'Quiz question',
-    ),
+    title: _localizedTextFromBackend(dto.question, fallback: 'Quiz question'),
+    prompt: _localizedTextFromBackend(dto.question, fallback: 'Quiz question'),
     options: sortedOptions
         .map(
           (o) => QuizOption(
@@ -1704,37 +1708,33 @@ LessonQuiz _quizFromBackend(BackendQuizDto dto) {
   );
 }
 
-Future<BackendPracticeDto?> _safeFetchPracticeDto(
+Future<List<BackendPracticeDto>> _safeFetchPracticeDtos(
   BackendCourseRemoteDataSource remote, {
   required String accessToken,
   required String lessonId,
 }) async {
   try {
-    return await remote.fetchPracticeByLessonId(
+    final practices = await remote.fetchPracticesForLesson(
       accessToken: accessToken,
       lessonId: lessonId,
     );
+    final sorted = [...practices]
+      ..sort((a, b) => a.position.compareTo(b.position));
+    return sorted;
   } catch (_) {
-    return null;
+    return const <BackendPracticeDto>[];
   }
 }
 
 LessonItem _adaptBackendLessonDto(
   BackendLessonDto dto, {
   required String moduleId,
-  int moduleIndex = 0,
-  int lessonIndex = 0,
   List<BackendQuizDto> backendQuizzes = const <BackendQuizDto>[],
 }) {
-  // Prefer quizzes from the backend; fall back to local OopQuizData when the
-  // backend returns none (e.g. content not yet seeded for this lesson).
-  final quizItems = backendQuizzes.isNotEmpty
-      ? backendQuizzes
-            .map(_quizFromBackend)
-            .toList(growable: false)
-      : OopQuizData.forModule(moduleIndex);
+  final quizItems = backendQuizzes
+      .map(_quizFromBackend)
+      .toList(growable: false);
 
-  final codeTask = getOopCodeTask(moduleIndex, lessonIndex);
   return LessonItem(
     id: dto.id,
     trackId: 'oop',
@@ -1743,15 +1743,14 @@ LessonItem _adaptBackendLessonDto(
     summary: _localizedTextFromBackend(dto.summary),
     durationMinutes: dto.durationMinutes > 0 ? dto.durationMinutes : 15,
     outcome: _localizedTextFromBackend(dto.outcome),
-    codeSnippet: codeTask.starterCode,
-    exampleOutput: codeTask.expectedOutput,
+    codeSnippet: dto.codeSnippet,
+    exampleOutput: dto.exampleOutput,
     keyPoints: dto.keyPoints
         .map((kp) => _localizedTextFromBackend(kp))
         .toList(growable: false),
     quizzes: quizItems,
     codeTrainers: const <CodeTrainer>[],
-    completionRequirements:
-        quizItems.map((q) => q.id).toList(growable: false),
+    completionRequirements: quizItems.map((q) => q.id).toList(growable: false),
     promptSuggestion: _localizedTextFromBackend(
       dto.theoryContent,
       fallback: 'Explain the key concepts in ${dto.title.en}',
@@ -1760,7 +1759,6 @@ LessonItem _adaptBackendLessonDto(
     theoryContent: _localizedTextFromBackend(dto.theoryContent),
   );
 }
-
 
 PracticeTask _adaptBackendPracticeDto(
   BackendPracticeDto dto, {
@@ -1825,7 +1823,11 @@ LearningTrack _buildOopLearningTrack(List<LearningModule> modules) {
     availability: TrackAvailability.available,
     order: 12,
     nodeId: 'cs-oop',
-    connections: const <String>['algorithms_data_structures', 'backend', 'mobile'],
+    connections: const <String>[
+      'algorithms_data_structures',
+      'backend',
+      'mobile',
+    ],
     modules: modules,
   );
 }
@@ -1836,69 +1838,77 @@ LearningTrack _buildOopLearningTrack(List<LearningModule> modules) {
 /// Refreshes whenever the access token changes.
 final backendMyPracticeSubmissionsProvider =
     FutureProvider<List<BackendPracticeSubmissionDto>>((ref) async {
-  final accessToken = ref.watch(backendCourseAccessTokenProvider);
-  if (accessToken == null || accessToken.trim().isEmpty) return const [];
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) return const [];
 
-  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
-  try {
-    return await remote.fetchMySubmissions(accessToken: accessToken);
-  } catch (_) {
-    return const [];
-  }
-});
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+      try {
+        return await remote.fetchMySubmissions(accessToken: accessToken);
+      } catch (_) {
+        return const [];
+      }
+    });
 
 /// Student: single submission by ID.
-final backendMySubmissionProvider = FutureProvider.family<
-    BackendPracticeSubmissionDto?, String>((ref, submissionId) async {
-  final accessToken = ref.watch(backendCourseAccessTokenProvider);
-  if (accessToken == null || accessToken.trim().isEmpty) return null;
+final backendMySubmissionProvider =
+    FutureProvider.family<BackendPracticeSubmissionDto?, String>((
+      ref,
+      submissionId,
+    ) async {
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) return null;
 
-  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
-  try {
-    return await remote.fetchMySubmission(
-      accessToken: accessToken,
-      submissionId: submissionId,
-    );
-  } catch (_) {
-    return null;
-  }
-});
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+      try {
+        return await remote.fetchMySubmission(
+          accessToken: accessToken,
+          submissionId: submissionId,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
 
 /// Teacher/admin: queue of all submissions pending review.
 final backendTeacherSubmissionsProvider =
     FutureProvider<List<BackendPracticeSubmissionDto>>((ref) async {
-  final accessToken = ref.watch(backendCourseAccessTokenProvider);
-  if (accessToken == null || accessToken.trim().isEmpty) return const [];
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) return const [];
 
-  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
-  try {
-    return await remote.fetchTeacherSubmissions(accessToken: accessToken);
-  } catch (_) {
-    return const [];
-  }
-});
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+      try {
+        return await remote.fetchTeacherSubmissions(accessToken: accessToken);
+      } catch (_) {
+        return const [];
+      }
+    });
 
 /// Teacher/admin: single submission detail by ID.
-final backendTeacherSubmissionProvider = FutureProvider.family<
-    BackendPracticeSubmissionDto?, String>((ref, submissionId) async {
-  final accessToken = ref.watch(backendCourseAccessTokenProvider);
-  if (accessToken == null || accessToken.trim().isEmpty) return null;
+final backendTeacherSubmissionProvider =
+    FutureProvider.family<BackendPracticeSubmissionDto?, String>((
+      ref,
+      submissionId,
+    ) async {
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) return null;
 
-  final remote = ref.watch(backendCourseRemoteDataSourceProvider);
-  try {
-    return await remote.fetchTeacherSubmission(
-      accessToken: accessToken,
-      submissionId: submissionId,
-    );
-  } catch (_) {
-    return null;
-  }
-});
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+      try {
+        return await remote.fetchTeacherSubmission(
+          accessToken: accessToken,
+          submissionId: submissionId,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
 
 /// Resolves a user UUID to a display name via GET /api/v1/profiles/{userId}.
 /// Falls back to the raw userId if the request fails or the user is not authenticated.
-final backendUserDisplayNameProvider =
-    FutureProvider.family<String, String>((ref, userId) async {
+final backendUserDisplayNameProvider = FutureProvider.family<String, String>((
+  ref,
+  userId,
+) async {
   final accessToken = ref.watch(backendCourseAccessTokenProvider);
   if (accessToken == null || accessToken.trim().isEmpty) return userId;
 
@@ -1906,7 +1916,9 @@ final backendUserDisplayNameProvider =
   try {
     final json = await client.getJson(
       '/api/v1/profiles/${userId.trim()}',
-      headers: <String, String>{'Authorization': 'Bearer ${accessToken.trim()}'},
+      headers: <String, String>{
+        'Authorization': 'Bearer ${accessToken.trim()}',
+      },
     );
     final name = json['name'] as String? ?? '';
     final login = json['login'] as String? ?? '';

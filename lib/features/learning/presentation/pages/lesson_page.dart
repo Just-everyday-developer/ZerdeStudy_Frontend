@@ -87,6 +87,30 @@ class _LessonPageState extends ConsumerState<LessonPage> {
       LessonStep(kind: LessonStepKind.theory, id: '${widget.lessonId}_theory'),
     );
 
+    for (final quiz in lesson.quizzes) {
+      steps.add(LessonStep(kind: LessonStepKind.quiz, quiz: quiz, id: quiz.id));
+    }
+
+    for (final trainer in lesson.codeTrainers) {
+      steps.add(
+        LessonStep(
+          kind: LessonStepKind.trainer,
+          trainer: trainer,
+          id: trainer.id,
+        ),
+      );
+    }
+
+    if (lesson.codeSnippet.trim().isNotEmpty ||
+        lesson.exampleOutput.trim().isNotEmpty) {
+      steps.add(
+        LessonStep(kind: LessonStepKind.code, id: '${widget.lessonId}_code'),
+      );
+    }
+
+    return steps;
+
+    /*
     // 5 Quiz steps
     for (int i = 0; i < 5; i++) {
       final quiz = lesson.quizzes.isNotEmpty
@@ -139,6 +163,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
     }
 
     return steps;
+    */
   }
 
   @override
@@ -148,7 +173,9 @@ class _LessonPageState extends ConsumerState<LessonPage> {
     final catalog = ref.watch(demoCatalogProvider);
 
     // For backend OOP lessons (UUID IDs), fetch from backend provider
-    final backendLessonAsync = ref.watch(backendOopLessonItemProvider(widget.lessonId));
+    final backendLessonAsync = ref.watch(
+      backendOopLessonItemProvider(widget.lessonId),
+    );
     final backendLesson = backendLessonAsync.maybeWhen(
       data: (l) => l,
       orElse: () => null,
@@ -179,45 +206,90 @@ class _LessonPageState extends ConsumerState<LessonPage> {
       expandContent: true, // Allow content to fill available height
       child: Column(
         children: [
-          // Step Progress Bar (Stepik style)
+          // Step progress
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(steps.length, (index) {
-                  final step = steps[index];
-                  final isActive = _currentStepIndex == index;
-                  final isStepCompleted = _isStepCompleted(step, state);
-
-                  return GestureDetector(
-                    onTap: () => setState(() => _currentStepIndex = index),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      margin: const EdgeInsets.only(right: 6),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? colors.success
-                            : isStepCompleted
-                            ? colors.success.withValues(alpha: 0.4)
-                            : colors.surfaceSoft,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: isActive ? Colors.white70 : Colors.transparent,
-                          width: 2,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Per-step color strips
+                Row(
+                  children: List.generate(steps.length, (i) {
+                    final done = _isStepCompleted(steps[i], state);
+                    final active = _currentStepIndex == i;
+                    return Expanded(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        height: 4,
+                        margin: EdgeInsets.only(right: i < steps.length - 1 ? 4 : 0),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          color: done
+                              ? colors.success
+                              : active
+                                  ? colors.primary
+                                  : colors.surfaceSoft,
                         ),
                       ),
-                      child: Center(
-                        child: _getStepIcon(
-                          step,
-                          isActive ? Colors.white : colors.textSecondary,
+                    );
+                  }),
+                ),
+                const SizedBox(height: 10),
+                // Chip row
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ...List.generate(steps.length, (index) {
+                        final step = steps[index];
+                        final isActive = _currentStepIndex == index;
+                        final isStepCompleted = _isStepCompleted(step, state);
+                        return GestureDetector(
+                          onTap: () => setState(() => _currentStepIndex = index),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            height: 36,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? colors.success
+                                  : isStepCompleted
+                                      ? colors.success.withValues(alpha: 0.3)
+                                      : colors.surfaceSoft,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isActive
+                                    ? Colors.white.withValues(alpha: 0.55)
+                                    : Colors.transparent,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Center(
+                              child: _getStepIcon(
+                                step,
+                                isActive
+                                    ? Colors.white
+                                    : isStepCompleted
+                                        ? colors.success
+                                        : colors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      Text(
+                        '${_currentStepIndex + 1} / ${steps.length}',
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                  );
-                }),
-              ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -299,14 +371,19 @@ class _LessonPageState extends ConsumerState<LessonPage> {
 
                             // Use backend XP if already latched; otherwise
                             // re-read the provider (may have loaded by now).
-                            final xp = _backendXpReward
-                                ?? ref
-                                    .read(backendOopLessonItemProvider(widget.lessonId))
+                            final xp =
+                                _backendXpReward ??
+                                ref
+                                    .read(
+                                      backendOopLessonItemProvider(
+                                        widget.lessonId,
+                                      ),
+                                    )
                                     .maybeWhen(
                                       data: (l) => l?.xpReward,
                                       orElse: () => null,
-                                    )
-                                ?? lesson.xpReward;
+                                    ) ??
+                                lesson.xpReward;
                             AppNotice.show(
                               context,
                               message: '+$xp XP',
@@ -319,8 +396,10 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                               AppLocale.en => 'Lesson completed! 🎉',
                             };
                             final notifBody = switch (locale) {
-                              AppLocale.ru => 'Вы заработали +$xp XP. Так держать!',
-                              AppLocale.kk => 'Сіз +$xp XP жинадыңыз. Жарайсыз!',
+                              AppLocale.ru =>
+                                'Вы заработали +$xp XP. Так держать!',
+                              AppLocale.kk =>
+                                'Сіз +$xp XP жинадыңыз. Жарайсыз!',
                               AppLocale.en => 'You earned +$xp XP. Keep it up!',
                             };
                             ref
@@ -347,20 +426,13 @@ class _LessonPageState extends ConsumerState<LessonPage> {
   Widget _getStepIcon(LessonStep step, Color color) {
     switch (step.kind) {
       case LessonStepKind.theory:
-        return const SizedBox.shrink(); // Empty for theory as requested
+        return Icon(Icons.menu_book_rounded, size: 15, color: color);
       case LessonStepKind.quiz:
-        return Text(
-          '?',
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        );
+        return Icon(Icons.quiz_rounded, size: 15, color: color);
+      case LessonStepKind.trainer:
+        return Icon(Icons.memory_rounded, size: 15, color: color);
       case LessonStepKind.code:
-        return Icon(Icons.code_rounded, size: 16, color: color);
-      default:
-        return const SizedBox.shrink();
+        return Icon(Icons.code_rounded, size: 15, color: color);
     }
   }
 
@@ -392,58 +464,91 @@ class _LessonPageState extends ConsumerState<LessonPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GlowCard(
-              accent: colors.primary,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Video Placeholder
-                  Container(
-                    width: double.infinity,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      color: Colors.black26,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white10),
+            // Meta: duration + XP
+            Row(
+              children: [
+                _MetaChip(
+                  icon: Icons.schedule_outlined,
+                  label: '${lesson.durationMinutes} ${l10n.text('minutes')}',
+                  colors: colors,
+                ),
+                const SizedBox(width: 8),
+                _MetaChip(
+                  icon: Icons.bolt_rounded,
+                  label: '${lesson.xpReward} XP',
+                  colors: colors,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Video placeholder 16:9
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF0D1B2A),
+                        colors.primary.withValues(alpha: 0.3),
+                      ],
                     ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.play_circle_fill_rounded,
-                            size: 48,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
                             color: colors.primary,
+                            boxShadow: [
+                              BoxShadow(
+                                color: colors.primary.withValues(alpha: 0.45),
+                                blurRadius: 24,
+                                spreadRadius: 2,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Видео по теме',
-                            style: TextStyle(color: Colors.white54),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 30,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          switch (locale) {
+                            AppLocale.ru => 'Видео по теме',
+                            AppLocale.kk => 'Тақырып бойынша бейне',
+                            _ => 'Topic Video',
+                          },
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    lesson.summary.resolve(locale),
-                    style: TextStyle(color: colors.textSecondary, height: 1.45),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 10,
-                    children: [
-                      _Pill(
-                        label:
-                            '${lesson.durationMinutes} ${l10n.text('minutes')}',
-                      ),
-                      _Pill(label: '${lesson.xpReward} XP'),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
-            const SizedBox(height: 16),
+            if (lesson.summary.resolve(locale).trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                lesson.summary.resolve(locale),
+                style: TextStyle(color: colors.textSecondary, height: 1.5, fontSize: 14),
+              ),
+            ],
+            const SizedBox(height: 20),
+            // Theory content
             GlowCard(
               accent: const Color(0xFFFFA726),
               child: Column(
@@ -451,26 +556,16 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.auto_stories_rounded,
-                        color: colors.primary,
-                        size: 22,
-                      ),
+                      Icon(Icons.auto_stories_rounded, color: colors.primary, size: 22),
                       const SizedBox(width: 10),
-                      Text(
-                        l10n.text('lesson_theory'),
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
+                      Text(l10n.text('lesson_theory'), style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const SizedBox(height: 14),
                   ...lesson.theoryContent
                       .resolve(locale)
                       .split('\n\n')
-                      .map(
-                        (paragraph) =>
-                            _TheoryParagraph(text: paragraph, colors: colors),
-                      ),
+                      .map((paragraph) => _TheoryParagraph(text: paragraph, colors: colors)),
                 ],
               ),
             ),
@@ -487,9 +582,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                 unawaited(
                   ref
                       .read(aiChatControllerProvider.notifier)
-                      .sendMessage(
-                        lesson.promptSuggestion.resolve(state2.locale),
-                      ),
+                      .sendMessage(lesson.promptSuggestion.resolve(state2.locale)),
                 );
               },
             ),
@@ -516,11 +609,11 @@ class _LessonPageState extends ConsumerState<LessonPage> {
 
             if (_isBackendId(quiz.id)) {
               try {
-                final accessToken =
-                    ref.read(backendCourseAccessTokenProvider);
+                final accessToken = ref.read(backendCourseAccessTokenProvider);
                 if (accessToken != null && accessToken.trim().isNotEmpty) {
-                  final remote =
-                      ref.read(backendCourseRemoteDataSourceProvider);
+                  final remote = ref.read(
+                    backendCourseRemoteDataSourceProvider,
+                  );
                   final selectedIndex = quiz.options.indexWhere(
                     (o) => o.id == selected,
                   );
@@ -531,10 +624,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                       selectedAnswerIndex: selectedIndex,
                     );
                     correct = result.isCorrect;
-                    final exp = _resolveBackendText(
-                      result.explanation,
-                      locale,
-                    );
+                    final exp = _resolveBackendText(result.explanation, locale);
                     if (exp.trim().isNotEmpty) serverExplanation = exp;
                   } else {
                     correct = selected == quiz.correctOptionId;
@@ -566,8 +656,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
             // Show server explanation on wrong answer if available, else
             // fall back to the locally stored explanation.
             final explanationText = !correct
-                ? (serverExplanation ??
-                      quiz.explanation.resolve(locale))
+                ? (serverExplanation ?? quiz.explanation.resolve(locale))
                 : null;
 
             AppNotice.show(
@@ -702,14 +791,17 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                       }
                       final output = result.stdout.trim();
                       final expected = expectedOutput.trim();
-                      final passed = expected.isEmpty ||
+                      final passed =
+                          expected.isEmpty ||
                           output == expected ||
                           output.contains(expected);
                       if (passed) {
                         controller.completeCodeStep(stepId);
                         setState(() => _codeStepSubmitted[stepId] = true);
-                        final xpPerStep =
-                            (lesson.xpReward / 3).round().clamp(5, 30);
+                        final xpPerStep = (lesson.xpReward / 3).round().clamp(
+                          5,
+                          30,
+                        );
                         AppNotice.show(
                           context,
                           message: '+$xpPerStep XP — код принят!',
@@ -718,8 +810,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                       } else {
                         AppNotice.show(
                           context,
-                          message:
-                              'Вывод не совпадает. Ожидалось: "$expected"',
+                          message: 'Вывод не совпадает. Ожидалось: "$expected"',
                           type: AppNoticeType.error,
                         );
                       }
@@ -1174,27 +1265,35 @@ class _OptionTile extends StatelessWidget {
   }
 }
 
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label});
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({required this.icon, required this.label, required this.colors});
 
+  final IconData icon;
   final String label;
+  final AppThemeColors colors;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: colors.surfaceSoft,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: colors.textPrimary,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: colors.textSecondary),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }

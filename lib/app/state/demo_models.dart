@@ -384,6 +384,7 @@ class LearningModule {
     required this.summary,
     required this.lessons,
     required this.practice,
+    this.practices = const <PracticeTask>[],
   });
 
   final String id;
@@ -392,8 +393,13 @@ class LearningModule {
   final LocalizedText summary;
   final List<LessonItem> lessons;
   final PracticeTask? practice;
+  final List<PracticeTask> practices;
 
-  int get totalUnits => lessons.length + (practice == null ? 0 : 1);
+  List<PracticeTask> get allPractices => practices.isNotEmpty
+      ? practices
+      : <PracticeTask>[if (practice != null) practice!];
+
+  int get totalUnits => lessons.length + allPractices.length;
 }
 
 enum TrackZone { computerScienceCore, itSpheres }

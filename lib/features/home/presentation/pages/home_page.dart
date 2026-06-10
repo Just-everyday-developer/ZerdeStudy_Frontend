@@ -70,10 +70,33 @@ class HomePage extends ConsumerWidget {
     final currentTrack = catalog.trackById('oop');
     // Always show OOP as the current track; overlay backend progress so the
     // home card reflects real completed lessons.
-    final backendOopProgress = ref
-        .watch(backendOopProgressProvider)
-        .maybeWhen(data: (p) => p, orElse: () => null);
+    final backendOopAsync = ref.watch(backendOopProgressProvider);
+    final backendOopProgress = backendOopAsync.maybeWhen(
+      data: (p) => p,
+      orElse: () => null,
+    );
+    final isBackendOopLoading = backendOopAsync.isLoading;
+    final backendOopTrack = ref
+        .watch(backendOopTrackProvider)
+        .maybeWhen(data: (t) => t, orElse: () => null);
     final localTrackProgress = catalog.progressForTrack(state, 'oop');
+
+    // Compute next lesson from backend track + completed IDs so "Continue"
+    // resumes from where the student left off, not from lesson 1.
+    LearningTarget? backendNextLesson;
+    if (backendOopProgress != null && backendOopTrack != null) {
+      final completedIds = backendOopProgress.completedLessonIds.toSet();
+      outer:
+      for (final module in backendOopTrack.modules) {
+        for (final lesson in module.lessons) {
+          if (!completedIds.contains(lesson.id)) {
+            backendNextLesson = LearningTarget.lesson(lesson);
+            break outer;
+          }
+        }
+      }
+    }
+
     final currentProgress =
         (backendOopProgress != null &&
             backendOopProgress.totalLessons > 0)
@@ -89,7 +112,7 @@ class HomePage extends ConsumerWidget {
             totalQuizzes: localTrackProgress.totalQuizzes,
             completedTrainers: localTrackProgress.completedTrainers,
             totalTrainers: localTrackProgress.totalTrainers,
-            nextTarget: localTrackProgress.nextTarget,
+            nextTarget: backendNextLesson ?? localTrackProgress.nextTarget,
           )
         : localTrackProgress;
 
@@ -110,7 +133,8 @@ class HomePage extends ConsumerWidget {
     };
 
     final trackCards = startedTracks.map((track) {
-      final progress = track.id == 'oop'
+      final isOop = track.id == 'oop';
+      final progress = isOop
           ? currentProgress
           : catalog.progressForTrack(state, track.id);
       return Padding(
@@ -121,6 +145,7 @@ class HomePage extends ConsumerWidget {
           percent: (progress.fraction * 100).round(),
           color: track.color,
           icon: track.icon,
+          isLoading: isOop && isBackendOopLoading,
           onTap: () {
             final target = progress.nextTarget;
             if (target == null) {
@@ -152,7 +177,9 @@ class HomePage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _AnimatedGreeting(
-                userName: state.user?.name ?? 'Talgat',
+                userName: (backendProfile?.login ?? '').trim().isNotEmpty
+                    ? backendProfile!.login.trim()
+                    : (state.user?.name ?? 'Student'),
                 locale: state.locale,
               ),
               if (currentTrack.description
@@ -172,7 +199,7 @@ class HomePage extends ConsumerWidget {
                   context.push(AppRoutes.diagnostics);
                 },
               ),
-              if (currentProgress.nextTarget != null) ...[
+              if (isBackendOopLoading || currentProgress.nextTarget != null) ...[
                 const SizedBox(height: 18),
                 _CurrentTrackCard(
                   track: currentTrack,
@@ -180,8 +207,13 @@ class HomePage extends ConsumerWidget {
                   xp: effectiveXp,
                   colors: colors,
                   locale: state.locale,
+                  isLoading: isBackendOopLoading,
                   onTap: () {
-                    final target = currentProgress.nextTarget!;
+                    final target = currentProgress.nextTarget;
+                    if (target == null) {
+                      context.push(AppRoutes.trackById('oop'));
+                      return;
+                    }
                     context.push(
                       target.isPractice
                           ? AppRoutes.practiceById(target.id)
@@ -716,6 +748,7 @@ class _CircularProgressCard extends StatelessWidget {
     required this.color,
     required this.icon,
     required this.onTap,
+    this.isLoading = false,
   });
 
   final String title;
@@ -724,6 +757,7 @@ class _CircularProgressCard extends StatelessWidget {
   final Color color;
   final IconData icon;
   final VoidCallback onTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -794,14 +828,15 @@ class _CircularProgressCard extends StatelessWidget {
                         width: 64,
                         height: 64,
                         child: CircularProgressIndicator(
-                          value: percent / 100.0,
+                          value: isLoading ? null : percent / 100.0,
                           strokeWidth: 7,
-                          backgroundColor: colors.backgroundElevated,
+                          backgroundColor:
+                              isLoading ? Colors.transparent : colors.backgroundElevated,
                           color: color,
                         ),
                       ),
                       Text(
-                        '$percent%',
+                        isLoading ? '—' : '$percent%',
                         style: TextStyle(
                           color: colors.textPrimary,
                           fontWeight: FontWeight.w800,
@@ -1025,6 +1060,7 @@ class _CurrentTrackCard extends StatelessWidget {
     required this.colors,
     required this.locale,
     required this.onTap,
+    this.isLoading = false,
   });
 
   final LearningTrack track;
@@ -1033,6 +1069,7 @@ class _CurrentTrackCard extends StatelessWidget {
   final AppThemeColors colors;
   final AppLocale locale;
   final VoidCallback onTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -1046,14 +1083,20 @@ class _CurrentTrackCard extends StatelessWidget {
       _ => 'CURRENT TRACK',
     };
 
-    final labelCompleted = switch (locale) {
-      AppLocale.ru =>
-        '${progress.completedUnits} из ${progress.totalUnits} разделов завершено',
-      AppLocale.kk =>
-        '${progress.completedUnits} / ${progress.totalUnits} бөлім аяқталды',
-      _ =>
-        '${progress.completedUnits} of ${progress.totalUnits} units completed',
-    };
+    final labelCompleted = isLoading
+        ? switch (locale) {
+            AppLocale.ru => 'Загрузка прогресса...',
+            AppLocale.kk => 'Жүктелуде...',
+            _ => 'Loading progress...',
+          }
+        : switch (locale) {
+            AppLocale.ru =>
+              '${progress.completedUnits} из ${progress.totalUnits} разделов завершено',
+            AppLocale.kk =>
+              '${progress.completedUnits} / ${progress.totalUnits} бөлім аяқталды',
+            _ =>
+              '${progress.completedUnits} of ${progress.totalUnits} units completed',
+          };
 
     final labelNextLevel = switch (locale) {
       AppLocale.ru => 'До следующего уровня: $xpNeededForNext XP',

@@ -63,8 +63,11 @@ class _AiMentorPageState extends ConsumerState<AiMentorPage> {
     await ref.read(aiChatControllerProvider.notifier).sendMessage(message);
   }
 
-  Future<void> _send() {
-    return _submitMessage(_controller.text, clearComposer: true);
+  Future<void> _send() async {
+    await _submitMessage(_controller.text, clearComposer: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scrollToBottom();
+    });
   }
 
   void _scrollToBottom() {

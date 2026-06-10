@@ -12,6 +12,7 @@ class BackendPracticeDto {
     required this.description,
     required this.language,
     required this.starterCode,
+    required this.checkType,
     required this.successCriteria,
     required this.knowledgeChecks,
     required this.promptSuggestion,
@@ -27,12 +28,15 @@ class BackendPracticeDto {
   final BackendLocalizedTextDto title;
   final BackendLocalizedTextDto summary;
   final BackendLocalizedTextDto brief;
+
   /// Flat (non-localized) task description as stored by curriculum-service.
   final String description;
+
   /// Programming language the task expects (e.g. "java"), required by the
   /// `/practice/:id/run` endpoint.
   final String language;
   final String starterCode;
+  final String checkType;
   final List<BackendLocalizedTextDto> successCriteria;
   final List<BackendLocalizedTextDto> knowledgeChecks;
   final BackendLocalizedTextDto promptSuggestion;
@@ -43,26 +47,35 @@ class BackendPracticeDto {
   factory BackendPracticeDto.fromJson(Map<String, dynamic> json) {
     List<BackendLocalizedTextDto> parseLocales(String key) {
       final raw = json[key] as List<dynamic>? ?? const <dynamic>[];
-      return raw
-          .map(BackendLocalizedTextDto.fromJson)
-          .toList(growable: false);
+      return raw.map(BackendLocalizedTextDto.fromJson).toList(growable: false);
     }
+
+    BackendLocalizedTextDto localizedOrFallback(String key, String fallback) {
+      final localized = BackendLocalizedTextDto.fromJson(json[key]);
+      if (!localized.isEmpty) return localized;
+      return BackendLocalizedTextDto.fromJson(fallback);
+    }
+
+    final flatDescription = json['description'] as String? ?? '';
+    final compactSummary = _compactSummary(flatDescription);
 
     return BackendPracticeDto(
       id: '${json['id'] ?? ''}',
       lessonId: '${json['lesson_id'] ?? ''}',
       courseId: '${json['course_id'] ?? ''}',
       position: (json['position'] as num?)?.round() ?? 0,
-      title: BackendLocalizedTextDto.fromJson(json['title']),
-      summary: BackendLocalizedTextDto.fromJson(json['summary']),
-      brief: BackendLocalizedTextDto.fromJson(json['brief']),
-      description: json['description'] as String? ?? '',
+      title: localizedOrFallback('title', ''),
+      summary: localizedOrFallback('summary', compactSummary),
+      brief: localizedOrFallback('brief', flatDescription),
+      description: flatDescription,
       language: json['language'] as String? ?? 'java',
       starterCode: json['starter_code'] as String? ?? '',
+      checkType: json['check_type'] as String? ?? 'auto',
       successCriteria: parseLocales('success_criteria'),
       knowledgeChecks: parseLocales('knowledge_checks'),
-      promptSuggestion: BackendLocalizedTextDto.fromJson(
-        json['prompt_suggestion'],
+      promptSuggestion: localizedOrFallback(
+        'prompt_suggestion',
+        flatDescription,
       ),
       xpReward: (json['xp_reward'] as num?)?.round() ?? 0,
       createdAt:
@@ -73,4 +86,15 @@ class BackendPracticeDto {
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
+}
+
+String _compactSummary(String value) {
+  final normalized = value
+      .replaceAll('\r\n', '\n')
+      .split('\n')
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .join(' ');
+  if (normalized.length <= 150) return normalized;
+  return '${normalized.substring(0, 147)}...';
 }

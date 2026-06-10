@@ -8,33 +8,44 @@ final appEnvironmentProvider = Provider<AppEnvironment>((ref) {
 class AppEnvironment {
   const AppEnvironment({
     required this.gatewayBaseUrl,
+    required this.codeRunnerBaseUrl,
     required this.aiServiceBaseUrl,
+    this.aiServiceViaGateway = false,
     this.aiServiceAuthToken = '',
   });
 
   static const String _defaultGatewayPort = '8090';
-  static const String _defaultAiServicePort = '8088';
+  static const String _defaultCodeRunnerPort = '8091';
 
   final String gatewayBaseUrl;
+  final String codeRunnerBaseUrl;
   final String aiServiceBaseUrl;
+  final bool aiServiceViaGateway;
   final String aiServiceAuthToken;
 
   factory AppEnvironment.fromPlatform() {
     const gatewayOverride = String.fromEnvironment('GATEWAY_BASE_URL');
+    const codeRunnerOverride = String.fromEnvironment('CODE_RUNNER_BASE_URL');
     const aiServiceOverride = String.fromEnvironment('AI_SERVICE_BASE_URL');
     const aiServiceAuthToken = String.fromEnvironment('AI_SERVICE_AUTH_TOKEN');
 
+    final gatewayBaseUrl = _normalizeBaseUrl(
+      gatewayOverride.isNotEmpty
+          ? gatewayOverride
+          : _defaultBaseUrlForPort(_defaultGatewayPort),
+    );
+
     return AppEnvironment(
-      gatewayBaseUrl: _normalizeBaseUrl(
-        gatewayOverride.isNotEmpty
-            ? gatewayOverride
-            : _defaultBaseUrlForPort(_defaultGatewayPort),
+      gatewayBaseUrl: gatewayBaseUrl,
+      codeRunnerBaseUrl: _normalizeBaseUrl(
+        codeRunnerOverride.isNotEmpty
+            ? codeRunnerOverride
+            : _sameHostWithPort(gatewayBaseUrl, _defaultCodeRunnerPort),
       ),
       aiServiceBaseUrl: _normalizeBaseUrl(
-        aiServiceOverride.isNotEmpty
-            ? aiServiceOverride
-            : _defaultBaseUrlForPort(_defaultAiServicePort),
+        aiServiceOverride.isNotEmpty ? aiServiceOverride : gatewayBaseUrl,
       ),
+      aiServiceViaGateway: aiServiceOverride.isEmpty,
       aiServiceAuthToken: aiServiceAuthToken.trim(),
     );
   }
@@ -44,7 +55,18 @@ class AppEnvironment {
   }
 
   Uri resolveAiService(String path) {
-    return Uri.parse(aiServiceBaseUrl).resolve(path);
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    if (aiServiceViaGateway) {
+      final gatewayPath = normalizedPath.startsWith('/v1/')
+          ? normalizedPath.substring('/v1'.length)
+          : normalizedPath;
+      return Uri.parse(gatewayBaseUrl).resolve('/api/v1/ai$gatewayPath');
+    }
+    return Uri.parse(aiServiceBaseUrl).resolve(normalizedPath);
+  }
+
+  Uri resolveCodeRunner(String path) {
+    return Uri.parse(codeRunnerBaseUrl).resolve(path);
   }
 
   static String _defaultBaseUrlForPort(String port) {
@@ -70,5 +92,18 @@ class AppEnvironment {
       return trimmed.substring(0, trimmed.length - 1);
     }
     return trimmed;
+  }
+
+  static String _sameHostWithPort(String baseUrl, String port) {
+    final uri = Uri.tryParse(baseUrl);
+    final parsedPort = int.tryParse(port);
+    if (uri == null ||
+        parsedPort == null ||
+        uri.scheme.isEmpty ||
+        uri.host.isEmpty) {
+      return _defaultBaseUrlForPort(port);
+    }
+
+    return Uri(scheme: uri.scheme, host: uri.host, port: parsedPort).toString();
   }
 }

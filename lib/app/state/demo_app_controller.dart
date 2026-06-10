@@ -227,7 +227,8 @@ class DemoAppController extends Notifier<DemoAppState> {
     if (!state.startedLessonIds.contains(lessonId)) {
       state = _withDerived(
         state.copyWith(
-          startedLessonIds: Set<String>.from(state.startedLessonIds)..add(lessonId),
+          startedLessonIds: Set<String>.from(state.startedLessonIds)
+            ..add(lessonId),
         ),
       );
       _persist();
@@ -247,10 +248,13 @@ class DemoAppController extends Notifier<DemoAppState> {
   }
 
   void focusPractice(String practiceId) {
-    final practice = _catalog.practiceById(practiceId);
+    final practice = _catalog.maybePracticeById(practiceId);
+    final isBackendPractice = _uuidPattern.hasMatch(practiceId.trim());
+    if (practice == null && !isBackendPractice) return;
+
     state = _withDerived(
       state.copyWith(
-        currentTrackId: practice.trackId,
+        currentTrackId: practice?.trackId ?? 'oop',
         focusedLessonId: null,
         focusedPracticeId: practiceId,
       ),
@@ -306,7 +310,8 @@ class DemoAppController extends Notifier<DemoAppState> {
     if (state.completedTheoryIds.contains(stepId)) return;
     state = _withDerived(
       state.copyWith(
-        completedTheoryIds: Set<String>.from(state.completedTheoryIds)..add(stepId),
+        completedTheoryIds: Set<String>.from(state.completedTheoryIds)
+          ..add(stepId),
         xp: state.xp + 2,
       ),
     );
@@ -317,7 +322,8 @@ class DemoAppController extends Notifier<DemoAppState> {
     if (state.completedCodeStepIds.contains(stepId)) return;
     state = _withDerived(
       state.copyWith(
-        completedCodeStepIds: Set<String>.from(state.completedCodeStepIds)..add(stepId),
+        completedCodeStepIds: Set<String>.from(state.completedCodeStepIds)
+          ..add(stepId),
         xp: state.xp + 10,
       ),
     );
@@ -332,7 +338,11 @@ class DemoAppController extends Notifier<DemoAppState> {
     if (score < 6) {
       recommended = {'mathematics', 'discrete_math', 'oop'};
     } else if (score < 11) {
-      recommended = {'algorithms_data_structures', 'database_systems', 'frontend'};
+      recommended = {
+        'algorithms_data_structures',
+        'database_systems',
+        'frontend',
+      };
     } else {
       recommended = {'operating_systems', 'system_design', 'ai'};
     }
@@ -397,14 +407,17 @@ class DemoAppController extends Notifier<DemoAppState> {
     }
 
     final previousState = state;
-    final practice = _catalog.practiceById(practiceId);
+    final practice = _catalog.maybePracticeById(practiceId);
+    final isBackendPractice = _uuidPattern.hasMatch(practiceId.trim());
+    if (practice == null && !isBackendPractice) return;
+
     final completedPracticeIds = Set<String>.from(state.completedPracticeIds)
       ..add(practiceId);
 
     final candidate = previousState.copyWith(
-      currentTrackId: practice.trackId,
+      currentTrackId: practice?.trackId ?? 'oop',
       completedPracticeIds: completedPracticeIds,
-      xp: previousState.xp + practice.xpReward,
+      xp: previousState.xp + (practice?.xpReward ?? 0),
       streak: previousState.streak + 1,
       dailyMissionDone: true,
       focusedPracticeId: practiceId,
@@ -415,11 +428,12 @@ class DemoAppController extends Notifier<DemoAppState> {
     state = _withDerived(
       candidate.copyWith(
         learningHistory: <LearningHistoryEntry>[
-          ..._completionHistoryEntriesForPractice(
-            previousState,
-            candidate,
-            practice,
-          ),
+          if (practice != null)
+            ..._completionHistoryEntriesForPractice(
+              previousState,
+              candidate,
+              practice,
+            ),
           ...previousState.learningHistory,
         ],
       ),
@@ -522,7 +536,10 @@ class DemoAppController extends Notifier<DemoAppState> {
     _persist();
   }
 
-  void enrollCommunityCourse(String courseId, {CommunityCourse? courseOverride}) {
+  void enrollCommunityCourse(
+    String courseId, {
+    CommunityCourse? courseOverride,
+  }) {
     if (state.enrolledCommunityCourseIds.contains(courseId)) {
       return;
     }

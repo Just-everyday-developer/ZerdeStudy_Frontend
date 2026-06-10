@@ -1,301 +1,85 @@
-// Teacher Studio · Q&A — Phase 2.
-//
-// Layout:
-//   - Top KPI strip
-//   - Inbox: list of questions on the left, detail (with AI draft + composer)
-//     on the right. On mobile the right pane collapses into a full-screen
-//     route triggered by tap.
-//
-// Mobile-friendly: column on < 900px, split on wider screens.
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/theme/app_theme_colors.dart';
+import '../../../courses_backend/data/models/backend_practice_submission_dto.dart';
+import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../teacher_text.dart';
 import '../widgets/teacher_studio_widgets.dart';
 
-class TeacherQnaPage extends ConsumerStatefulWidget {
+// ─── List page ────────────────────────────────────────────────────────────────
+
+class TeacherQnaPage extends ConsumerWidget {
   const TeacherQnaPage({super.key});
-  @override
-  ConsumerState<TeacherQnaPage> createState() => _TeacherQnaPageState();
-}
-
-class _TeacherQnaPageState extends ConsumerState<TeacherQnaPage> {
-  String _filter = 'new';
-  int _selected = 0;
 
   @override
-  Widget build(BuildContext context) {
-    final locale = ref.watch(
-      demoAppControllerProvider.select((state) => state.locale),
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(demoAppControllerProvider.select((s) => s.locale));
     final colors = context.appColors;
-    final compact = MediaQuery.sizeOf(context).width < 900;
-    final all = _seedQuestions(locale);
-    final filtered = all.where((q) {
-      if (_filter == 'all') return true;
-      return q.status == _filter;
-    }).toList();
-
-    // Keep _selected in range
-    final selectedIndex = _selected >= filtered.length ? 0 : _selected;
-    final selected = filtered.isEmpty ? null : filtered[selectedIndex];
+    final submissionsAsync = ref.watch(backendTeacherSubmissionsProvider);
 
     return TsPageScrollView(
       children: [
         TsPageHeader(
-          eyebrow: _heroEyebrow.resolve(locale),
-          title: _heroTitle.resolve(locale),
-          subtitle: _heroSubtitle.resolve(locale),
+          eyebrow: _eyebrow.resolve(locale),
+          title: _title.resolve(locale),
+          subtitle: _subtitle.resolve(locale),
           actions: [
             TsButton(
-              label: _sortAction.resolve(locale),
-              icon: Icons.swap_vert_rounded,
-              onPressed: () {},
-            ),
-            TsButton.primary(
-              label: _autoDraftAction.resolve(locale),
-              icon: Icons.auto_awesome_rounded,
-              onPressed: () {},
+              label: _refresh.resolve(locale),
+              icon: Icons.refresh_rounded,
+              onPressed: () => ref.invalidate(backendTeacherSubmissionsProvider),
             ),
           ],
         ),
-
-        // KPI strip
-        TsResponsiveGrid(
-          desktopCols: 4,
-          children: [
-            TsKpiCard(
-              label: _kpiOpenLabel.resolve(locale),
-              value: '12',
-              accent: colors.danger,
-              subtitle: _kpiOpenSub.resolve(locale),
-            ),
-            TsKpiCard(
-              label: _kpiAwaitLabel.resolve(locale),
-              value: '4',
-              accent: colors.accent,
-              subtitle: _kpiAwaitSub.resolve(locale),
-            ),
-            TsKpiCard(
-              label: _kpiAutoLabel.resolve(locale),
-              value: '38',
-              accent: colors.success,
-              subtitle: _kpiAutoSub.resolve(locale),
-            ),
-            TsKpiCard(
-              label: _kpiRateLabel.resolve(locale),
-              value: '94%',
-              accent: colors.primary,
-              subtitle: _kpiRateSub.resolve(locale),
-            ),
-          ],
-        ),
-
-        // Inbox
-        TsCard(
-          padding: EdgeInsets.zero,
-          child: compact
-              ? _MobileInbox(
-                  items: filtered,
-                  filter: _filter,
-                  onFilter: (f) => setState(() => _filter = f),
-                  onTap: (q) =>
-                      _openDetailRoute(context, q, locale),
-                  locale: locale,
-                )
-              : SizedBox(
-                  height: 560,
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 360,
-                        child: _DesktopList(
-                          items: filtered,
-                          filter: _filter,
-                          selectedIndex: selectedIndex,
-                          onFilter: (f) => setState(() {
-                            _filter = f;
-                            _selected = 0;
-                          }),
-                          onSelect: (i) => setState(() => _selected = i),
-                          locale: locale,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        color: colors.divider.withValues(alpha: 0.55),
-                      ),
-                      Expanded(
-                        child: selected == null
-                            ? _EmptyDetail(locale: locale)
-                            : _QnaDetailPane(
-                                question: selected,
-                                locale: locale,
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
+        submissionsAsync.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => TsCallout(
+            color: colors.danger,
+            icon: Icons.error_outline_rounded,
+            title: _errorTitle.resolve(locale),
+            body: e.toString(),
+          ),
+          data: (submissions) => submissions.isEmpty
+              ? _EmptyState(colors: colors, locale: locale)
+              : _SubmissionList(submissions: submissions, colors: colors, locale: locale),
         ),
       ],
     );
   }
-
-  void _openDetailRoute(
-      BuildContext context, _Question q, AppLocale locale) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) {
-      final colors = context.appColors;
-      return Scaffold(
-        backgroundColor: colors.background,
-        appBar: AppBar(
-          backgroundColor: colors.backgroundElevated,
-          title: Text(q.learner,
-              style: TextStyle(color: colors.textPrimary, fontSize: 15)),
-        ),
-        body: _QnaDetailPane(question: q, locale: locale),
-      );
-    }));
-  }
-
-  List<_Question> _seedQuestions(AppLocale l) => [
-        _Question(
-          id: 'q1',
-          learner: 'Madina K.',
-          cohort: 'C-25/B',
-          course: 'SQL/01',
-          lesson: _lessonSelfJoins.resolve(l),
-          asked: _ago12m.resolve(l),
-          status: 'new',
-          preview: _previewQ1.resolve(l),
-          aiSuggested: true,
-        ),
-        _Question(
-          id: 'q2',
-          learner: 'Daniyar T.',
-          cohort: 'C-24/B',
-          course: 'SQL/01',
-          lesson: _lessonOuterJoins.resolve(l),
-          asked: _ago38m.resolve(l),
-          status: 'new',
-          preview: _previewQ2.resolve(l),
-          aiSuggested: true,
-        ),
-        _Question(
-          id: 'q3',
-          learner: 'Aizada B.',
-          cohort: 'C-25/A',
-          course: 'FE/02',
-          lesson: _lessonFlexbox.resolve(l),
-          asked: _ago1h.resolve(l),
-          status: 'answered',
-          preview: _previewQ3.resolve(l),
-        ),
-        _Question(
-          id: 'q4',
-          learner: 'Ruslan O.',
-          cohort: 'C-24/A',
-          course: 'SQL/01',
-          lesson: _lessonLab.resolve(l),
-          asked: _ago2h.resolve(l),
-          status: 'needs-rubric',
-          preview: _previewQ4.resolve(l),
-        ),
-        _Question(
-          id: 'q5',
-          learner: 'Saya M.',
-          cohort: 'C-25/B',
-          course: 'DM/03',
-          lesson: _lessonInclusion.resolve(l),
-          asked: _ago4h.resolve(l),
-          status: 'new',
-          preview: _previewQ5.resolve(l),
-          aiSuggested: true,
-        ),
-      ];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Models
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── List widget ──────────────────────────────────────────────────────────────
 
-class _Question {
-  _Question({
-    required this.id,
-    required this.learner,
-    required this.cohort,
-    required this.course,
-    required this.lesson,
-    required this.asked,
-    required this.status, // new | needs-rubric | answered
-    required this.preview,
-    this.aiSuggested = false,
-  });
-  final String id, learner, cohort, course, lesson, asked, status, preview;
-  final bool aiSuggested;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Filter chips
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _FilterBar extends StatelessWidget {
-  const _FilterBar({
-    required this.filter,
-    required this.onFilter,
+class _SubmissionList extends StatelessWidget {
+  const _SubmissionList({
+    required this.submissions,
+    required this.colors,
     required this.locale,
   });
-  final String filter;
-  final ValueChanged<String> onFilter;
+  final List<BackendPracticeSubmissionDto> submissions;
+  final AppThemeColors colors;
   final AppLocale locale;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final items = [
-      ('new', _filterNew.resolve(locale), 3),
-      ('needs-rubric', _filterAwait.resolve(locale), 1),
-      ('answered', _filterDone.resolve(locale), 1),
-      ('all', _filterAll.resolve(locale), null as int?),
-    ];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return TsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final it in items) ...[
-            InkWell(
-              onTap: () => onFilter(it.$1),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: filter == it.$1
-                      ? colors.primary.withValues(alpha: 0.14)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: filter == it.$1
-                        ? colors.primary.withValues(alpha: 0.3)
-                        : colors.divider.withValues(alpha: 0.55),
-                  ),
-                ),
-                child: Text(
-                  it.$3 == null ? it.$2 : '${it.$2} · ${it.$3}',
-                  style: TextStyle(
-                    color: filter == it.$1
-                        ? colors.primary
-                        : colors.textSecondary,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
+          TsCardHeader(
+            eyebrow: _listEyebrow.resolve(locale),
+            title: _listTitleFn(submissions.length, locale),
+          ),
+          for (var i = 0; i < submissions.length; i++) ...[
+            if (i > 0) Divider(height: 1, color: colors.divider),
+            _SubmissionRow(sub: submissions[i], colors: colors, locale: locale),
           ],
         ],
       ),
@@ -303,403 +87,510 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Desktop list (left pane)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── List row ─────────────────────────────────────────────────────────────────
 
-class _DesktopList extends StatelessWidget {
-  const _DesktopList({
-    required this.items,
-    required this.filter,
-    required this.selectedIndex,
-    required this.onFilter,
-    required this.onSelect,
+class _SubmissionRow extends StatelessWidget {
+  const _SubmissionRow({
+    required this.sub,
+    required this.colors,
     required this.locale,
   });
-  final List<_Question> items;
-  final String filter;
-  final int selectedIndex;
-  final ValueChanged<String> onFilter;
-  final ValueChanged<int> onSelect;
+  final BackendPracticeSubmissionDto sub;
+  final AppThemeColors colors;
   final AppLocale locale;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-          child:
-              _FilterBar(filter: filter, onFilter: onFilter, locale: locale),
-        ),
-        Container(
-          height: 1,
-          color: colors.divider.withValues(alpha: 0.55),
-        ),
-        Expanded(
-          child: items.isEmpty
-              ? Center(
-                  child: Text(
-                    _emptyList.resolve(locale),
-                    style: TextStyle(color: colors.textSecondary),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, i) {
-                    final q = items[i];
-                    final selected = i == selectedIndex;
-                    return InkWell(
-                      onTap: () => onSelect(i),
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? colors.primary.withValues(alpha: 0.07)
-                              : Colors.transparent,
-                          border: Border(
-                            left: BorderSide(
-                              color: selected
-                                  ? colors.primary
-                                  : Colors.transparent,
-                              width: 3,
-                            ),
-                            bottom: BorderSide(
-                              color: colors.divider.withValues(alpha: 0.55),
-                            ),
-                          ),
-                        ),
-                        child: _QuestionRowBody(q: q),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-}
+    final (tagLabel, tagColor) = _statusInfo(sub.status, locale, colors);
+    final timeAgo = _timeAgo(sub.createdAt, locale);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mobile inbox (list-only, taps push detail route)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _MobileInbox extends StatelessWidget {
-  const _MobileInbox({
-    required this.items,
-    required this.filter,
-    required this.onFilter,
-    required this.onTap,
-    required this.locale,
-  });
-  final List<_Question> items;
-  final String filter;
-  final ValueChanged<String> onFilter;
-  final ValueChanged<_Question> onTap;
-  final AppLocale locale;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-          child:
-              _FilterBar(filter: filter, onFilter: onFilter, locale: locale),
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => _SubmissionDetailPage(submission: sub),
         ),
-        Container(
-          height: 1,
-          color: colors.divider.withValues(alpha: 0.55),
-        ),
-        if (items.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(28),
-            child: Text(
-              _emptyList.resolve(locale),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: colors.textSecondary),
-            ),
-          ),
-        for (var i = 0; i < items.length; i++) ...[
-          InkWell(
-            onTap: () => onTap(items[i]),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              child: _QuestionRowBody(q: items[i]),
-            ),
-          ),
-          if (i != items.length - 1)
-            Container(
-              height: 1,
-              color: colors.divider.withValues(alpha: 0.45),
-            ),
-        ],
-      ],
-    );
-  }
-}
-
-class _QuestionRowBody extends StatelessWidget {
-  const _QuestionRowBody({required this.q});
-  final _Question q;
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+      ),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
+        child: Row(
           children: [
             Expanded(
-              child: Text(
-                q.learner,
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      TsTag(label: tagLabel, color: tagColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          sub.practiceTitle.isNotEmpty ? sub.practiceTitle : sub.practiceId,
+                          style: TextStyle(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13.5,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${sub.studentEmail}  ·  ${sub.courseTitle}',
+                    style: TextStyle(color: colors.textSecondary, fontSize: 11.5),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  timeAgo,
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                  ),
                 ),
-              ),
-            ),
-            Text(
-              q.asked,
-              style: TextStyle(
-                color: colors.textSecondary,
-                fontSize: 10.5,
-                fontFamily: 'monospace',
-              ),
+                const SizedBox(height: 4),
+                Icon(Icons.chevron_right_rounded, color: colors.textSecondary, size: 16),
+              ],
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          '${q.course} · ${q.lesson} · ${q.cohort}',
-          style: TextStyle(
-            color: colors.textSecondary,
-            fontSize: 10.5,
-            fontFamily: 'monospace',
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          q.preview,
-          style: TextStyle(
-            color: colors.textSecondary,
-            fontSize: 12,
-            height: 1.4,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            TsTag(
-              label: q.status.replaceAll('-', ' '),
-              color: q.status == 'new'
-                  ? colors.danger
-                  : q.status == 'needs-rubric'
-                      ? colors.accent
-                      : colors.success,
-            ),
-            if (q.aiSuggested) TsTag(label: 'AI draft', color: colors.accent),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Detail pane (used on both desktop split and mobile fullscreen)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Detail page ──────────────────────────────────────────────────────────────
 
-class _QnaDetailPane extends StatefulWidget {
-  const _QnaDetailPane({required this.question, required this.locale});
-  final _Question question;
-  final AppLocale locale;
+class _SubmissionDetailPage extends ConsumerStatefulWidget {
+  const _SubmissionDetailPage({required this.submission});
+  final BackendPracticeSubmissionDto submission;
+
   @override
-  State<_QnaDetailPane> createState() => _QnaDetailPaneState();
+  ConsumerState<_SubmissionDetailPage> createState() =>
+      _SubmissionDetailPageState();
 }
 
-class _QnaDetailPaneState extends State<_QnaDetailPane> {
-  late TextEditingController _ctrl;
+class _SubmissionDetailPageState extends ConsumerState<_SubmissionDetailPage> {
+  final _commentCtrl = TextEditingController();
+  bool _loading = false;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController();
-  }
-
-  @override
-  void didUpdateWidget(covariant _QnaDetailPane old) {
-    super.didUpdateWidget(old);
-    if (old.question.id != widget.question.id) {
-      _ctrl.clear();
-    }
+    _commentCtrl.text = widget.submission.teacherComment;
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _commentCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _review(String status) async {
+    final locale = ref.read(demoAppControllerProvider.select((s) => s.locale));
+    if (status == 'changes_requested' && _commentCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_commentRequired.resolve(locale))),
+      );
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final accessToken = ref.read(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        throw Exception('Not authenticated');
+      }
+      final remote = ref.read(backendCourseRemoteDataSourceProvider);
+      await remote.reviewPracticeSubmission(
+        accessToken: accessToken,
+        submissionId: widget.submission.id,
+        request: BackendReviewPracticeSubmissionRequest(
+          status: status,
+          comment: _commentCtrl.text.trim(),
+        ),
+      );
+      ref.invalidate(backendTeacherSubmissionsProvider);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            status == 'approved'
+                ? _approvedMsg.resolve(locale)
+                : _changesMsg.resolve(locale),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final locale = ref.read(demoAppControllerProvider.select((s) => s.locale));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_errorMsg.resolve(locale)}: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(demoAppControllerProvider.select((s) => s.locale));
     final colors = context.appColors;
-    final q = widget.question;
-    final locale = widget.locale;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    q.learner,
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  TsButton(
-                    label: _openLesson.resolve(locale),
-                    icon: Icons.remove_red_eye_outlined,
-                    onPressed: () {},
-                  ),
-                  TsButton(
-                    label: _showGraph.resolve(locale),
-                    icon: Icons.account_tree_rounded,
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${q.course} · ${q.lesson} · ${q.cohort} · ${q.asked}',
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ],
+    final sub = widget.submission;
+    final (tagLabel, tagColor) = _statusInfo(sub.status, locale, colors);
+    final canReview = !sub.isApproved;
+
+    return Scaffold(
+      backgroundColor: colors.background,
+      appBar: AppBar(
+        backgroundColor: colors.backgroundElevated,
+        title: Text(
+          _detailTitle.resolve(locale),
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
           ),
         ),
-        Container(
-          height: 1,
-          color: colors.divider.withValues(alpha: 0.55),
+        iconTheme: IconThemeData(color: colors.textSecondary),
+        surfaceTintColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(height: 1, color: colors.divider),
         ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Meta card
+          TsCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: colors.surfaceSoft.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: colors.divider.withValues(alpha: 0.55)),
-                  ),
-                  child: Text(
-                    q.preview,
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 13.5,
-                      height: 1.55,
-                    ),
-                  ),
-                ),
-                if (q.aiSuggested) ...[
-                  const SizedBox(height: 14),
-                  TsCallout(
-                    color: colors.primary,
-                    icon: Icons.auto_awesome_rounded,
-                    title:
-                        'AI · ${_aiDraftReply.resolve(locale).toUpperCase()}',
-                    body: _aiBody.resolve(locale).replaceAll(
-                          '{name}',
-                          q.learner.split(' ').first,
-                        ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _ctrl,
-                  minLines: 3,
-                  maxLines: 6,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 13,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: _composerHint.resolve(locale),
-                    hintStyle: TextStyle(color: colors.textSecondary),
-                    filled: true,
-                    fillColor: colors.surfaceSoft.withValues(alpha: 0.65),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: colors.divider),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: colors.divider),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          BorderSide(color: colors.primary, width: 1.4),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.start,
+                Row(
                   children: [
-                    TsButton.primary(
-                      label: _sendReply.resolve(locale),
-                      icon: Icons.send_rounded,
-                      onPressed: () {},
-                    ),
-                    TsButton(
-                      label: _useAi.resolve(locale),
-                      icon: Icons.auto_awesome_rounded,
-                      onPressed: () {},
-                    ),
-                    TsButton(
-                      label: _broadcast.resolve(locale),
-                      icon: Icons.campaign_rounded,
-                      onPressed: () {},
-                    ),
-                    TsButton(
-                      label: _pinFaq.resolve(locale),
-                      icon: Icons.push_pin_rounded,
-                      onPressed: () {},
+                    TsTag(label: tagLabel, color: tagColor),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        sub.practiceTitle.isNotEmpty
+                            ? sub.practiceTitle
+                            : sub.practiceId,
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                _MetaRow(
+                  icon: Icons.person_rounded,
+                  label: sub.studentEmail,
+                  colors: colors,
+                ),
+                const SizedBox(height: 6),
+                _MetaRow(
+                  icon: Icons.school_rounded,
+                  label: sub.courseTitle,
+                  colors: colors,
+                ),
+                const SizedBox(height: 6),
+                _MetaRow(
+                  icon: Icons.menu_book_rounded,
+                  label: sub.lessonTitle,
+                  colors: colors,
+                ),
+                const SizedBox(height: 6),
+                _MetaRow(
+                  icon: Icons.repeat_rounded,
+                  label: '${_attemptLabel.resolve(locale)} ${sub.attemptNumber}',
+                  colors: colors,
+                ),
+                if (sub.reviewedAt != null) ...[
+                  const SizedBox(height: 6),
+                  _MetaRow(
+                    icon: Icons.rate_review_rounded,
+                    label: _timeAgo(sub.reviewedAt!, locale),
+                    colors: colors,
+                  ),
+                ],
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+          // Code card
+          TsCard(
+            accentBar: colors.primary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    TsEyebrow(_codeEyebrow.resolve(locale), color: colors.primary),
+                    const Spacer(),
+                    if (sub.language.isNotEmpty) ...[
+                      TsTag(label: sub.language, color: colors.textSecondary),
+                      const SizedBox(width: 8),
+                    ],
+                    InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: sub.code));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(_copiedMsg.resolve(locale))),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.copy_rounded,
+                          size: 14,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D1117),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: colors.divider.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: SelectableText(
+                    sub.code.isEmpty ? '// (empty)' : sub.code,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12.5,
+                      color: Color(0xFFE6EDF3),
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Output / error
+          if (sub.output.isNotEmpty || sub.error.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            TsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TsEyebrow(_outputEyebrow.resolve(locale)),
+                  const SizedBox(height: 10),
+                  if (sub.output.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceSoft,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: colors.divider.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: SelectableText(
+                        sub.output,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: colors.textSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  if (sub.error.isNotEmpty) ...[
+                    if (sub.output.isNotEmpty) const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: colors.danger.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: colors.danger.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: SelectableText(
+                        sub.error,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: colors.danger,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+          // Already approved callout
+          if (!canReview) ...[
+            const SizedBox(height: 12),
+            TsCallout(
+              color: colors.success,
+              icon: Icons.check_circle_rounded,
+              title: _alreadyApprovedTitle.resolve(locale),
+              body: sub.teacherComment.isNotEmpty
+                  ? sub.teacherComment
+                  : _alreadyApprovedBody.resolve(locale),
+            ),
+          ],
+          // Review action section
+          if (canReview) ...[
+            const SizedBox(height: 12),
+            TsCard(
+              accentBar: colors.accent,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TsCardHeader(
+                    eyebrow: _reviewEyebrow.resolve(locale),
+                    title: _reviewTitle.resolve(locale),
+                    subtitle: _reviewSubtitle.resolve(locale),
+                  ),
+                  TextField(
+                    controller: _commentCtrl,
+                    maxLines: 4,
+                    enabled: !_loading,
+                    style: TextStyle(color: colors.textPrimary, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: _commentHint.resolve(locale),
+                      hintStyle: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 13,
+                      ),
+                      filled: true,
+                      fillColor: colors.surfaceSoft,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: BorderSide(color: colors.divider),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: BorderSide(color: colors.divider),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: BorderSide(color: colors.primary),
+                      ),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_loading)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _review('changes_requested'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: colors.accent,
+                              side: BorderSide(
+                                color: colors.accent.withValues(alpha: 0.5),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(9),
+                              ),
+                            ),
+                            icon: const Icon(Icons.edit_note_rounded, size: 16),
+                            label: Text(
+                              _requestChangesLabel.resolve(locale),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => _review('approved'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: colors.success,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(9),
+                              ),
+                            ),
+                            icon: const Icon(Icons.check_rounded, size: 16),
+                            label: Text(
+                              _approveLabel.resolve(locale),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Helper widgets ───────────────────────────────────────────────────────────
+
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({
+    required this.icon,
+    required this.label,
+    required this.colors,
+  });
+  final IconData icon;
+  final String label;
+  final AppThemeColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 13, color: colors.textSecondary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: colors.textSecondary, fontSize: 12.5),
           ),
         ),
       ],
@@ -707,22 +598,47 @@ class _QnaDetailPaneState extends State<_QnaDetailPane> {
   }
 }
 
-class _EmptyDetail extends StatelessWidget {
-  const _EmptyDetail({required this.locale});
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.colors, required this.locale});
+  final AppThemeColors colors;
   final AppLocale locale;
+
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.divider),
+      ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.forum_rounded,
-              size: 32, color: colors.textSecondary),
-          const SizedBox(height: 12),
+          Icon(
+            Icons.rate_review_rounded,
+            size: 52,
+            color: colors.textSecondary.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: 16),
           Text(
-            _emptyDetail.resolve(locale),
-            style: TextStyle(color: colors.textSecondary),
+            _emptyTitle.resolve(locale),
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _emptyBody.resolve(locale),
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: 13,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -730,180 +646,182 @@ class _EmptyDetail extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Strings
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Status helpers ───────────────────────────────────────────────────────────
 
-final _heroEyebrow = teacherText(
-  ru: 'ВОПРОСЫ СТУДЕНТОВ',
-  en: 'LEARNER QUESTIONS',
-  kk: 'СТУДЕНТ СҰРАҚТАРЫ',
-);
-final _heroTitle =
-    teacherText(ru: 'Q&A · входящие', en: 'Q&A inbox', kk: 'Q&A — кіріс');
-final _heroSubtitle = teacherText(
-  ru:
-      'Открытые вопросы по всем вашим курсам. AI предложит черновик ответа по теме урока.',
-  en:
-      'Pending questions across all your courses. AI suggests a first-draft reply scoped to the relevant lesson.',
-  kk:
-      'Барлық курстарыңыз бойынша ашық сұрақтар. AI сабақ тақырыбына сәйкес жауап нобайын ұсынады.',
-);
-final _sortAction =
-    teacherText(ru: 'Сначала старые', en: 'Sort · oldest', kk: 'Алдымен ескі');
-final _autoDraftAction = teacherText(
-  ru: 'Авто-черновики ответов',
-  en: 'Auto-draft replies',
-  kk: 'Авто-нобай жауаптар',
-);
+(String, Color) _statusInfo(
+  String status,
+  AppLocale locale,
+  AppThemeColors colors,
+) {
+  return switch (status) {
+    'approved' => (
+        switch (locale) {
+          AppLocale.ru => 'ОДОБРЕНО',
+          AppLocale.kk => 'МАҚҰЛДАНДЫ',
+          _ => 'APPROVED',
+        },
+        colors.success,
+      ),
+    'changes_requested' => (
+        switch (locale) {
+          AppLocale.ru => 'ПРАВКИ',
+          AppLocale.kk => 'ТҮЗЕТУ',
+          _ => 'CHANGES',
+        },
+        colors.accent,
+      ),
+    'in_review' => (
+        switch (locale) {
+          AppLocale.ru => 'НА РЕВЬЮ',
+          AppLocale.kk => 'ТЕКСЕРУДЕ',
+          _ => 'IN REVIEW',
+        },
+        colors.primary,
+      ),
+    _ => (
+        switch (locale) {
+          AppLocale.ru => 'НОВОЕ',
+          AppLocale.kk => 'ЖАҢА',
+          _ => 'NEW',
+        },
+        const Color(0xFF60A5FA),
+      ),
+  };
+}
 
-final _kpiOpenLabel =
-    teacherText(ru: 'Открытые', en: 'Open', kk: 'Ашық');
-final _kpiOpenSub = teacherText(
-  ru: '2ч 14м среднее время',
-  en: '2h 14m avg first reply',
-  kk: '2с 14м орташа',
-);
-final _kpiAwaitLabel = teacherText(
-  ru: 'Ждут rubric',
-  en: 'Awaiting rubric',
-  kk: 'Rubric күтеді',
-);
-final _kpiAwaitSub =
-    teacherText(ru: 'Lab #14 · joins', en: 'Lab #14 · joins', kk: 'Lab #14');
-final _kpiAutoLabel = teacherText(
-  ru: 'AI решил сам',
-  en: 'Auto-resolved by AI',
-  kk: 'AI өзі шешті',
-);
-final _kpiAutoSub =
-    teacherText(ru: 'за 7 дней', en: 'last 7 days', kk: 'соңғы 7 күн');
-final _kpiRateLabel =
-    teacherText(ru: 'Reply rate', en: 'Your reply rate', kk: 'Жауап мөлшері');
-final _kpiRateSub = teacherText(
-  ru: 'в течение 24ч',
-  en: 'within 24h',
-  kk: '24с ішінде',
-);
+String _timeAgo(DateTime dt, AppLocale locale) {
+  final diff = DateTime.now().difference(dt);
+  if (diff.inMinutes < 1) {
+    return switch (locale) {
+      AppLocale.ru => 'только что',
+      AppLocale.kk => 'жаңа ғана',
+      _ => 'just now',
+    };
+  }
+  if (diff.inHours < 1) {
+    final m = diff.inMinutes;
+    return switch (locale) {
+      AppLocale.ru => '$m мин назад',
+      AppLocale.kk => '$m мин бұрын',
+      _ => '${m}m ago',
+    };
+  }
+  if (diff.inDays < 1) {
+    final h = diff.inHours;
+    return switch (locale) {
+      AppLocale.ru => '$h ч назад',
+      AppLocale.kk => '$h сағ бұрын',
+      _ => '${h}h ago',
+    };
+  }
+  final d = diff.inDays;
+  return switch (locale) {
+    AppLocale.ru => '$d дн назад',
+    AppLocale.kk => '$d күн бұрын',
+    _ => '${d}d ago',
+  };
+}
 
-final _filterNew = teacherText(ru: 'Открытые', en: 'Open', kk: 'Ашық');
-final _filterAwait =
-    teacherText(ru: 'Ждут', en: 'Awaiting', kk: 'Күтуде');
-final _filterDone =
-    teacherText(ru: 'Готово', en: 'Done', kk: 'Дайын');
-final _filterAll = teacherText(ru: 'Все', en: 'All', kk: 'Барлығы');
-final _emptyList = teacherText(
-  ru: 'Здесь пусто.',
-  en: 'Nothing here yet.',
-  kk: 'Әзірге бос.',
-);
+String _listTitleFn(int count, AppLocale locale) {
+  return switch (locale) {
+    AppLocale.ru => '$count работ${count == 1 ? 'а' : ''} на проверку',
+    AppLocale.kk => 'Тексеруге $count жұмыс',
+    _ => '$count submission${count == 1 ? '' : 's'} to review',
+  };
+}
 
-final _openLesson =
-    teacherText(ru: 'Открыть урок', en: 'Open lesson', kk: 'Сабақты ашу');
-final _showGraph =
-    teacherText(ru: 'В графе', en: 'Show in graph', kk: 'Графта көрсету');
-final _aiDraftReply = teacherText(
-  ru: 'черновик ответа',
-  en: 'draft reply',
-  kk: 'жауап нобайы',
-);
-final _aiBody = teacherText(
-  ru:
-      'Привет, {name}. Дубликаты на self-join почти всегда — пропущенный предикат. Добавьте WHERE a.created_at > b.created_at, чтобы каждая пара считалась один раз. Если нужен последний заказ на пару — оберните в ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) и отфильтруйте по 1.',
-  en:
-      'Hi {name} — duplicate rows on a self-join are almost always a missing predicate. Add WHERE a.created_at > b.created_at so each pair is counted once. For the latest order per pair, wrap with ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) and filter to 1.',
-  kk:
-      'Сәлем, {name}. Self-join қайталанулары әдетте предикат жетпеуінен. WHERE a.created_at > b.created_at қосыңыз. Әр жұптың соңғы заказы үшін ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) пайдаланып 1-ге сүзіңіз.',
-);
-final _composerHint = teacherText(
-  ru: 'Напишите ответ или отредактируйте черновик AI…',
-  en: 'Type your reply, or edit the AI draft above…',
-  kk: 'Жауабыңызды жазыңыз немесе AI нобайын өңдеңіз…',
-);
-final _sendReply =
-    teacherText(ru: 'Отправить', en: 'Send reply', kk: 'Жіберу');
-final _useAi = teacherText(
-  ru: 'Взять AI-черновик',
-  en: 'Use AI draft',
-  kk: 'AI-нобайын алу',
-);
-final _broadcast = teacherText(
-  ru: 'Сохранить и разослать группе',
-  en: 'Save & broadcast to cohort',
-  kk: 'Сақтап топқа жіберу',
-);
-final _pinFaq = teacherText(
-  ru: 'Закрепить в FAQ урока',
-  en: 'Pin to lesson FAQ',
-  kk: 'Сабақ FAQ-ына бекіту',
-);
-final _emptyDetail = teacherText(
-  ru: 'Выберите вопрос слева',
-  en: 'Select a question on the left',
-  kk: 'Сол жақтан сұрақ таңдаңыз',
-);
+// ─── Strings ──────────────────────────────────────────────────────────────────
 
-// Question previews + lesson labels
-final _lessonSelfJoins = teacherText(
-  ru: 'Self & cross joins',
-  en: 'Self & cross joins',
-  kk: 'Self & cross joins',
+final _eyebrow = teacherText(ru: 'РЕВЬЮ КОДА', en: 'CODE REVIEW', kk: 'КОД РЕВЬЮ');
+final _title = teacherText(
+  ru: 'Работы на проверке',
+  en: 'Submissions',
+  kk: 'Тексеру жұмыстары',
 );
-final _lessonOuterJoins =
-    teacherText(ru: 'OUTER joins', en: 'OUTER joins', kk: 'OUTER joins');
-final _lessonFlexbox = teacherText(
-  ru: 'Flexbox layout',
-  en: 'Flexbox layout',
-  kk: 'Flexbox layout',
+final _subtitle = teacherText(
+  ru: 'Код студентов, ожидающий вашей проверки.',
+  en: 'Student practice code waiting for your review.',
+  kk: 'Тексеруіңізді күтіп тұрған студент коды.',
 );
-final _lessonLab = teacherText(
-  ru: 'Lab · 12 join puzzles',
-  en: 'Lab · 12 join puzzles',
-  kk: 'Lab · 12 join puzzles',
+final _refresh = teacherText(ru: 'Обновить', en: 'Refresh', kk: 'Жаңарту');
+final _errorTitle = teacherText(
+  ru: 'Ошибка загрузки',
+  en: 'Load error',
+  kk: 'Жүктеу қатесі',
 );
-final _lessonInclusion = teacherText(
-  ru: 'Inclusion-exclusion',
-  en: 'Inclusion-exclusion',
-  kk: 'Inclusion-exclusion',
+final _listEyebrow = teacherText(
+  ru: 'ОЧЕРЕДЬ РЕВЬЮ',
+  en: 'REVIEW QUEUE',
+  kk: 'РЕВЬЮ КЕЗЕГІ',
 );
-final _ago12m = teacherText(ru: '12 мин', en: '12m', kk: '12м');
-final _ago38m = teacherText(ru: '38 мин', en: '38m', kk: '38м');
-final _ago1h = teacherText(ru: '1 ч', en: '1h', kk: '1с');
-final _ago2h = teacherText(ru: '2 ч', en: '2h', kk: '2с');
-final _ago4h = teacherText(ru: '4 ч', en: '4h', kk: '4с');
-
-final _previewQ1 = teacherText(
-  ru:
-      'Получаю дубликаты строк, когда делаю self-join таблицы orders по user_id. Как оставить только последний заказ для каждой пары?',
-  en:
-      'I get duplicate rows when I self-join the orders table on user_id. Is there a way to keep only the latest order per pair?',
-  kk:
-      'Orders кестесін user_id бойынша self-join жасағанда қайталанатын жолдар шығады. Әр жұптың тек соңғысын қалай қалдыруға болады?',
+final _emptyTitle = teacherText(
+  ru: 'Нет работ на проверку',
+  en: 'No submissions yet',
+  kk: 'Тексеретін жұмыс жоқ',
 );
-final _previewQ2 = teacherText(
-  ru: 'Когда LEFT JOIN может вернуть больше строк, чем сама левая таблица?',
-  en: 'Could you walk through when a LEFT JOIN can produce more rows than the left table?',
-  kk:
-      'LEFT JOIN сол кестеден көп жол қашан қайтаратынын түсіндіріп бересіз бе?',
+final _emptyBody = teacherText(
+  ru: 'Когда студенты сдадут практику, она появится здесь.',
+  en: 'When students submit practice code, it will appear here.',
+  kk: 'Студенттер практика тапсырған кезде ол осында пайда болады.',
 );
-final _previewQ3 = teacherText(
-  ru: 'Спасибо за диаграмму — наконец-то стало понятно.',
-  en: 'Thanks for the diagram — finally clicked.',
-  kk: 'Диаграмма үшін рахмет — енді түсінікті болды.',
+final _detailTitle = teacherText(
+  ru: 'Ревью задания',
+  en: 'Review submission',
+  kk: 'Тапсырманы тексеру',
 );
-final _previewQ4 = teacherText(
-  ru:
-      'Сдал puzzle #7, но авто-проверка засчитала как неверный, хотя результат совпадает. Прикладываю скриншот.',
-  en:
-      'Submitted puzzle #7 but the auto-grader marked it wrong even though the result set matches. Attaching screenshot.',
-  kk:
-      'Puzzle #7 тапсырдым, бірақ нәтиже сәйкес келсе де, авто-тексерші қате деп тапты. Скриншот қосып отырмын.',
+final _codeEyebrow = teacherText(
+  ru: 'КОД СТУДЕНТА',
+  en: 'STUDENT CODE',
+  kk: 'СТУДЕНТ КОДЫ',
 );
-final _previewQ5 = teacherText(
-  ru:
-      'Откуда интуитивно берётся |A ∩ B ∩ C|? Я разобрал алгебру, но не складывается.',
-  en:
-      "Where does the |A ∩ B ∩ C| term come from intuitively? I followed the algebra but it doesn't click.",
-  kk:
-      '|A ∩ B ∩ C| мүшесі қайдан шығады? Алгебраны түсіндім, бірақ интуитивті емес.',
+final _outputEyebrow = teacherText(
+  ru: 'ВЫВОД ПРОГРАММЫ',
+  en: 'PROGRAM OUTPUT',
+  kk: 'БАҒДАРЛАМА ШЫҒЫСЫ',
 );
+final _reviewEyebrow = teacherText(
+  ru: 'ДЕЙСТВИЕ',
+  en: 'ACTION',
+  kk: 'ӘРЕКЕТ',
+);
+final _reviewTitle = teacherText(ru: 'Ваш отзыв', en: 'Your feedback', kk: 'Пікіріңіз');
+final _reviewSubtitle = teacherText(
+  ru: 'Напишите комментарий и одобрите работу или запросите правки.',
+  en: 'Write a comment, then approve or request changes.',
+  kk: 'Пікір жазыңыз, жұмысты мақұлдаңыз немесе түзету сұраңыз.',
+);
+final _commentHint = teacherText(
+  ru: 'Комментарий для студента...',
+  en: 'Comment for the student...',
+  kk: 'Студентке арналған пікір...',
+);
+final _requestChangesLabel = teacherText(
+  ru: 'Запросить правки',
+  en: 'Request changes',
+  kk: 'Түзету сұрау',
+);
+final _approveLabel = teacherText(ru: 'Одобрить', en: 'Approve', kk: 'Мақұлдау');
+final _alreadyApprovedTitle = teacherText(
+  ru: 'РАБОТА ОДОБРЕНА',
+  en: 'APPROVED',
+  kk: 'МАҚҰЛДАНДЫ',
+);
+final _alreadyApprovedBody = teacherText(
+  ru: 'Эта работа уже проверена и одобрена.',
+  en: 'This submission has already been approved.',
+  kk: 'Бұл жұмыс тексеріліп, мақұлданды.',
+);
+final _attemptLabel = teacherText(ru: 'Попытка', en: 'Attempt', kk: 'Әрекет');
+final _copiedMsg = teacherText(ru: 'Скопировано', en: 'Copied', kk: 'Көшірілді');
+final _commentRequired = teacherText(
+  ru: 'Напишите комментарий для запроса правок',
+  en: 'Write a comment when requesting changes',
+  kk: 'Түзету сұрағанда пікір жазыңыз',
+);
+final _approvedMsg = teacherText(ru: 'Работа одобрена', en: 'Approved', kk: 'Жұмыс мақұлданды');
+final _changesMsg = teacherText(
+  ru: 'Запрошены правки',
+  en: 'Changes requested',
+  kk: 'Түзету сұралды',
+);
+final _errorMsg = teacherText(ru: 'Ошибка', en: 'Error', kk: 'Қате');

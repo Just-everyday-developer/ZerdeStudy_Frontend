@@ -17,6 +17,7 @@ import '../../../ai/presentation/providers/ai_chat_controller.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/data/models/backend_code_attempt_dto.dart';
 import '../../../courses_backend/data/models/backend_practice_dto.dart';
+import '../../../courses_backend/data/models/backend_practice_submission_dto.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../../domain/models/code_execution.dart';
 import '../widgets/premium_code_editor.dart';
@@ -132,6 +133,23 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     );
   }
 
+  PracticeTask _emptyBackendPracticeShell(String practiceId) {
+    const empty = LocalizedText(ru: '', en: '', kk: '');
+    return PracticeTask(
+      id: practiceId,
+      trackId: 'oop',
+      moduleId: 'oop',
+      title: empty,
+      summary: empty,
+      brief: empty,
+      starterCode: '',
+      successCriteria: const <LocalizedText>[],
+      knowledgeChecks: const <LocalizedText>[],
+      promptSuggestion: empty,
+      xpReward: 0,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_usesMockExam) {
@@ -140,7 +158,9 @@ class _PracticePageState extends ConsumerState<PracticePage> {
 
     final state = ref.watch(demoAppControllerProvider);
     final catalog = ref.watch(demoCatalogProvider);
-    final mockPractice = catalog.practiceById(widget.practiceId);
+    final mockPractice =
+        catalog.maybePracticeById(widget.practiceId) ??
+        _emptyBackendPracticeShell(widget.practiceId);
     final backendPracticeById = ref.watch(
       backendPracticeByIdProvider(widget.practiceId),
     );
@@ -418,7 +438,8 @@ class _PracticePageState extends ConsumerState<PracticePage> {
                 : Icons.verified_rounded,
             onPressed: completed || _isRunningOnBackend
                 ? null
-                : () => _handleSubmit(practice, locale, resolvedBackendPractice),
+                : () =>
+                      _handleSubmit(practice, locale, resolvedBackendPractice),
           ),
           if (completed) ...[
             const SizedBox(height: 12),
@@ -667,6 +688,16 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       return;
     }
 
+    if (backendPractice?.checkType.trim().toLowerCase() == 'manual') {
+      final submitted = await _submitManualPracticeReview(
+        practice: practice,
+        backendPractice: backendPractice!,
+      );
+      if (submitted) {
+        return;
+      }
+    }
+
     final handled = await _tryBackendRun(
       practice: practice,
       backendPractice: backendPractice,
@@ -675,6 +706,58 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     );
     if (!handled) {
       await _submitPractice(practice, locale, backendPractice);
+    }
+  }
+
+  Future<bool> _submitManualPracticeReview({
+    required PracticeTask practice,
+    required BackendPracticeDto backendPractice,
+  }) async {
+    final accessToken = ref.read(backendCourseAccessTokenProvider)?.trim();
+    if (accessToken == null ||
+        accessToken.isEmpty ||
+        !_looksLikeUuid(backendPractice.id)) {
+      return false;
+    }
+
+    final code = _editorCode.isEmpty ? practice.starterCode : _editorCode;
+    final result = _lastAttemptResult;
+    setState(() => _isRunningOnBackend = true);
+
+    try {
+      final remote = ref.read(backendCourseRemoteDataSourceProvider);
+      await remote.createPracticeSubmission(
+        accessToken: accessToken,
+        practiceId: backendPractice.id,
+        request: BackendCreatePracticeSubmissionRequest(
+          code: code,
+          language: backendPractice.language,
+          output: result?.output ?? _draftOutput ?? '',
+          error: result?.error ?? '',
+          errorType: result?.errorType ?? '',
+          durationMs: result?.durationMs,
+        ),
+      );
+
+      if (!mounted) {
+        return true;
+      }
+
+      setState(() => _isRunningOnBackend = false);
+      ref.invalidate(backendOopProgressProvider);
+      ref.invalidate(backendAllProgressProvider);
+
+      AppNotice.show(
+        context,
+        message: 'Solution submitted for teacher review.',
+        type: AppNoticeType.success,
+      );
+      return true;
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isRunningOnBackend = false);
+      }
+      return false;
     }
   }
 

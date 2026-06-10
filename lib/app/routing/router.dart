@@ -420,7 +420,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const TeacherShellPage(section: TeacherSection.builder),
+          child: const TeacherShellPage(section: TeacherSection.dashboard),
         ),
       ),
       GoRoute(
@@ -428,7 +428,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const TeacherShellPage(section: TeacherSection.builder),
+          child: const TeacherShellPage(section: TeacherSection.dashboard),
         ),
       ),
       GoRoute(
@@ -436,7 +436,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const TeacherShellPage(section: TeacherSection.builder),
+          child: const TeacherShellPage(section: TeacherSection.dashboard),
         ),
       ),
       GoRoute(
@@ -444,7 +444,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: appRootNavigatorKey,
         pageBuilder: (context, state) => cyberTransition(
           state: state,
-          child: const TeacherShellPage(section: TeacherSection.builder),
+          child: const TeacherShellPage(section: TeacherSection.dashboard),
         ),
       ),
       GoRoute(

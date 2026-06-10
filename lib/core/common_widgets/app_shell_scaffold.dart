@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/routing/app_routes.dart';
 import '../../app/state/app_locale.dart';
 import '../../app/state/demo_app_controller.dart';
+import '../config/app_environment.dart';
 import '../../features/app_guide/presentation/app_guide_controller.dart';
 import '../../features/app_guide/presentation/app_guide_target.dart';
 import '../../features/auth/presentation/providers/auth_controller.dart';
@@ -16,6 +18,17 @@ import 'notification_bell_button.dart';
 import '../localization/app_localizations.dart';
 import '../providers/course_search_focus_provider.dart';
 import '../theme/app_theme_colors.dart';
+
+String? _patchMediaUrl(String? url, String gatewayBase) {
+  if (url == null || url.isEmpty || kIsWeb) return url;
+  final uri = Uri.tryParse(url);
+  if (uri == null) return url;
+  final host = uri.host;
+  if (host != '127.0.0.1' && host != 'localhost') return url;
+  final gatewayHost = Uri.tryParse(gatewayBase)?.host ?? host;
+  if (gatewayHost == host) return url;
+  return url.replaceFirst('$host:${uri.port}', '$gatewayHost:${uri.port}');
+}
 
 class AppShellScaffold extends ConsumerStatefulWidget {
   const AppShellScaffold({
@@ -110,9 +123,32 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
     final state = ref.watch(demoAppControllerProvider);
     // Pre-warm OOP backend progress so it's ready when the home page renders.
     ref.watch(backendOopProgressProvider);
-    final backendPhotoUrl = ref
+    final backendProfile = ref
         .watch(backendProfileProvider)
-        .maybeWhen(data: (p) => p?.photoUrl, orElse: () => null);
+        .maybeWhen(data: (p) => p, orElse: () => null);
+    final gatewayBase = ref.read(appEnvironmentProvider).gatewayBaseUrl;
+    final backendPhotoUrl = _patchMediaUrl(
+      backendProfile?.photoUrl.isNotEmpty == true ? backendProfile!.photoUrl : null,
+      gatewayBase,
+    );
+
+    // Sync backend name/bio into local DemoUser so the home greeting
+    // shows the correct name from the first render after session restore.
+    if (backendProfile != null) {
+      final login = backendProfile.login.trim();
+      if (login.isNotEmpty) {
+        final localName = (state.user?.name ?? '').trim();
+        if (localName != login) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ref.read(demoAppControllerProvider.notifier).updateProfile(
+                  name: login,
+                  bio: backendProfile.bio,
+                );
+          });
+        }
+      }
+    }
     final destinations = <_ShellDestination>[
       _ShellDestination(
         label: l10n.text('tab_home'),
@@ -204,28 +240,7 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
 
             return Scaffold(
               backgroundColor: colors.background,
-              body: compact
-                  ? Stack(
-                      children: [
-                        shellBody,
-                        Positioned(
-                          top: 0,
-                          right: 4,
-                          child: SafeArea(
-                            bottom: false,
-                            child: Container(
-                              margin: const EdgeInsets.only(top: 6),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: colors.surface.withValues(alpha: 0.85),
-                              ),
-                              child: const NotificationBellButton(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : shellBody,
+              body: shellBody,
               bottomNavigationBar: compact
                   ? AppGuideTarget(
                       id: AppGuideTargetIds.shellNavigation,

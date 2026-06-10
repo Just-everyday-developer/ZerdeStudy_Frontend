@@ -12,6 +12,11 @@ class BackendLocalizedTextDto {
   bool get isEmpty => en.isEmpty && ru.isEmpty && kk.isEmpty;
 
   factory BackendLocalizedTextDto.fromJson(Object? raw) {
+    if (raw is String) {
+      final value = raw.trim();
+      return BackendLocalizedTextDto(en: value, ru: value, kk: value);
+    }
+
     if (raw is! Map) {
       return const BackendLocalizedTextDto(en: '', ru: '', kk: '');
     }
@@ -29,6 +34,7 @@ class BackendLessonDto {
   const BackendLessonDto({
     required this.id,
     required this.moduleId,
+    required this.position,
     required this.title,
     required this.summary,
     required this.outcome,
@@ -46,6 +52,7 @@ class BackendLessonDto {
 
   final String id;
   final String moduleId;
+  final int position;
   final BackendLocalizedTextDto title;
   final BackendLocalizedTextDto summary;
   final BackendLocalizedTextDto outcome;
@@ -67,6 +74,7 @@ class BackendLessonDto {
     return BackendLessonDto(
       id: '${json['id'] ?? ''}',
       moduleId: '${json['module_id'] ?? ''}',
+      position: (json['position'] as num?)?.round() ?? 0,
       title: BackendLocalizedTextDto.fromJson(json['title']),
       summary: BackendLocalizedTextDto.fromJson(json['summary']),
       outcome: BackendLocalizedTextDto.fromJson(json['out_come']),

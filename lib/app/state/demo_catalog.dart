@@ -34,7 +34,7 @@ class DemoCatalog {
   late final Map<String, PracticeTask> _practicesById = <String, PracticeTask>{
     for (final track in tracks)
       for (final module in track.modules)
-        if (module.practice != null) module.practice!.id: module.practice!,
+        for (final practice in module.allPractices) practice.id: practice,
   };
   late final Map<String, LessonQuiz> _lessonQuizzesById = <String, LessonQuiz>{
     for (final lesson in _lessonsById.values)
@@ -64,6 +64,9 @@ class DemoCatalog {
 
   PracticeTask practiceById(String practiceId) =>
       _practicesById[practiceId] ?? _practicesById.values.first;
+
+  PracticeTask? maybePracticeById(String practiceId) =>
+      _practicesById[practiceId];
 
   LessonQuiz? lessonQuizById(String quizId) => _lessonQuizzesById[quizId];
 
@@ -530,8 +533,7 @@ class DemoCatalog {
           nextTarget ??= LearningTarget.lesson(lesson);
         }
       }
-      final practice = module.practice;
-      if (practice != null) {
+      for (final practice in module.allPractices) {
         if (state.completedPracticeIds.contains(practice.id)) {
           completedUnits += 1;
         } else {
@@ -1250,11 +1252,9 @@ class DemoCatalog {
       final lessonsDone = module.lessons
           .where((lesson) => state.completedLessonIds.contains(lesson.id))
           .length;
-      final practiceDone =
-          module.practice != null &&
-              state.completedPracticeIds.contains(module.practice!.id)
-          ? 1
-          : 0;
+      final practiceDone = module.allPractices
+          .where((practice) => state.completedPracticeIds.contains(practice.id))
+          .length;
       return sum + lessonsDone + practiceDone;
     });
   }
@@ -1526,8 +1526,7 @@ TrackAssessment _buildAssessmentForTrack(
     for (final module in track.modules) ...module.lessons,
   ];
   final practices = <PracticeTask>[
-    for (final module in track.modules)
-      if (module.practice != null) module.practice!,
+    for (final module in track.modules) ...module.allPractices,
   ];
   final connectionPool = allTracks
       .where((candidate) => track.connections.contains(candidate.id))
@@ -1788,9 +1787,8 @@ List<String> _practiceDistractors(
   return <String>[
     for (final track in tracks)
       for (final module in track.modules)
-        if (module.practice != null &&
-            !excludedPracticeIds.contains(module.practice!.id))
-          module.practice!.title.en,
+        for (final practice in module.allPractices)
+          if (!excludedPracticeIds.contains(practice.id)) practice.title.en,
   ].take(3).toList(growable: false);
 }
 
@@ -1850,8 +1848,8 @@ bool _isModuleCompleted(DemoAppState state, LearningModule module) {
   final lessonsDone = module.lessons.every(
     (lesson) => state.completedLessonIds.contains(lesson.id),
   );
-  final practiceDone =
-      module.practice == null ||
-      state.completedPracticeIds.contains(module.practice!.id);
+  final practiceDone = module.allPractices.every(
+    (practice) => state.completedPracticeIds.contains(practice.id),
+  );
   return lessonsDone && practiceDone;
 }

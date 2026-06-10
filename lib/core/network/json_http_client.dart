@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'api_exception.dart';
@@ -191,7 +192,8 @@ class JsonHttpClient {
       throw _exceptionFromResponse(response);
     } on ApiException {
       rethrow;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[JsonHttpClient] network error: $e\n$st');
       throw const ApiException(
         statusCode: 0,
         code: 'network_error',

@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -11,7 +11,6 @@ import 'package:image/image.dart' as img;
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
-
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/adaptive_panel.dart';
@@ -21,8 +20,8 @@ import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/app_settings_panel.dart';
 import '../../../../core/common_widgets/app_user_avatar.dart';
 import '../../../../core/common_widgets/bubble_progress_bar.dart';
-
-
+import '../../../../core/common_widgets/notification_bell_button.dart';
+import '../../../../core/config/app_environment.dart';
 import '../../../../core/layout/app_breakpoints.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
@@ -31,6 +30,18 @@ import '../../../app_guide/presentation/app_guide_copy.dart';
 import '../../../app_guide/presentation/app_guide_target.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
+
+/// Patches Minio/gateway URLs that contain 127.0.0.1 so they work on device.
+String? _patchMediaUrl(String? url, String gatewayBase) {
+  if (url == null || url.isEmpty || kIsWeb) return url;
+  final uri = Uri.tryParse(url);
+  if (uri == null) return url;
+  final host = uri.host;
+  if (host != '127.0.0.1' && host != 'localhost') return url;
+  final gatewayHost = Uri.tryParse(gatewayBase)?.host ?? host;
+  if (gatewayHost == host) return url;
+  return url.replaceFirst('$host:${uri.port}', '$gatewayHost:${uri.port}');
+}
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key, this.enableShellAvatarHero = false});
@@ -107,6 +118,10 @@ class ProfilePage extends ConsumerWidget {
     final colors = context.appColors;
     final compact = context.isCompactLayout;
 
+    // Patch Minio photo URL: on device 127.0.0.1 is the phone's own loopback.
+    final gatewayBase = ref.read(appEnvironmentProvider).gatewayBaseUrl;
+    final effectivePhotoUrl = _patchMediaUrl(backendProfile?.photoUrl, gatewayBase);
+
     // Build the effective DemoUser for the edit dialog (server values + local avatar).
     final effectiveUserForEdit = user?.copyWith(
           name: effectiveDisplayName,
@@ -120,7 +135,7 @@ class ProfilePage extends ConsumerWidget {
         );
 
     void openProfileEditor() {
-      _showEditProfileDialog(context, ref, effectiveUserForEdit, backendProfile?.photoUrl);
+      _showEditProfileDialog(context, ref, effectiveUserForEdit, effectivePhotoUrl);
     }
 
     return AppPageScaffold(
@@ -131,6 +146,7 @@ class ProfilePage extends ConsumerWidget {
           icon: Icon(Icons.insights_rounded, color: colors.primary),
           onPressed: () => context.push(AppRoutes.stats),
         ),
+        if (compact) const NotificationBellButton(),
         AppGuideTarget(
           id: AppGuideTargetIds.profileSettings,
           child: IconButton(
@@ -194,17 +210,18 @@ class ProfilePage extends ConsumerWidget {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // — Avatar + name row —
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             _EditableProfileAvatar(
                               user: user,
-                              photoUrl: backendProfile?.photoUrl,
+                              photoUrl: effectivePhotoUrl,
                               enableHero: enableShellAvatarHero,
-                              size: 108,
+                              size: 88,
                               onTap: openProfileEditor,
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 18),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,81 +233,80 @@ class ProfilePage extends ConsumerWidget {
                                     style: Theme.of(context)
                                         .textTheme
                                         .headlineSmall
-                                        ?.copyWith(fontSize: 28),
+                                        ?.copyWith(fontSize: 26, fontWeight: FontWeight.w900),
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 5),
                                   Text(
                                     email,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: colors.textSecondary,
-                                      height: 1.35,
+                                      fontSize: 13,
+                                      height: 1.4,
                                     ),
-                                  ),
-                                  if (user != null && user.bio.isNotEmpty) ...[
-                                    const SizedBox(height: 10),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: colors.surfaceSoft,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: colors.divider.withValues(alpha: 0.6)),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.format_quote_rounded, color: colors.primary.withValues(alpha: 0.6), size: 16),
-                                          const SizedBox(width: 8),
-                                          Flexible(
-                                            child: Text(
-                                              user.bio,
-                                              maxLines: 3,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: colors.textPrimary,
-                                                fontStyle: FontStyle.italic,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 14),
-                                  AppButton.secondary(
-                                    label: l10n.text('profile_edit'),
-                                    icon: Icons.edit_rounded,
-                                    maxWidth: 220,
-                                    onPressed: openProfileEditor,
                                   ),
                                 ],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 18),
+                        // — Bio (full width, below avatar row) —
+                        if (effectiveBio.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: colors.surfaceSoft,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: colors.divider.withValues(alpha: 0.6)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.format_quote_rounded, color: colors.primary.withValues(alpha: 0.6), size: 16),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    effectiveBio,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: colors.textPrimary,
+                                      fontStyle: FontStyle.italic,
+                                      fontSize: 13,
+                                      height: 1.45,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        // — Edit button (full width on mobile) —
+                        const SizedBox(height: 16),
+                        AppButton.secondary(
+                          label: l10n.text('profile_edit'),
+                          icon: Icons.edit_rounded,
+                          onPressed: openProfileEditor,
+                        ),
+                        const SizedBox(height: 20),
+                        // — Stats pills —
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
                             _Pill(label: 'XP', value: '$effectiveXp'),
+                            _Pill(label: l10n.text('level'), value: '$effectiveLevel'),
+                            _Pill(label: l10n.text('streak'), value: '${effectiveStreak}d'),
                             _Pill(
-                              label: l10n.text('level'),
-                              value: '$effectiveLevel',
-                            ),
-                            _Pill(
-                              label: l10n.text('streak'),
-                              value: '${effectiveStreak}d',
-                            ),
-                            _Pill(
-                              label: l10n.locale == AppLocale.ru ? 'Макс. серия' : (l10n.locale == AppLocale.kk ? 'Макс. серия' : 'Max Streak'),
+                              label: l10n.locale == AppLocale.ru
+                                  ? 'Макс. серия'
+                                  : (l10n.locale == AppLocale.kk ? 'Макс. серия' : 'Max Streak'),
                               value: '${effectiveMaxStreak}d',
                             ),
                           ],
                         ),
-
                       ],
                     );
                   }
@@ -300,7 +316,7 @@ class ProfilePage extends ConsumerWidget {
                     children: [
                       _EditableProfileAvatar(
                         user: user,
-                        photoUrl: backendProfile?.photoUrl,
+                        photoUrl: effectivePhotoUrl,
                         enableHero: enableShellAvatarHero,
                         size: 108,
                         onTap: openProfileEditor,

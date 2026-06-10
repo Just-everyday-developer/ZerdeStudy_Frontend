@@ -46,10 +46,19 @@ final aiJsonHttpClientProvider = Provider<JsonHttpClient>((ref) {
 final aiChatRemoteDataSourceProvider = Provider<AiChatRemoteDataSource>((ref) {
   final client = ref.watch(aiJsonHttpClientProvider);
   final environment = ref.watch(appEnvironmentProvider);
-  return AiChatRemoteDataSource(
-    client,
-    authToken: environment.aiServiceAuthToken,
-  );
+  final accessToken =
+      ref
+          .watch(
+            authControllerProvider.select(
+              (state) => state.session?.accessToken,
+            ),
+          )
+          ?.trim() ??
+      '';
+  final aiAuthToken = environment.aiServiceAuthToken.trim().isNotEmpty
+      ? environment.aiServiceAuthToken.trim()
+      : accessToken;
+  return AiChatRemoteDataSource(client, authToken: aiAuthToken);
 });
 
 final aiChatControllerProvider =
@@ -80,16 +89,16 @@ class AiChatController extends Notifier<AiChatState> {
     if (authUser == null) return;
 
     try {
-      final remoteChats = await ref.read(aiChatRemoteDataSourceProvider).fetchChats(authUser.id);
+      final remoteChats = await ref
+          .read(aiChatRemoteDataSourceProvider)
+          .fetchChats(authUser.id);
       if (remoteChats.isEmpty) {
         // Safe check: If no chats exist on backend but we have active local history, upload it
         if (state.messages.isNotEmpty) {
           final title = state.chatTitles[state.activeChatId] ?? 'AI Assistant';
-          await ref.read(aiChatRemoteDataSourceProvider).createChat(
-            authUser.id,
-            state.activeChatId,
-            title: title,
-          );
+          await ref
+              .read(aiChatRemoteDataSourceProvider)
+              .createChat(authUser.id, state.activeChatId, title: title);
         }
         return;
       }
@@ -110,14 +119,18 @@ class AiChatController extends Notifier<AiChatState> {
       }
 
       // Pre-load messages of active chat
-      final remoteMsgs = await ref.read(aiChatRemoteDataSourceProvider).fetchChatMessages(activeId);
+      final remoteMsgs = await ref
+          .read(aiChatRemoteDataSourceProvider)
+          .fetchChatMessages(activeId);
       final messages = remoteMsgs.map((m) {
         final role = m['role'] as String;
         return AiChatMessage(
           id: m['messageId'] as String,
           author: role == 'user' ? AiChatAuthor.user : AiChatAuthor.mentor,
           text: m['content'] as String? ?? '',
-          createdAt: DateTime.tryParse(m['createdAt'] as String? ?? '') ?? DateTime.now(),
+          createdAt:
+              DateTime.tryParse(m['createdAt'] as String? ?? '') ??
+              DateTime.now(),
         );
       }).toList();
 
@@ -146,8 +159,10 @@ class AiChatController extends Notifier<AiChatState> {
 
     final chatTitle = title ?? 'Chat #${state.chatTitles.length + 1}';
 
-    final updatedTitles = Map<String, String>.from(state.chatTitles)..[finalChatId] = chatTitle;
-    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[finalChatId] = <AiChatMessage>[];
+    final updatedTitles = Map<String, String>.from(state.chatTitles)
+      ..[finalChatId] = chatTitle;
+    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)
+      ..[finalChatId] = <AiChatMessage>[];
 
     state = state.copyWith(
       activeChatId: finalChatId,
@@ -161,11 +176,9 @@ class AiChatController extends Notifier<AiChatState> {
     final authUser = ref.read(authControllerProvider).user;
     if (authUser != null) {
       try {
-        await ref.read(aiChatRemoteDataSourceProvider).createChat(
-          authUser.id,
-          finalChatId,
-          title: chatTitle,
-        );
+        await ref
+            .read(aiChatRemoteDataSourceProvider)
+            .createChat(authUser.id, finalChatId, title: chatTitle);
       } catch (_) {}
     }
   }
@@ -184,24 +197,27 @@ class AiChatController extends Notifier<AiChatState> {
     final authUser = ref.read(authControllerProvider).user;
     if (authUser != null) {
       try {
-        final remoteMsgs = await ref.read(aiChatRemoteDataSourceProvider).fetchChatMessages(chatId);
+        final remoteMsgs = await ref
+            .read(aiChatRemoteDataSourceProvider)
+            .fetchChatMessages(chatId);
         final messages = remoteMsgs.map((m) {
           final role = m['role'] as String;
           return AiChatMessage(
             id: m['messageId'] as String,
             author: role == 'user' ? AiChatAuthor.user : AiChatAuthor.mentor,
             text: m['content'] as String? ?? '',
-            createdAt: DateTime.tryParse(m['createdAt'] as String? ?? '') ?? DateTime.now(),
+            createdAt:
+                DateTime.tryParse(m['createdAt'] as String? ?? '') ??
+                DateTime.now(),
           );
         }).toList();
 
-        final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[chatId] = messages;
+        final updatedChats = Map<String, List<AiChatMessage>>.from(
+          state.allChats,
+        )..[chatId] = messages;
 
         if (state.activeChatId == chatId) {
-          state = state.copyWith(
-            messages: messages,
-            allChats: updatedChats,
-          );
+          state = state.copyWith(messages: messages, allChats: updatedChats);
           _persistState();
         }
       } catch (_) {}
@@ -209,8 +225,10 @@ class AiChatController extends Notifier<AiChatState> {
   }
 
   void deleteChat(String chatId) async {
-    final updatedTitles = Map<String, String>.from(state.chatTitles)..remove(chatId);
-    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..remove(chatId);
+    final updatedTitles = Map<String, String>.from(state.chatTitles)
+      ..remove(chatId);
+    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)
+      ..remove(chatId);
 
     if (updatedChats.isEmpty) {
       final newId = generateUuidV4();
@@ -220,11 +238,9 @@ class AiChatController extends Notifier<AiChatState> {
       final authUser = ref.read(authControllerProvider).user;
       if (authUser != null) {
         try {
-          await ref.read(aiChatRemoteDataSourceProvider).createChat(
-            authUser.id,
-            newId,
-            title: 'AI Assistant',
-          );
+          await ref
+              .read(aiChatRemoteDataSourceProvider)
+              .createChat(authUser.id, newId, title: 'AI Assistant');
         } catch (_) {}
       }
     }
@@ -256,16 +272,17 @@ class AiChatController extends Notifier<AiChatState> {
 
   void renameChat(String chatId, String newTitle) async {
     if (newTitle.trim().isEmpty) return;
-    final updatedTitles = Map<String, String>.from(state.chatTitles)..[chatId] = newTitle.trim();
-    state = state.copyWith(
-      chatTitles: updatedTitles,
-    );
+    final updatedTitles = Map<String, String>.from(state.chatTitles)
+      ..[chatId] = newTitle.trim();
+    state = state.copyWith(chatTitles: updatedTitles);
     _persistState();
 
     final authUser = ref.read(authControllerProvider).user;
     if (authUser != null) {
       try {
-        await ref.read(aiChatRemoteDataSourceProvider).renameChat(chatId, newTitle.trim());
+        await ref
+            .read(aiChatRemoteDataSourceProvider)
+            .renameChat(chatId, newTitle.trim());
       } catch (_) {}
     }
   }
@@ -292,14 +309,21 @@ class AiChatController extends Notifier<AiChatState> {
       isPending: true,
     );
 
-    final updatedMessages = <AiChatMessage>[...previousMessages, userMessage, pendingReply];
-    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[state.activeChatId] = updatedMessages;
+    final updatedMessages = <AiChatMessage>[
+      ...previousMessages,
+      userMessage,
+      pendingReply,
+    ];
+    final updatedChats = Map<String, List<AiChatMessage>>.from(state.allChats)
+      ..[state.activeChatId] = updatedMessages;
 
     var updatedTitles = Map<String, String>.from(state.chatTitles);
     if (previousMessages.isEmpty &&
         (updatedTitles[state.activeChatId] == 'AI Assistant' ||
             updatedTitles[state.activeChatId]?.startsWith('Chat #') == true)) {
-      final summary = message.length > 24 ? '${message.substring(0, 24)}...' : message;
+      final summary = message.length > 24
+          ? '${message.substring(0, 24)}...'
+          : message;
       updatedTitles[state.activeChatId] = summary;
       renameChat(state.activeChatId, summary);
     }
@@ -342,7 +366,8 @@ class AiChatController extends Notifier<AiChatState> {
         pendingMessageId: pendingReply.id,
         replyText: reply.text,
       );
-      final finalChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[state.activeChatId] = finalMessages;
+      final finalChats = Map<String, List<AiChatMessage>>.from(state.allChats)
+        ..[state.activeChatId] = finalMessages;
 
       state = state.copyWith(
         messages: finalMessages,
@@ -354,7 +379,8 @@ class AiChatController extends Notifier<AiChatState> {
       return null;
     } on ApiException catch (error) {
       final finalMessages = _removeMessageById(pendingReply.id);
-      final finalChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[state.activeChatId] = finalMessages;
+      final finalChats = Map<String, List<AiChatMessage>>.from(state.allChats)
+        ..[state.activeChatId] = finalMessages;
       state = state.copyWith(
         messages: finalMessages,
         allChats: finalChats,
@@ -366,7 +392,8 @@ class AiChatController extends Notifier<AiChatState> {
     } catch (_) {
       const errorMsg = 'Unable to get an AI response right now.';
       final finalMessages = _removeMessageById(pendingReply.id);
-      final finalChats = Map<String, List<AiChatMessage>>.from(state.allChats)..[state.activeChatId] = finalMessages;
+      final finalChats = Map<String, List<AiChatMessage>>.from(state.allChats)
+        ..[state.activeChatId] = finalMessages;
       state = state.copyWith(
         messages: finalMessages,
         allChats: finalChats,
@@ -440,7 +467,10 @@ class AiChatController extends Notifier<AiChatState> {
           if (value is List) {
             allChats[key] = value
                 .whereType<Map>()
-                .map((msg) => AiChatMessage.fromJson(Map<String, dynamic>.from(msg)))
+                .map(
+                  (msg) =>
+                      AiChatMessage.fromJson(Map<String, dynamic>.from(msg)),
+                )
                 .where((msg) => !msg.isPending)
                 .toList();
           }
@@ -473,7 +503,10 @@ class AiChatController extends Notifier<AiChatState> {
         if (decoded is List) {
           final messages = decoded
               .whereType<Map>()
-              .map((message) => AiChatMessage.fromJson(Map<String, dynamic>.from(message)))
+              .map(
+                (message) =>
+                    AiChatMessage.fromJson(Map<String, dynamic>.from(message)),
+              )
               .where((message) => !message.isPending)
               .toList();
 

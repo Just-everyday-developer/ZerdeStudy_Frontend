@@ -1,31 +1,23 @@
-// Teacher shell page — updated to match the new 5-tab design.
-//
-// Section list reduced from 8 to 5:
-//   Overview · Course Builder · Analytics · Q&A · Profile
-//
-// The old `generator`, `assessments`, `publishing` (external platforms) and
-// `qna`-as-separate-from-overview have been folded into the builder + AI
-// surfaces. See MIGRATION.md for the rationale.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
+import '../../../../app/state/app_theme_mode.dart';
 import '../../../../app/state/demo_app_controller.dart';
 import '../../../../app/state/demo_models.dart';
-import '../../../../core/common_widgets/app_settings_panel.dart';
+import '../../../../core/common_widgets/adaptive_panel.dart';
+import '../../../../core/common_widgets/locale_selector.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../teacher_text.dart';
 import 'teacher_analytics_page.dart';
-import 'teacher_courses_page.dart';
 import 'teacher_dashboard_page.dart';
 import 'teacher_profile_page.dart';
 import 'teacher_qna_page.dart';
 
-enum TeacherSection { dashboard, builder, analytics, qna, profile }
+enum TeacherSection { dashboard, analytics, qna, profile }
 
 class TeacherShellPage extends ConsumerWidget {
   const TeacherShellPage({super.key, required this.section});
@@ -42,13 +34,11 @@ class TeacherShellPage extends ConsumerWidget {
 
     final page = switch (section) {
       TeacherSection.dashboard => const TeacherDashboardPage(),
-      TeacherSection.builder   => const TeacherCoursesPage(),
       TeacherSection.analytics => const TeacherAnalyticsPage(),
       TeacherSection.qna       => const TeacherQnaPage(),
       TeacherSection.profile   => const TeacherProfilePage(),
     };
 
-    // Compact: bottom-tab nav (mobile / phone web).
     if (compact) {
       return Scaffold(
         backgroundColor: colors.background,
@@ -61,7 +51,6 @@ class TeacherShellPage extends ConsumerWidget {
       );
     }
 
-    // Wide: persistent left rail.
     return Scaffold(
       backgroundColor: colors.background,
       body: Row(
@@ -73,7 +62,7 @@ class TeacherShellPage extends ConsumerWidget {
               locale: locale,
               userName: demoState.user?.name ?? 'Teacher',
               onSectionTap: (s) => context.go(_descriptor(s).route),
-              onOpenSettings: () => showAppSettingsPanel(context),
+              onOpenSettings: () => _showTeacherSettings(context, ref),
               onLogout: () async {
                 await authController.logout();
                 if (!context.mounted) return;
@@ -84,6 +73,234 @@ class TeacherShellPage extends ConsumerWidget {
           Expanded(child: page),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Teacher settings panel
+// ─────────────────────────────────────────────────────────────────────────────
+
+Future<void> _showTeacherSettings(BuildContext context, WidgetRef ref) {
+  return showAdaptivePanel<void>(
+    context: context,
+    builder: (_) => _TeacherSettingsContent(ref: ref),
+  );
+}
+
+class _TeacherSettingsContent extends ConsumerStatefulWidget {
+  const _TeacherSettingsContent({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  ConsumerState<_TeacherSettingsContent> createState() =>
+      _TeacherSettingsContentState();
+}
+
+class _TeacherSettingsContentState
+    extends ConsumerState<_TeacherSettingsContent> {
+  Future<void> _showChangePasswordDialog() async {
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => _ChangePasswordDialog(
+        onSubmit: (current, next) =>
+            ref.read(authControllerProvider.notifier).changePassword(
+              currentPassword: current,
+              newPassword: next,
+            ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(demoAppControllerProvider);
+    final ctrl = ref.read(demoAppControllerProvider.notifier);
+    final colors = context.appColors;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AdaptivePanelHandle(),
+          const SizedBox(height: 18),
+          Text('Настройки', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 20),
+          Text('Язык', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          LocaleSelector(
+            currentLocale: state.locale,
+            onChanged: ctrl.changeLocale,
+          ),
+          const SizedBox(height: 18),
+          Text('Тема', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: AppThemeMode.values.map((mode) {
+              final selected = mode == state.themeMode;
+              final label = switch (mode) {
+                AppThemeMode.dark => 'Тёмная',
+                AppThemeMode.light => 'Светлая',
+              };
+              return ChoiceChip(
+                label: Text(label),
+                selected: selected,
+                onSelected: (_) => ctrl.changeThemeMode(mode),
+                selectedColor: colors.primary.withValues(alpha: 0.16),
+                backgroundColor: colors.surfaceSoft,
+                side: BorderSide(color: selected ? colors.primary : colors.divider),
+                labelStyle: TextStyle(
+                  color: selected ? colors.primary : colors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _showChangePasswordDialog,
+              icon: const Icon(Icons.lock_reset_rounded),
+              label: const Text('Сменить пароль'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Change Password dialog (minimal, teacher-only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ChangePasswordDialog extends StatefulWidget {
+  const _ChangePasswordDialog({required this.onSubmit});
+  final Future<String?> Function(String current, String next) onSubmit;
+
+  @override
+  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
+  final _currentCtrl = TextEditingController();
+  final _newCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+  bool _submitting = false;
+  String _error = '';
+
+  @override
+  void dispose() {
+    _currentCtrl.dispose();
+    _newCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_newCtrl.text != _confirmCtrl.text) {
+      setState(() => _error = 'Пароли не совпадают');
+      return;
+    }
+    if (_newCtrl.text.length < 8) {
+      setState(() => _error = 'Минимум 8 символов');
+      return;
+    }
+    setState(() { _submitting = true; _error = ''; });
+    final err = await widget.onSubmit(_currentCtrl.text, _newCtrl.text);
+    if (!mounted) return;
+    if (err != null) {
+      setState(() { _error = err; _submitting = false; });
+    } else {
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(Icons.lock_reset_rounded, color: colors.primary, size: 20),
+          const SizedBox(width: 10),
+          const Text('Сменить пароль'),
+        ],
+      ),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _currentCtrl,
+              obscureText: true,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Текущий пароль',
+                prefixIcon: Icon(Icons.lock_outline_rounded),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _newCtrl,
+              obscureText: true,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Новый пароль',
+                prefixIcon: Icon(Icons.lock_rounded),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _confirmCtrl,
+              obscureText: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+              decoration: const InputDecoration(
+                labelText: 'Повторите пароль',
+                prefixIcon: Icon(Icons.lock_rounded),
+              ),
+            ),
+            if (_error.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: colors.danger, size: 15),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _error,
+                      style: TextStyle(color: colors.danger, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Отмена'),
+        ),
+        FilledButton.icon(
+          onPressed: _submitting ? null : _submit,
+          icon: _submitting
+              ? const SizedBox(
+                  width: 15, height: 15,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.check_rounded, size: 16),
+          label: const Text('Сохранить'),
+        ),
+      ],
     );
   }
 }
@@ -111,16 +328,6 @@ _Descriptor _descriptor(TeacherSection s) {
         icon: Icons.dashboard_rounded,
         title: teacherText(ru: 'Обзор', en: 'Overview', kk: 'Шолу'),
       );
-    case TeacherSection.builder:
-      return _Descriptor(
-        route: AppRoutes.teacherBuilder,
-        icon: Icons.library_books_rounded,
-        title: teacherText(
-          ru: 'Мои курсы',
-          en: 'My Courses',
-          kk: 'Менің курстарым',
-        ),
-      );
     case TeacherSection.analytics:
       return _Descriptor(
         route: AppRoutes.teacherAnalytics,
@@ -130,8 +337,8 @@ _Descriptor _descriptor(TeacherSection s) {
     case TeacherSection.qna:
       return _Descriptor(
         route: AppRoutes.teacherQna,
-        icon: Icons.forum_rounded,
-        title: teacherText(ru: 'Вопросы', en: 'Q&A', kk: 'Сұрақтар'),
+        icon: Icons.rate_review_rounded,
+        title: teacherText(ru: 'Ревью', en: 'Review', kk: 'Ревью'),
       );
     case TeacherSection.profile:
       return _Descriptor(

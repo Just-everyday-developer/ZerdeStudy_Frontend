@@ -17,6 +17,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../app_guide/presentation/app_guide_controller.dart';
 import '../../../app_guide/presentation/app_guide_target.dart';
+import '../../../courses_backend/data/models/backend_progress_dto.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../tree_map_config.dart';
 
@@ -73,6 +74,12 @@ class _KnowledgeTreeViewportState
   double _fitScale = 1;
   bool _didInitialFit = false;
 
+  // Cache for nodeAccentColors — same map instance avoids _KnowledgeTreePainter.shouldRepaint firing on every build.
+  DemoCatalog? _lastCatalog;
+  DemoAppState? _lastState;
+  AppThemeColors? _lastColors;
+  Map<String, Color>? _cachedNodeAccentColors;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -122,10 +129,10 @@ class _KnowledgeTreeViewportState
     _didInitialFit = true;
   }
 
-  double _minScale(bool compact) => compact ? _fitScale * 0.96 : _fitScale;
+  double _minScale(bool compact) => compact ? _fitScale * 0.7 : _fitScale;
 
   double _maxScale(bool compact) => compact
-      ? math.max(_fitScale * 2.35, 1.7)
+      ? math.max(_fitScale * 7.0, 3.5)
       : math.max(_fitScale * 1.65, 1.2);
 
   double _initialScaleForViewport(
@@ -149,15 +156,25 @@ class _KnowledgeTreeViewportState
       );
       return math.max(normalFit, zoomedFit);
     }
-    return math.min(widthFit, heightFit);
+    // On mobile: start zoomed in so nodes are readable (show ~half the tree).
+    // widthFit alone fits the canvas width to the viewport; multiply by 1.8
+    // so text is legible at first glance. Users can pinch-zoom to see more.
+    final fitFull = math.min(widthFit, heightFit);
+    return fitFull * 1.8;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(demoAppControllerProvider);
-    final catalog = ref.watch(demoCatalogProvider);
-    final colors = context.appColors;
-    final nodeAccentColors = <String, Color>{
+  Map<String, Color> _getNodeAccentColors(
+    DemoCatalog catalog,
+    DemoAppState state,
+    AppThemeColors colors,
+  ) {
+    if (identical(_lastCatalog, catalog) &&
+        identical(_lastState, state) &&
+        identical(_lastColors, colors) &&
+        _cachedNodeAccentColors != null) {
+      return _cachedNodeAccentColors!;
+    }
+    final map = <String, Color>{
       for (final node in knowledgeTreeNodes)
         node.id: _nodeAccentColor(
           node: node,
@@ -166,6 +183,22 @@ class _KnowledgeTreeViewportState
           colors: colors,
         ),
     };
+    _lastCatalog = catalog;
+    _lastState = state;
+    _lastColors = colors;
+    _cachedNodeAccentColors = map;
+    return map;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(demoAppControllerProvider);
+    final catalog = ref.watch(demoCatalogProvider);
+    final oopProgress = ref
+        .watch(backendOopProgressProvider)
+        .maybeWhen(data: (p) => p, orElse: () => null);
+    final colors = context.appColors;
+    final nodeAccentColors = _getNodeAccentColors(catalog, state, colors);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -251,7 +284,7 @@ class _KnowledgeTreeViewportState
                                   maxScale: windowsFixedViewport
                                       ? _windowsFixedScale
                                       : _maxScale(compact),
-                                  scaleEnabled: false,
+                                  scaleEnabled: compact,
                                   panEnabled: true,
                                   trackpadScrollCausesScale: true,
                                   boundaryMargin: EdgeInsets.symmetric(
@@ -268,37 +301,40 @@ class _KnowledgeTreeViewportState
                                         ? 24
                                         : 64,
                                   ),
-                                  child: SizedBox(
-                                    width: knowledgeTreeCanvasSize.width,
-                                    height: knowledgeTreeCanvasSize.height,
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        Positioned.fill(
-                                          child: IgnorePointer(
-                                            child: CustomPaint(
-                                              painter: _KnowledgeTreePainter(
-                                                nodes: knowledgeTreeNodes,
-                                                edges: knowledgeTreeEdges,
-                                                nodeAccentColors:
-                                                    nodeAccentColors,
-                                                colors: colors,
+                                  child: RepaintBoundary(
+                                    child: SizedBox(
+                                      width: knowledgeTreeCanvasSize.width,
+                                      height: knowledgeTreeCanvasSize.height,
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Positioned.fill(
+                                            child: IgnorePointer(
+                                              child: CustomPaint(
+                                                painter: _KnowledgeTreePainter(
+                                                  nodes: knowledgeTreeNodes,
+                                                  edges: knowledgeTreeEdges,
+                                                  nodeAccentColors:
+                                                      nodeAccentColors,
+                                                  colors: colors,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                        ...knowledgeTreeNodes.map(
-                                          (node) => _buildPositionedNode(
-                                            context,
-                                            node,
-                                            catalog,
-                                            state,
-                                            colors,
-                                            nodeAccentColors[node.id] ??
-                                                colors.primary,
+                                          ...knowledgeTreeNodes.map(
+                                            (node) => _buildPositionedNode(
+                                              context,
+                                              node,
+                                              catalog,
+                                              state,
+                                              colors,
+                                              nodeAccentColors[node.id] ??
+                                                  colors.primary,
+                                              oopProgress,
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -325,6 +361,7 @@ class _KnowledgeTreeViewportState
     DemoAppState state,
     AppThemeColors colors,
     Color accent,
+    BackendCourseProgressDto? oopProgress,
   ) {
     final orbSize = node.radius * 2;
     final widgetWidth =
@@ -342,6 +379,7 @@ class _KnowledgeTreeViewportState
         state: state,
         catalog: catalog,
         accent: accent,
+        oopProgress: oopProgress,
         onTap: node.trackId == null || node.id == 'mathematics'
             ? null
             : () => context.push(AppRoutes.trackById(node.trackId!)),
@@ -350,13 +388,14 @@ class _KnowledgeTreeViewportState
   }
 }
 
-class _KnowledgeTreeNodeCard extends ConsumerWidget {
+class _KnowledgeTreeNodeCard extends StatelessWidget {
   const _KnowledgeTreeNodeCard({
     required this.node,
     required this.state,
     required this.catalog,
     required this.accent,
     required this.onTap,
+    this.oopProgress,
   });
 
   final KnowledgeTreeNodeSpec node;
@@ -364,9 +403,10 @@ class _KnowledgeTreeNodeCard extends ConsumerWidget {
   final DemoCatalog catalog;
   final Color accent;
   final VoidCallback? onTap;
+  final BackendCourseProgressDto? oopProgress;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colors = context.appColors;
     final track = node.trackId == null
         ? null
@@ -382,11 +422,7 @@ class _KnowledgeTreeNodeCard extends ConsumerWidget {
     final localProgress = track == null
         ? null
         : catalog.progressForTrack(state, track.id);
-    final backendOopProgress = (track?.id == 'oop')
-        ? ref
-            .watch(backendOopProgressProvider)
-            .maybeWhen(data: (p) => p, orElse: () => null)
-        : null;
+    final backendOopProgress = track?.id == 'oop' ? oopProgress : null;
     final progress = (backendOopProgress != null &&
             backendOopProgress.totalLessons > 0 &&
             track?.id == 'oop')

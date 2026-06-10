@@ -47,8 +47,7 @@ class TrackPage extends ConsumerWidget {
       final backendProgress = ref
           .watch(backendOopProgressProvider)
           .maybeWhen(data: (p) => p, orElse: () => null);
-      progress =
-          (backendProgress != null && backendProgress.totalLessons > 0)
+      progress = (backendProgress != null && backendProgress.totalLessons > 0)
           ? _mergeBackendProgress(localProgress, backendProgress)
           : localProgress;
     } else {
@@ -160,13 +159,25 @@ class TrackPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 14),
                     ...module.lessons.map((lesson) {
-                      final isCompleted = state.completedLessonIds.contains(lesson.id);
-                      final isStarted = state.startedLessonIds.contains(lesson.id);
+                      final isCompleted = state.completedLessonIds.contains(
+                        lesson.id,
+                      );
+                      final isStarted = state.startedLessonIds.contains(
+                        lesson.id,
+                      );
                       final statusLabel = isCompleted
-                          ? (state.locale == AppLocale.ru ? 'Пройдено' : (state.locale == AppLocale.kk ? 'Аяқталды' : 'Completed'))
+                          ? (state.locale == AppLocale.ru
+                                ? 'Пройдено'
+                                : (state.locale == AppLocale.kk
+                                      ? 'Аяқталды'
+                                      : 'Completed'))
                           : isStarted
-                              ? (state.locale == AppLocale.ru ? 'В процессе' : (state.locale == AppLocale.kk ? 'Орындалуда' : 'In Progress'))
-                              : '';
+                          ? (state.locale == AppLocale.ru
+                                ? 'В процессе'
+                                : (state.locale == AppLocale.kk
+                                      ? 'Орындалуда'
+                                      : 'In Progress'))
+                          : '';
 
                       return ListTile(
                         onTap: () {
@@ -188,26 +199,39 @@ class TrackPage extends ConsumerWidget {
                             ),
                             if (statusLabel.isNotEmpty)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isCompleted
-                                      ? context.appColors.success.withValues(alpha: 0.12)
-                                      : context.appColors.accent.withValues(alpha: 0.12),
+                                      ? context.appColors.success.withValues(
+                                          alpha: 0.12,
+                                        )
+                                      : context.appColors.accent.withValues(
+                                          alpha: 0.12,
+                                        ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      isCompleted ? Icons.check_circle_outline_rounded : Icons.pending_actions_rounded,
+                                      isCompleted
+                                          ? Icons.check_circle_outline_rounded
+                                          : Icons.pending_actions_rounded,
                                       size: 11,
-                                      color: isCompleted ? context.appColors.success : context.appColors.accent,
+                                      color: isCompleted
+                                          ? context.appColors.success
+                                          : context.appColors.accent,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       statusLabel,
                                       style: TextStyle(
-                                        color: isCompleted ? context.appColors.success : context.appColors.accent,
+                                        color: isCompleted
+                                            ? context.appColors.success
+                                            : context.appColors.accent,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 9,
                                       ),
@@ -230,79 +254,110 @@ class TrackPage extends ConsumerWidget {
                         ),
                       );
                     }),
-                    if (module.practice != null) ...[
-                      (() {
-                        final practice = module.practice!;
-                        final isCompleted = state.completedPracticeIds.contains(practice.id);
-                        final isFocused = state.focusedPracticeId == practice.id;
-                        final statusLabel = isCompleted
-                            ? (state.locale == AppLocale.ru ? 'Пройдено' : (state.locale == AppLocale.kk ? 'Аяқталды' : 'Completed'))
-                            : isFocused
-                                ? (state.locale == AppLocale.ru ? 'В процессе' : (state.locale == AppLocale.kk ? 'Орындалуда' : 'In Progress'))
-                                : '';
+                    if (module.allPractices.isNotEmpty) ...[
+                      for (final practice in module.allPractices)
+                        (() {
+                          final isCompleted = state.completedPracticeIds
+                              .contains(practice.id);
+                          final isFocused =
+                              state.focusedPracticeId == practice.id;
+                          final statusLabel = isCompleted
+                              ? (state.locale == AppLocale.ru
+                                    ? 'Пройдено'
+                                    : (state.locale == AppLocale.kk
+                                          ? 'Аяқталды'
+                                          : 'Completed'))
+                              : isFocused
+                              ? (state.locale == AppLocale.ru
+                                    ? 'В процессе'
+                                    : (state.locale == AppLocale.kk
+                                          ? 'Орындалуда'
+                                          : 'In Progress'))
+                              : '';
 
-                        return ListTile(
-                          onTap: () {
-                            controller.focusPractice(practice.id);
-                            context.push(AppRoutes.practiceById(practice.id));
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          title: Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 8,
-                            runSpacing: 4,
-                            children: [
-                              Text(
-                                practice.title.resolve(state.locale),
-                                style: TextStyle(
-                                  color: context.appColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              if (statusLabel.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: isCompleted
-                                        ? context.appColors.success.withValues(alpha: 0.12)
-                                        : context.appColors.accent.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(6),
+                          final summary = practice.summary
+                              .resolve(state.locale)
+                              .trim();
+
+                          return ListTile(
+                            onTap: () {
+                              controller.focusPractice(practice.id);
+                              context.push(AppRoutes.practiceById(practice.id));
+                            },
+                            contentPadding: EdgeInsets.zero,
+                            title: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                Text(
+                                  practice.title.resolve(state.locale),
+                                  style: TextStyle(
+                                    color: context.appColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        isCompleted ? Icons.check_circle_outline_rounded : Icons.pending_actions_rounded,
-                                        size: 11,
-                                        color: isCompleted ? context.appColors.success : context.appColors.accent,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        statusLabel,
-                                        style: TextStyle(
-                                          color: isCompleted ? context.appColors.success : context.appColors.accent,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 9,
+                                ),
+                                if (statusLabel.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isCompleted
+                                          ? context.appColors.success
+                                                .withValues(alpha: 0.12)
+                                          : context.appColors.accent.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          isCompleted
+                                              ? Icons
+                                                    .check_circle_outline_rounded
+                                              : Icons.pending_actions_rounded,
+                                          size: 11,
+                                          color: isCompleted
+                                              ? context.appColors.success
+                                              : context.appColors.accent,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          statusLabel,
+                                          style: TextStyle(
+                                            color: isCompleted
+                                                ? context.appColors.success
+                                                : context.appColors.accent,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 9,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                            ],
-                          ),
-                          subtitle: Text(
-                            practice.summary.resolve(state.locale),
-                            style: TextStyle(
-                              color: context.appColors.textSecondary,
-                              height: 1.35,
+                              ],
                             ),
-                          ),
-                          trailing: Icon(
-                            Icons.chevron_right_rounded,
-                            color: context.appColors.textSecondary,
-                          ),
-                        );
-                      })(),
+                            subtitle: summary.isEmpty
+                                ? null
+                                : Text(
+                                    summary,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: context.appColors.textSecondary,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                            trailing: Icon(
+                              Icons.chevron_right_rounded,
+                              color: context.appColors.textSecondary,
+                            ),
+                          );
+                        })(),
                     ],
                   ],
                 ),
@@ -326,8 +381,8 @@ TrackProgress _mergeBackendProgress(
   final availability = completed == 0
       ? TrackAvailability.available
       : completed < total
-          ? TrackAvailability.inProgress
-          : TrackAvailability.completed;
+      ? TrackAvailability.inProgress
+      : TrackAvailability.completed;
 
   return TrackProgress(
     state: availability,
@@ -355,8 +410,7 @@ TrackProgress _computeTrackProgress(DemoAppState state, LearningTrack track) {
         nextTarget ??= LearningTarget.lesson(lesson);
       }
     }
-    final practice = module.practice;
-    if (practice != null) {
+    for (final practice in module.allPractices) {
       if (state.completedPracticeIds.contains(practice.id)) {
         completedUnits += 1;
       } else {
@@ -374,15 +428,16 @@ TrackProgress _computeTrackProgress(DemoAppState state, LearningTrack track) {
   final availability = completedUnits == 0
       ? TrackAvailability.available
       : completedUnits < track.totalUnits
-          ? TrackAvailability.inProgress
-          : TrackAvailability.completed;
+      ? TrackAvailability.inProgress
+      : TrackAvailability.completed;
 
   return TrackProgress(
     state: availability,
     completedUnits: completedUnits,
     totalUnits: track.totalUnits,
-    completedQuizzes:
-        quizIds.where(state.completedQuizIds.contains).length,
+    completedQuizzes: quizIds
+        .where((quizId) => state.completedQuizIds.contains(quizId))
+        .length,
     totalQuizzes: quizIds.length,
     completedTrainers: 0,
     totalTrainers: 0,
