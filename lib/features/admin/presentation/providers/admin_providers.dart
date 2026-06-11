@@ -7,6 +7,7 @@ import '../../../courses_backend/presentation/providers/backend_course_providers
 import '../../data/datasources/admin_remote_data_source.dart';
 import '../../data/models/admin_role_dto.dart';
 import '../../data/models/admin_user_dto.dart';
+import '../../data/models/course_review_dto.dart';
 
 /// Access token of the signed-in (admin) user.
 final adminAccessTokenProvider = Provider<String?>((ref) {
@@ -18,6 +19,16 @@ final adminAccessTokenProvider = Provider<String?>((ref) {
 final adminRemoteDataSourceProvider = Provider<AdminRemoteDataSource>((ref) {
   final client = ref.watch(authJsonHttpClientProvider);
   return AdminRemoteDataSource(client);
+});
+
+final adminPendingCoursesProvider =
+    FutureProvider<List<PendingCourseDto>>((ref) async {
+  final accessToken = ref.watch(adminAccessTokenProvider);
+  if (accessToken == null || accessToken.trim().isEmpty) {
+    return const <PendingCourseDto>[];
+  }
+  final remote = ref.watch(adminRemoteDataSourceProvider);
+  return remote.fetchPendingCourses(accessToken: accessToken);
 });
 
 /// All registered users (admin/manager only). Empty when unauthenticated.

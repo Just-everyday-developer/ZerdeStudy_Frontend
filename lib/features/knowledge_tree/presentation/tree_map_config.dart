@@ -39,7 +39,7 @@ const List<KnowledgeTreeNodeSpec> knowledgeTreeNodes = <KnowledgeTreeNodeSpec>[
     id: 'oop',
     trackId: 'oop',
     title: LocalizedText(ru: 'OOP', en: 'OOP', kk: 'OOP'),
-    position: Offset(500, 500),
+    position: Offset(560, 540),
     radius: 80,
   ),
   KnowledgeTreeNodeSpec(
@@ -284,6 +284,7 @@ const List<KnowledgeTreeEdgeSpec> knowledgeTreeEdges = <KnowledgeTreeEdgeSpec>[
   // Root to primary foundations
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'mathematics'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'root', toNodeId: 'oop'),
+
   KnowledgeTreeEdgeSpec(
     fromNodeId: 'root',
     toNodeId: 'algorithms_data_structures',
@@ -331,6 +332,7 @@ const List<KnowledgeTreeEdgeSpec> knowledgeTreeEdges = <KnowledgeTreeEdgeSpec>[
   // Foundation convergence into applied paths
   KnowledgeTreeEdgeSpec(fromNodeId: 'mathematics', toNodeId: 'applied_hub'),
   KnowledgeTreeEdgeSpec(fromNodeId: 'oop', toNodeId: 'applied_hub'),
+
   KnowledgeTreeEdgeSpec(
     fromNodeId: 'algorithms_data_structures',
     toNodeId: 'applied_hub',

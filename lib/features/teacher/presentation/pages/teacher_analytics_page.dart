@@ -171,12 +171,6 @@ class _KpiGrid extends StatelessWidget {
         accent: colors.primary,
       ),
       (
-        icon: Icons.people_rounded,
-        value: '$totalStudents',
-        label: _kpiStudents.resolve(locale),
-        accent: const Color(0xFF34D399),
-      ),
-      (
         icon: Icons.menu_book_rounded,
         value: '$totalLessons',
         label: _kpiLessons.resolve(locale),
@@ -191,7 +185,7 @@ class _KpiGrid extends StatelessWidget {
     ];
 
     return LayoutBuilder(builder: (context, box) {
-      final cols = box.maxWidth > 600 ? 4 : 2;
+      final cols = box.maxWidth > 600 ? 3 : 2;
       return GridView.count(
         crossAxisCount: cols,
         shrinkWrap: true,
@@ -714,7 +708,6 @@ final _emptyBody = teacherText(
   kk: 'Студенттер курстарыңызды өте бастаған соң статистика пайда болады.',
 );
 final _kpiCourses = teacherText(ru: 'Курсов', en: 'Courses', kk: 'Курс');
-final _kpiStudents = teacherText(ru: 'Студентов', en: 'Students', kk: 'Студент');
 final _kpiLessons = teacherText(ru: 'Уроков', en: 'Lessons', kk: 'Сабақ');
 final _kpiPending = teacherText(ru: 'На ревью', en: 'Pending review', kk: 'Ревьюда');
 final _reviewLabel = teacherText(ru: 'Код-ревью', en: 'Code review', kk: 'Код-ревью');

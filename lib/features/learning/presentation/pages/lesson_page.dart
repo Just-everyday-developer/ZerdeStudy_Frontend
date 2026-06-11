@@ -14,13 +14,18 @@ import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/notifications/local_notification_service.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../ai/presentation/providers/ai_chat_controller.dart';
+import '../../../courses_backend/data/models/backend_code_attempt_dto.dart';
 import '../../../courses_backend/data/models/backend_lesson_dto.dart';
+import '../../../courses_backend/data/models/backend_practice_dto.dart';
+import '../../../courses_backend/data/models/backend_practice_submission_dto.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
 import '../widgets/premium_code_editor.dart';
+import '../../../home/presentation/pages/backend_course_player_page.dart' show oopVideoUrls;
 
 class LessonPage extends ConsumerStatefulWidget {
   const LessonPage({super.key, required this.lessonId});
@@ -34,10 +39,21 @@ class LessonPage extends ConsumerStatefulWidget {
 enum LessonStepKind { theory, quiz, trainer, code }
 
 class LessonStep {
-  const LessonStep({required this.kind, this.quiz, this.trainer, this.id});
+  const LessonStep({
+    required this.kind,
+    this.quiz,
+    this.trainer,
+    this.practice,
+    this.id,
+  });
   final LessonStepKind kind;
   final LessonQuiz? quiz;
   final CodeTrainer? trainer;
+
+  /// Real backend practice task (curriculum-service `practice_tasks`) backing a
+  /// code step. When set, the step renders the task's own title/description and
+  /// grades Run/Submit through `/practice/:id/run` instead of a generic editor.
+  final BackendPracticeDto? practice;
   final String? id;
 }
 
@@ -48,6 +64,21 @@ class _LessonPageState extends ConsumerState<LessonPage> {
   final Map<String, String> _codeTexts = <String, String>{};
   final ScrollController _theoryScrollController = ScrollController();
   final Map<String, bool> _codeStepSubmitted = <String, bool>{};
+
+  /// Per practice-step backend state: in-flight flag, last attempt result and
+  /// console text. Keyed by the step id (`practice_<uuid>`).
+  final Set<String> _practiceRunning = <String>{};
+  final Map<String, BackendCodeAttemptResultDto> _practiceResults =
+      <String, BackendCodeAttemptResultDto>{};
+  final Map<String, String> _practiceConsole = <String, String>{};
+
+  /// Theory marked on the backend once per lesson so practice prerequisites and
+  /// lesson completion can fire without depending on the final button.
+  bool _theoryMarkedOnBackend = false;
+
+  /// Id of the last step in the freshly built list (set in [build]); used to
+  /// decide when finishing a practice should also finalize the whole lesson.
+  String? _lastStepId;
   int _currentStepIndex = 0;
 
   /// XP reward from the backend lesson. Latched on the first successful load
@@ -79,7 +110,10 @@ class _LessonPageState extends ConsumerState<LessonPage> {
     }
   }
 
-  List<LessonStep> _buildSteps(LessonItem lesson) {
+  List<LessonStep> _buildSteps(
+    LessonItem lesson,
+    List<BackendPracticeDto> practices,
+  ) {
     final steps = <LessonStep>[];
 
     // Step 1: Theory
@@ -101,8 +135,22 @@ class _LessonPageState extends ConsumerState<LessonPage> {
       );
     }
 
-    if (lesson.codeSnippet.trim().isNotEmpty ||
-        lesson.exampleOutput.trim().isNotEmpty) {
+    if (practices.isNotEmpty) {
+      // Real, topic-specific practice tasks from curriculum-service: one
+      // graded code step each (Run/Submit go through /practice/:id/run).
+      for (final practice in practices) {
+        steps.add(
+          LessonStep(
+            kind: LessonStepKind.code,
+            practice: practice,
+            id: 'practice_${practice.id}',
+          ),
+        );
+      }
+    } else if (!_isBackendId(widget.lessonId) &&
+        (lesson.codeSnippet.trim().isNotEmpty ||
+            lesson.exampleOutput.trim().isNotEmpty)) {
+      // Local demo-catalog lessons keep the lightweight generic editor step.
       steps.add(
         LessonStep(kind: LessonStepKind.code, id: '${widget.lessonId}_code'),
       );
@@ -193,13 +241,23 @@ class _LessonPageState extends ConsumerState<LessonPage> {
         }
       });
     }
+    // Real practice tasks for this lesson (graded via /practice/:id/run).
+    final practices = ref
+        .watch(backendPracticesForLessonProvider(widget.lessonId))
+        .maybeWhen(
+          data: (items) => items,
+          orElse: () => const <BackendPracticeDto>[],
+        );
+
     final completed = state.completedLessonIds.contains(widget.lessonId);
     final colors = context.appColors;
     final l10n = context.l10n;
     final locale = state.locale;
 
-    final steps = _buildSteps(lesson);
-    final currentStep = steps[_currentStepIndex];
+    final steps = _buildSteps(lesson, practices);
+    _lastStepId = steps.isNotEmpty ? steps.last.id : null;
+    final currentStep =
+        steps[_currentStepIndex.clamp(0, steps.length - 1)];
 
     return AppPageScaffold(
       title: lesson.title.resolve(state.locale),
@@ -330,8 +388,15 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                         Expanded(
                           child: AppButton.primary(
                             label: l10n.text('next_step'),
-                            onPressed: () =>
-                                setState(() => _currentStepIndex++),
+                            onPressed: () {
+                              // Leaving the theory step marks theory complete on
+                              // the backend so practices unlock and the lesson
+                              // can auto-complete once all tasks are done.
+                              if (currentStep.kind == LessonStepKind.theory) {
+                                _markTheoryOnBackend();
+                              }
+                              setState(() => _currentStepIndex++);
+                            },
                           ),
                         )
                       else
@@ -489,77 +554,96 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               ],
             ),
             const SizedBox(height: 12),
-            // Video placeholder 16:9
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF0D1B2A),
-                        colors.primary.withValues(alpha: 0.3),
-                      ],
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: SizedBox(
+                  height: 270,
+                  width: 670,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF0D1B2A),
+                          colors.primary.withValues(alpha: 0.3),
+                        ],
+                      ),
                     ),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 58,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: colors.primary,
-                            boxShadow: [
-                              BoxShadow(
-                                color: colors.primary.withValues(alpha: 0.45),
-                                blurRadius: 24,
-                                spreadRadius: 2,
-                              ),
-                            ],
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: colors.primary,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.primary.withValues(alpha: 0.45),
+                                  blurRadius: 24,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 30,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: Colors.white,
-                            size: 30,
+                          const SizedBox(height: 10),
+                          Text(
+                            switch (locale) {
+                              AppLocale.ru => 'Видео по теме',
+                              AppLocale.kk => 'Тақырып бойынша бейне',
+                              _ => 'Topic Video',
+                            },
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          switch (locale) {
-                            AppLocale.ru => 'Видео по теме',
-                            AppLocale.kk => 'Тақырып бойынша бейне',
-                            _ => 'Topic Video',
-                          },
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            if (lesson.summary.resolve(locale).trim().isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Text(
-                lesson.summary.resolve(locale),
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  height: 1.5,
-                  fontSize: 14,
-                ),
-              ),
-            ],
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (lesson.summary.resolve(locale).trim().isNotEmpty)
+                  Expanded(
+                    child: Text(
+                      lesson.summary.resolve(locale),
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        height: 1.5,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                if (_oopVideoUrl(widget.lessonId) != null) ...[
+                  if (lesson.summary.resolve(locale).trim().isNotEmpty)
+                    const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _oopVideoUrl(widget.lessonId)!,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ],
+              ],
+            ),
             const SizedBox(height: 20),
+
             // Theory content
             GlowCard(
               accent: const Color(0xFFFFA726),
@@ -719,6 +803,22 @@ class _LessonPageState extends ConsumerState<LessonPage> {
           },
         );
       case LessonStepKind.code:
+        // Real backend practice task → graded code step (Run/Submit via
+        // /practice/:id/run). Falls back to the generic editor below only for
+        // local demo-catalog lessons that have no practice_tasks.
+        if (step.practice != null) {
+          final isLastStep = step.id == _lastStepId;
+          return _buildBackendPracticeStep(
+            practice: step.practice!,
+            stepId: step.id!,
+            isLastStep: isLastStep,
+            state: state,
+            controller: controller,
+            colors: colors,
+            locale: locale,
+          );
+        }
+
         final stepId = step.id!;
 
         // Determine initial code: use lesson.codeSnippet or default Java Main class
@@ -845,6 +945,421 @@ class _LessonPageState extends ConsumerState<LessonPage> {
     }
   }
 
+  /// Renders a real `practice_tasks` entry: its own title/description + an
+  /// editor whose Run/Submit are graded by curriculum-service
+  /// (`/practice/:id/run` for auto tasks, teacher review for manual tasks).
+  Widget _buildBackendPracticeStep({
+    required BackendPracticeDto practice,
+    required String stepId,
+    required bool isLastStep,
+    required DemoAppState state,
+    required DemoAppController controller,
+    required AppThemeColors colors,
+    required AppLocale locale,
+  }) {
+    final isManual = practice.checkType.trim().toLowerCase() == 'manual';
+    final isRunning = _practiceRunning.contains(stepId);
+    final isDone =
+        state.completedCodeStepIds.contains(stepId) ||
+        (_codeStepSubmitted[stepId] ?? false);
+    final result = _practiceResults[stepId];
+    final console = _practiceConsole[stepId];
+    final title = _resolveBackendText(practice.title, locale);
+    final description = practice.description.trim();
+    final initialCode = _codeTexts[stepId] ?? _practiceInitialCode(practice);
+    final submitLabel = isRunning
+        ? 'Отправка…'
+        : isDone
+        ? (isManual ? 'Отправлено' : 'Принято')
+        : (isManual ? 'Отправить на ревью' : 'Submit');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title.isNotEmpty ? title : 'Практическое задание',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        if (description.isNotEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: colors.surfaceSoft.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colors.divider),
+            ),
+            child: Text(
+              description,
+              style: TextStyle(
+                color: colors.textPrimary,
+                height: 1.45,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Icon(
+              isManual ? Icons.rate_review_rounded : Icons.bolt_rounded,
+              size: 16,
+              color: isManual ? colors.accent : colors.success,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              isManual
+                  ? 'Проверяет преподаватель'
+                  : 'Авто-проверка по выводу программы',
+              style: TextStyle(color: colors.textSecondary, fontSize: 12),
+            ),
+            const Spacer(),
+            if (practice.xpReward > 0)
+              Text(
+                '+${practice.xpReward} XP',
+                style: TextStyle(
+                  color: colors.accent,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        PremiumCodeEditor(
+          key: ValueKey<String>('${widget.lessonId}_$stepId'),
+          initialCode: initialCode,
+          language: practice.language.trim().isEmpty
+              ? 'java'
+              : practice.language.trim(),
+          isSubmitted: isDone,
+          // Execution is driven by the Run/Submit buttons below (backend
+          // /practice/:id/run), so hide the editor's own local Run button.
+          showRunButton: false,
+          onCodeChanged: (code) => _codeTexts[stepId] = code,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: AppButton.secondary(
+                label: isRunning ? 'Запуск…' : 'Run code',
+                icon: Icons.play_arrow_rounded,
+                onPressed: (isRunning || isDone)
+                    ? null
+                    : () => _runLessonPractice(
+                        practice: practice,
+                        stepId: stepId,
+                        runType: 'run',
+                        isLastStep: isLastStep,
+                        locale: locale,
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: AppButton.primary(
+                label: submitLabel,
+                icon: isDone
+                    ? Icons.check_circle_rounded
+                    : Icons.send_rounded,
+                onPressed: (isRunning || isDone)
+                    ? null
+                    : () => isManual
+                          ? _submitManualLessonPractice(
+                              practice: practice,
+                              stepId: stepId,
+                            )
+                          : _runLessonPractice(
+                              practice: practice,
+                              stepId: stepId,
+                              runType: 'submit',
+                              isLastStep: isLastStep,
+                              locale: locale,
+                            ),
+              ),
+            ),
+          ],
+        ),
+        if (console != null) ...[
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D1117),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colors.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Вывод',
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (result != null) ...[
+                      const SizedBox(width: 10),
+                      Icon(
+                        result.passed
+                            ? Icons.check_circle_rounded
+                            : Icons.error_rounded,
+                        size: 16,
+                        color: result.passed ? colors.success : colors.danger,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        result.passed
+                            ? 'Пройдено${result.xpAwarded > 0 ? ' · +${result.xpAwarded} XP' : ''}'
+                            : 'Не пройдено',
+                        style: TextStyle(
+                          color: result.passed
+                              ? colors.success
+                              : colors.danger,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SelectableText(
+                  console,
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontFamily: 'monospace',
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  String _practiceInitialCode(BackendPracticeDto practice) {
+    if (practice.starterCode.trim().isNotEmpty) return practice.starterCode;
+    return 'public class Main {\n    public static void main(String[] args) {\n        // Напишите ваше решение здесь\n    }\n}';
+  }
+
+  /// Runs (`run`) or grades (`submit`) a practice through curriculum-service.
+  /// On a passing submit the backend records progress, awards XP and may mark
+  /// the whole lesson complete — so we refresh the backend providers and, for
+  /// the final step, finalize the lesson locally too.
+  Future<void> _runLessonPractice({
+    required BackendPracticeDto practice,
+    required String stepId,
+    required String runType,
+    required bool isLastStep,
+    required AppLocale locale,
+  }) async {
+    final accessToken = ref.read(backendCourseAccessTokenProvider)?.trim();
+    if (accessToken == null || accessToken.isEmpty) {
+      AppNotice.show(
+        context,
+        message: 'Нет соединения с сервером. Войдите снова.',
+        type: AppNoticeType.error,
+      );
+      return;
+    }
+
+    // Ensure theory is marked first so the practice prerequisite check passes
+    // even if the student jumped straight here via the step chips.
+    await _markTheoryOnBackend();
+
+    final code = _codeTexts[stepId] ?? _practiceInitialCode(practice);
+    if (!mounted) return;
+    setState(() => _practiceRunning.add(stepId));
+
+    try {
+      final remote = ref.read(backendCourseRemoteDataSourceProvider);
+      final result = await remote.runPractice(
+        accessToken: accessToken,
+        practiceId: practice.id,
+        courseId: practice.courseId,
+        lessonId: practice.lessonId,
+        runType: runType,
+        language: practice.language.trim().isEmpty
+            ? 'java'
+            : practice.language.trim(),
+        code: code,
+      );
+
+      if (!mounted) return;
+
+      final consoleText = [
+        if (result.output.trim().isNotEmpty) result.output.trim(),
+        if (result.error.trim().isNotEmpty) result.error.trim(),
+      ].join('\n');
+
+      setState(() {
+        _practiceRunning.remove(stepId);
+        _practiceResults[stepId] = result;
+        _practiceConsole[stepId] = consoleText.isEmpty
+            ? 'Программа не вывела ничего.'
+            : consoleText;
+      });
+
+      if (runType != 'submit') return;
+
+      if (result.passed) {
+        ref.read(demoAppControllerProvider.notifier).completeCodeStep(stepId);
+        ref.invalidate(backendStreakProvider);
+        ref.invalidate(backendOopProgressProvider);
+        ref.invalidate(backendAllProgressProvider);
+        ref.invalidate(backendAchievementsProvider);
+        ref.invalidate(backendProfileProvider);
+        AppNotice.show(
+          context,
+          message: result.xpAwarded > 0
+              ? '+${result.xpAwarded} XP — задача принята!'
+              : 'Задача принята!',
+          type: AppNoticeType.success,
+        );
+        if (isLastStep) _finalizeLessonLocally(locale);
+      } else {
+        AppNotice.show(
+          context,
+          message:
+              'Вывод не совпал с ожидаемым. Сравните результат и попробуйте снова.',
+          type: AppNoticeType.error,
+        );
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _practiceRunning.remove(stepId));
+      final message = e.code == 'practice_prerequisites_not_met'
+          ? 'Сначала пройдите теорию и тесты этого урока, затем отправляйте практику.'
+          : (e.message.trim().isNotEmpty
+                ? e.message.trim()
+                : 'Не удалось выполнить код. Попробуйте ещё раз.');
+      AppNotice.show(context, message: message, type: AppNoticeType.error);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _practiceRunning.remove(stepId));
+      AppNotice.show(
+        context,
+        message: 'Code runner недоступен. Проверьте соединение.',
+        type: AppNoticeType.error,
+      );
+    }
+  }
+
+  /// Sends a manual practice solution to the teacher review queue
+  /// (`POST /practice/:id/submissions`). Completion happens after the teacher
+  /// approves it, so we only lock the step as "submitted" here.
+  Future<void> _submitManualLessonPractice({
+    required BackendPracticeDto practice,
+    required String stepId,
+  }) async {
+    final accessToken = ref.read(backendCourseAccessTokenProvider)?.trim();
+    if (accessToken == null || accessToken.isEmpty) {
+      AppNotice.show(
+        context,
+        message: 'Нет соединения с сервером. Войдите снова.',
+        type: AppNoticeType.error,
+      );
+      return;
+    }
+
+    final code = _codeTexts[stepId] ?? _practiceInitialCode(practice);
+    final result = _practiceResults[stepId];
+    setState(() => _practiceRunning.add(stepId));
+
+    try {
+      final remote = ref.read(backendCourseRemoteDataSourceProvider);
+      await remote.createPracticeSubmission(
+        accessToken: accessToken,
+        practiceId: practice.id,
+        request: BackendCreatePracticeSubmissionRequest(
+          code: code,
+          language: practice.language.trim().isEmpty
+              ? 'java'
+              : practice.language.trim(),
+          output: result?.output ?? _practiceConsole[stepId] ?? '',
+          error: result?.error ?? '',
+          errorType: result?.errorType ?? '',
+          durationMs: result?.durationMs,
+        ),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _practiceRunning.remove(stepId);
+        _codeStepSubmitted[stepId] = true;
+      });
+      ref.invalidate(backendOopProgressProvider);
+      ref.invalidate(backendAllProgressProvider);
+      ref.invalidate(backendMyPracticeSubmissionsProvider);
+      AppNotice.show(
+        context,
+        message: 'Решение отправлено на проверку преподавателю.',
+        type: AppNoticeType.success,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _practiceRunning.remove(stepId));
+      AppNotice.show(
+        context,
+        message: 'Не удалось отправить решение. Попробуйте ещё раз.',
+        type: AppNoticeType.error,
+      );
+    }
+  }
+
+  /// Marks the lesson's theory complete on the backend (idempotent, once per
+  /// lesson). This sets `theory_completed_at`, which unlocks practice runs and
+  /// lets the server auto-complete the lesson once every task is done.
+  Future<void> _markTheoryOnBackend() async {
+    if (_theoryMarkedOnBackend || !_isBackendId(widget.lessonId)) return;
+    _theoryMarkedOnBackend = true;
+    final accessToken = ref.read(backendCourseAccessTokenProvider)?.trim();
+    if (accessToken == null || accessToken.isEmpty) return;
+    try {
+      await ref
+          .read(backendCourseRemoteDataSourceProvider)
+          .completeLesson(accessToken: accessToken, lessonId: widget.lessonId);
+      ref.invalidate(backendOopProgressProvider);
+      ref.invalidate(backendAllProgressProvider);
+    } catch (_) {
+      // Best-effort; the explicit completion button is still available.
+    }
+  }
+
+  /// Local + notification bookkeeping when the final practice of a lesson is
+  /// accepted (the server already recorded the real completion).
+  void _finalizeLessonLocally(AppLocale locale) {
+    ref.read(demoAppControllerProvider.notifier).completeLesson(widget.lessonId);
+    final notifTitle = switch (locale) {
+      AppLocale.ru => 'Урок завершён! 🎉',
+      AppLocale.kk => 'Сабақ аяқталды! 🎉',
+      AppLocale.en => 'Lesson completed! 🎉',
+    };
+    ref
+        .read(localNotificationServiceProvider)
+        .showNotification(
+          id: 5001,
+          title: notifTitle,
+          body: switch (locale) {
+            AppLocale.ru => 'Все задания выполнены. Так держать!',
+            AppLocale.kk => 'Барлық тапсырма орындалды. Жарайсыз!',
+            AppLocale.en => 'All tasks done. Keep it up!',
+          },
+          payload: 'lesson:${widget.lessonId}',
+        );
+  }
+
   bool _isTrainerCorrect(CodeTrainer trainer) {
     if (trainer.kind == CodeTrainerKind.reorderLines) {
       final selected = _trainerSequences[trainer.id] ?? <String>[];
@@ -891,6 +1406,19 @@ String _resolveBackendText(BackendLocalizedTextDto dto, AppLocale locale) {
   }
 }
 
+/// Returns the YouTube URL for an OOP lesson, supporting both backend UUIDs
+/// (ee010601-...) and local catalog IDs (oop_lesson_1_6).
+String? _oopVideoUrl(String lessonId) {
+  if (oopVideoUrls.containsKey(lessonId)) return oopVideoUrls[lessonId];
+  final m = RegExp(r'^oop_lesson_(\d+)_(\d+)$').firstMatch(lessonId);
+  if (m != null) {
+    final mod = m.group(1)!.padLeft(2, '0');
+    final les = m.group(2)!.padLeft(2, '0');
+    return oopVideoUrls['ee$mod${les}01-0000-0000-0000-000000000000'];
+  }
+  return null;
+}
+
 class _QuizCard extends StatelessWidget {
   const _QuizCard({
     required this.quiz,
@@ -910,23 +1438,61 @@ class _QuizCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final title = quiz.prompt.resolve(locale);
+    final explanation = quiz.explanation.resolve(locale).trim();
 
     return GlowCard(
-      accent: context.appColors.primary,
+      accent: colors.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
-          ...quiz.options.map(
-            (option) => _OptionTile(
+          ...quiz.options.map((option) {
+            var reveal = _OptionReveal.none;
+            if (completed) {
+              if (option.id == quiz.correctOptionId) {
+                reveal = _OptionReveal.correct;
+              } else if (option.id == selectedOptionId) {
+                reveal = _OptionReveal.wrong;
+              }
+            }
+            return _OptionTile(
               label: option.label.resolve(locale),
               selected: selectedOptionId == option.id,
               enabled: !completed,
+              reveal: reveal,
               onTap: () => onOptionSelected(option.id),
+            );
+          }),
+          if (completed && explanation.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colors.primary.withValues(alpha: 0.22)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lightbulb_outline_rounded,
+                      size: 18, color: colors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      explanation,
+                      style: TextStyle(color: colors.textSecondary, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            const SizedBox(height: 12),
+          ],
           AppButton.primary(
             label: completed
                 ? context.l10n.text('lesson_solved')
@@ -1248,22 +1814,43 @@ class _MatchingTrainerView extends StatelessWidget {
   }
 }
 
+/// Reveal state of a quiz option after the answer was checked.
+enum _OptionReveal { none, correct, wrong }
+
 class _OptionTile extends StatelessWidget {
   const _OptionTile({
     required this.label,
     required this.selected,
     required this.enabled,
     required this.onTap,
+    this.reveal = _OptionReveal.none,
   });
 
   final String label;
   final bool selected;
   final bool enabled;
   final VoidCallback onTap;
+  final _OptionReveal reveal;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+
+    Color bg = selected
+        ? colors.primary.withValues(alpha: 0.14)
+        : colors.surfaceSoft;
+    Color borderColor = selected ? colors.primary : colors.divider;
+    Widget? trailing;
+
+    if (reveal == _OptionReveal.correct) {
+      bg = colors.success.withValues(alpha: 0.16);
+      borderColor = colors.success;
+      trailing = Icon(Icons.check_circle_rounded, color: colors.success, size: 20);
+    } else if (reveal == _OptionReveal.wrong) {
+      bg = colors.danger.withValues(alpha: 0.16);
+      borderColor = colors.danger;
+      trailing = Icon(Icons.cancel_rounded, color: colors.danger, size: 20);
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -1275,14 +1862,20 @@ class _OptionTile extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            color: selected
-                ? colors.primary.withValues(alpha: 0.14)
-                : colors.surfaceSoft,
-            border: Border.all(
-              color: selected ? colors.primary : colors.divider,
-            ),
+            color: bg,
+            border: Border.all(color: borderColor),
           ),
-          child: Text(label, style: TextStyle(color: colors.textPrimary)),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(label, style: TextStyle(color: colors.textPrimary)),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 10),
+                trailing,
+              ],
+            ],
+          ),
         ),
       ),
     );

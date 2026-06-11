@@ -897,6 +897,28 @@ class BackendCourseRemoteDataSource {
     return DiagnosticResultDto.fromJson(json);
   }
 
+  /// GET /api/v1/courses/:courseId/review — admin review status for a course.
+  Future<Map<String, dynamic>> fetchCourseReviewStatus({
+    required String accessToken,
+    required String courseId,
+  }) async {
+    return _client.getJson(
+      '/api/v1/courses/${courseId.trim()}/review',
+      headers: _authHeaders(accessToken),
+    );
+  }
+
+  /// PATCH /api/v1/courses/:courseId/resubmit-review — teacher resubmits.
+  Future<void> resubmitCourseForReview({
+    required String accessToken,
+    required String courseId,
+  }) async {
+    await _client.patchEmpty(
+      '/api/v1/courses/${courseId.trim()}/resubmit-review',
+      headers: _authHeaders(accessToken),
+    );
+  }
+
   Map<String, String> _authHeaders(String accessToken) {
     return <String, String>{'Authorization': 'Bearer ${accessToken.trim()}'};
   }

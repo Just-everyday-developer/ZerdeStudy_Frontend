@@ -214,6 +214,23 @@ final teacherBackendCoursesProvider = FutureProvider<List<BackendCourseDto>>((
   }
 });
 
+/// Fetches admin review status for a course. Returns null on error/unauthed.
+/// Map keys: is_checked (bool), is_approved (bool), comment (String?).
+final courseAdminReviewProvider =
+    FutureProvider.family<Map<String, dynamic>?, String>((ref, courseId) async {
+  final token = ref.watch(backendCourseAccessTokenProvider);
+  if (token == null || token.trim().isEmpty) return null;
+  try {
+    final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+    return await remote.fetchCourseReviewStatus(
+      accessToken: token,
+      courseId: courseId,
+    );
+  } catch (_) {
+    return null;
+  }
+});
+
 final backendCourseDetailProvider =
     FutureProvider.family<CommunityCourse?, String>((ref, courseId) async {
       final normalizedCourseId = courseId.trim();
@@ -234,16 +251,29 @@ final backendCourseDetailProvider =
           accessToken: accessToken,
           courseId: normalizedCourseId,
         );
-        final modules =
+        var modules =
             (await remote.fetchModules(
                   accessToken: accessToken,
                   localeCode: localeCode,
                 ))
                 .where((module) => module.courseId == course.id)
-                .toList(growable: true)
-              ..sort(
-                (left, right) => left.createdAt.compareTo(right.createdAt),
-              );
+                .toList(growable: true);
+
+        // If no modules found in user's locale, fall back to English.
+        // Needed for courses that only have 'en' locale modules (e.g. OOP course).
+        if (modules.isEmpty && localeCode != 'en') {
+          modules =
+              (await remote.fetchModules(
+                    accessToken: accessToken,
+                    localeCode: 'en',
+                  ))
+                  .where((module) => module.courseId == course.id)
+                  .toList(growable: true);
+        }
+
+        modules.sort(
+          (left, right) => left.createdAt.compareTo(right.createdAt),
+        );
 
         final lessonResponses =
             await Future.wait<MapEntry<String, List<BackendLessonDto>>>(
@@ -1211,6 +1241,38 @@ final backendPracticeByLessonIdProvider =
         );
       } catch (_) {
         return null;
+      }
+    });
+
+/// All practice tasks attached to a lesson (sorted by position). Used by the
+/// lesson player to render every real practice as its own code step wired to
+/// the curriculum-service `/practice/:id/run` grading flow.
+final backendPracticesForLessonProvider =
+    FutureProvider.family<List<BackendPracticeDto>, String>((
+      ref,
+      lessonId,
+    ) async {
+      final normalizedLessonId = lessonId.trim();
+      if (normalizedLessonId.isEmpty || !_looksLikeUuid(normalizedLessonId)) {
+        return const <BackendPracticeDto>[];
+      }
+
+      final accessToken = ref.watch(backendCourseAccessTokenProvider);
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return const <BackendPracticeDto>[];
+      }
+
+      final remote = ref.watch(backendCourseRemoteDataSourceProvider);
+
+      try {
+        final practices = await remote.fetchPracticesForLesson(
+          accessToken: accessToken,
+          lessonId: normalizedLessonId,
+        );
+        return [...practices]
+          ..sort((a, b) => a.position.compareTo(b.position));
+      } catch (_) {
+        return const <BackendPracticeDto>[];
       }
     });
 

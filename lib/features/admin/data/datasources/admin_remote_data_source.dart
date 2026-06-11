@@ -1,6 +1,7 @@
 import '../../../../core/network/json_http_client.dart';
 import '../models/admin_role_dto.dart';
 import '../models/admin_user_dto.dart';
+import '../models/course_review_dto.dart';
 
 /// Talks to the auth-service RBAC endpoints through the gateway.
 ///
@@ -93,6 +94,46 @@ class AdminRemoteDataSource {
       body: <String, dynamic>{'user_id': userId, 'role_id': roleId},
     );
     return _rolesFromUserRolesResponse(json);
+  }
+
+  Future<List<PendingCourseDto>> fetchPendingCourses({
+    required String accessToken,
+  }) async {
+    final json = await _client.getJsonList(
+      '/api/v1/admin/courses/pending-check',
+      headers: _authHeaders(accessToken),
+    );
+    return json.map(PendingCourseDto.fromJson).toList(growable: false);
+  }
+
+  Future<CourseReviewResultDto> reviewCourse({
+    required String accessToken,
+    required String courseId,
+    required String adminId,
+    required bool isApproved,
+    required String comment,
+  }) async {
+    final json = await _client.patchJson(
+      '/api/v1/admin/courses/$courseId/review',
+      headers: _authHeaders(accessToken),
+      body: <String, dynamic>{
+        'is_approved': isApproved,
+        'admin_id': adminId,
+        'comment': comment,
+      },
+    );
+    return CourseReviewResultDto.fromJson(json);
+  }
+
+  Future<CourseReviewResultDto> getCourseReview({
+    required String accessToken,
+    required String courseId,
+  }) async {
+    final json = await _client.getJson(
+      '/api/v1/admin/courses/$courseId/review',
+      headers: _authHeaders(accessToken),
+    );
+    return CourseReviewResultDto.fromJson(json);
   }
 
   List<AdminRoleDto> _rolesFromUserRolesResponse(JsonMap json) {

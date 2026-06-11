@@ -498,6 +498,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: const AdminShellPage(section: AdminSection.roles),
         ),
       ),
+      GoRoute(
+        path: AppRoutes.adminCourseReview,
+        parentNavigatorKey: appRootNavigatorKey,
+        pageBuilder: (context, state) => cyberTransition(
+          state: state,
+          child: const AdminShellPage(section: AdminSection.courseReview),
+        ),
+      ),
     ],
   );
 });

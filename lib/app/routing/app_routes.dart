@@ -32,6 +32,7 @@ class AppRoutes {
   static const String teacherProfile = '/teacher/profile';
   static const String admin = '/admin';
   static const String adminRoles = '/admin/roles';
+  static const String adminCourseReview = '/admin/course-review';
   static const String diagnostics = '/diagnostics';
   static const String payment = '/payment';
   static const String backendCoursePlayer = '/backend-course-player';

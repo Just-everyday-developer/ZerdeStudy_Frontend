@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/routing/app_routes.dart';
 import '../../../../app/state/app_locale.dart';
 import '../../../../app/state/demo_models.dart';
 import '../../../../core/common_widgets/app_button.dart';
+import '../../../../core/common_widgets/app_notice.dart';
 import '../../../../core/common_widgets/app_page_scaffold.dart';
 import '../../../../core/common_widgets/glow_card.dart';
 import '../../../../core/layout/app_breakpoints.dart';
@@ -14,7 +16,60 @@ import '../../../../core/theme/app_theme_colors.dart';
 import '../../../courses_backend/data/models/backend_lesson_dto.dart';
 import '../../../courses_backend/data/models/backend_practice_dto.dart';
 import '../../../courses_backend/data/models/backend_quiz_dto.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../courses_backend/presentation/providers/backend_course_providers.dart';
+
+const Map<String, String> oopVideoUrls = {
+  'ee010101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=Y2iB_DwdyfM',
+  'ee010201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=mTucAnRpxcQ',
+  'ee010301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=mTucAnRpxcQ',
+  'ee010401-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=F0T5ydRpScw',
+  'ee010501-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=vbU8Tg9fz7Q',
+  'ee010601-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=4oRyzq6Z4KE',
+  'ee010701-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=uPK2FVz6qUs',
+  'ee020101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=f5vLvG-P73c',
+  'ee020201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=uPK2FVz6qUs',
+  'ee020301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=uPK2FVz6qUs',
+  'ee020401-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=tw_xSEjufD0',
+  'ee020501-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=UbB2H6SHfHU',
+  'ee030101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=tw_xSEjufD0',
+  'ee030201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=tw_xSEjufD0',
+  'ee030301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=tw_xSEjufD0',
+  'ee030401-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=2PPPW6I-C34',
+  'ee040101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=TcBojMaxRPY',
+  'ee040201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=TcBojMaxRPY',
+  'ee040301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=TcBojMaxRPY',
+  'ee050101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=MyLAa2ufn4o',
+  'ee050201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=MyLAa2ufn4o',
+  'ee050301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=MyLAa2ufn4o',
+  'ee060101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=kY07wfP2JiA',
+  'ee060201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=kY07wfP2JiA',
+  'ee060301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=kY07wfP2JiA',
+  'ee060401-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=uX8Ot1u3YV0',
+  'ee070101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=HyJtdT5X03E',
+  'ee070201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=HyJtdT5X03E',
+  'ee070301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=HyJtdT5X03E',
+  'ee080101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=NWemqNMCesQ',
+  'ee080201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=NWemqNMCesQ',
+  'ee090101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee090201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee090301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee090401-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee100101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee100201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee100301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee100401-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee110101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee110201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee110301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee110401-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee110501-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yl0-_8OJyHQ',
+  'ee120101-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=66_0-u8P5DQ',
+  'ee120201-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=ZnyNsrcLl2I',
+  'ee120301-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=yY6oy8xHLT8',
+  'ee120401-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=eZx8eiTntAs',
+  'ee120501-0000-0000-0000-000000000000': 'https://www.youtube.com/watch?v=epiQxPyOPBY',
+};
 
 class BackendCoursePlayerPage extends ConsumerStatefulWidget {
   const BackendCoursePlayerPage({super.key, required this.courseId});
@@ -29,6 +84,22 @@ class BackendCoursePlayerPage extends ConsumerStatefulWidget {
 class _BackendCoursePlayerPageState
     extends ConsumerState<BackendCoursePlayerPage> {
   String? _selectedLessonId;
+
+  Future<void> _completeLessonAsync(String lessonId, int xp) async {
+    final accessToken = ref.read(backendCourseAccessTokenProvider);
+    if (accessToken == null || accessToken.trim().isEmpty) return;
+    try {
+      final remote = ref.read(backendCourseRemoteDataSourceProvider);
+      await remote.completeLesson(accessToken: accessToken, lessonId: lessonId);
+      if (!mounted) return;
+      ref.invalidate(backendProfileProvider);
+      ref.invalidate(backendAllProgressProvider);
+      ref.invalidate(backendOopProgressProvider);
+      if (xp > 0) {
+        AppNotice.show(context, message: '+$xp XP', type: AppNoticeType.success);
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +159,16 @@ class _BackendCoursePlayerPageState
 
         void selectLesson(String id) => setState(() => _selectedLessonId = id);
         void goPrev() => selectLesson(allLessons[effectiveIndex - 1].id);
-        void goNext() => selectLesson(allLessons[effectiveIndex + 1].id);
+        final xp = backendLesson?.xpReward ?? 0;
+        void goNext() {
+          final id = selectedId;
+          selectLesson(allLessons[effectiveIndex + 1].id);
+          _completeLessonAsync(id, xp);
+        }
+        void goFinish() {
+          _completeLessonAsync(selectedId, xp);
+          context.go(AppRoutes.courses);
+        }
 
         final contentArea = _LessonContent(
           course: course,
@@ -101,6 +181,7 @@ class _BackendCoursePlayerPageState
           hasNext: hasNext,
           onPrev: goPrev,
           onNext: goNext,
+          onFinish: goFinish,
         );
 
         return AppPageScaffold(
@@ -368,6 +449,7 @@ class _LessonContent extends StatelessWidget {
     required this.hasNext,
     required this.onPrev,
     required this.onNext,
+    required this.onFinish,
   });
 
   final CommunityCourse course;
@@ -380,6 +462,7 @@ class _LessonContent extends StatelessWidget {
   final bool hasNext;
   final VoidCallback onPrev;
   final VoidCallback onNext;
+  final VoidCallback onFinish;
 
   String _resolve(BackendLocalizedTextDto? dto, String fallback) {
     if (dto == null) return fallback;
@@ -424,6 +507,7 @@ class _LessonContent extends StatelessWidget {
             .where((p) => p.isNotEmpty)
             .toList(growable: false) ??
         <String>[];
+    final videoUrl = oopVideoUrls[lesson.id] ?? '';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 12, 0, 40),
@@ -572,6 +656,43 @@ class _LessonContent extends StatelessWidget {
           const SizedBox(height: 16),
         ],
 
+        // Recommended video
+        if (videoUrl.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: InkWell(
+              onTap: () async {
+                final uri = Uri.tryParse(videoUrl);
+                if (uri != null) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.play_circle_outline_rounded,
+                        color: Color(0xFFFF0000), size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Видео по теме',
+                      style: TextStyle(
+                        color: const Color(0xFFFF0000),
+                        fontSize: 14,
+                        decoration: TextDecoration.underline,
+                        decorationColor: const Color(0xFFFF0000),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
         // Quizzes
         if (backendQuizzes.isNotEmpty) ...[
           GlowCard(
@@ -665,7 +786,7 @@ class _LessonContent extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: FilledButton.icon(
-                onPressed: hasNext ? onNext : null,
+                onPressed: hasNext ? onNext : onFinish,
                 icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                 label: Text(hasNext ? 'Следующий' : 'Завершить'),
                 style: FilledButton.styleFrom(

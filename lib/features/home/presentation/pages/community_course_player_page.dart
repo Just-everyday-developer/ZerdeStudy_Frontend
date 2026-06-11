@@ -21,6 +21,8 @@ import '../../../ai/domain/entities/ai_chat_message.dart';
 import '../../../ai/presentation/providers/ai_app_context_provider.dart';
 import '../../../ai/presentation/providers/ai_chat_controller.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'backend_course_player_page.dart' show oopVideoUrls;
 
 class CommunityCoursePlayerPage extends ConsumerStatefulWidget {
   const CommunityCoursePlayerPage({
@@ -520,13 +522,14 @@ class _CommunityCoursePlayerPageState
   }
 
   Widget _mediaCard(CommunityCourse course, CoursePlayerLesson lesson) {
+    final ytUrl = oopVideoUrls[lesson.id];
     return GlowCard(
       accent: course.color,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
+          SizedBox(
+            height: 140,
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
@@ -545,22 +548,23 @@ class _CommunityCoursePlayerPageState
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircleAvatar(
-                      radius: 34,
+                      radius: 26,
                       backgroundColor: context.appColors.surface.withValues(
                         alpha: 0.9,
                       ),
                       child: Icon(
                         Icons.play_arrow_rounded,
                         color: course.color,
-                        size: 36,
+                        size: 28,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Text(
                       lesson.videoLabel,
                       style: TextStyle(
                         color: context.appColors.textPrimary,
                         fontWeight: FontWeight.w800,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -568,14 +572,45 @@ class _CommunityCoursePlayerPageState
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            lesson.imageCaption,
-            style: TextStyle(
-              color: context.appColors.textSecondary,
-              height: 1.4,
+          const SizedBox(height: 10),
+          if (ytUrl != null)
+            InkWell(
+              onTap: () async {
+                final uri = Uri.tryParse(ytUrl);
+                if (uri != null) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.play_circle_outline_rounded,
+                        color: Color(0xFFFF0000), size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Видео по теме',
+                      style: TextStyle(
+                        color: const Color(0xFFFF0000),
+                        fontSize: 14,
+                        decoration: TextDecoration.underline,
+                        decorationColor: const Color(0xFFFF0000),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Text(
+              lesson.imageCaption,
+              style: TextStyle(
+                color: context.appColors.textSecondary,
+                height: 1.4,
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -477,9 +477,12 @@ class _CommunityCourseDetailPageState
     }
 
     // Paid/enrolled courses must always be openable. Prefer the demo player
-    // when lessons are in the local catalog; otherwise open the backend player.
+    // only when lessons are in the local catalog; backend-only courses always
+    // use the backend player (local catalog returns fallback course otherwise).
     if (alreadyEnrolled) {
-      if (course.supportsCoursePlayer) {
+      final localCatalog = ref.read(demoCatalogProvider);
+      final isLocalCourse = localCatalog.maybeCourseById(course.id) != null;
+      if (course.supportsCoursePlayer && isLocalCourse) {
         context.push(AppRoutes.coursePlayerById(course.id));
         return;
       }

@@ -8,10 +8,11 @@ import '../../../../app/state/demo_app_controller.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme_colors.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
+import 'admin_course_review_page.dart';
 import 'admin_roles_page.dart';
 import 'admin_users_page.dart';
 
-enum AdminSection { users, roles }
+enum AdminSection { users, roles, courseReview }
 
 /// Standalone admin workspace (RBAC). Connected to the backend via
 /// admin_providers; no moderation/mock content.
@@ -51,6 +52,11 @@ class AdminShellPage extends ConsumerWidget {
       AppLocale.ru => 'Роли',
       AppLocale.kk => 'Рөлдер',
       _ => 'Roles',
+    };
+    final courseReviewLabel = switch (locale) {
+      AppLocale.ru => 'Курсы',
+      AppLocale.kk => 'Курстар',
+      _ => 'Courses',
     };
 
     return LayoutBuilder(
@@ -144,11 +150,16 @@ class AdminShellPage extends ConsumerWidget {
             body: switch (section) {
               AdminSection.users => const AdminUsersPage(),
               AdminSection.roles => const AdminRolesPage(),
+              AdminSection.courseReview => const AdminCourseReviewPage(),
             },
             bottomNavigationBar: NavigationBar(
               selectedIndex: section.index,
               onDestinationSelected: (i) => context.go(
-                i == 0 ? AppRoutes.admin : AppRoutes.adminRoles,
+                switch (i) {
+                  0 => AppRoutes.admin,
+                  1 => AppRoutes.adminRoles,
+                  _ => AppRoutes.adminCourseReview,
+                },
               ),
               destinations: [
                 NavigationDestination(
@@ -160,6 +171,11 @@ class AdminShellPage extends ConsumerWidget {
                   icon: const Icon(Icons.shield_outlined),
                   selectedIcon: const Icon(Icons.shield_rounded),
                   label: rolesLabel,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.rate_review_outlined),
+                  selectedIcon: const Icon(Icons.rate_review_rounded),
+                  label: courseReviewLabel,
                 ),
               ],
             ),
@@ -244,6 +260,13 @@ class AdminShellPage extends ConsumerWidget {
                           selected: section == AdminSection.roles,
                           colors: colors,
                           onTap: () => context.go(AppRoutes.adminRoles),
+                        ),
+                        _AdminNavItem(
+                          icon: Icons.rate_review_rounded,
+                          label: courseReviewLabel,
+                          selected: section == AdminSection.courseReview,
+                          colors: colors,
+                          onTap: () => context.go(AppRoutes.adminCourseReview),
                         ),
                       ],
                     ),
@@ -352,6 +375,7 @@ class AdminShellPage extends ConsumerWidget {
                 child: switch (section) {
                   AdminSection.users => const AdminUsersPage(),
                   AdminSection.roles => const AdminRolesPage(),
+                  AdminSection.courseReview => const AdminCourseReviewPage(),
                 },
               ),
             ),

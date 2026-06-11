@@ -78,10 +78,6 @@ class ProfilePage extends ConsumerWidget {
     final previewAchievements = achievements.take(6).toList(growable: false);
     final certificates = catalog.certificatesFor(state);
     // favorites removed — no backend endpoint; section hidden in UI.
-    final completedTracks = catalog.completedTracksFor(state);
-    final completedModules = catalog.completedModulesFor(state);
-    final completedLessons = catalog.completedLessonsFor(state);
-    final completedPractices = catalog.completedPracticesFor(state);
     final user = state.user;
 
     // Prefer backend profile data (login, bio, photoUrl) over local state.
@@ -538,74 +534,6 @@ class ProfilePage extends ConsumerWidget {
           // Favorites section hidden — no backend endpoint for saved courses.
           // TODO: implement when backend supports it.
 
-          SizedBox(height: compact ? 14 : 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.text('completed'),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _Pill(
-                        label: l10n.text('tracks'),
-                        value: '${completedTracks.length}',
-                      ),
-                      const SizedBox(width: 10),
-                      _Pill(
-                        label: l10n.text('modules'),
-                        value: '${completedModules.length}',
-                      ),
-                      const SizedBox(width: 10),
-                      _Pill(
-                        label: l10n.text('lessons'),
-                        value: '${completedLessons.length}',
-                      ),
-                      const SizedBox(width: 10),
-                      _Pill(
-                        label: l10n.text('practices'),
-                        value: '${completedPractices.length}',
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                if (completedTracks.isNotEmpty)
-                  ...completedTracks
-                      .take(3)
-                      .map(
-                        (track) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _ProfileLinkTile(
-                            title: track.title.resolve(state.locale),
-                            subtitle:
-                                '${l10n.text('tree_assessments')} ${catalog.bestAssessmentPercentFor(state, track.id)}% - ${catalog.progressForTrack(state, track.id).completedUnits}/${track.totalUnits} ${l10n.text('tree_units')}',
-                            accent: track.color,
-                            icon: Icons.check_circle_rounded,
-                            onTap: () =>
-                                context.push(AppRoutes.trackById(track.id)),
-                          ),
-                        ),
-                      )
-                else
-                  Text(
-                    l10n.text('completed_empty'),
-                    style: TextStyle(color: colors.textSecondary, height: 1.4),
-                  ),
-              ],
-            ),
-          ),
 
         ],
       ),

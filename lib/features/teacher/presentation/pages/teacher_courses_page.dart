@@ -153,7 +153,7 @@ class TeacherCoursesPage extends ConsumerWidget {
   }
 }
 
-class _CourseCard extends StatelessWidget {
+class _CourseCard extends ConsumerStatefulWidget {
   const _CourseCard({
     required this.course,
     required this.colors,
@@ -167,7 +167,42 @@ class _CourseCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
+  ConsumerState<_CourseCard> createState() => _CourseCardState();
+}
+
+class _CourseCardState extends ConsumerState<_CourseCard> {
+  bool _resubmitting = false;
+
+  Future<void> _resubmit() async {
+    setState(() => _resubmitting = true);
+    try {
+      final token = ref.read(backendCourseAccessTokenProvider);
+      if (token == null || token.trim().isEmpty) return;
+      final remote = ref.read(backendCourseRemoteDataSourceProvider);
+      await remote.resubmitCourseForReview(
+        accessToken: token,
+        courseId: widget.course.id,
+      );
+      ref.invalidate(courseAdminReviewProvider(widget.course.id));
+      ref.invalidate(teacherBackendCoursesProvider);
+      if (mounted) {
+        AppNotice.show(context,
+            message: 'Курс отправлен на проверку', type: AppNoticeType.success);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppNotice.show(context,
+            message: 'Ошибка: $e', type: AppNoticeType.error);
+      }
+    } finally {
+      if (mounted) setState(() => _resubmitting = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final course = widget.course;
+    final colors = widget.colors;
     final statusCode = course.status.code;
     final statusColor = statusCode == 'published'
         ? const Color(0xFF4CAF50)
@@ -175,75 +210,143 @@ class _CourseCard extends StatelessWidget {
             ? colors.textSecondary
             : colors.accent;
 
+    final reviewAsync = ref.watch(courseAdminReviewProvider(course.id));
+    final review = reviewAsync.asData?.value;
+    final isChecked = review?['is_checked'] as bool? ?? false;
+    final isApproved = review?['is_approved'] as bool? ?? true;
+    final comment = (review?['comment'] as String? ?? '').trim();
+    final isRejected = isChecked && !isApproved;
+
     return InkWell(
-      onTap: onOpen,
+      onTap: widget.onOpen,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.divider),
+          border: Border.all(
+            color: isRejected ? Colors.red.withValues(alpha: 0.5) : colors.divider,
+          ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: colors.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.menu_book_rounded, color: colors.primary),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    course.title.trim().isEmpty
-                        ? 'Без названия'
-                        : course.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
+                  child: Icon(Icons.menu_book_rounded, color: colors.primary),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          course.status.name.isNotEmpty
-                              ? course.status.name
-                              : statusCode,
-                          style: TextStyle(
-                              color: statusColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700),
-                        ),
+                      Text(
+                        course.title.trim().isEmpty ? 'Без названия' : course.title,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(width: 8),
-                      Text('${course.lessonsCount} уроков · ${course.level.name}',
-                          style: TextStyle(
-                              color: colors.textSecondary, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              course.status.name.isNotEmpty
+                                  ? course.status.name
+                                  : statusCode,
+                              style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                              '${course.lessonsCount} уроков · ${course.level.name}',
+                              style: TextStyle(
+                                  color: colors.textSecondary, fontSize: 12)),
+                        ],
+                      ),
                     ],
                   ),
-                ],
+                ),
+                IconButton(
+                  onPressed: widget.onDelete,
+                  icon: Icon(Icons.delete_outline_rounded, color: colors.danger),
+                ),
+                Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+              ],
+            ),
+            if (isRejected) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.cancel_outlined,
+                            color: Colors.red, size: 16),
+                        const SizedBox(width: 6),
+                        const Text('Курс отклонён администратором',
+                            style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                    if (comment.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(comment,
+                          style: TextStyle(
+                              color: colors.textSecondary, fontSize: 13)),
+                    ],
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        onPressed: _resubmitting ? null : _resubmit,
+                        icon: _resubmitting
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.send_rounded, size: 16),
+                        label: const Text('Отправить на проверку снова'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            IconButton(
-              onPressed: onDelete,
-              icon: Icon(Icons.delete_outline_rounded, color: colors.danger),
-            ),
-            Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+            ],
           ],
         ),
       ),
